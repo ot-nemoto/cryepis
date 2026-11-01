@@ -1,8 +1,8 @@
 {
-  "day": 26,
+  "day": 27,
   "lap": 1,
-  "lap_day": 26,
-  "pos": 78,
+  "lap_day": 27,
+  "pos": 81,
   "boss_cleared": [
     "草原",
     "迷いの森",
@@ -10,12 +10,12 @@
   ],
   "hero": {
     "level": 7,
-    "exp": 188,
+    "exp": 239,
     "max_hp": 90,
-    "hp": 25,
+    "hp": 2,
     "base_atk": 25,
     "base_def": 8,
-    "gold": 355,
+    "gold": 403,
     "potions": 4,
     "weapon": {
       "name": "銅の剣",
@@ -26,20 +26,25 @@
       "power": 14
     }
   },
-  "kills": 35,
+  "kills": 37,
   "deaths": 0,
-  "last_date": "2026-10-31",
+  "last_date": "2026-11-01",
   "last": {
-    "date": "2026-10-31",
-    "contributions": 84,
+    "date": "2026-11-01",
+    "contributions": 9,
     "steps": 3,
     "events": [
-      "宝箱から回復薬を見つけた",
-      "スノーウルフを倒した！ (+22EXP)",
-      "宝箱から104Gを見つけた"
+      "イエティを倒した！ (+29EXP)",
+      "足跡が雪に消えていく",
+      "スノーウルフを倒した！ (+22EXP)"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-01",
+      "contributions": 9,
+      "text": "イエティを倒した！ (+29EXP) / 足跡が雪に消えていく / スノーウルフを倒した！ (+22EXP)"
+    },
     {
       "date": "2026-10-31",
       "contributions": 84,
