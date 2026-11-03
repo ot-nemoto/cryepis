@@ -1,21 +1,21 @@
 {
-  "day": 28,
+  "day": 29,
   "lap": 1,
-  "lap_day": 28,
-  "pos": 84,
+  "lap_day": 29,
+  "pos": 87,
   "boss_cleared": [
     "草原",
     "迷いの森",
     "地下洞窟"
   ],
   "hero": {
-    "level": 7,
-    "exp": 268,
-    "max_hp": 90,
-    "hp": 39,
-    "base_atk": 25,
-    "base_def": 8,
-    "gold": 599,
+    "level": 8,
+    "exp": 8,
+    "max_hp": 100,
+    "hp": 100,
+    "base_atk": 28,
+    "base_def": 9,
+    "gold": 634,
     "potions": 3,
     "weapon": {
       "name": "銅の剣",
@@ -26,20 +26,26 @@
       "power": 14
     }
   },
-  "kills": 38,
+  "kills": 39,
   "deaths": 0,
-  "last_date": "2026-11-02",
+  "last_date": "2026-11-03",
   "last": {
-    "date": "2026-11-02",
-    "contributions": 41,
+    "date": "2026-11-03",
+    "contributions": 50,
     "steps": 3,
     "events": [
-      "宝箱から52Gを見つけた",
-      "宝箱から116Gを見つけた",
-      "イエティを倒した！ (+29EXP)"
+      "山頂に雲がかかっている",
+      "吹雪で前が見えない",
+      "氷の魔女を倒した！ (+34EXP)",
+      "レベルが上がった！ Lv.8"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-03",
+      "contributions": 50,
+      "text": "山頂に雲がかかっている / 吹雪で前が見えない / 氷の魔女を倒した！ (+34EXP) / レベルが上がった！ Lv.8"
+    },
     {
       "date": "2026-11-02",
       "contributions": 41,
