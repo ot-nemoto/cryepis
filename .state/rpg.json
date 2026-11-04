@@ -1,22 +1,23 @@
 {
-  "day": 29,
+  "day": 30,
   "lap": 1,
-  "lap_day": 29,
-  "pos": 87,
+  "lap_day": 30,
+  "pos": 90,
   "boss_cleared": [
     "草原",
     "迷いの森",
-    "地下洞窟"
+    "地下洞窟",
+    "雪山"
   ],
   "hero": {
     "level": 8,
-    "exp": 8,
+    "exp": 229,
     "max_hp": 100,
     "hp": 100,
     "base_atk": 28,
     "base_def": 9,
-    "gold": 634,
-    "potions": 3,
+    "gold": 962,
+    "potions": 2,
     "weapon": {
       "name": "銅の剣",
       "power": 3
@@ -26,21 +27,25 @@
       "power": 14
     }
   },
-  "kills": 39,
+  "kills": 41,
   "deaths": 0,
-  "last_date": "2026-11-03",
+  "last_date": "2026-11-04",
   "last": {
-    "date": "2026-11-03",
-    "contributions": 50,
+    "date": "2026-11-04",
+    "contributions": 9,
     "steps": 3,
     "events": [
-      "山頂に雲がかかっている",
-      "吹雪で前が見えない",
-      "氷の魔女を倒した！ (+34EXP)",
-      "レベルが上がった！ Lv.8"
+      "イエティを倒した！ (+29EXP)",
+      "フロストドラゴンを討ち取った！！ (+192EXP)",
+      "城下の廃墟で休んだ"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-04",
+      "contributions": 9,
+      "text": "イエティを倒した！ (+29EXP) / フロストドラゴンを討ち取った！！ (+192EXP) / 城下の廃墟で休んだ"
+    },
     {
       "date": "2026-11-03",
       "contributions": 50,
