@@ -29,7 +29,7 @@ def api(method: str, url: str, token: str | None, body: dict | None = None) -> d
     headers = {
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "gistrap",
+        "User-Agent": "sandoria",
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
