@@ -1,4 +1,4 @@
-# sandoria
+# cryepis
 
 GitHub プロフィールに Pin した Gist の中身を、GitHub Actions の定期実行で生成・更新する仕組みです。
 ネタ（Pin に載せる内容）ごとにスクリプトと workflow を持ち、今後ネタを追加していく想定です。
