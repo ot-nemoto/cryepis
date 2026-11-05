@@ -46,6 +46,13 @@ class MaskTest(unittest.TestCase):
         self.assertEqual(report.mask("a\x07b"), "ab")
         self.assertEqual(report.mask("x" * 100), "x" * 40)
 
+    def test_masks_ip_in_values(self):
+        self.assertEqual(report.mask("GET /x?q=8.8.8.8"), "GET /x?q=x.x.x.x")
+
+    def test_cards_do_not_leak_ip(self):
+        data = {"date": "2026-11-05", "top_commands": [{"v": "wget http://185.220.101.4/a", "n": 9}]}
+        self.assertNotIn("185.220.101.4", report.build_card("commands", data))
+
     def test_long_values_are_clipped_in_cards(self):
         data = {"date": "2026-11-05", "top_http_paths": [{"v": "/" + "a" * 100, "n": 5}]}
         line = report.build_card("http", data).splitlines()[1]

@@ -38,8 +38,15 @@ sudo apt-get update && sudo apt-get install -y docker.io docker-compose-v2 iptab
 sudo mkdir -p /opt/honeypot && sudo chown "$USER" /opt/honeypot
 # このリポジトリの honeypot/ を /opt/honeypot に置く（git clone か scp）
 cd /opt/honeypot
+# ログの出力先を作り、コンテナの実行ユーザー（uid 1000）が書けるようにする
+mkdir -p cowrie/var http
+sudo chown -R 1000:1000 cowrie/var http
 docker compose up -d
 ```
+
+ログは bind mount でホストの `cowrie/var/log/cowrie/cowrie.json` と `http/requests.log` に出ます
+（`aggregate.py` の既定の読み取りパスと同じ）。Cowrie はホスト鍵や pid を `cowrie/var` に書くので、
+このディレクトリは書き込み可能にしておきます（compose では Cowrie のルートを読み取り専用にしていません）。
 
 ## 4. ポート転送と記録の設定
 
@@ -62,7 +69,18 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
 
 `docker-compose.yml` に 443 用のサービスを足し、`--cert`/`--key`/`--port 443` を渡します。
 
-## 5. 1 日 1 回の集計とアップロード
+## 5. 生のログの保存量を抑える（logrotate）
+
+Cowrie と HTTP のログは単一ファイルに追記され続けるので、logrotate で日次ローテーション・35 日保持にします。
+
+```sh
+sudo cp /opt/honeypot/honeypot.logrotate /etc/logrotate.d/honeypot
+```
+
+`aggregate.py` は本体と、ローテーション後の `*.1` の両方を読むので、集計がちょうど日付の変わり目に当たっても
+前日分を取りこぼしません。`/var/log/kern.log`（iptables LOG の出力先）は OS 標準の logrotate がすでに回しています。
+
+## 6. 1 日 1 回の集計とアップロード
 
 ```sh
 sudo crontab -e
@@ -73,10 +91,11 @@ PAR_PUT_URL=https://<書き込み専用の PAR の URL。末尾は / >
 10 0 * * * /opt/honeypot/daily.sh >> /var/log/honeypot-daily.log 2>&1
 ```
 
-- `daily.sh` が前日分を集計し、`latest.json` と `daily/<日付>.json` を Object Storage にアップロードします。
-- 生のログ（IP を含む）は VM の中だけに残り、30 日より古いものは消えます。
+- `daily.sh` は**前日（UTC）**分だけを集計し、`latest.json` と `daily/<日付>.json` を Object Storage にアップロードします。
+  `aggregate.py` が各ログを日付で絞るので、ログが累積でもカードの数字は 1 日分になります。
+- 生のログ（IP を含む）は VM の中だけに残り、logrotate で 35 日より古いものは消えます。
 
-## 6. GitHub 側
+## 7. GitHub 側
 
 - Secret `HONEYPOT_DATA_URL` に、`latest.json` を指す**読み取り専用の PAR の URL**を入れる。
 - 以降は README の「セットアップ」の手順（Gist を作って `GIST_IDS` を登録）に進む。

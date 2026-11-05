@@ -41,11 +41,16 @@ TITLE = {
 }
 # 伏せ字にする語（下品・差別的な語の最小限の例。VM 側でも落とすが、表示前にも念のため）
 BAD = re.compile(r"(fuck|shit|bitch|nigger|cunt)", re.I)
+IPV4 = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
+IPV6 = re.compile(r"\b[0-9a-f]{1,4}(?::[0-9a-f]{0,4}){2,7}\b", re.I)
 
 
 def mask(value: str, limit: int = 40) -> str:
-    """表示前の防御。制御文字・長すぎる文字列・NG 語を伏せる。"""
-    value = "".join(c for c in str(value) if c.isprintable())
+    """表示前の防御。制御文字・IP・長すぎる文字列・NG 語を伏せる。"""
+    import unicodedata
+    value = unicodedata.normalize("NFKC", str(value))
+    value = "".join(c for c in value if c.isprintable())
+    value = IPV6.sub("x:x", IPV4.sub("x.x.x.x", value))
     if BAD.search(value):
         return "***"
     return value[:limit]
@@ -120,17 +125,22 @@ def empty_data() -> dict:
 
 
 def load_data(sample: str | None) -> dict:
+    import time
+    import urllib.request
     if sample:
         with open(sample, encoding="utf-8") as f:
             return json.load(f)
     url = os.environ.get("HONEYPOT_DATA_URL")
     if not url:
         raise SystemExit("HONEYPOT_DATA_URL か --sample を指定してください")
-    try:
-        with __import__("urllib.request", fromlist=["request"]).urlopen(url, timeout=20) as res:
-            return json.load(res)
-    except OSError as e:
-        raise common.FetchError(f"集計データを取得できません: {e}")
+    for wait in (*common.RETRY_WAITS, None):  # 一時的なエラーは少し待って再試行する
+        try:
+            with urllib.request.urlopen(url, timeout=20) as res:
+                return json.load(res)
+        except OSError as e:
+            if wait is None:
+                raise common.FetchError(f"集計データを取得できません: {e}")
+            time.sleep(wait)
 
 
 def gist_ids() -> dict:
@@ -174,7 +184,11 @@ def main() -> int:
     if a.create_gists:
         return create_gists()
 
-    data = load_data(a.sample)
+    try:
+        data = load_data(a.sample)
+    except common.FetchError as e:
+        common.warn(str(e))
+        return 1
     cards = {key: build_card(key, data) for key in CARDS}
     for key in CARDS:
         print(f"===== {key} ({FILENAME[key]}) =====\n{cards[key]}")

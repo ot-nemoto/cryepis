@@ -24,8 +24,15 @@ class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
     def _record(self) -> None:
-        length = min(int(self.headers.get("Content-Length", 0) or 0), MAX_BODY)
-        body = self.rfile.read(length).decode("utf-8", "replace") if length else ""
+        total = int(self.headers.get("Content-Length", 0) or 0)
+        keep = min(total, MAX_BODY)
+        body = self.rfile.read(keep).decode("utf-8", "replace") if keep else ""
+        remaining = total - keep  # 記録しない残りも読み捨てて、接続のずれを防ぐ
+        while remaining > 0:
+            chunk = self.rfile.read(min(remaining, 65536))
+            if not chunk:
+                break
+            remaining -= len(chunk)
         event = {
             "time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "src_ip": self.client_address[0],
