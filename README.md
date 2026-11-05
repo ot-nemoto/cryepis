@@ -1,53 +1,26 @@
 # gistrap
 
-自前のハニーポットに来たスキャンや総当たりを毎日集計し、GitHub プロフィールに Pin した Gist に
-「今日の侵入者ランキング」として表示する仕組みです。VM で記録・集計し、GitHub Actions が Gist を更新します。
+GitHub プロフィールに Pin した Gist の中身を、GitHub Actions の定期実行で生成・更新する仕組みです。
+ネタ（Pin に載せる内容）ごとにスクリプトと workflow を持ち、今後ネタを追加していく想定です。
 
-攻撃を受けるために置くだけで、こちらから攻撃や逆スキャンはしません。記録して集計を公開するだけです。
+## ネタ一覧
 
-## 全体の流れ
+| ネタ | Pin する Gist | 更新 | 説明 |
+|---|---|---|---|
+| [勇者の冒険（テキスト RPG）](#勇者の冒険テキスト-rpg) | 1 つ | 毎日 JST 7:17 | 前日のコントリビューション数だけ勇者が進む RPG。魔王を倒すとクリアして、もう一度最初から |
 
-```
-[VM（Oracle Cloud など）]
-  ├─ Cowrie        SSH(22) / Telnet(23) の受け口。偽のシェルでログイン試行とコマンドを記録
-  ├─ http_server   HTTP(80) / HTTPS(443) の受け口。来たパスやヘッダーを記録して 404 を返す
-  ├─ iptables LOG  全ポートへの接続の試みを記録（叩かれたポートの統計）
-  └─ 1 日 1 回: aggregate.py で集計 → IP を含まない JSON を Object Storage へ
-                                     （生のログ・IP は VM の外へ出さない。30 日で削除）
-        ▼
-[GitHub Actions（1 日 1 回）]
-  └─ 集計 JSON を取得 → report.py が 6 枚のカードに整形 → Pinned Gist を更新
-```
+## 共通の仕組み
 
-## Pin に出すもの（最大 6 枚）
-
-| カード | 中身 |
-|---|---|
-| 概要 | 接続数・ユニークな IP の数・国の数・ログイン試行・HTTP・ポートの合計 |
-| パスワード | SSH/Telnet で試されたパスワードのランキング |
-| コマンド | ログイン後に打たれたコマンドのランキング |
-| URL | HTTP/HTTPS で狙われたパスのランキング |
-| ポート | 叩かれたポートのランキング |
-| 国 | 攻撃元の国のランキング |
-
-## 公開しないもの
-
-- **IP アドレス**は集計にも Gist にも出しません（ユニークな数だけ）。攻撃元の多くは乗っ取られた無関係な機器のため。
-  コマンドや URL の中に紛れた IP（`wget http://x.x.x.x/...` など）も、集計の時点で伏せ字にします。
-- 生のログ（IP を含む）は VM の中だけに置き、logrotate で 35 日より古いものを消します。
-- 試されたパスワードやコマンドのうち、表示に向かない語は伏せ字にし、長すぎるものは詰めます。
-
-## ファイル
-
-| 場所 | 役割 |
-|---|---|
-| `honeypot/` | VM で動かす一式（Cowrie の設定・HTTP の受け口・集計・cron・iptables）。[docs/HONEYPOT.md](docs/HONEYPOT.md) |
-| `honeypot/aggregate.py` | VM で 1 日分を集計し、IP を含まない JSON を作る |
-| `scripts/report.py` | 集計 JSON を読み、6 枚のカードを作って Gist を更新する（Actions 側） |
-| `scripts/common.py` | GitHub API・Gist の更新・表示幅などの共通部品 |
-| `.github/workflows/update-gists.yml` | 毎日 JST 7:17 に集計を取得して Gist を更新する |
-
-集計 JSON の形式は [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md) を参照してください。
+- workflow・スクリプト・ファイルの関係と、各ファイルの使い道は [docs/DATA_FLOW.md](docs/DATA_FLOW.md) の図を参照
+- `.state/` 配下のファイルの JSON 構成と項目の意味は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md) を参照
+- セットアップ（Gist・PAT・Secrets / Variables）は [docs/SETUP.md](docs/SETUP.md) を参照
+  （ネタを追加したら、これらのドキュメントにも追記する）
+- Gist の更新には `gist` スコープの Classic PAT（Secret `GIST_PAT`）を使う。Gist ごとの ID は Repository variable で渡す
+- Pinned カードには Gist の**名前順で先頭のファイル**の、先頭 5 行（見出し + 4 行）ほどしか出ず、1 行 55 桁前後で切れる。
+  各ネタはこの範囲に収まるように出力する（Gist のファイルは 1 つだけにする。1 行は `common.LINE_MAX` = 49 桁まで）
+- 記録用のデータは `.state/` に置き、workflow の最後に github-actions[bot] 名義で master に直接コミットする（PR は通さない）
+- `.state/last-run` は keepalive 用。毎日コミットし、60 日無活動による scheduled workflow の停止を防ぐ
+- 標準ライブラリのみで動く（Python 3.12）。GitHub API・Gist の更新・表示幅の計算は `scripts/common.py` にまとめている
 
 ## テスト
 
@@ -55,12 +28,61 @@
 python -m unittest discover -s tests
 ```
 
-## セットアップ
+## ネタを追加するとき
 
-1. VM を立ててハニーポットを動かす（[docs/HONEYPOT.md](docs/HONEYPOT.md)）。
-2. gist スコープの Classic PAT を Secret `GIST_PAT` に登録する。
-3. **Actions** → *Update honeypot gists* → **Run workflow** で `create_gists` にチェックを入れて実行する。
-   6 枚の Gist が作られ、ID の一覧が実行結果の Summary に出る。
-4. その一覧を Repository variable `GIST_IDS`（JSON）に登録する。
-5. 集計 JSON を読む URL を Secret `HONEYPOT_DATA_URL` に登録する。
-6. チェックを外して **Run workflow**（または翌朝の定期実行）で更新し、6 枚の Gist を Pin する。
+1. `scripts/` にスクリプトを、`tests/` にテストを追加する（Gist の更新は `common.update_gist` を使い回せる）
+2. ネタごとに `.github/workflows/` に workflow を作る（`hero-adventure.yml` を参考にする）
+   - 最初に Test ステップ（`python -m unittest discover -s tests`）を置く
+   - `.state/` に書くなら `permissions: contents: write` とコミットのステップを用意する。
+     keepalive（`.state/last-run`）はどれか 1 つの毎日の workflow で更新すれば足りる（今は `hero-adventure.yml`）
+3. public Gist を作り（ファイルは 1 つ）、ID を Repository variable に登録して Pin する
+4. ドキュメントを更新する: この README の「ネタ一覧」とネタごとの節、docs/SETUP.md（Gist・Variable）、
+   docs/DATA_FLOW.md（図・ファイルの表）、`.state/` に書く場合は docs/STATE_FORMAT.md（データ形式）
+
+---
+
+## 勇者の冒険（テキスト RPG）
+
+勇者が毎日少しずつ冒険を進める RPG を Pinned Gist に表示します。**前日（JST）の自分のコントリビューション数**
+（コミット・PR・Issue・レビュー）で、その日に進む歩数が決まります。コミットするほど勇者が進みます。
+
+```
+⚔️ Day 37  勇者 Lv.5 ── 🦇 地下洞窟
+🏠━━━━━━━━━━━🧙────────────🏰 魔王城まで59歩
+HP ██████░░░░ 41/70  攻24 防15  178G
+昨日(0 contrib): 夢の中で冒険の続きを見た
+今日: 冷たい風が奥から吹いてくる…
+```
+
+Gist を開くと、ステータス・装備、直近 30 日の冒険の記録、歴代のクリアの記録が見られます。
+
+| 前日のコントリビューション数 | 進む歩数 |
+|---|---|
+| 0 | 0 歩（休息日。HP が少し回復する） |
+| 1〜2 | 1 歩 |
+| 3〜5 | 2 歩 |
+| 6 以上 | 3 歩 |
+
+- 草原 → 迷いの森 → 地下洞窟 → 雪山 → 魔王城と進む。各エリアの最初のマスは町（回復・装備の購入）、最後のマスはボス
+- 1 歩ごとに、戦闘・宝箱・旅の商人・景色・まれなイベント（能力が上がる、伝説の剣など）のどれかが起きる
+- HP が 0 になったら、そのエリアの町に戻され、所持金が半分になる（レベルと装備はそのまま。町で回復し、残ったお金で買い物をする）
+- 魔王を倒すとクリア。記録を残し、レベルと装備をリセットして最初からもう一度挑む（周回ごとにクリアまでの日数を比べられる）
+- 平均的なペース（コントリビューションが 0 の日が 3 割程度）で、1 周 90 日前後になるように調整している（`tests/test_rpg.py` でまとめて試している）
+- 乱数は「日付＋周回数」を種にするので、同じ日に何度実行しても結果は同じ。その日の分を処理済みなら進めない（Gist の表示だけ更新する）
+- workflow が動かなかった日や、コントリビューション数を取得できなかった日（警告を出す）は、次の実行でさかのぼって 1 日ずつ進める（最大 7 日分）
+- Repository variable `GIST_ID_RPG` を登録するまでは動かない（RPG を使わないなら何もしなくてよい）。
+  始めるための Gist は、workflow の手動実行で `create_gist` を指定すると作れる（[docs/SETUP.md](docs/SETUP.md)）
+
+| ファイル | 役割 |
+|---|---|
+| `rpg_world.json` | 世界の設定（エリア・敵・ボス・店・イベントの起こりやすさ・歩数の決まり）。敵やエリアを足すときはここを編集する |
+| `scripts/rpg.py` | 1 日分を進めて、Gist（`hero-adventure.txt`）を更新する |
+| `.state/rpg.json` | 勇者の状態・日誌・周回の記録（形式は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md)） |
+| `.github/workflows/hero-adventure.yml` | 毎日 JST 7:17 に rpg.py を動かし、`.state/rpg.json` をコミットする |
+
+```sh
+python scripts/rpg.py --dry-run --contributions 3   # 記録せずに今日の分を試す（前日のコントリビューション数を指定）
+GIST_PAT=xxx python scripts/rpg.py --create-gist    # 冒険を始めるための Gist を作る（Actions の手動実行の create_gist でも作れる）
+```
+
+`rpg_world.json` を変えたら、`tests/test_rpg.py` のバランスのテスト（1 周 70〜120 日に収まるか）が通るか確かめてください。

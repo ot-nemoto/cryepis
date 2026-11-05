@@ -1,0 +1,86 @@
+name: Advance hero adventure (text RPG)
+
+# テキスト RPG を 1 日分進め、Pinned Gist を更新する（前日のコントリビューション数で進む歩数が決まる）。
+# 状態は .state/rpg.json に保存し、最後に master にコミットする。
+
+on:
+  schedule:
+    # cron は UTC。JST 7:17 に実行（混雑する毎時 0 分を避けている）
+    - cron: "17 22 * * *"
+  workflow_dispatch:
+    inputs:
+      create_gist:
+        description: "冒険を始めるための Gist を作る（作るだけで冒険は進めない。ID は実行結果のサマリーに出る）"
+        type: boolean
+        default: false
+
+concurrency:
+  group: hero-adventure
+  cancel-in-progress: false
+
+permissions:
+  contents: write # RPG の状態（.state/rpg.json）と keepalive（.state/last-run）をコミットするために必要
+
+jobs:
+  advance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # 起動時点の SHA ではなくブランチの先端を取る。実行が重なって待たされた場合も、
+      # 先行の実行がコミットした .state/rpg.json の続きから進める
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Test
+        run: python -m unittest discover -s tests
+
+      # 手動実行で create_gist を指定したときだけ。GIST_ID_RPG が設定済みなら作らずに失敗する
+      - name: Create gist
+        if: ${{ inputs.create_gist }}
+        env:
+          GIST_PAT: ${{ secrets.GIST_PAT }}
+          GIST_ID_RPG: ${{ vars.GIST_ID_RPG }}
+        run: python scripts/rpg.py --create-gist
+
+      # Test が失敗した日と、Repository variable GIST_ID_RPG が未設定のとき、Gist を作るだけの実行のときは実行しない
+      # （状態も作らない）。コントリビューション数を取得できなかった日は、次の実行でさかのぼって進める。
+      - name: Advance RPG
+        if: ${{ success() && vars.GIST_ID_RPG != '' && !inputs.create_gist }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GIST_PAT: ${{ secrets.GIST_PAT }}
+          GIST_ID_RPG: ${{ vars.GIST_ID_RPG }}
+          RPG_USER: ${{ vars.RPG_USER || github.repository_owner }}
+        run: python scripts/rpg.py
+
+      # rpg.py が更新した状態（.state/rpg.json）を master にコミットする。
+      # あわせて 60 日間アクティビティがないと scheduled workflow が停止するのを防ぐため、
+      # .state/last-run も更新する（keepalive）。変更が無ければコミットしない。
+      # Test が失敗した日も keepalive は残す（!cancelled()）。
+      - name: Commit state (RPG + keepalive)
+        if: ${{ !cancelled() }}
+        run: |
+          TODAY=$(TZ=Asia/Tokyo date +%F)
+          mkdir -p .state
+          echo "$TODAY" > .state/last-run
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .state/last-run
+          if [ -f .state/rpg.json ]; then git add .state/rpg.json; fi
+          if git diff --cached --quiet; then
+            echo "変更なし"
+          else
+            if git diff --cached --quiet -- .state/rpg.json; then
+              MSG="chore: keepalive $TODAY"
+            else
+              MSG="chore: update state $TODAY"
+            fi
+            git commit -m "$MSG"
+            git pull --rebase
+            git push
+          fi
