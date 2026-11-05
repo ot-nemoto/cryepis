@@ -1,0 +1,85 @@
+{
+  "title": "勇者",
+  "hero": {"max_hp": 30, "atk": 5, "def": 2, "gold": 50, "potions": 1},
+  "level_up": {"hp": 10, "atk": 3, "def": 1, "exp_base": 6},
+  "potion": {"price": 20, "heal_rate": 0.5},
+  "rest_heal_rate": 0.25,
+  "step_rule": [[0, 0], [1, 1], [3, 2], [6, 3]],
+  "events": {"battle": 50, "treasure": 12, "merchant": 8, "nothing": 27, "rare": 3},
+  "areas": [
+    {
+      "name": "草原", "emoji": "🌱", "length": 20, "town": "はじまりの村",
+      "enemies": [
+        {"name": "スライム", "hp": 8, "atk": 4, "def": 0, "exp": 4, "gold": 4},
+        {"name": "おおねずみ", "hp": 11, "atk": 5, "def": 1, "exp": 5, "gold": 5},
+        {"name": "ゴブリン", "hp": 15, "atk": 6, "def": 1, "exp": 7, "gold": 8}
+      ],
+      "boss": {"name": "キングスライム", "hp": 45, "atk": 9, "def": 2, "exp": 36, "gold": 60},
+      "shop": [
+        {"name": "銅の剣", "slot": "weapon", "power": 3, "price": 40},
+        {"name": "革の鎧", "slot": "armor", "power": 2, "price": 30}
+      ],
+      "scenery": ["そよ風が草原を渡っていく", "遠くで羊が鳴いている", "道端に小さな花が咲いている"]
+    },
+    {
+      "name": "迷いの森", "emoji": "🌲", "length": 22, "town": "森の隠れ里",
+      "enemies": [
+        {"name": "ウルフ", "hp": 20, "atk": 9, "def": 2, "exp": 10, "gold": 10},
+        {"name": "トレント", "hp": 28, "atk": 10, "def": 4, "exp": 12, "gold": 12},
+        {"name": "ダークエルフ", "hp": 24, "atk": 12, "def": 3, "exp": 14, "gold": 15}
+      ],
+      "boss": {"name": "森の番人", "hp": 90, "atk": 15, "def": 5, "exp": 72, "gold": 120},
+      "shop": [
+        {"name": "鉄の剣", "slot": "weapon", "power": 7, "price": 150},
+        {"name": "鎖かたびら", "slot": "armor", "power": 5, "price": 120}
+      ],
+      "scenery": ["木漏れ日が揺れている", "同じ場所を回っている気がする…", "フクロウがこちらを見ている"]
+    },
+    {
+      "name": "地下洞窟", "emoji": "🦇", "length": 24, "town": "鉱山の町",
+      "enemies": [
+        {"name": "コウモリ", "hp": 24, "atk": 12, "def": 3, "exp": 12, "gold": 10},
+        {"name": "スケルトン", "hp": 36, "atk": 14, "def": 6, "exp": 17, "gold": 18},
+        {"name": "ゴーレム", "hp": 55, "atk": 15, "def": 9, "exp": 24, "gold": 25}
+      ],
+      "boss": {"name": "地底竜", "hp": 150, "atk": 18, "def": 8, "exp": 120, "gold": 200},
+      "shop": [
+        {"name": "鋼の剣", "slot": "weapon", "power": 12, "price": 400},
+        {"name": "鋼の鎧", "slot": "armor", "power": 9, "price": 350}
+      ],
+      "scenery": ["水滴の音が響いている", "壁の鉱石がかすかに光っている", "冷たい風が奥から吹いてくる"]
+    },
+    {
+      "name": "雪山", "emoji": "🗻", "length": 24, "town": "山小屋",
+      "enemies": [
+        {"name": "スノーウルフ", "hp": 45, "atk": 16, "def": 7, "exp": 22, "gold": 20},
+        {"name": "イエティ", "hp": 65, "atk": 18, "def": 9, "exp": 29, "gold": 28},
+        {"name": "氷の魔女", "hp": 55, "atk": 20, "def": 8, "exp": 34, "gold": 35}
+      ],
+      "boss": {"name": "フロストドラゴン", "hp": 230, "atk": 22, "def": 12, "exp": 192, "gold": 300},
+      "shop": [
+        {"name": "魔法の剣", "slot": "weapon", "power": 18, "price": 900},
+        {"name": "魔法の鎧", "slot": "armor", "power": 14, "price": 800}
+      ],
+      "scenery": ["吹雪で前が見えない", "足跡が雪に消えていく", "山頂に雲がかかっている"]
+    },
+    {
+      "name": "魔王城", "emoji": "🏰", "length": 20, "town": "城下の廃墟",
+      "enemies": [
+        {"name": "デーモン", "hp": 75, "atk": 21, "def": 12, "exp": 36, "gold": 40},
+        {"name": "ダークナイト", "hp": 90, "atk": 23, "def": 15, "exp": 43, "gold": 50},
+        {"name": "リッチ", "hp": 80, "atk": 24, "def": 12, "exp": 48, "gold": 55}
+      ],
+      "boss": {"name": "魔王", "hp": 380, "atk": 26, "def": 16, "exp": 0, "gold": 0},
+      "shop": [],
+      "scenery": ["禍々しい気配が満ちている", "燭台の火が揺れている", "どこからか笑い声が聞こえる"]
+    }
+  ],
+  "rare": [
+    {"text": "旅の僧侶に祝福された（最大HP+5）", "max_hp": 5},
+    {"text": "古い祠で力を授かった（攻撃+2）", "atk": 2},
+    {"text": "妖精に守りの加護を受けた（防御+2）", "def": 2},
+    {"text": "伝説の剣を見つけた！", "item": {"name": "伝説の剣", "slot": "weapon", "power": 25}, "min_area": 3}
+  ],
+  "rest": ["焚き火のそばで体を休めた", "宿で一日のんびり過ごした", "夢の中で冒険の続きを見た"]
+}
