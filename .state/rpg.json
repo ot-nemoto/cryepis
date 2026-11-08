@@ -1,8 +1,8 @@
 {
-  "day": 33,
+  "day": 34,
   "lap": 1,
-  "lap_day": 33,
-  "pos": 99,
+  "lap_day": 34,
+  "pos": 102,
   "boss_cleared": [
     "草原",
     "迷いの森",
@@ -10,13 +10,13 @@
     "雪山"
   ],
   "hero": {
-    "level": 8,
-    "exp": 356,
-    "max_hp": 100,
-    "hp": 50,
-    "base_atk": 28,
-    "base_def": 9,
-    "gold": 1087,
+    "level": 9,
+    "exp": 20,
+    "max_hp": 110,
+    "hp": 110,
+    "base_atk": 31,
+    "base_def": 10,
+    "gold": 1212,
     "potions": 2,
     "weapon": {
       "name": "銅の剣",
@@ -27,20 +27,26 @@
       "power": 14
     }
   },
-  "kills": 44,
+  "kills": 45,
   "deaths": 0,
-  "last_date": "2026-11-07",
+  "last_date": "2026-11-08",
   "last": {
-    "date": "2026-11-07",
-    "contributions": 81,
+    "date": "2026-11-08",
+    "contributions": 36,
     "steps": 3,
     "events": [
-      "リッチを倒した！ (+48EXP)",
       "どこからか笑い声が聞こえる",
-      "燭台の火が揺れている"
+      "宝箱から70Gを見つけた",
+      "リッチを倒した！ (+48EXP)",
+      "レベルが上がった！ Lv.9"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-08",
+      "contributions": 36,
+      "text": "どこからか笑い声が聞こえる / 宝箱から70Gを見つけた / リッチを倒した！ (+48EXP) / レベルが上がった！ Lv.9"
+    },
     {
       "date": "2026-11-07",
       "contributions": 81,
@@ -185,11 +191,6 @@
       "date": "2026-10-10",
       "contributions": 35,
       "text": "宝箱から12Gを見つけた / 旅の商人に出会った / おおねずみを倒した！ (+5EXP) / レベルが上がった！ Lv.3"
-    },
-    {
-      "date": "2026-10-09",
-      "contributions": 62,
-      "text": "おおねずみを倒した！ (+5EXP) / そよ風が草原を渡っていく / スライムを倒した！ (+4EXP)"
     }
   ],
   "records": []
