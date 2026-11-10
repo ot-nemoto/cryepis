@@ -1,8 +1,8 @@
 {
-  "day": 35,
+  "day": 36,
   "lap": 1,
-  "lap_day": 35,
-  "pos": 105,
+  "lap_day": 36,
+  "pos": 108,
   "boss_cleared": [
     "草原",
     "迷いの森",
@@ -11,13 +11,13 @@
   ],
   "hero": {
     "level": 9,
-    "exp": 142,
+    "exp": 221,
     "max_hp": 110,
-    "hp": 24,
+    "hp": 34,
     "base_atk": 31,
     "base_def": 10,
-    "gold": 1352,
-    "potions": 2,
+    "gold": 1442,
+    "potions": 1,
     "weapon": {
       "name": "銅の剣",
       "power": 3
@@ -27,20 +27,25 @@
       "power": 14
     }
   },
-  "kills": 48,
+  "kills": 50,
   "deaths": 0,
-  "last_date": "2026-11-09",
+  "last_date": "2026-11-10",
   "last": {
-    "date": "2026-11-09",
-    "contributions": 44,
+    "date": "2026-11-10",
+    "contributions": 34,
     "steps": 3,
     "events": [
-      "ダークナイトを倒した！ (+43EXP)",
       "デーモンを倒した！ (+36EXP)",
+      "どこからか笑い声が聞こえる",
       "ダークナイトを倒した！ (+43EXP)"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-10",
+      "contributions": 34,
+      "text": "デーモンを倒した！ (+36EXP) / どこからか笑い声が聞こえる / ダークナイトを倒した！ (+43EXP)"
+    },
     {
       "date": "2026-11-09",
       "contributions": 44,
@@ -185,11 +190,6 @@
       "date": "2026-10-12",
       "contributions": 85,
       "text": "キングスライムを討ち取った！！ (+36EXP) / 森の隠れ里で休んだ、鎖かたびらを買った / 同じ場所を回っている気がする…"
-    },
-    {
-      "date": "2026-10-11",
-      "contributions": 63,
-      "text": "そよ風が草原を渡っていく / 遠くで羊が鳴いている / スライムを倒した！ (+4EXP)"
     }
   ],
   "records": []
