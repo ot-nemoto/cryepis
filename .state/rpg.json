@@ -1,8 +1,8 @@
 {
-  "day": 38,
+  "day": 39,
   "lap": 1,
-  "lap_day": 38,
-  "pos": 93,
+  "lap_day": 39,
+  "pos": 96,
   "boss_cleared": [
     "草原",
     "迷いの森",
@@ -11,36 +11,41 @@
   ],
   "hero": {
     "level": 9,
-    "exp": 264,
+    "exp": 360,
     "max_hp": 110,
-    "hp": 76,
+    "hp": 40,
     "base_atk": 31,
     "base_def": 10,
-    "gold": 801,
+    "gold": 911,
     "potions": 2,
     "weapon": {
-      "name": "銅の剣",
-      "power": 3
+      "name": "伝説の剣",
+      "power": 25
     },
     "armor": {
       "name": "魔法の鎧",
       "power": 14
     }
   },
-  "kills": 51,
+  "kills": 53,
   "deaths": 1,
-  "last_date": "2026-11-12",
+  "last_date": "2026-11-13",
   "last": {
-    "date": "2026-11-12",
-    "contributions": 82,
+    "date": "2026-11-13",
+    "contributions": 58,
     "steps": 3,
     "events": [
-      "宝箱から70Gを見つけた",
-      "ダークナイトを倒した！ (+43EXP)",
-      "禍々しい気配が満ちている"
+      "リッチを倒した！ (+48EXP)",
+      "伝説の剣を見つけた！",
+      "リッチを倒した！ (+48EXP)"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-13",
+      "contributions": 58,
+      "text": "リッチを倒した！ (+48EXP) / 伝説の剣を見つけた！ / リッチを倒した！ (+48EXP)"
+    },
     {
       "date": "2026-11-12",
       "contributions": 82,
@@ -185,11 +190,6 @@
       "date": "2026-10-15",
       "contributions": 96,
       "text": "ウルフを倒した！ (+10EXP) / 木漏れ日が揺れている / ダークエルフを倒した！ (+14EXP)"
-    },
-    {
-      "date": "2026-10-14",
-      "contributions": 112,
-      "text": "トレントを倒した！ (+12EXP) / レベルが上がった！ Lv.4 / 木漏れ日が揺れている / ウルフを倒した！ (+10EXP)"
     }
   ],
   "records": []
