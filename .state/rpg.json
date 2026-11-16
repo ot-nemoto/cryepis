@@ -1,8 +1,8 @@
 {
-  "day": 41,
+  "day": 42,
   "lap": 1,
-  "lap_day": 41,
-  "pos": 102,
+  "lap_day": 42,
+  "pos": 105,
   "boss_cleared": [
     "草原",
     "迷いの森",
@@ -10,13 +10,13 @@
     "雪山"
   ],
   "hero": {
-    "level": 9,
-    "exp": 439,
-    "max_hp": 110,
-    "hp": 19,
-    "base_atk": 31,
-    "base_def": 10,
-    "gold": 981,
+    "level": 10,
+    "exp": 25,
+    "max_hp": 120,
+    "hp": 120,
+    "base_atk": 34,
+    "base_def": 11,
+    "gold": 1061,
     "potions": 3,
     "weapon": {
       "name": "伝説の剣",
@@ -27,20 +27,26 @@
       "power": 14
     }
   },
-  "kills": 55,
+  "kills": 57,
   "deaths": 1,
-  "last_date": "2026-11-15",
+  "last_date": "2026-11-16",
   "last": {
-    "date": "2026-11-15",
-    "contributions": 26,
+    "date": "2026-11-16",
+    "contributions": 28,
     "steps": 3,
     "events": [
       "禍々しい気配が満ちている",
-      "燭台の火が揺れている",
-      "デーモンを倒した！ (+36EXP)"
+      "デーモンを倒した！ (+36EXP)",
+      "デーモンを倒した！ (+36EXP)",
+      "レベルが上がった！ Lv.10"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-16",
+      "contributions": 28,
+      "text": "禍々しい気配が満ちている / デーモンを倒した！ (+36EXP) / デーモンを倒した！ (+36EXP) / レベルが上がった！ Lv.10"
+    },
     {
       "date": "2026-11-15",
       "contributions": 26,
@@ -185,11 +191,6 @@
       "date": "2026-10-18",
       "contributions": 17,
       "text": "同じ場所を回っている気がする… / ダークエルフを倒した！ (+14EXP) / 宝箱から28Gを見つけた"
-    },
-    {
-      "date": "2026-10-17",
-      "contributions": 11,
-      "text": "木漏れ日が揺れている / トレントを倒した！ (+12EXP) / 木漏れ日が揺れている"
     }
   ],
   "records": []
