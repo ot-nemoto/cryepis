@@ -242,6 +242,11 @@ class HeroesTest(unittest.TestCase):
         self.assertLessEqual(common.width(rpg.clean_name("あ" * 30)), rpg.NAME_WIDTH_MAX)
         with self.assertRaises(SystemExit):
             rpg.clean_name(" \t ")
+        with self.assertRaises(SystemExit):
+            rpg.clean_name("h12")  # ID と紛らわしい
+
+    def test_md_escape(self):
+        self.assertEqual(rpg.md_escape("[x](u)<b>"), r"\[x\]\(u\)\<b\>")
 
     def test_new_game_registers_hero_and_creates_gist(self):
         create = self.new_game("アリス")
@@ -320,6 +325,21 @@ class HeroesTest(unittest.TestCase):
         self.assertEqual(gist.call_count, 2)
         warn.assert_called_once()
         self.assertEqual(rpg.load_state(WORLD, rpg.hero_state_path("h2"))["day"], 1)
+
+    def test_retire_matches_id_first(self):
+        self.new_game("アリス", "g1")
+        self.new_game("ボブ", "g2")
+        self.run_main(["--retire", "h2"])
+        self.assertEqual([h["active"] for h in rpg.load_heroes()], [True, False])
+
+    def test_missing_state_file_is_an_error_not_a_reset(self):
+        self.new_game("アリス")
+        rpg.hero_state_path("h1").unlink()
+        with mock.patch.object(common, "update_gist") as gist, mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"}), 1)
+        gist.assert_not_called()
+        warn.assert_called_once()
+        self.assertFalse(rpg.hero_state_path("h1").exists())
 
     def test_no_heroes_is_a_noop(self):
         with mock.patch.object(common, "update_gist") as gist:

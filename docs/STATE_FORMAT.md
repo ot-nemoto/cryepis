@@ -40,7 +40,7 @@
 
 ---
 
-## heroes/&lt;id&gt;.json
+## `heroes/<id>.json`
 
 勇者ごとの状態です（テキスト RPG は [README](../README.md#勇者の冒険テキスト-rpg)）。`scripts/rpg.py` が毎日 1 日分進めて上書きします。
 世界の設定（エリア・敵・アイテム）は `rpg_world.json` にあり、ここには勇者の状態だけを持ちます。

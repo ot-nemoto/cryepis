@@ -25,6 +25,7 @@ import argparse
 import json
 import os
 import random
+import re
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -120,7 +121,14 @@ def clean_name(raw: str) -> str:
     name = name.strip()
     if not name:
         raise SystemExit("勇者の名前を指定してください")
+    if re.fullmatch(r"h\d+", name):  # 引退の指定で ID と取り違えないように
+        raise SystemExit(f"「{name}」は勇者の ID と紛らわしいので、名前には使えません")
     return name
+
+
+def md_escape(text: str) -> str:
+    """GitHub Actions のサマリー（Markdown）に名前をそのまま出さないよう、記号をエスケープする。"""
+    return re.sub(r"([\\`*_{}\[\]<>()#+\-.!|~&])", r"\\\1", text)
 
 
 def area_at(world: dict, pos: int) -> dict:
@@ -437,11 +445,12 @@ def new_game(world: dict, raw_name: str, today: date) -> int:
     hero_id = f"h{max((int(h['id'][1:]) for h in heroes), default=0) + 1}"
     state = new_state(world, hero_id, name)
     gist = common.create_gist(token, FILENAME, build_text(world, state), GIST_DESCRIPTION)
+    print(f"Gist を作りました: {gist['html_url']}")  # 以降の保存・コミットが失敗しても、孤立した Gist を探せるように
     heroes.append({"id": hero_id, "name": name, "gist_id": gist["id"], "gist_url": gist["html_url"],
                    "created": today.isoformat(), "active": True})
     save_state(state, hero_state_path(hero_id))
     save_heroes(heroes)
-    write_summary(f"## 勇者「{name}」({hero_id}) が旅立ちます\n\nGist: {gist['html_url']}\n\n"
+    write_summary(f"## 勇者「{md_escape(name)}」({hero_id}) が旅立ちます\n\nGist: {gist['html_url']}\n\n"
                   "冒険は次回の毎日の実行から進みます。プロフィールの **Customize your pins** で Gist を Pin できます。")
     return 0
 
@@ -449,17 +458,20 @@ def new_game(world: dict, raw_name: str, today: date) -> int:
 def retire(key: str) -> int:
     """ID か名前で勇者を引退させる（Gist と状態は残す）。"""
     heroes = load_heroes()
-    for h in heroes:
-        if h["active"] and key in (h["id"], h["name"]):
-            h["active"] = False
-            save_heroes(heroes)
-            write_summary(f"勇者「{h['name']}」({h['id']}) を引退させました（Gist: {h['gist_url']}）")
-            return 0
+    active = [h for h in heroes if h["active"]]
+    # ID を優先して照合する（名前が ID と同じ勇者は作れない）
+    for h in [h for h in active if h["id"] == key] + [h for h in active if h["name"] == key]:
+        h["active"] = False
+        save_heroes(heroes)
+        write_summary(f"勇者「{md_escape(h['name'])}」({h['id']}) を引退させました（Gist: {h['gist_url']}）")
+        return 0
     raise SystemExit(f"引退させられる勇者「{key}」がいません（ID か名前で、現役の勇者を指定してください）")
 
 
 def run_hero(world: dict, hero: dict, today: date, steps: int | None, dry_run: bool, token: str | None) -> None:
     path = hero_state_path(hero["id"])
+    if not path.exists():  # 登録済みの勇者の状態が無いのは異常。黙って最初からにしない
+        raise SystemExit(f"{path} がありません（削除やマージで消えた可能性があります）")
     state = load_state(world, path, hero["id"], hero["name"])
     days = pending_days(state, today)
     if not days:
