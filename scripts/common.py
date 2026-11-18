@@ -11,13 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 JST = timezone(timedelta(hours=9))
-RETRY_WAITS = (2, 5)  # 一時的なエラーの再試行までの待ち秒数
 # Pinned カードは 1 行 55 桁前後で切れる。行（見出し以外）はこの桁数に収める
 LINE_MAX = 49
-
-
-class FetchError(Exception):
-    """再試行してもデータを取得できなかった。"""
 
 
 def warn(msg: str) -> None:

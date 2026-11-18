@@ -1,0 +1,49 @@
+name: Retire hero
+
+# 勇者を引退させる: 勇者の ID（h1 など）か名前を入れて手動実行すると、勇者管理シート（.state/heroes.json）で
+# その勇者が現役ではなくなり、毎日の更新の対象から外れる（Gist と状態は残る。枠が 1 つ空く）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      hero:
+        description: "引退させる勇者の ID（h1 など）または名前"
+        type: string
+        required: true
+
+concurrency:
+  group: hero-adventure
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Test
+        run: python -m unittest discover -s tests
+
+      - name: Retire hero
+        env:
+          HERO: ${{ inputs.hero }}
+        run: python scripts/rpg.py --retire "$HERO"
+
+      - name: Commit state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A .state
+          git commit -m "chore: retire hero"
+          git pull --rebase
+          git push

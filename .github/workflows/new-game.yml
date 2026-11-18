@@ -1,0 +1,53 @@
+name: New game (add a hero)
+
+# 新しい勇者を登録する: 勇者の名前を入れて手動実行すると、新しい public Gist を作り、
+# 勇者管理シート（.state/heroes.json）と勇者の状態（.state/heroes/<id>.json）を master にコミットする。
+# 勇者は最大 6 人（引退した勇者は数えない）。冒険は次回の毎日の実行（hero-adventure.yml）から進む。
+
+on:
+  workflow_dispatch:
+    inputs:
+      hero_name:
+        description: "勇者の名前（表示幅 16 まで（全角 8 文字ぶん）。超えた分は切り捨てる）"
+        type: string
+        required: true
+
+# 毎日の実行・引退と同じグループにして、.state/ への書き込みを直列にする
+concurrency:
+  group: hero-adventure
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  new-game:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Test
+        run: python -m unittest discover -s tests
+
+      # 入力は環境変数経由で渡す（シェルに直接展開しない）
+      - name: Create hero and gist
+        env:
+          GIST_PAT: ${{ secrets.GIST_PAT }}
+          HERO_NAME: ${{ inputs.hero_name }}
+        run: python scripts/rpg.py --new-game "$HERO_NAME"
+
+      - name: Commit state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A .state
+          git commit -m "chore: new hero"
+          git pull --rebase
+          git push

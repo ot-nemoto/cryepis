@@ -1,4 +1,3 @@
-import copy
 import random
 import sys
 import tempfile
@@ -16,10 +15,10 @@ WORLD = rpg.load_world()
 DAY = date(2026, 10, 6)
 
 
-def play(days, contributions=3, seed=0):
+def play(days, steps=2, seed=0):
     state = rpg.new_state(WORLD)
     for i in range(days):
-        rpg.advance(WORLD, state, DAY + timedelta(days=i + seed * 1000), contributions)
+        rpg.advance(WORLD, state, DAY + timedelta(days=i + seed * 1000), steps)
     return state
 
 
@@ -31,18 +30,29 @@ class WorldTest(unittest.TestCase):
             self.assertEqual(a["end"] + 1, b["start"])
         self.assertEqual(WORLD["total"], sum(a["length"] for a in areas))
 
-    def test_steps_for(self):
-        self.assertEqual([rpg.steps_for(WORLD, c) for c in (0, 1, 2, 3, 5, 6, 40)], [0, 1, 1, 2, 2, 3, 3])
+    def test_roll_steps_follows_weights(self):
+        rng = random.Random(0)
+        rolls = [rpg.roll_steps(WORLD, rng) for _ in range(2000)]
+        self.assertEqual(set(rolls), {0, 1, 2, 3})
+        self.assertGreater(rolls.count(1), rolls.count(3))
 
 
 class AdvanceTest(unittest.TestCase):
     def test_same_day_is_processed_once_and_deterministic(self):
         a, b = rpg.new_state(WORLD), rpg.new_state(WORLD)
-        self.assertTrue(rpg.advance(WORLD, a, DAY, 3))
-        self.assertFalse(rpg.advance(WORLD, a, DAY, 3))  # 同じ日は進めない
-        rpg.advance(WORLD, b, DAY, 3)
+        self.assertTrue(rpg.advance(WORLD, a, DAY, 2))
+        self.assertFalse(rpg.advance(WORLD, a, DAY, 2))  # 同じ日は進めない
+        rpg.advance(WORLD, b, DAY, 2)
         self.assertEqual(a, b)  # 同じ日・同じ周回なら同じ結果
         self.assertEqual(a["day"], 1)
+
+    def test_hero_id_changes_the_dice(self):
+        results = set()
+        for i in range(8):
+            state = rpg.new_state(WORLD, f"h{i}")
+            rpg.advance(WORLD, state, DAY)
+            results.add(state["last"]["steps"])
+        self.assertGreater(len(results), 1)  # 勇者ごとに歩数が違う日がある
 
     def test_rest_day_heals_and_does_not_move(self):
         state = rpg.new_state(WORLD)
@@ -60,12 +70,12 @@ class AdvanceTest(unittest.TestCase):
 
     def test_past_date_is_not_processed(self):
         state = play(3)
-        self.assertFalse(rpg.advance(WORLD, state, DAY, 3))
+        self.assertFalse(rpg.advance(WORLD, state, DAY, 2))
         self.assertEqual(state["day"], 3)
 
     def test_moves_by_steps(self):
         state = rpg.new_state(WORLD)
-        rpg.advance(WORLD, state, DAY, 6)
+        rpg.advance(WORLD, state, DAY, 3)
         self.assertEqual(state["pos"], 3)
 
     def test_boss_blocks_until_defeated(self):
@@ -74,7 +84,7 @@ class AdvanceTest(unittest.TestCase):
         state["pos"] = area["end"] - 1
         state["hero"]["hp"] = 1
         state["hero"]["potions"] = 0
-        rpg.advance(WORLD, state, DAY, 6)  # 弱いまま挑んで負ける
+        rpg.advance(WORLD, state, DAY, 3)  # 弱いまま挑んで負ける
         self.assertEqual(state["pos"], area["start"])  # 町に戻される
         self.assertEqual(state["deaths"], 1)
         self.assertNotIn(area["name"], state["boss_cleared"])
@@ -123,7 +133,7 @@ class AdvanceTest(unittest.TestCase):
         self.assertEqual(state["lap_day"], 1)
 
     def test_journal_is_capped(self):
-        state = play(rpg.JOURNAL_DAYS + 5, contributions=0)
+        state = play(rpg.JOURNAL_DAYS + 5, steps=0)
         self.assertEqual(len(state["journal"]), rpg.JOURNAL_DAYS)
         self.assertEqual(state["journal"][0]["date"], (DAY + timedelta(days=rpg.JOURNAL_DAYS + 4)).isoformat())
 
@@ -132,9 +142,9 @@ class BalanceTest(unittest.TestCase):
     def test_average_player_clears_in_about_three_months(self):
         days, deaths = [], []
         for seed in range(40):
-            rng, state, d = random.Random(seed), rpg.new_state(WORLD), DAY + timedelta(days=seed * 1000)
+            state, d = rpg.new_state(WORLD, f"h{seed}"), DAY + timedelta(days=seed * 1000)
             while state["lap"] == 1 and state["day"] < 1000:
-                rpg.advance(WORLD, state, d, rng.choices([0, 1, 3, 6], [30, 30, 25, 15])[0])
+                rpg.advance(WORLD, state, d, None)
                 d += timedelta(days=1)
             self.assertEqual(state["lap"], 2, "1000 日でクリアできない")
             days.append(state["records"][0]["days"])
@@ -146,7 +156,7 @@ class BalanceTest(unittest.TestCase):
 
 class DisplayTest(unittest.TestCase):
     def test_card_fits_and_has_five_lines(self):
-        for state in (rpg.new_state(WORLD), play(1), play(40), play(120, contributions=6)):
+        for state in (rpg.new_state(WORLD), play(1), play(40), play(120, steps=3)):
             lines = rpg.build_text(WORLD, state).splitlines()
             for line in lines[:5]:
                 self.assertLessEqual(common.width(line), common.LINE_MAX, line)
@@ -173,20 +183,21 @@ class StateTest(unittest.TestCase):
     def test_save_and_load(self):
         state = play(3)
         with tempfile.TemporaryDirectory() as d:
-            path = Path(d) / "rpg.json"
+            path = Path(d) / "h1.json"
             rpg.save_state(state, path)
             self.assertEqual(rpg.load_state(WORLD, path), state)
             path.write_text("<<<<<<< HEAD")
             with self.assertRaises(SystemExit):
                 rpg.load_state(WORLD, path)
-        self.assertEqual(rpg.load_state(WORLD, Path("/nonexistent/rpg.json")), rpg.new_state(WORLD))
+        loaded = rpg.load_state(WORLD, Path("/nonexistent/h9.json"), "h9", "アリス")
+        self.assertEqual(loaded, rpg.new_state(WORLD, "h9", "アリス"))
 
     def test_load_fills_missing_keys_and_clamps_to_the_world(self):
         state = play(3)
         del state["kills"], state["hero"]["potions"]
         state.update(pos=WORLD["total"] + 5, boss_cleared=["草原", "消えたエリア"])
         with tempfile.TemporaryDirectory() as d:
-            path = Path(d) / "rpg.json"
+            path = Path(d) / "h1.json"
             rpg.save_state(state, path)
             loaded = rpg.load_state(WORLD, path)
         self.assertEqual((loaded["kills"], loaded["hero"]["potions"]), (0, WORLD["hero"]["potions"]))
@@ -203,118 +214,144 @@ class StateTest(unittest.TestCase):
         self.assertEqual(rpg.pending_days(state, DAY), [])
 
 
-class ContributionsTest(unittest.TestCase):
-    def test_sums_contributions_and_falls_back_to_next_token(self):
-        ok = {"data": {"user": {"contributionsCollection": {
-            "totalCommitContributions": 3, "totalIssueContributions": 1, "totalPullRequestContributions": 1,
-            "totalPullRequestReviewContributions": 0, "restrictedContributionsCount": 2}}}}
-        denied = {"errors": [{"message": "Resource not accessible by integration"}]}
-        with mock.patch.object(common, "api", side_effect=[denied, ok]) as api:
-            self.assertEqual(rpg.fetch_contributions("me", DAY, ["t1", "t2"]), 7)
-        body = api.call_args.args[3]
-        self.assertEqual(body["variables"]["from"], "2026-10-06T00:00:00+09:00")  # JST の 1 日
-        self.assertEqual(body["variables"]["to"], "2026-10-06T23:59:59+09:00")
+class HeroesTest(unittest.TestCase):
+    """勇者管理シート（heroes.json）と状態ファイルを一時ディレクトリに向けて、main を動かす。"""
 
-    def test_retries_server_errors(self):
-        ok = {"data": {"user": {"contributionsCollection": {"totalCommitContributions": 2}}}}
-        err = rpg.urllib.error.HTTPError("u", 502, "bad", {}, None)
-        with mock.patch.object(common, "api", side_effect=[err, ok]), mock.patch.object(rpg.time_module, "sleep"):
-            self.assertEqual(rpg.fetch_contributions("me", DAY, ["t1"]), 2)
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = Path(tmp.name)
+        for target, value in (("HEROES_PATH", self.dir / "heroes.json"), ("HERO_DIR", self.dir / "heroes")):
+            patcher = mock.patch.object(rpg, target, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
-    def test_all_tokens_fail(self):
-        with mock.patch.object(common, "api", side_effect=OSError("down")) as api, \
-             mock.patch.object(rpg.time_module, "sleep"), self.assertRaises(common.FetchError):
-            rpg.fetch_contributions("me", DAY, ["t1"])
-        self.assertEqual(api.call_count, len(common.RETRY_WAITS) + 1)  # 通信エラーは再試行してから諦める
-        with self.assertRaises(common.FetchError):
-            rpg.fetch_contributions("me", DAY, [])
-
-
-class MainTest(unittest.TestCase):
-    def run_main(self, state, argv, env=None):
-        saved = {}
-        with mock.patch.object(rpg, "load_state", return_value=state), \
-             mock.patch.object(rpg, "save_state", side_effect=lambda s: saved.setdefault("s", copy.deepcopy(s))), \
-             mock.patch.object(common, "update_gist") as gist, \
-             mock.patch.object(sys, "argv", ["rpg.py", *argv]), mock.patch.dict("os.environ", env or {}, clear=True), \
+    def run_main(self, argv, env=None):
+        with mock.patch.object(sys, "argv", ["rpg.py", *argv]), mock.patch.dict("os.environ", env or {}, clear=True), \
              mock.patch("sys.stdout"):
-            rpg.main()
-        return saved.get("s"), gist
+            return rpg.main()
 
-    def test_advances_saves_and_updates_gist(self):
-        saved, gist = self.run_main(rpg.new_state(WORLD), ["--date", "2026-10-06", "--contributions", "3"],
-                                    {"GIST_ID_RPG": "g", "GIST_PAT": "p"})
-        self.assertEqual(saved["day"], 1)
-        self.assertEqual(gist.call_args.args[:3], ("g", "p", rpg.FILENAME))
+    def new_game(self, name, gist_id="g1"):
+        gist = {"id": gist_id, "html_url": f"https://g/{gist_id}"}
+        with mock.patch.object(common, "create_gist", return_value=gist) as create:
+            self.run_main(["--new-game", name], {"GIST_PAT": "p"})
+        return create
 
-    def test_already_processed_only_updates_gist(self):
-        state = play(1)
-        saved, gist = self.run_main(state, ["--date", DAY.isoformat()], {"GIST_ID_RPG": "g", "GIST_PAT": "p"})
-        self.assertIsNone(saved)
-        gist.assert_called_once()
+    def test_clean_name(self):
+        self.assertEqual(rpg.clean_name("  アリス\n"), "アリス")
+        self.assertLessEqual(common.width(rpg.clean_name("あ" * 30)), rpg.NAME_WIDTH_MAX)
+        with self.assertRaises(SystemExit):
+            rpg.clean_name(" \t ")
+        with self.assertRaises(SystemExit):
+            rpg.clean_name("h12")  # ID と紛らわしい
 
-    def test_catches_up_missed_days(self):
-        state = play(1)  # last_date = DAY
-        today = DAY + timedelta(days=3)
-        with mock.patch.object(rpg, "fetch_contributions", return_value=3) as fetch:
-            saved, gist = self.run_main(state, ["--date", today.isoformat()],
-                                        {"RPG_USER": "me", "GIST_ID_RPG": "g", "GIST_PAT": "p"})
-        self.assertEqual([c.args[1] for c in fetch.call_args_list],
-                         [DAY, DAY + timedelta(days=1), DAY + timedelta(days=2)])  # 各日の前日の分
-        self.assertEqual((saved["day"], saved["last_date"]), (4, today.isoformat()))
-        gist.assert_called_once()
+    def test_md_escape(self):
+        self.assertEqual(rpg.md_escape("[x](u)<b>"), r"\[x\]\(u\)\<b\>")
 
-    def test_stops_at_the_first_failed_day(self):
-        state = play(1)
-        with mock.patch.object(rpg, "fetch_contributions", side_effect=[3, common.FetchError("x")]), \
-             mock.patch.object(common, "warn"):
-            saved, _ = self.run_main(state, ["--date", (DAY + timedelta(days=3)).isoformat()],
-                                     {"RPG_USER": "me", "GIST_ID_RPG": "g", "GIST_PAT": "p"})
-        self.assertEqual(saved["last_date"], (DAY + timedelta(days=1)).isoformat())  # 失敗した日から次回やり直す
-
-    def test_fetch_failure_skips_the_day(self):
-        with mock.patch.object(rpg, "fetch_contributions", side_effect=common.FetchError("x")), \
-             mock.patch.object(common, "warn"):
-            saved, gist = self.run_main(rpg.new_state(WORLD), ["--date", "2026-10-06"],
-                                        {"RPG_USER": "me", "GIST_ID_RPG": "g", "GIST_PAT": "p"})
-        self.assertIsNone(saved)
-        gist.assert_not_called()
-
-    def test_create_gist_writes_summary(self):
-        with tempfile.TemporaryDirectory() as d:
-            summary = Path(d) / "summary.md"
-            with mock.patch.object(common, "create_gist", return_value={"id": "abc", "html_url": "https://g/abc"}) as create:
-                saved, gist = self.run_main(rpg.new_state(WORLD), ["--create-gist"],
-                                            {"GIST_PAT": "p", "GITHUB_STEP_SUMMARY": str(summary)})
-            self.assertIn("`abc`", summary.read_text(encoding="utf-8"))
+    def test_new_game_registers_hero_and_creates_gist(self):
+        create = self.new_game("アリス")
         token, filename, content, _ = create.call_args.args
         self.assertEqual((token, filename), ("p", rpg.FILENAME))
-        self.assertTrue(content.startswith("⚔️ Day 0"))
-        self.assertIsNone(saved)  # 冒険は進めない
-        gist.assert_not_called()
+        self.assertTrue(content.startswith("⚔️ Day 0  アリス Lv.1"))
+        (hero,) = rpg.load_heroes()
+        self.assertEqual((hero["id"], hero["name"], hero["gist_id"], hero["active"]), ("h1", "アリス", "g1", True))
+        self.assertEqual(rpg.load_state(WORLD, rpg.hero_state_path("h1"))["name"], "アリス")
 
-    def test_create_gist_refuses_when_already_set(self):
-        with mock.patch.object(common, "create_gist") as create, self.assertRaises(SystemExit):
-            self.run_main(rpg.new_state(WORLD), ["--create-gist"], {"GIST_PAT": "p", "GIST_ID_RPG": "g"})
-        create.assert_not_called()
-
-    def test_create_gist_needs_pat_and_rejects_dry_run(self):
+    def test_new_game_needs_pat_and_valid_name(self):
         with mock.patch.object(common, "create_gist") as create:
             with self.assertRaises(SystemExit):
-                self.run_main(rpg.new_state(WORLD), ["--create-gist"], {"GIST_ID_RPG": ""})  # 未設定の変数は空文字
+                self.run_main(["--new-game", "アリス"])  # GIST_PAT なし
+            with self.assertRaises(SystemExit):
+                self.run_main(["--new-game", " "], {"GIST_PAT": "p"})
             with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
-                self.run_main(rpg.new_state(WORLD), ["--create-gist", "--dry-run"], {"GIST_PAT": "p"})
+                self.run_main(["--new-game", "アリス", "--dry-run"], {"GIST_PAT": "p"})
         create.assert_not_called()
+        self.assertEqual(rpg.load_heroes(), [])
 
-    def test_create_gist_when_variable_is_empty(self):
-        with mock.patch.object(common, "create_gist", return_value={"id": "abc", "html_url": "u"}) as create:
-            self.run_main(rpg.new_state(WORLD), ["--create-gist"], {"GIST_PAT": "p", "GIST_ID_RPG": ""})
-        create.assert_called_once()
+    def test_new_game_rejects_duplicates_and_more_than_max(self):
+        self.new_game("アリス", "g1")
+        with mock.patch.object(common, "create_gist") as create, self.assertRaises(SystemExit):
+            self.run_main(["--new-game", "アリス"], {"GIST_PAT": "p"})
+        create.assert_not_called()
+        for i in range(2, rpg.MAX_HEROES + 1):
+            self.new_game(f"勇者{i}", f"g{i}")
+        with mock.patch.object(common, "create_gist") as create, self.assertRaises(SystemExit):
+            self.run_main(["--new-game", "あふれた勇者"], {"GIST_PAT": "p"})
+        create.assert_not_called()
+        self.assertEqual(len(rpg.load_heroes()), rpg.MAX_HEROES)
+
+    def test_retire_frees_a_slot_and_ids_are_not_reused(self):
+        for i in range(1, rpg.MAX_HEROES + 1):
+            self.new_game(f"勇者{i}", f"g{i}")
+        self.run_main(["--retire", "勇者2"])
+        self.assertEqual([h["active"] for h in rpg.load_heroes()], [True, False, True, True, True, True])
+        self.new_game("新人", "g7")
+        self.assertEqual(rpg.load_heroes()[-1]["id"], "h7")
+        with self.assertRaises(SystemExit):
+            self.run_main(["--retire", "勇者2"])  # 引退済み
+
+    def test_daily_advances_every_active_hero_and_updates_each_gist(self):
+        self.new_game("アリス", "g1")
+        self.new_game("ボブ", "g2")
+        self.new_game("引退者", "g3")
+        self.run_main(["--retire", "h3"])
+        with mock.patch.object(common, "update_gist") as gist:
+            self.assertEqual(self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"}), 0)
+        self.assertEqual([c.args[:3] for c in gist.call_args_list],
+                         [("g1", "p", rpg.FILENAME), ("g2", "p", rpg.FILENAME)])
+        self.assertEqual(rpg.load_state(WORLD, rpg.hero_state_path("h1"))["day"], 1)
+        self.assertEqual(rpg.load_state(WORLD, rpg.hero_state_path("h3"))["day"], 0)  # 引退者は進まない
+
+    def test_daily_is_idempotent_and_catches_up(self):
+        self.new_game("アリス")
+        with mock.patch.object(common, "update_gist"):
+            self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"})
+            self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"})  # 同じ日は進まない
+            self.assertEqual(rpg.load_state(WORLD, rpg.hero_state_path("h1"))["day"], 1)
+            self.run_main(["--date", "2026-10-09"], {"GIST_PAT": "p"})  # 3 日空いた
+        self.assertEqual(rpg.load_state(WORLD, rpg.hero_state_path("h1"))["day"], 4)
+
+    def test_one_failing_hero_does_not_stop_the_others(self):
+        self.new_game("アリス", "g1")
+        self.new_game("ボブ", "g2")
+
+        def fail_first(gist_id, *_):
+            if gist_id == "g1":
+                raise SystemExit("Gist API エラー 404")
+
+        with mock.patch.object(common, "update_gist", side_effect=fail_first) as gist, \
+             mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"}), 1)
+        self.assertEqual(gist.call_count, 2)
+        warn.assert_called_once()
+        self.assertEqual(rpg.load_state(WORLD, rpg.hero_state_path("h2"))["day"], 1)
+
+    def test_retire_matches_id_first(self):
+        self.new_game("アリス", "g1")
+        self.new_game("ボブ", "g2")
+        self.run_main(["--retire", "h2"])
+        self.assertEqual([h["active"] for h in rpg.load_heroes()], [True, False])
+
+    def test_missing_state_file_is_an_error_not_a_reset(self):
+        self.new_game("アリス")
+        rpg.hero_state_path("h1").unlink()
+        with mock.patch.object(common, "update_gist") as gist, mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"}), 1)
+        gist.assert_not_called()
+        warn.assert_called_once()
+        self.assertFalse(rpg.hero_state_path("h1").exists())
+
+    def test_no_heroes_is_a_noop(self):
+        with mock.patch.object(common, "update_gist") as gist:
+            self.assertEqual(self.run_main([], {"GIST_PAT": "p"}), 0)
+        gist.assert_not_called()
 
     def test_dry_run_writes_nothing(self):
-        saved, gist = self.run_main(rpg.new_state(WORLD), ["--dry-run", "--contributions", "1"])
-        self.assertIsNone(saved)
+        self.new_game("アリス")
+        with mock.patch.object(common, "update_gist") as gist:
+            self.run_main(["--dry-run", "--steps", "1"])
         gist.assert_not_called()
+        self.assertEqual(rpg.load_state(WORLD, rpg.hero_state_path("h1"))["day"], 0)
 
 
 if __name__ == "__main__":
