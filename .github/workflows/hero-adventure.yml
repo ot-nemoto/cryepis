@@ -1,25 +1,20 @@
 name: Advance hero adventure (text RPG)
 
-# テキスト RPG を 1 日分進め、Pinned Gist を更新する（前日のコントリビューション数で進む歩数が決まる）。
-# 状態は .state/rpg.json に保存し、最後に master にコミットする。
+# 現役の勇者（.state/heroes.json）を全員 1 日分進め、それぞれの Gist を更新する（進む歩数は乱数で決まる）。
+# 状態は .state/heroes/<id>.json に保存し、最後に master にコミットする。勇者は new-game.yml で増やす。
 
 on:
   schedule:
     # cron は UTC。JST 7:17 に実行（混雑する毎時 0 分を避けている）
     - cron: "17 22 * * *"
   workflow_dispatch:
-    inputs:
-      create_gist:
-        description: "冒険を始めるための Gist を作る（作るだけで冒険は進めない。ID は実行結果のサマリーに出る）"
-        type: boolean
-        default: false
 
 concurrency:
   group: hero-adventure
   cancel-in-progress: false
 
 permissions:
-  contents: write # RPG の状態（.state/rpg.json）と keepalive（.state/last-run）をコミットするために必要
+  contents: write # RPG の状態（.state/heroes*）と keepalive（.state/last-run）をコミットするために必要
 
 jobs:
   advance:
@@ -39,26 +34,15 @@ jobs:
       - name: Test
         run: python -m unittest discover -s tests
 
-      # 手動実行で create_gist を指定したときだけ。GIST_ID_RPG が設定済みなら作らずに失敗する
-      - name: Create gist
-        if: ${{ inputs.create_gist }}
+      # Test が失敗した日は実行しない（状態も作らない）。勇者がいなければ何もしない。
+      # 勇者ごとに失敗を隔離し、1 人でも失敗したらこのステップは失敗にする（ほかの勇者は進めて、状態もコミットする）。
+      - name: Advance heroes
+        if: ${{ success() }}
         env:
           GIST_PAT: ${{ secrets.GIST_PAT }}
-          GIST_ID_RPG: ${{ vars.GIST_ID_RPG }}
-        run: python scripts/rpg.py --create-gist
-
-      # Test が失敗した日と、Repository variable GIST_ID_RPG が未設定のとき、Gist を作るだけの実行のときは実行しない
-      # （状態も作らない）。コントリビューション数を取得できなかった日は、次の実行でさかのぼって進める。
-      - name: Advance RPG
-        if: ${{ success() && vars.GIST_ID_RPG != '' && !inputs.create_gist }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GIST_PAT: ${{ secrets.GIST_PAT }}
-          GIST_ID_RPG: ${{ vars.GIST_ID_RPG }}
-          RPG_USER: ${{ vars.RPG_USER || github.repository_owner }}
         run: python scripts/rpg.py
 
-      # rpg.py が更新した状態（.state/rpg.json）を master にコミットする。
+      # rpg.py が更新した状態（.state/heroes.json と .state/heroes/）を master にコミットする。
       # あわせて 60 日間アクティビティがないと scheduled workflow が停止するのを防ぐため、
       # .state/last-run も更新する（keepalive）。変更が無ければコミットしない。
       # Test が失敗した日も keepalive は残す（!cancelled()）。
@@ -70,12 +54,11 @@ jobs:
           echo "$TODAY" > .state/last-run
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .state/last-run
-          if [ -f .state/rpg.json ]; then git add .state/rpg.json; fi
+          git add -A .state
           if git diff --cached --quiet; then
             echo "変更なし"
           else
-            if git diff --cached --quiet -- .state/rpg.json; then
+            if git diff --cached --quiet -- .state ':!.state/last-run'; then
               MSG="chore: keepalive $TODAY"
             else
               MSG="chore: update state $TODAY"
