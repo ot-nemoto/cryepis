@@ -1,46 +1,39 @@
 {
-  "day": 43,
-  "lap": 1,
-  "lap_day": 43,
-  "pos": 108,
-  "boss_cleared": [
-    "草原",
-    "迷いの森",
-    "地下洞窟",
-    "雪山"
-  ],
+  "day": 44,
+  "lap": 2,
+  "lap_day": 0,
+  "pos": 0,
+  "boss_cleared": [],
   "hero": {
-    "level": 10,
-    "exp": 25,
-    "max_hp": 120,
-    "hp": 120,
-    "base_atk": 34,
-    "base_def": 11,
-    "gold": 1126,
-    "potions": 3,
-    "weapon": {
-      "name": "伝説の剣",
-      "power": 25
-    },
-    "armor": {
-      "name": "魔法の鎧",
-      "power": 14
-    }
+    "level": 1,
+    "exp": 0,
+    "max_hp": 30,
+    "hp": 30,
+    "base_atk": 5,
+    "base_def": 2,
+    "gold": 50,
+    "potions": 1,
+    "weapon": null,
+    "armor": null
   },
-  "kills": 57,
-  "deaths": 1,
-  "last_date": "2026-11-17",
+  "kills": 0,
+  "deaths": 0,
+  "last_date": "2026-11-18",
   "last": {
-    "date": "2026-11-17",
-    "contributions": 115,
+    "date": "2026-11-18",
+    "contributions": 126,
     "steps": 3,
     "events": [
-      "どこからか笑い声が聞こえる",
-      "宝箱から65Gを見つけた",
-      "燭台の火が揺れている"
+      "魔王を討ち取った！！",
+      "魔王を倒し、世界に平和が戻った！ 1周目クリア（44日）"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-18",
+      "contributions": 126,
+      "text": "魔王を討ち取った！！ / 魔王を倒し、世界に平和が戻った！ 1周目クリア（44日）"
+    },
     {
       "date": "2026-11-17",
       "contributions": 115,
@@ -185,12 +178,15 @@
       "date": "2026-10-20",
       "contributions": 41,
       "text": "旅の商人に出会った / 水滴の音が響いている / コウモリを倒した！ (+12EXP)"
-    },
-    {
-      "date": "2026-10-19",
-      "contributions": 36,
-      "text": "ダークエルフを倒した！ (+14EXP) / 森の番人を討ち取った！！ (+72EXP) / レベルが上がった！ Lv.5 / 鉱山の町で休んだ"
     }
   ],
-  "records": []
+  "records": [
+    {
+      "lap": 1,
+      "days": 44,
+      "deaths": 1,
+      "level": 10,
+      "cleared_on": "2026-11-18"
+    }
+  ]
 }
