@@ -69,7 +69,8 @@ class DisplayTest(unittest.TestCase):
         self.assertTrue(lines[4].startswith("📰 "))
         text = "\n".join(lines)
         self.assertIn("ゴールドヒルデガルト", text)  # 本文は名前を切り詰めない
-        self.assertIn("https://g/0", text)
+        self.assertIn("詳細: heroes/h0.md", text)  # 勇者ごとの欄と、詳細のページへのリンク
+        self.assertIn("■ アリス  Lv.", text)
 
     def test_board_before_the_season_and_for_heroes_not_started(self):
         entries = [({"id": "h1", "name": "アリス", "gist_url": "u"}, game.new_state(WORLD, "h1", "アリス"))]
@@ -120,20 +121,23 @@ class DisplayTest(unittest.TestCase):
 
 
 class HeroesTest(unittest.TestCase):
-    """勇者管理シート（heroes.json）と状態ファイルを一時ディレクトリに向けて、main を動かす。"""
+    """勇者管理シート（heroes.json）・状態・詳細のページを一時ディレクトリに向けて、main を動かす。"""
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.dir = Path(tmp.name)
         for target, value in (("HEROES_PATH", self.dir / "heroes.json"), ("HERO_DIR", self.dir / "heroes"),
-                              ("BOARD_PATH", self.dir / "board.json")):
+                              ("BOARD_PATH", self.dir / "board.json"), ("PAGE_DIR", self.dir / "pages")):
             patcher = mock.patch.object(rpg, target, value)
             patcher.start()
             self.addCleanup(patcher.stop)
-        # 毎日の実行で作られるランキングの Gist（new_game ではそれぞれのテストで差し替える）
+        # Gist を作るのはランキングだけ（毎日の実行の最初）
         patcher = mock.patch.object(common, "create_gist", return_value={"id": "board", "html_url": "https://g/board"})
         self.create_board = patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch.object(common, "update_gist")
+        self.update_gist = patcher.start()
         self.addCleanup(patcher.stop)
 
     def run_main(self, argv, env=None):
@@ -141,11 +145,11 @@ class HeroesTest(unittest.TestCase):
              mock.patch("sys.stdout"):
             return rpg.main()
 
-    def new_game(self, name, gist_id="g1"):
-        gist = {"id": gist_id, "html_url": f"https://g/{gist_id}"}
-        with mock.patch.object(common, "create_gist", return_value=gist) as create:
-            self.run_main(["--new-game", name], {"GIST_PAT": "p"})
-        return create
+    def new_game(self, name):
+        return self.run_main(["--new-game", name])
+
+    def daily(self, day="2026-12-01"):
+        return self.run_main(["--date", day], {"GIST_PAT": "p"})
 
     def test_clean_name(self):
         self.assertEqual(rpg.clean_name("  アリス\n"), "アリス")
@@ -158,164 +162,160 @@ class HeroesTest(unittest.TestCase):
     def test_md_escape(self):
         self.assertEqual(rpg.md_escape("[x](u)<b>"), r"\[x\]\(u\)\<b\>")
 
-    def test_new_game_registers_hero_and_creates_gist(self):
-        create = self.new_game("アリス")
-        token, filename, content, description = create.call_args.args
-        self.assertEqual((token, filename, description), ("p", rpg.FILENAME, "アリス"))  # 説明は勇者の名前
-        self.assertTrue(content.startswith("⚔️ アリス Lv.1"))
+    def test_new_game_registers_hero_without_a_gist(self):
+        self.assertEqual(self.new_game("アリス"), 0)  # GIST_PAT は要らない
+        self.create_board.assert_not_called()
         (hero,) = rpg.load_heroes()
-        self.assertEqual((hero["id"], hero["name"], hero["gist_id"], hero["active"]), ("h1", "アリス", "g1", True))
+        self.assertEqual(hero, {"id": "h1", "name": "アリス", "created": hero["created"], "active": True})
         self.assertEqual(load("h1")["name"], "アリス")
+        page = rpg.page_path("h1").read_text(encoding="utf-8")
+        self.assertTrue(page.startswith("# アリス（h1）\n\n```text\n⚔️ アリス Lv.1"))
 
-    def test_new_game_needs_pat_and_valid_name(self):
-        with mock.patch.object(common, "create_gist") as create:
-            with self.assertRaises(SystemExit):
-                self.run_main(["--new-game", "アリス"])  # GIST_PAT なし
-            with self.assertRaises(SystemExit):
-                self.run_main(["--new-game", " "], {"GIST_PAT": "p"})
-            with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
-                self.run_main(["--new-game", "アリス", "--dry-run"], {"GIST_PAT": "p"})
-        create.assert_not_called()
+    def test_new_game_rejects_bad_names_and_options(self):
+        with self.assertRaises(SystemExit):
+            self.new_game(" ")
+        with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
+            self.run_main(["--new-game", "アリス", "--dry-run"])
         self.assertEqual(rpg.load_heroes(), [])
 
     def test_new_game_rejects_duplicates_and_more_than_max(self):
-        self.new_game("アリス", "g1")
-        with mock.patch.object(common, "create_gist") as create, self.assertRaises(SystemExit):
-            self.run_main(["--new-game", "アリス"], {"GIST_PAT": "p"})
-        create.assert_not_called()
+        self.new_game("アリス")
+        with self.assertRaises(SystemExit):
+            self.new_game("アリス")
         for i in range(2, rpg.MAX_HEROES + 1):
-            self.new_game(f"勇者{i}", f"g{i}")
-        with mock.patch.object(common, "create_gist") as create, self.assertRaises(SystemExit):
-            self.run_main(["--new-game", "あふれた勇者"], {"GIST_PAT": "p"})
-        create.assert_not_called()
+            self.new_game(f"勇者{i}")
+        with self.assertRaises(SystemExit):
+            self.new_game("あふれた勇者")
         self.assertEqual(len(rpg.load_heroes()), rpg.MAX_HEROES)
 
     def test_retire_frees_a_slot_and_ids_are_not_reused(self):
         for i in range(1, rpg.MAX_HEROES + 1):
-            self.new_game(f"勇者{i}", f"g{i}")
+            self.new_game(f"勇者{i}")
         self.run_main(["--retire", "勇者2"])
         self.assertEqual([h["active"] for h in rpg.load_heroes()], [True, False] + [True] * (rpg.MAX_HEROES - 2))
-        self.new_game("新人", "gx")
+        self.new_game("新人")
         self.assertEqual(rpg.load_heroes()[-1]["id"], f"h{rpg.MAX_HEROES + 1}")
         with self.assertRaises(SystemExit):
             self.run_main(["--retire", "勇者2"])  # 引退済み
 
-    def test_daily_advances_every_active_hero_and_updates_each_gist(self):
-        self.new_game("アリス", "g1")
-        self.new_game("ボブ", "g2")
-        self.new_game("引退者", "g3")
+    def test_daily_advances_active_heroes_writes_pages_and_only_the_board_gist(self):
+        self.new_game("アリス")
+        self.new_game("ボブ")
+        self.new_game("引退者")
         self.run_main(["--retire", "h3"])
-        with mock.patch.object(common, "update_gist") as gist:
-            self.assertEqual(self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"}), 0)
-        self.assertEqual([c.args[:3] for c in gist.call_args_list],
-                         [("g1", "p", rpg.FILENAME), ("g2", "p", rpg.FILENAME)])
-        # ランキングの Gist は最初の実行で作られ、board.json に記録される
+        retired_page = rpg.page_path("h3").read_text(encoding="utf-8")
+        self.assertEqual(self.daily(), 0)
+        # Gist はランキングの 1 つだけ（最初の実行で作られ、board.json に記録される）
+        self.assertEqual(self.create_board.call_count, 1)
         self.assertEqual(self.create_board.call_args.args[1], rpg.BOARD_FILENAME)
+        self.update_gist.assert_not_called()
         self.assertEqual(rpg.load_board()["gist_id"], "board")
-        self.assertNotIn("引退者", self.create_board.call_args.args[2])
-        self.assertEqual([c.kwargs["description"] for c in gist.call_args_list], ["アリス", "ボブ"])
-        self.assertEqual(load("h1")["day"], 1)
-        self.assertEqual(load("h3")["day"], 0)  # 引退者は進まない
+        board = self.create_board.call_args.args[2]
+        self.assertIn("■ アリス", board)
+        self.assertNotIn("引退者", board)
+        self.assertEqual((load("h1")["day"], load("h3")["day"]), (1, 0))  # 引退者は進まない
+        self.assertIn("S1 Day 1", rpg.page_path("h1").read_text(encoding="utf-8"))
+        self.assertEqual(rpg.page_path("h3").read_text(encoding="utf-8"), retired_page)
+
+    def test_page_url_points_to_github_in_actions(self):
+        env = {"GITHUB_SERVER_URL": "https://github.com", "GITHUB_REPOSITORY": "o/r", "GITHUB_REF_NAME": "master"}
+        with mock.patch.dict("os.environ", env, clear=True):
+            self.assertEqual(rpg.page_url("h1"), "https://github.com/o/r/blob/master/heroes/h1.md")
+        with mock.patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(rpg.page_url("h1"), "heroes/h1.md")
 
     def test_daily_is_idempotent_and_catches_up(self):
         self.new_game("アリス")
-        with mock.patch.object(common, "update_gist"):
-            self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"})
-            self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"})  # 同じ日は進まない
-            self.assertEqual(load("h1")["day"], 1)
-            self.run_main(["--date", "2026-10-09"], {"GIST_PAT": "p"})  # 3 日空いた
+        self.daily("2026-12-01")
+        self.daily("2026-12-01")  # 同じ日は進まない
+        self.assertEqual(load("h1")["day"], 1)
+        self.daily("2026-12-04")  # 3 日空いた
         self.assertEqual(load("h1")["day"], 4)
 
     def test_one_failing_hero_does_not_stop_the_others(self):
-        self.new_game("アリス", "g1")
-        self.new_game("ボブ", "g2")
-
-        def fail_first(gist_id, *_, **__):
-            if gist_id == "g1":
-                raise SystemExit("Gist API エラー 404")
-
-        with mock.patch.object(common, "update_gist", side_effect=fail_first) as gist, \
-             mock.patch.object(common, "warn") as warn:
-            self.assertEqual(self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"}), 1)
-        self.assertEqual(gist.call_count, 2)
+        self.new_game("アリス")
+        self.new_game("ボブ")
+        rpg.hero_state_path("h1").write_text("{壊れた", encoding="utf-8")
+        with mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.daily(), 1)
         warn.assert_called_once()
         self.assertEqual(load("h2")["day"], 1)
+        board = self.create_board.call_args.args[2]
+        self.assertIn("■ ボブ", board)  # 進められた勇者だけでランキングを作る
+        self.assertNotIn("■ アリス", board)
 
     def test_board_is_updated_after_it_is_created(self):
         self.new_game("アリス")
-        with mock.patch.object(common, "update_gist") as gist:
-            self.run_main(["--date", "2026-12-01"], {"GIST_PAT": "p"})
-            self.run_main(["--date", "2026-12-02"], {"GIST_PAT": "p"})
+        self.daily("2026-12-01")
+        self.daily("2026-12-02")
         self.assertEqual(self.create_board.call_count, 1)
-        board = [c for c in gist.call_args_list if c.args[0] == "board"]
-        self.assertEqual(len(board), 1)
-        self.assertEqual(board[0].args[2], rpg.BOARD_FILENAME)
-        self.assertEqual(board[0].kwargs["description"], "勇者ランキング シーズン1")
+        (call,) = self.update_gist.call_args_list
+        self.assertEqual(call.args[:3], ("board", "p", rpg.BOARD_FILENAME))
+        self.assertEqual(call.kwargs["description"], "勇者ランキング シーズン1")
 
     def test_board_is_recreated_when_the_gist_is_gone(self):
         self.new_game("アリス")
-        with mock.patch.object(common, "update_gist"):
-            self.run_main(["--date", "2026-12-01"], {"GIST_PAT": "p"})
+        self.daily("2026-12-01")
         self.create_board.return_value = {"id": "board2", "html_url": "https://g/board2"}
-
-        def gone(gist_id, *_, **__):
-            if gist_id == "board":
-                raise common.GistAPIError(404, "Gist API エラー 404")
-
-        with mock.patch.object(common, "update_gist", side_effect=gone), mock.patch.object(common, "warn") as warn:
-            self.assertEqual(self.run_main(["--date", "2026-12-02"], {"GIST_PAT": "p"}), 0)
+        self.update_gist.side_effect = common.GistAPIError(404, "Gist API エラー 404")
+        with mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.daily("2026-12-02"), 0)
         warn.assert_called_once()
         self.assertEqual(rpg.load_board()["gist_id"], "board2")
 
     def test_board_other_errors_are_not_recreated(self):
         self.new_game("アリス")
-        with mock.patch.object(common, "update_gist"):
-            self.run_main(["--date", "2026-12-01"], {"GIST_PAT": "p"})
-
-        def denied(gist_id, *_, **__):
-            if gist_id == "board":
-                raise common.GistAPIError(403, "Gist API エラー 403")
-
-        with mock.patch.object(common, "update_gist", side_effect=denied), mock.patch.object(common, "warn"):
-            self.assertEqual(self.run_main(["--date", "2026-12-02"], {"GIST_PAT": "p"}), 1)
+        self.daily("2026-12-01")
+        self.update_gist.side_effect = common.GistAPIError(403, "Gist API エラー 403")
+        with mock.patch.object(common, "warn"):
+            self.assertEqual(self.daily("2026-12-02"), 1)
         self.assertEqual(self.create_board.call_count, 1)
         self.assertEqual(rpg.load_board()["gist_id"], "board")
 
     def test_board_failure_fails_the_run_but_keeps_heroes(self):
         self.new_game("アリス")
         self.create_board.side_effect = SystemExit("Gist API エラー 403")
-        with mock.patch.object(common, "update_gist"), mock.patch.object(common, "warn") as warn:
-            self.assertEqual(self.run_main(["--date", "2026-12-01"], {"GIST_PAT": "p"}), 1)
+        with mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.daily(), 1)
         warn.assert_called_once()
         self.assertEqual(load("h1")["day"], 1)
+        self.assertTrue(rpg.page_path("h1").exists())
         self.assertIsNone(rpg.load_board())
 
+    def test_daily_needs_pat(self):
+        self.new_game("アリス")
+        with self.assertRaises(SystemExit):
+            self.run_main(["--date", "2026-12-01"])
+        self.assertEqual(load("h1")["day"], 0)
+
     def test_retire_matches_id_first(self):
-        self.new_game("アリス", "g1")
-        self.new_game("ボブ", "g2")
+        self.new_game("アリス")
+        self.new_game("ボブ")
         self.run_main(["--retire", "h2"])
         self.assertEqual([h["active"] for h in rpg.load_heroes()], [True, False])
 
     def test_missing_state_file_is_an_error_not_a_reset(self):
         self.new_game("アリス")
         rpg.hero_state_path("h1").unlink()
-        with mock.patch.object(common, "update_gist") as gist, mock.patch.object(common, "warn") as warn:
-            self.assertEqual(self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"}), 1)
-        gist.assert_not_called()
+        with mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.daily(), 1)
+        self.create_board.assert_not_called()  # 進められた勇者がいなければ、ランキングも作らない
         warn.assert_called_once()
         self.assertFalse(rpg.hero_state_path("h1").exists())
 
     def test_no_heroes_is_a_noop(self):
-        with mock.patch.object(common, "update_gist") as gist:
-            self.assertEqual(self.run_main([], {"GIST_PAT": "p"}), 0)
-        gist.assert_not_called()
+        self.assertEqual(self.daily(), 0)
+        self.create_board.assert_not_called()
 
     def test_dry_run_writes_nothing(self):
         self.new_game("アリス")
-        with mock.patch.object(common, "update_gist") as gist:
-            self.run_main(["--dry-run", "--actions", "1"])
-        gist.assert_not_called()
+        page = rpg.page_path("h1").read_text(encoding="utf-8")
+        self.run_main(["--dry-run", "--actions", "1"])
+        self.create_board.assert_not_called()
+        self.update_gist.assert_not_called()
         self.assertEqual(load("h1")["day"], 0)
+        self.assertEqual(rpg.page_path("h1").read_text(encoding="utf-8"), page)
+        self.assertIsNone(rpg.load_board())
 
 
 if __name__ == "__main__":

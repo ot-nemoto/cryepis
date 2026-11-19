@@ -25,8 +25,7 @@
 ```json
 {
   "heroes": [
-    {"id": "h1", "name": "アリス", "gist_id": "0123abcd…", "gist_url": "https://gist.github.com/…",
-     "created": "2026-11-18", "active": true}
+    {"id": "h1", "name": "アリス", "created": "2026-11-18", "active": true}
   ]
 }
 ```
@@ -35,9 +34,10 @@
 |---|---|
 | `id` | 勇者の ID（`h1`, `h2`, …）。引退しても欠番は再利用しない。状態ファイル名と乱数の種に使う |
 | `name` | 勇者の名前（表示幅 16 まで） |
-| `gist_id` / `gist_url` | その勇者の Gist |
 | `created` | 作った日（JST） |
 | `active` | 現役か。`false`（引退）の勇者は毎日の更新の対象外。現役は最大 30 人 |
+
+以前は勇者ごとに Gist を作っていたため、古い行には `gist_id` / `gist_url` が残っています。今は使いません（その Gist も更新しません）。
 
 ---
 

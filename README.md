@@ -7,7 +7,7 @@ GitHub プロフィールに Pin した Gist の中身を、GitHub Actions の�
 
 | ネタ | Pin する Gist | 更新 | 説明 |
 |---|---|---|---|
-| [勇者の冒険（テキスト RPG）](#勇者の冒険テキスト-rpg) | ランキング 1 つ（勇者ごとの Gist も Pin できる） | 毎日 JST 7:17 | 勇者たちがギルドの依頼をこなして育っていくのを眺める RPG。3 か月ごとのシーズン制（アイテムだけ持ち越す） |
+| [勇者の冒険（テキスト RPG）](#勇者の冒険テキスト-rpg) | ランキング 1 つ | 毎日 JST 7:17 | 勇者たちがギルドの依頼をこなして育っていくのを眺める RPG。3 か月ごとのシーズン制（アイテムだけ持ち越す） |
 
 ## 共通の仕組み
 
@@ -15,7 +15,7 @@ GitHub プロフィールに Pin した Gist の中身を、GitHub Actions の�
 - `.state/` 配下のファイルの JSON 構成と項目の意味は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md) を参照
 - セットアップ（Gist・PAT・Secrets / Variables）は [docs/SETUP.md](docs/SETUP.md) を参照
   （ネタを追加したら、これらのドキュメントにも追記する）
-- Gist の更新には `gist` スコープの Classic PAT（Secret `GIST_PAT`）を使う。Gist の ID は `.state/` のファイル（RPG は `heroes.json`）に記録する
+- Gist の更新には `gist` スコープの Classic PAT（Secret `GIST_PAT`）を使う。Gist の ID は `.state/` のファイル（RPG は `board.json`）に記録する
 - Pinned カードには Gist の**名前順で先頭のファイル**の、先頭 5 行（見出し + 4 行）ほどしか出ず、1 行 55 桁前後で切れる。
   各ネタはこの範囲に収まるように出力する（Gist のファイルは 1 つだけにする。1 行は `common.LINE_MAX` = 49 桁まで）
 - 記録用のデータは `.state/` に置き、workflow の最後に github-actions[bot] 名義で master に直接コミットする（PR は通さない）
@@ -45,10 +45,11 @@ python -m unittest discover -s tests
 
 MAP の上で勇者たちが毎日それぞれ動き、町のギルドの依頼をこなしながら育っていく RPG を Gist に表示します。
 ゴールはなく、成長を眺める RPG です（設計は [docs/SEASON_DESIGN.md](docs/SEASON_DESIGN.md)。いまは第 1 段階のプロトタイプ）。
-勇者は最大 30 人まで同時に冒険できます。Gist は 2 種類あります。
+勇者は最大 30 人まで同時に冒険できます。見る場所は 2 つあります。
 
-- **ランキングの Gist**（Pin するのはこれ）: 今のシーズンの進み具合と、レベル・討伐数・依頼達成のランキング。最初の毎日の実行で自動的に作られる
-- **勇者ごとの Gist**: その勇者のステータス・装備・持ち物・日誌。Pin は repo と合わせて 6 件までなので、Pin するのは好きな勇者だけでよい
+- **ランキングの Gist**（Pin する。Gist はこの 1 つだけ）: 今のシーズンの進み具合と、レベル・討伐数・依頼達成のランキング。
+  本文には勇者ごとの短い欄もある。最初の毎日の実行で自動的に作られる
+- **勇者ごとの詳細のページ**（`heroes/<id>.md`。リポジトリの中）: その勇者のステータス・装備・持ち物・日誌。毎日のコミットで更新する
 
 ランキングのカード:
 
@@ -61,9 +62,18 @@ Lv   🥇カイ 13 🥈ゴール… 13 🥉ボブ 13
 ```
 
 カードでは名前を表示幅 8（全角 4 文字）までに切り詰めます。ランキングの Gist を開くと、全員の順位（レベル・討伐数・依頼達成・レアアイテム）、
-今日の出来事、勇者たちの居場所と Gist へのリンク、歴代のシーズンの 1 位が見られます。
+今日の出来事、勇者ごとの欄、歴代のシーズンの 1 位が見られます。勇者ごとの欄はこんな形です。
 
-勇者ごとのカード:
+```
+■ アリス  Lv.12  📍 迷いの森 🎯 ウルフ 1/4
+  HP 117/123  攻33 防16  1587G  回復薬 3
+  装備: 鉄の剣 / 鎖かたびら / 幸運のお守り
+  レア: ★狩人の短剣
+  今日: ウルフを倒した (+17EXP)、木漏れ日が揺れている
+  詳細: https://github.com/<owner>/<repo>/blob/master/heroes/h1.md
+```
+
+勇者ごとの詳細のページ（`heroes/<id>.md`）の先頭:
 
 ```
 ⚔️ アリス Lv.12  S1 Day 40
@@ -73,19 +83,18 @@ HP ██████████ 117/123  攻33 防16  1587G
 今日: ウルフを倒した (+17EXP)、木漏れ日が揺れて…
 ```
 
-勇者の Gist を開くと、ステータス・装備・持ち物、今シーズンの成績、直近 30 日の冒険の記録、歴代のシーズンの記録が見られます。
+続けて、ステータス・装備・持ち物、今シーズンの成績、直近 30 日の冒険の記録、歴代のシーズンの記録が載ります。
 
 ### 勇者を増やす・引退させる（手動実行）
 
 | workflow | 入力 | すること |
 |---|---|---|
-| *New game (add a hero)* | 勇者の名前 | 新しい public Gist（説明は勇者の名前）を作り、勇者管理シート `.state/heroes.json` に登録する。冒険は次回の毎日の実行から進む |
-| *Retire hero* | 勇者の ID（`h1` など）または名前 | 勇者を引退させる（毎日の更新の対象から外れる。Gist と状態は残り、枠が 1 つ空く） |
+| *New game (add a hero)* | 勇者の名前 | 勇者管理シート `.state/heroes.json` に登録し、状態と詳細のページを作る（Gist は作らない）。冒険は次回の毎日の実行から進む |
+| *Retire hero* | 勇者の ID（`h1` など）または名前 | 勇者を引退させる（毎日の更新の対象から外れ、ランキングにも出なくなる。状態と詳細のページは残り、枠が 1 つ空く） |
 
 - 手動実行は 1 件ずつ、終わってから次を実行する（`.state/` への書き込みを直列にするため、待機中に別の実行が起動すると先の待機分が取り消される）
 - 現役の勇者は最大 30 人（`MAX_HEROES`）。引退した勇者は数えない。同じ名前の現役の勇者は作れない。名前は表示幅 16（全角 8 文字）まで
-- Gist の説明は勇者の名前（Pin したカードのタイトルになる）。毎日の更新でも名前にそろえる
-- 勇者管理シート `.state/heroes.json` に、勇者の ID・名前・Gist の ID と URL・作成日・現役かどうかが入る
+- 勇者管理シート `.state/heroes.json` に、勇者の ID・名前・作成日・現役かどうかが入る
 
 ### 進み方
 
@@ -102,7 +111,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 - 乱数は「日付＋シーズン＋勇者の ID」を種にするので、勇者ごとに展開が違う。同じ日に何度実行しても結果は同じで、その日の分を処理済みなら進めない（Gist の表示だけ更新する）
 - workflow が動かなかった日は、次の実行でさかのぼって 1 日ずつ進める（最大 7 日分）
 - 1 人の勇者の更新（Gist の API エラーなど）が失敗しても、ほかの勇者は進める（失敗した勇者があれば workflow は失敗で終わる）
-- 始めるには Secret `GIST_PAT` を登録して、*New game* を実行する（[docs/SETUP.md](docs/SETUP.md)）。勇者がいない間、毎日の実行は何もしない
+- 始めるには Secret `GIST_PAT` を登録して（ランキングの Gist に使う）、*New game* を実行する（[docs/SETUP.md](docs/SETUP.md)）。勇者がいない間、毎日の実行は何もしない
 
 ### 世界を広げる（world/ の編集）
 
@@ -125,15 +134,16 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `world/` | 世界のデータ（上の表） |
 | `scripts/world.py` | `world/` の読み込みと検証、最短経路の計算 |
 | `scripts/game.py` | 1 日分の進行（依頼・戦闘・アイテム・シーズンの切り替え）と、勇者の状態の読み書き |
-| `scripts/rpg.py` | 勇者を登録・引退させ、現役の勇者を 1 日分ずつ進めて Gist（`hero-adventure.txt`）を更新する。カードと本文の表示 |
+| `scripts/rpg.py` | 勇者を登録・引退させ、現役の勇者を 1 日分ずつ進めて、詳細のページとランキングの Gist（`hero-ranking.txt`）を更新する |
 | `.state/heroes.json` | 勇者管理シート（勇者の一覧） |
 | `.state/board.json` | ランキングの Gist の ID と URL |
+| `heroes/<id>.md` | 勇者ごとの詳細のページ（rpg.py が書き出す。手で編集しない） |
 | `.state/heroes/<id>.json` | 勇者ごとの状態・持ち物・日誌・シーズンの記録（形式は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md)） |
-| `.github/workflows/hero-adventure.yml` | 毎日 JST 7:17 に rpg.py を動かし（勇者の Gist とランキングの Gist を更新）、`.state/` をコミットする |
+| `.github/workflows/hero-adventure.yml` | 毎日 JST 7:17 に rpg.py を動かし（ランキングの Gist を更新）、`.state/` と `heroes/` をコミットする |
 | `.github/workflows/new-game.yml` / `retire-hero.yml` | 勇者の追加・引退（手動実行） |
 
 ```sh
 python scripts/rpg.py --dry-run --actions 4       # 記録せずに今日の分を試す（行動回数を指定。勇者が登録済みのとき）
-GIST_PAT=xxx python scripts/rpg.py --new-game 名前  # 勇者を登録して Gist を作る（Actions の New game と同じ）
+python scripts/rpg.py --new-game 名前              # 勇者を登録する（Actions の New game と同じ）
 python scripts/rpg.py --retire 名前またはID        # 勇者を引退させる
 ```

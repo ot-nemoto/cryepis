@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""シーズン制のテキスト RPG。勇者（最大 MAX_HEROES 人）を 1 日分ずつ進め、勇者ごとの Gist とランキングの Gist を更新する。
+"""シーズン制のテキスト RPG。勇者（最大 MAX_HEROES 人）を 1 日分ずつ進め、ランキングの Gist を更新する。
 
 勇者は heroes.json（勇者管理シート）に登録する。世界（MAP・敵・アイテム・依頼）は world/ の下のデータで、
 1 日分の進め方は game.py にある。勇者は毎日、乱数で決まる回数だけ行動し、町のギルドの依頼をこなして育つ。
@@ -7,17 +7,18 @@
 workflow が動かなかった日があれば、次の実行で最大 CATCH_UP_DAYS 日分までさかのぼって進める。
 
 状態は .state/heroes.json（勇者の一覧）と .state/heroes/<id>.json（勇者ごとの状態）に保存し、
+勇者ごとの詳細（ステータス・装備・持ち物・日誌）は heroes/<id>.md に書き出す（Gist は作らない）。
 ランキングの Gist の ID は .state/board.json に記録する（なければ毎日の実行で作る）。
 workflow の最後のステップで master にコミットする。
 乱数は「日付＋シーズン＋勇者の ID」を種にするので、同じ日に何度実行しても結果は同じ（その日の分が処理済みなら進めない）。
 
 環境変数:
-  GIST_PAT   勇者の Gist の作成・更新に使う（gist スコープの Classic PAT）
+  GIST_PAT   ランキングの Gist の作成・更新に使う（gist スコープの Classic PAT）
 
 使い方:
   python scripts/rpg.py                          # 登録済みの勇者を全員 1 日分進めて Gist を更新する（毎日の workflow）
   python scripts/rpg.py --dry-run --actions 4    # 記録せずに 1 日分を試す
-  GIST_PAT=xxx python scripts/rpg.py --new-game 名前   # 新しい勇者を登録し、Gist を作る
+  python scripts/rpg.py --new-game 名前                # 新しい勇者を登録する
   python scripts/rpg.py --retire 名前または ID         # 勇者を引退させる（毎日の更新の対象から外れる）
 """
 from __future__ import annotations
@@ -39,7 +40,7 @@ import world as W  # noqa: E402
 HEROES_PATH = common.ROOT / ".state" / "heroes.json"
 HERO_DIR = common.ROOT / ".state" / "heroes"
 BOARD_PATH = common.ROOT / ".state" / "board.json"
-FILENAME = "hero-adventure.txt"
+PAGE_DIR = common.ROOT / "heroes"  # 勇者ごとの詳細のページ（GitHub 上で読む）
 BOARD_FILENAME = "hero-ranking.txt"
 MAX_HEROES = 30  # 同時に冒険できる（引退していない）勇者の数
 BOARD_NAME_WIDTH = 8  # ランキングのカードに出す名前の表示幅
@@ -197,6 +198,28 @@ def build_text(world: dict, state: dict) -> str:
     return "\n".join(card + detail) + "\n"
 
 
+def page_path(hero_id: str) -> Path:
+    return PAGE_DIR / f"{hero_id}.md"
+
+
+def page_url(hero_id: str) -> str:
+    """勇者の詳細のページの URL（GitHub Actions の外では、リポジトリの中のパス）。"""
+    rel = f"heroes/{hero_id}.md"
+    server, repo = os.environ.get("GITHUB_SERVER_URL"), os.environ.get("GITHUB_REPOSITORY")
+    branch = os.environ.get("GITHUB_REF_NAME")
+    return f"{server}/{repo}/blob/{branch}/{rel}" if server and repo and branch else rel
+
+
+def build_page(world: dict, state: dict) -> str:
+    """勇者の詳細のページ（Markdown）。中身は等幅で見せるため、コードブロックに入れる。"""
+    return f"# {state['name']}（{state['id']}）\n\n```text\n{build_text(world, state)}```\n"
+
+
+def save_page(world: dict, state: dict) -> None:
+    PAGE_DIR.mkdir(parents=True, exist_ok=True)
+    page_path(state["id"]).write_text(build_page(world, state), encoding="utf-8")
+
+
 # ---- ランキング（Pin 用の Gist）------------------------------------------------------
 RANKINGS = (  # (見出し, カードでの見出し（None ならカードに出さない）, 並べる値, 表示する値, 単位)
     ("レベル", "Lv  ", lambda s: s["hero"]["level"], lambda s: s["hero"]["level"], ""),
@@ -268,8 +291,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
     detail += ["", "── 今日の出来事 ──"] + (today_news or ["まだない"])
     detail += ["", "── 勇者たち ──"]
     for hero, state in views:
-        place = world["places"][state["place"]]["name"]
-        detail.append(f"{hero['name']}  Lv.{state['hero']['level']}  📍{place}  {hero['gist_url']}")
+        detail += [""] + hero_summary(world, hero, state, today)
     past = sorted({r["season"] for _, state in entries for r in state["seasons"]})
     if past:
         detail += ["", "── 歴代のシーズン ──"]
@@ -280,6 +302,24 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
             detail.append(f"シーズン{n}: 最高レベル {lv_hero['name']} Lv.{lv['level']}  "
                           f"討伐数 {kill_hero['name']} {kill['kills']}体")
     return "\n".join(card + detail) + "\n"
+
+
+def hero_summary(world: dict, entry: dict, state: dict, today: date) -> list[str]:
+    """ランキングの本文に載せる、勇者ごとの短い欄（entry は heroes.json の行）。"""
+    hero, s = state["hero"], game.stats(world, state)
+    worn = [world["items"][i]["name"] for i in game.equipment(world, state).values() if i]
+    rares = sorted({i for i in state["inventory"] if world["items"][i]["rarity"] != "common"},
+                   key=lambda i: (-world["rarities"].index(world["items"][i]["rarity"]), i))
+    last = state["last"]
+    events = highlights(last["events"]) if last and last["date"] == today.isoformat() and last["events"] else []
+    return [
+        f"■ {entry['name']}  Lv.{hero['level']}  {location(world, state)}",
+        f"  HP {hero['hp']}/{s['max_hp']}  攻{s['atk']} 防{s['def']}  {hero['gold']}G  回復薬 {hero['potions']}",
+        f"  装備: {' / '.join(worn) or 'なし'}",
+        f"  レア: {'、'.join(item_label(world, i) for i in rares) or 'まだない'}",
+        f"  今日: {'、'.join(events) or '—'}",
+        f"  詳細: {page_url(entry['id'])}",
+    ]
 
 
 def board_description(world: dict, today: date) -> str:
@@ -343,10 +383,7 @@ def write_summary(text: str) -> None:
 
 
 def new_game(world: dict, raw_name: str, today: date) -> int:
-    """新しい勇者を登録し、冒険前のカードを中身にした public Gist と状態を作る（冒険は翌日から進む）。"""
-    token = os.environ.get("GIST_PAT")
-    if not token:
-        raise SystemExit("GIST_PAT を環境変数で指定してください")
+    """新しい勇者を登録し、状態と詳細のページを作る（冒険は翌日から進む）。"""
     name = clean_name(raw_name)
     heroes = load_heroes()
     active = [h for h in heroes if h["active"]]
@@ -356,14 +393,14 @@ def new_game(world: dict, raw_name: str, today: date) -> int:
         raise SystemExit(f"勇者「{name}」はすでにいます")
     hero_id = f"h{max((int(h['id'][1:]) for h in heroes), default=0) + 1}"
     state = game.new_state(world, hero_id, name)
-    gist = common.create_gist(token, FILENAME, build_text(world, state), name)  # Gist の説明は勇者の名前
-    print(f"Gist を作りました: {gist['html_url']}")  # 以降の保存・コミットが失敗しても、孤立した Gist を探せるように
-    heroes.append({"id": hero_id, "name": name, "gist_id": gist["id"], "gist_url": gist["html_url"],
-                   "created": today.isoformat(), "active": True})
+    heroes.append({"id": hero_id, "name": name, "created": today.isoformat(), "active": True})
     game.save_state(state, hero_state_path(hero_id))
+    save_page(world, state)
     save_heroes(heroes)
-    write_summary(f"## 勇者「{md_escape(name)}」({hero_id}) が旅立ちます\n\nGist: {gist['html_url']}\n\n"
-                  "冒険は次回の毎日の実行から進みます。プロフィールの **Customize your pins** で Gist を Pin できます。")
+    board = load_board()
+    where = f"ランキングの Gist（{board['gist_url']}）" if board else "ランキングの Gist（次回の毎日の実行で作られます）"
+    write_summary(f"## 勇者「{md_escape(name)}」({hero_id}) が旅立ちます\n\n"
+                  f"冒険は次回の毎日の実行から進みます。様子は{where}と {page_url(hero_id)} で見られます。")
     return 0
 
 
@@ -375,7 +412,7 @@ def retire(key: str) -> int:
     for h in [h for h in active if h["id"] == key] + [h for h in active if h["name"] == key]:
         h["active"] = False
         save_heroes(heroes)
-        write_summary(f"勇者「{md_escape(h['name'])}」({h['id']}) を引退させました（Gist: {h['gist_url']}）")
+        write_summary(f"勇者「{md_escape(h['name'])}」({h['id']}) を引退させました（記録: {page_url(h['id'])}）")
         return 0
     raise SystemExit(f"引退させられる勇者「{key}」がいません（ID か名前で、現役の勇者を指定してください）")
 
@@ -413,11 +450,10 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
     for hero in heroes:
         try:
             state = run_hero(world, hero, today, actions, dry_run)
-            entries.append((hero, state))  # Gist の更新に失敗しても、進めた勇者はランキングに入れる
-            content = build_text(world, state)
-            print(content)
+            entries.append((hero, state))
+            print(build_text(world, state))
             if not dry_run:
-                common.update_gist(hero["gist_id"], token, FILENAME, content, description=hero["name"])
+                save_page(world, state)
         except (Exception, SystemExit) as e:  # noqa: BLE001  勇者ごとに失敗を隔離する
             failed += 1
             common.warn(f"{hero['name']}（{hero['id']}）を進められませんでした: {e}")
