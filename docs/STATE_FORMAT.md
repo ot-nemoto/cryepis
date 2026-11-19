@@ -6,6 +6,7 @@
 | ファイル | 書き込み元 | 中身 |
 |---|---|---|
 | [`heroes.json`](#heroesjson) | `scripts/rpg.py`（New game / Retire hero） | 勇者管理シート（勇者の一覧と Gist の ID） |
+| [`board.json`](#boardjson) | `scripts/rpg.py`（最初の毎日の実行） | ランキングの Gist の ID と URL |
 | [`heroes/<id>.json`](#heroesidjson) | `scripts/rpg.py` | 勇者ごとの状態・持ち物・日誌・シーズンの記録 |
 | [`last-run`](#last-run) | hero-adventure.yml の Commit state ステップ | 最終実行日 |
 
@@ -36,7 +37,18 @@
 | `name` | 勇者の名前（表示幅 16 まで） |
 | `gist_id` / `gist_url` | その勇者の Gist |
 | `created` | 作った日（JST） |
-| `active` | 現役か。`false`（引退）の勇者は毎日の更新の対象外。現役は最大 6 人 |
+| `active` | 現役か。`false`（引退）の勇者は毎日の更新の対象外。現役は最大 30 人 |
+
+---
+
+## board.json
+
+ランキングの Gist（Pin する Gist）の記録です。毎日の実行で、このファイルがなければ Gist を作って書き込みます（以降は書き換えません）。
+ファイルを消すと、次の実行で新しいランキングの Gist が作られます（古い Gist は残ります）。
+
+```json
+{"gist_id": "0123abcd…", "gist_url": "https://gist.github.com/…", "created": "2026-12-01"}
+```
 
 ---
 

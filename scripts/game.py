@@ -30,6 +30,17 @@ def season_of(world: dict, d: date) -> int:
     return 1 + months // cfg["months"]
 
 
+def season_range(world: dict, season: int) -> tuple[date, date]:
+    """シーズンの最初と最後の日（シーズン 1 の最初は start。それより前の日もシーズン 1 に含める）。"""
+    cfg = world["season"]
+    start = date.fromisoformat(cfg["start"])
+
+    def shift(months: int) -> date:
+        y, m = divmod(start.month - 1 + months, 12)
+        return date(start.year + y, m + 1, start.day)
+    return shift((season - 1) * cfg["months"]), shift(season * cfg["months"]) - timedelta(days=1)
+
+
 # ---- 状態 -----------------------------------------------------------------------------
 def new_hero(world: dict) -> dict:
     h = world["season"]["hero"]

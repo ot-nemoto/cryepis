@@ -36,6 +36,13 @@ class SeasonTest(unittest.TestCase):
         self.assertEqual(G.season_of(WORLD, nxt - timedelta(days=1)), 1)
         self.assertEqual(G.season_of(WORLD, nxt), 2)
 
+    def test_season_range(self):
+        first, last = G.season_range(WORLD, 1)
+        self.assertEqual(first, START)
+        self.assertEqual(G.season_of(WORLD, last), 1)
+        self.assertEqual(G.season_of(WORLD, last + timedelta(days=1)), 2)
+        self.assertEqual(G.season_range(WORLD, 2)[0], last + timedelta(days=1))
+
     def test_new_season_keeps_only_items(self):
         state = play(3)
         state["inventory"]["blue_flame_sword"] = 1

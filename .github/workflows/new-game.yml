@@ -2,7 +2,7 @@ name: New game (add a hero)
 
 # 新しい勇者を登録する: 勇者の名前を入れて手動実行すると、新しい public Gist を作り、
 # 勇者管理シート（.state/heroes.json）と勇者の状態（.state/heroes/<id>.json）を master にコミットする。
-# 勇者は最大 6 人（引退した勇者は数えない）。冒険は次回の毎日の実行（hero-adventure.yml）から進む。
+# 勇者は最大 30 人（引退した勇者は数えない）。冒険は次回の毎日の実行（hero-adventure.yml）から進む。
 
 on:
   workflow_dispatch:

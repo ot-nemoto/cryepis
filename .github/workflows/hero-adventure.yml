@@ -1,6 +1,6 @@
 name: Advance hero adventure (text RPG)
 
-# 現役の勇者（.state/heroes.json）を全員 1 日分進め、それぞれの Gist を更新する（その日の行動回数は乱数で決まる。世界は world/ のデータ）。
+# 現役の勇者（.state/heroes.json）を全員 1 日分進め、それぞれの Gist とランキングの Gist を更新する（その日の行動回数は乱数で決まる。世界は world/ のデータ）。
 # 状態は .state/heroes/<id>.json に保存し、最後に master にコミットする。勇者は new-game.yml で増やす。
 
 on:

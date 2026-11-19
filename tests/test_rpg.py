@@ -53,6 +53,42 @@ class DisplayTest(unittest.TestCase):
         self.assertIn("★蒼炎の剣", text)
         self.assertIn("シーズン0: Lv.20", text)
 
+    def test_board_card_fits_and_ranks(self):
+        names = ["アリス", "ボブ", "ゴールドヒルデガルト", "あ" * 8]
+        entries = [({"id": f"h{i}", "name": n, "gist_url": f"https://g/{i}"}, play(30, f"h{i}"))
+                   for i, n in enumerate(names)]
+        today = DAY + timedelta(days=29)
+        lines = rpg.build_board(WORLD, entries, today).splitlines()
+        for line in lines[:5]:
+            self.assertLessEqual(common.width(line), common.LINE_MAX, line)
+        self.assertEqual(lines[5], "")
+        first, last = game.season_range(WORLD, 1)
+        self.assertEqual(lines[0], f"🏆 シーズン1  Day 30/{(last - first).days + 1}  勇者4人")
+        self.assertTrue(lines[1].startswith("Lv   🥇"))
+        self.assertTrue(lines[2].startswith("討伐 🥇"))
+        self.assertTrue(lines[4].startswith("📰 "))
+        text = "\n".join(lines)
+        self.assertIn("ゴールドヒルデガルト", text)  # 本文は名前を切り詰めない
+        self.assertIn("https://g/0", text)
+
+    def test_board_before_the_season_and_for_heroes_not_started(self):
+        entries = [({"id": "h1", "name": "アリス", "gist_url": "u"}, game.new_state(WORLD, "h1", "アリス"))]
+        lines = rpg.build_board(WORLD, entries, DAY - timedelta(days=3)).splitlines()
+        self.assertIn("開幕前", lines[0])
+        self.assertIn("今日も勇者たちは冒険中", lines[4])
+
+    def test_ranked_shares_rank_on_ties(self):
+        rows = [({"name": n}, {"v": v}) for n, v in (("a", 5), ("b", 7), ("c", 5), ("d", 1))]
+        self.assertEqual([(r, h["name"]) for r, h, _ in rpg.ranked(rows, lambda s: s["v"])],
+                         [(1, "b"), (2, "a"), (2, "c"), (4, "d")])
+
+    def test_board_shows_past_season_champions(self):
+        state = play(3)
+        state["seasons"] = [{"season": 1, "days": 90, "level": 22, "quests_done": 30, "quests_failed": 1,
+                             "kills": 150, "deaths": 0, "rares": [], "ended_on": "2027-02-28"}]
+        text = rpg.build_board(WORLD, [({"id": "h1", "name": "アリス", "gist_url": "u"}, state)], DAY)
+        self.assertIn("シーズン1: 最高レベル アリス Lv.22  討伐数 アリス 150体", text)
+
     def test_highlights_prefer_important_events_and_merge_level_ups(self):
         events = ["スライムを倒した", "レベルが上がった！ Lv.2", "レベルが上がった！ Lv.3", "依頼達成！x", "景色"]
         self.assertEqual(rpg.highlights(events), ["レベルが上がった！ Lv.3", "依頼達成！x"])
@@ -81,10 +117,15 @@ class HeroesTest(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.dir = Path(tmp.name)
-        for target, value in (("HEROES_PATH", self.dir / "heroes.json"), ("HERO_DIR", self.dir / "heroes")):
+        for target, value in (("HEROES_PATH", self.dir / "heroes.json"), ("HERO_DIR", self.dir / "heroes"),
+                              ("BOARD_PATH", self.dir / "board.json")):
             patcher = mock.patch.object(rpg, target, value)
             patcher.start()
             self.addCleanup(patcher.stop)
+        # 毎日の実行で作られるランキングの Gist（new_game ではそれぞれのテストで差し替える）
+        patcher = mock.patch.object(common, "create_gist", return_value={"id": "board", "html_url": "https://g/board"})
+        self.create_board = patcher.start()
+        self.addCleanup(patcher.stop)
 
     def run_main(self, argv, env=None):
         with mock.patch.object(sys, "argv", ["rpg.py", *argv]), mock.patch.dict("os.environ", env or {}, clear=True), \
@@ -144,9 +185,9 @@ class HeroesTest(unittest.TestCase):
         for i in range(1, rpg.MAX_HEROES + 1):
             self.new_game(f"勇者{i}", f"g{i}")
         self.run_main(["--retire", "勇者2"])
-        self.assertEqual([h["active"] for h in rpg.load_heroes()], [True, False, True, True, True, True])
-        self.new_game("新人", "g7")
-        self.assertEqual(rpg.load_heroes()[-1]["id"], "h7")
+        self.assertEqual([h["active"] for h in rpg.load_heroes()], [True, False] + [True] * (rpg.MAX_HEROES - 2))
+        self.new_game("新人", "gx")
+        self.assertEqual(rpg.load_heroes()[-1]["id"], f"h{rpg.MAX_HEROES + 1}")
         with self.assertRaises(SystemExit):
             self.run_main(["--retire", "勇者2"])  # 引退済み
 
@@ -159,6 +200,10 @@ class HeroesTest(unittest.TestCase):
             self.assertEqual(self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"}), 0)
         self.assertEqual([c.args[:3] for c in gist.call_args_list],
                          [("g1", "p", rpg.FILENAME), ("g2", "p", rpg.FILENAME)])
+        # ランキングの Gist は最初の実行で作られ、board.json に記録される
+        self.assertEqual(self.create_board.call_args.args[1], rpg.BOARD_FILENAME)
+        self.assertEqual(rpg.load_board()["gist_id"], "board")
+        self.assertNotIn("引退者", self.create_board.call_args.args[2])
         self.assertEqual([c.kwargs["description"] for c in gist.call_args_list], ["アリス", "ボブ"])
         self.assertEqual(load("h1")["day"], 1)
         self.assertEqual(load("h3")["day"], 0)  # 引退者は進まない
@@ -186,6 +231,26 @@ class HeroesTest(unittest.TestCase):
         self.assertEqual(gist.call_count, 2)
         warn.assert_called_once()
         self.assertEqual(load("h2")["day"], 1)
+
+    def test_board_is_updated_after_it_is_created(self):
+        self.new_game("アリス")
+        with mock.patch.object(common, "update_gist") as gist:
+            self.run_main(["--date", "2026-12-01"], {"GIST_PAT": "p"})
+            self.run_main(["--date", "2026-12-02"], {"GIST_PAT": "p"})
+        self.assertEqual(self.create_board.call_count, 1)
+        board = [c for c in gist.call_args_list if c.args[0] == "board"]
+        self.assertEqual(len(board), 1)
+        self.assertEqual(board[0].args[2], rpg.BOARD_FILENAME)
+        self.assertEqual(board[0].kwargs["description"], "勇者ランキング シーズン1")
+
+    def test_board_failure_fails_the_run_but_keeps_heroes(self):
+        self.new_game("アリス")
+        self.create_board.side_effect = SystemExit("Gist API エラー 403")
+        with mock.patch.object(common, "update_gist"), mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.run_main(["--date", "2026-12-01"], {"GIST_PAT": "p"}), 1)
+        warn.assert_called_once()
+        self.assertEqual(load("h1")["day"], 1)
+        self.assertIsNone(rpg.load_board())
 
     def test_retire_matches_id_first(self):
         self.new_game("アリス", "g1")

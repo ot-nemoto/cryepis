@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""シーズン制のテキスト RPG。勇者ごとの Gist（最大 MAX_HEROES 人）を 1 日分ずつ進めて更新する。
+"""シーズン制のテキスト RPG。勇者（最大 MAX_HEROES 人）を 1 日分ずつ進め、勇者ごとの Gist とランキングの Gist を更新する。
 
 勇者は heroes.json（勇者管理シート）に登録する。世界（MAP・敵・アイテム・依頼）は world/ の下のデータで、
 1 日分の進め方は game.py にある。勇者は毎日、乱数で決まる回数だけ行動し、町のギルドの依頼をこなして育つ。
@@ -7,6 +7,7 @@
 workflow が動かなかった日があれば、次の実行で最大 CATCH_UP_DAYS 日分までさかのぼって進める。
 
 状態は .state/heroes.json（勇者の一覧）と .state/heroes/<id>.json（勇者ごとの状態）に保存し、
+ランキングの Gist の ID は .state/board.json に記録する（なければ毎日の実行で作る）。
 workflow の最後のステップで master にコミットする。
 乱数は「日付＋シーズン＋勇者の ID」を種にするので、同じ日に何度実行しても結果は同じ（その日の分が処理済みなら進めない）。
 
@@ -37,8 +38,12 @@ import world as W  # noqa: E402
 
 HEROES_PATH = common.ROOT / ".state" / "heroes.json"
 HERO_DIR = common.ROOT / ".state" / "heroes"
+BOARD_PATH = common.ROOT / ".state" / "board.json"
 FILENAME = "hero-adventure.txt"
-MAX_HEROES = 6  # 同時に冒険できる（引退していない）勇者の数
+BOARD_FILENAME = "hero-ranking.txt"
+MAX_HEROES = 30  # 同時に冒険できる（引退していない）勇者の数
+BOARD_NAME_WIDTH = 8  # ランキングのカードに出す名前の表示幅
+MEDALS = ("🥇", "🥈", "🥉")
 NAME_WIDTH_MAX = 16  # 勇者の名前の表示幅（全角 = 2）
 CATCH_UP_DAYS = 7  # 実行されなかった日をさかのぼって進める最大の日数
 # カードに優先して出す出来事（前ほど優先）
@@ -192,6 +197,124 @@ def build_text(world: dict, state: dict) -> str:
     return "\n".join(card + detail) + "\n"
 
 
+# ---- ランキング（Pin 用の Gist）------------------------------------------------------
+RANKINGS = (  # (見出し, カードでの見出し（None ならカードに出さない）, 並べる値, 表示する値, 単位)
+    ("レベル", "Lv  ", lambda s: (s["hero"]["level"], s["hero"]["exp"]), lambda s: s["hero"]["level"], ""),
+    ("討伐数", "討伐", lambda s: s["season_stats"]["kills"], lambda s: s["season_stats"]["kills"], "体"),
+    ("依頼達成", "依頼", lambda s: s["season_stats"]["quests_done"], lambda s: s["season_stats"]["quests_done"], "件"),
+    ("レアアイテム", None, lambda s: len(s["season_stats"]["rares"]), lambda s: len(s["season_stats"]["rares"]), "個"),
+)
+
+
+def shorten(text: str, limit: int) -> str:
+    return text if common.width(text) <= limit else fit(text, limit)
+
+
+def season_view(world: dict, state: dict, season: int) -> dict:
+    """ランキング用に、今のシーズンの状態を返す（まだ今のシーズンを進めていない勇者は最初の状態として扱う）。"""
+    if state["season"] == season:
+        return state
+    return {**state, "hero": game.new_hero(world), "season_stats": game.new_season_stats(), "season_day": 0}
+
+
+def ranked(entries: list[tuple[dict, dict]], key) -> list[tuple[int, dict, dict]]:
+    """(順位, 勇者, 状態) の一覧。同じ値は同じ順位（登録が早い順に並べる）。"""
+    rows = sorted(entries, key=lambda e: key(e[1]), reverse=True)
+    out, prev, rank = [], None, 0
+    for i, (hero, state) in enumerate(rows, 1):
+        if key(state) != prev:
+            rank, prev = i, key(state)
+        out.append((rank, hero, state))
+    return out
+
+
+def news(entries: list[tuple[dict, dict]], today: date) -> list[str]:
+    """今日の出来事（勇者ごとに目立つものを 1 つ）。目立つ順。"""
+    picks = []
+    for hero, state in entries:
+        last = state["last"]
+        if last and last["date"] == today.isoformat() and last["events"]:
+            (event,) = highlights(last["events"], 1)
+            rank = next((r for r, key in enumerate(HIGHLIGHTS) if key in event), len(HIGHLIGHTS))
+            picks.append((rank, f"{hero['name']}: {event}"))
+    return [text for _, text in sorted(picks, key=lambda p: p[0])]
+
+
+def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
+    """Pin 用のランキングの Gist の中身。entries は現役の勇者の (heroes.json の行, 状態)。"""
+    season = game.season_of(world, today)
+    first, last = game.season_range(world, season)
+    views = [(hero, season_view(world, state, season)) for hero, state in entries]
+    if today < first:
+        when = "開幕前"
+    else:
+        when = f"Day {(today - first).days + 1}/{(last - first).days + 1}"
+    lines = [f"🏆 シーズン{season}  {when}  勇者{len(views)}人"]
+    for _, label, key, value, _ in RANKINGS:
+        if label is None:
+            continue
+        top = [f"{MEDALS[min(r, 3) - 1]}{shorten(h['name'], BOARD_NAME_WIDTH)} {value(s)}"
+               for r, h, s in ranked(views, key)[:3]]
+        lines.append(f"{label} " + (" ".join(top) or "まだいない"))
+    today_news = news(views, today)
+    lines.append("📰 " + (today_news[0] if today_news else "今日も勇者たちは冒険中…"))
+    card = [fit(line) for line in lines]
+
+    detail = ["", f"── シーズン{season}（{first}〜{last}）──"]
+    for title, _, key, value, unit in RANKINGS:
+        detail += ["", f"── {title} ──"]
+        detail += [f"{r:>2}. {h['name']}  " + (f"Lv.{value(s)}" if title == "レベル" else f"{value(s)}{unit}")
+                   for r, h, s in ranked(views, key)]
+    detail += ["", "── 今日の出来事 ──"] + (today_news or ["まだない"])
+    detail += ["", "── 勇者たち ──"]
+    for hero, state in views:
+        place = world["places"][state["place"]]["name"]
+        detail.append(f"{hero['name']}  Lv.{state['hero']['level']}  📍{place}  {hero['gist_url']}")
+    past = sorted({r["season"] for _, state in entries for r in state["seasons"]})
+    if past:
+        detail += ["", "── 歴代のシーズン ──"]
+        for n in past:
+            recs = [(hero, r) for hero, state in entries for r in state["seasons"] if r["season"] == n]
+            lv_hero, lv = max(recs, key=lambda x: x[1]["level"])
+            kill_hero, kill = max(recs, key=lambda x: x[1]["kills"])
+            detail.append(f"シーズン{n}: 最高レベル {lv_hero['name']} Lv.{lv['level']}  "
+                          f"討伐数 {kill_hero['name']} {kill['kills']}体")
+    return "\n".join(card + detail) + "\n"
+
+
+def board_description(world: dict, today: date) -> str:
+    return f"勇者ランキング シーズン{game.season_of(world, today)}"
+
+
+def load_board(path: Path | None = None) -> dict | None:
+    path = path or BOARD_PATH
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"{path} が JSON として読めません（マージ衝突などを確認してください）: {e}")
+
+
+def update_board(world: dict, entries: list[tuple[dict, dict]], today: date, dry_run: bool, token: str | None) -> None:
+    """ランキングの Gist を更新する。まだなければ作って board.json に記録する。"""
+    content = build_board(world, entries, today)
+    print(content)
+    if dry_run:
+        return
+    description = board_description(world, today)
+    board = load_board()
+    if board is None:
+        gist = common.create_gist(token, BOARD_FILENAME, content, description)
+        board = {"gist_id": gist["id"], "gist_url": gist["html_url"], "created": today.isoformat()}
+        BOARD_PATH.parent.mkdir(parents=True, exist_ok=True)
+        BOARD_PATH.write_text(json.dumps(board, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        write_summary(f"## ランキングの Gist を作りました\n\n{gist['html_url']}\n\n"
+                      "プロフィールの **Customize your pins** で Pin できます。")
+        return
+    common.update_gist(board["gist_id"], token, BOARD_FILENAME, content, description=description)
+
+
 # ---- 実行 ---------------------------------------------------------------------------
 def pending_days(state: dict, today: date) -> list[date]:
     """進める日の一覧（古い順）。last_date の翌日から today まで、最大 CATCH_UP_DAYS 日。"""
@@ -247,7 +370,8 @@ def retire(key: str) -> int:
     raise SystemExit(f"引退させられる勇者「{key}」がいません（ID か名前で、現役の勇者を指定してください）")
 
 
-def run_hero(world: dict, hero: dict, today: date, actions: int | None, dry_run: bool, token: str | None) -> None:
+def run_hero(world: dict, hero: dict, today: date, actions: int | None, dry_run: bool) -> dict:
+    """勇者を進めて状態を保存し（dry_run なら保存しない）、状態を返す。"""
     path = hero_state_path(hero["id"])
     if not path.exists():  # 登録済みの勇者の状態が無いのは異常。黙って最初からにしない
         raise SystemExit(f"{path} がありません（削除やマージで消えた可能性があります）")
@@ -262,14 +386,12 @@ def run_hero(world: dict, hero: dict, today: date, actions: int | None, dry_run:
             game.advance(world, state, day)
     if days and not dry_run:
         game.save_state(state, path)
-    content = build_text(world, state)
-    print(content)
-    if not dry_run:
-        common.update_gist(hero["gist_id"], token, FILENAME, content, description=hero["name"])
+    return state
 
 
 def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) -> int:
-    """現役の勇者を全員進める。1 人が失敗しても残りは続け、1 人でも失敗したら終了コード 1。"""
+    """現役の勇者を全員進めて、それぞれの Gist とランキングの Gist を更新する。
+    1 人が失敗しても残りは続け、1 つでも失敗したら終了コード 1。"""
     heroes = [h for h in load_heroes() if h["active"]]
     if not heroes:
         print("現役の勇者がいません（new-game で作れます）")
@@ -277,13 +399,24 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
     token = os.environ.get("GIST_PAT")
     if not token and not dry_run:
         raise SystemExit("GIST_PAT を環境変数で指定してください")
-    failed = 0
+    failed, entries = 0, []
     for hero in heroes:
         try:
-            run_hero(world, hero, today, actions, dry_run, token)
+            state = run_hero(world, hero, today, actions, dry_run)
+            entries.append((hero, state))  # Gist の更新に失敗しても、進めた勇者はランキングに入れる
+            content = build_text(world, state)
+            print(content)
+            if not dry_run:
+                common.update_gist(hero["gist_id"], token, FILENAME, content, description=hero["name"])
         except (Exception, SystemExit) as e:  # noqa: BLE001  勇者ごとに失敗を隔離する
             failed += 1
             common.warn(f"{hero['name']}（{hero['id']}）を進められませんでした: {e}")
+    if entries:
+        try:
+            update_board(world, entries, today, dry_run, token)
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            failed += 1
+            common.warn(f"ランキングの Gist を更新できませんでした: {e}")
     return 1 if failed else 0
 
 
