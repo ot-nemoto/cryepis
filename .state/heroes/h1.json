@@ -1,10 +1,10 @@
 {
   "id": "h1",
   "name": "GOLD HILDR",
-  "day": 0,
+  "day": 1,
   "lap": 1,
-  "lap_day": 0,
-  "pos": 0,
+  "lap_day": 1,
+  "pos": 1,
   "boss_cleared": [],
   "hero": {
     "level": 1,
@@ -13,15 +13,31 @@
     "hp": 30,
     "base_atk": 5,
     "base_def": 2,
-    "gold": 50,
+    "gold": 10,
     "potions": 1,
-    "weapon": null,
+    "weapon": {
+      "name": "銅の剣",
+      "power": 3
+    },
     "armor": null
   },
   "kills": 0,
   "deaths": 0,
-  "last_date": null,
-  "last": null,
-  "journal": [],
+  "last_date": "2026-11-19",
+  "last": {
+    "date": "2026-11-19",
+    "steps": 1,
+    "events": [
+      "はじまりの村で休んだ、銅の剣を買った",
+      "遠くで羊が鳴いている"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-19",
+      "steps": 1,
+      "text": "はじまりの村で休んだ、銅の剣を買った / 遠くで羊が鳴いている"
+    }
+  ],
   "records": []
 }
