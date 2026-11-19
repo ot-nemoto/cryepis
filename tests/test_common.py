@@ -35,9 +35,12 @@ class UpdateGistTest(unittest.TestCase):
 
     def test_syncs_description_even_when_content_is_unchanged(self):
         gist = {"description": "old", "files": {"rank.txt": {"content": "same"}}}
-        with mock.patch.object(common, "api", side_effect=[gist, {}]) as api, mock.patch("sys.stdout", io.StringIO()):
+        out = io.StringIO()
+        with mock.patch.object(common, "api", side_effect=[gist, {}]) as api, mock.patch("sys.stdout", out):
             common.update_gist("g", "t", "rank.txt", "same", description="GOLD HILDR")
         self.assertEqual(api.call_args.args[3], {"description": "GOLD HILDR"})  # 中身は送らない
+        self.assertIn("説明", out.getvalue())
+        self.assertNotIn("rank.txt", out.getvalue())
 
     def test_updates_content_and_description_together(self):
         gist = {"description": "old", "files": {"rank.txt": {"content": "x"}}}

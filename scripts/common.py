@@ -85,4 +85,5 @@ def update_gist(gist_id: str, token: str, filename: str, content: str, descripti
     except urllib.error.HTTPError as e:
         hint = "（Classic PAT の gist スコープ・期限と Gist ID を確認してください）" if e.code in (401, 403, 404) else ""
         raise SystemExit(f"Gist API エラー {e.code}{hint}: {e.read().decode(errors='replace')}")
-    print(f"Gist を更新しました: {filename}")
+    changed = [x for x, key in ((filename, "files"), ("説明", "description")) if key in body]
+    print(f"Gist を更新しました: {'・'.join(changed)}")
