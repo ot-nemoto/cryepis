@@ -199,7 +199,7 @@ def build_text(world: dict, state: dict) -> str:
 
 # ---- ランキング（Pin 用の Gist）------------------------------------------------------
 RANKINGS = (  # (見出し, カードでの見出し（None ならカードに出さない）, 並べる値, 表示する値, 単位)
-    ("レベル", "Lv  ", lambda s: (s["hero"]["level"], s["hero"]["exp"]), lambda s: s["hero"]["level"], ""),
+    ("レベル", "Lv  ", lambda s: s["hero"]["level"], lambda s: s["hero"]["level"], ""),
     ("討伐数", "討伐", lambda s: s["season_stats"]["kills"], lambda s: s["season_stats"]["kills"], "体"),
     ("依頼達成", "依頼", lambda s: s["season_stats"]["quests_done"], lambda s: s["season_stats"]["quests_done"], "件"),
     ("レアアイテム", None, lambda s: len(s["season_stats"]["rares"]), lambda s: len(s["season_stats"]["rares"]), "個"),
@@ -296,8 +296,17 @@ def load_board(path: Path | None = None) -> dict | None:
         raise SystemExit(f"{path} が JSON として読めません（マージ衝突などを確認してください）: {e}")
 
 
+def create_board(content: str, description: str, today: date, token: str | None) -> None:
+    gist = common.create_gist(token, BOARD_FILENAME, content, description)
+    board = {"gist_id": gist["id"], "gist_url": gist["html_url"], "created": today.isoformat()}
+    BOARD_PATH.parent.mkdir(parents=True, exist_ok=True)
+    BOARD_PATH.write_text(json.dumps(board, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_summary(f"## ランキングの Gist を作りました\n\n{gist['html_url']}\n\n"
+                  "プロフィールの **Customize your pins** で Pin できます。")
+
+
 def update_board(world: dict, entries: list[tuple[dict, dict]], today: date, dry_run: bool, token: str | None) -> None:
-    """ランキングの Gist を更新する。まだなければ作って board.json に記録する。"""
+    """ランキングの Gist を更新する。まだないか、消えていたら（404）作って board.json に記録する。"""
     content = build_board(world, entries, today)
     print(content)
     if dry_run:
@@ -305,14 +314,15 @@ def update_board(world: dict, entries: list[tuple[dict, dict]], today: date, dry
     description = board_description(world, today)
     board = load_board()
     if board is None:
-        gist = common.create_gist(token, BOARD_FILENAME, content, description)
-        board = {"gist_id": gist["id"], "gist_url": gist["html_url"], "created": today.isoformat()}
-        BOARD_PATH.parent.mkdir(parents=True, exist_ok=True)
-        BOARD_PATH.write_text(json.dumps(board, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        write_summary(f"## ランキングの Gist を作りました\n\n{gist['html_url']}\n\n"
-                      "プロフィールの **Customize your pins** で Pin できます。")
+        create_board(content, description, today, token)
         return
-    common.update_gist(board["gist_id"], token, BOARD_FILENAME, content, description=description)
+    try:
+        common.update_gist(board["gist_id"], token, BOARD_FILENAME, content, description=description)
+    except common.GistAPIError as e:
+        if e.status != 404:
+            raise
+        common.warn(f"ランキングの Gist（{board['gist_url']}）が見つからないので、新しく作ります。Pin し直してください")
+        create_board(content, description, today, token)
 
 
 # ---- 実行 ---------------------------------------------------------------------------

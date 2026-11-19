@@ -77,6 +77,28 @@ class ValidateTest(unittest.TestCase):
             r["items"].append({"id": "god_sword", "name": "神の剣", "slot": "weapon", "rarity": "legendary", "atk": 99})
         self.assertError(change, ["強すぎ"])
 
+    def test_season_start_day_must_exist_in_every_month(self):
+        def change(r):
+            r["season"]["start"] = "2027-01-31"
+        self.assertError(change, ["start", "1〜28"])
+
+    def test_season_keys_are_checked(self):
+        def typo(r):
+            r["season"]["hunt_rang"] = r["season"].pop("hunt_range")
+        self.assertError(typo, ["hunt_range"])
+
+        def bad_hero(r):
+            del r["season"]["hero"]["atk"]
+        self.assertError(bad_hero, ["hero", "atk"])
+
+        def bad_rate(r):
+            r["season"]["potion"]["heal_rate"] = 2
+        self.assertError(bad_rate, ["potion", "heal_rate"])
+
+        def no_texts(r):
+            r["season"]["rest"] = []
+        self.assertError(no_texts, ["rest"])
+
     def test_bad_season(self):
         def change(r):
             r["season"]["months"] = 0

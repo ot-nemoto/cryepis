@@ -136,6 +136,27 @@ class QuestTest(unittest.TestCase):
         self.assertIsNone(state["quest"])
         self.assertEqual(state["home_town"], to)
 
+    def test_same_quest_is_not_taken_twice_a_day(self):
+        state = play(1, actions=0)
+        state["hero"]["level"] = 99  # どの依頼も合わない…ことがないよう、掲示板の依頼をすべて受けられるようにする
+        quests = G.board(WORLD, WORLD["start"], START, 1)
+        state["hero"]["level"] = max(q["level"][0] for q in quests)
+        day = day_of(state)
+        ids = []
+        for _ in range(len(quests) + 1):
+            state["quest"] = None
+            day.take_quest(WORLD["start"])
+            if state["quest"]["type"] != "patrol":
+                ids.append(state["quest"]["id"])
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(state["quest"]["type"], "patrol")  # 受けられる依頼が尽きたら見回り
+
+    def test_taken_quests_reset_the_next_day(self):
+        state = play(1, actions=1)
+        self.assertTrue(state["taken"])
+        G.advance(WORLD, state, START + timedelta(days=1), 0)
+        self.assertEqual(state["taken"], [])
+
     def test_patrol_matches_level(self):
         state = G.new_state(WORLD)
         low = G.patrol(WORLD, state)
@@ -161,6 +182,30 @@ class BattleAndItemTest(unittest.TestCase):
         self.assertIsNone(state["quest"])
         self.assertEqual(state["season_stats"]["deaths"], 1)
         self.assertEqual(state["hero"]["hp"], G.stats(WORLD, state)["max_hp"])
+
+    def low_hp_on_road(self, origin, to, left):
+        state = G.new_state(WORLD)
+        state.update(season=1, place=origin, road={"to": to, "left": left})
+        state["hero"].update(hp=1, potions=0)
+        return state
+
+    def test_turns_back_on_the_road_when_hp_is_low(self):
+        # 鉱山の町 →（距離 2）→ 雪原 の 1 歩目。引き返せば 1 で町、進めば 1 + 雪の町まで 1
+        state = self.low_hp_on_road("town_kouzan", "snowfield", 1)
+        day = day_of(state)
+        day.turn_back()
+        self.assertEqual((state["place"], state["road"]), ("snowfield", {"to": "town_kouzan", "left": 1}))
+        self.assertIn("引き返した", day.events[0])
+        self.assertTrue(day.act())  # 次の行動で町に着く
+        self.assertEqual((state["place"], state["road"]), ("town_kouzan", None))
+
+    def test_keeps_going_when_turning_back_is_not_closer(self):
+        # 東の丘 →（距離 2）→ 白い浜辺。どちらに行っても町まで 2 なら、そのまま進む
+        state = self.low_hp_on_road("east_hill", "beach", 1)
+        day = day_of(state)
+        day.turn_back()
+        self.assertEqual((state["place"], state["road"]["to"]), ("east_hill", "beach"))
+        self.assertEqual(day.events, [])
 
     def test_strong_monster_beats_a_new_hero(self):
         state = G.new_state(WORLD)
@@ -212,6 +257,26 @@ class StateFileTest(unittest.TestCase):
         self.assertEqual((loaded["place"], loaded["home_town"], loaded["road"], loaded["quest"]),
                          (WORLD["start"], WORLD["start"], None, None))
         self.assertNotIn("gone_item", loaded["inventory"])
+
+    def test_load_drops_removed_items_from_rare_records(self):
+        state = play(2)
+        state["season_stats"]["rares"] = ["blue_flame_sword", "gone_item"]
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "h1.json"
+            G.save_state(state, path)
+            loaded = G.load_state(WORLD, path)
+        self.assertEqual(loaded["season_stats"]["rares"], ["blue_flame_sword"])
+
+    def test_load_drops_quests_whose_place_changed_type(self):
+        state = play(2)
+        base = {"name": "x", "template": "t", "town": WORLD["start"], "report": WORLD["start"], "count": 1,
+                "progress": 0, "level": [1, 5], "deadline": "2099-01-01", "reward": None}
+        cases = [({"type": "hunt", "place": WORLD["towns"][1], "monster": "slime"}, False),  # 町で討伐はできない
+                 ({"type": "deliver", "place": "north_plain", "monster": None}, False),    # 野外へは配達しない
+                 ({"type": "hunt", "place": "north_plain", "monster": "slime"}, True),
+                 ({"type": "teleport", "place": "north_plain", "monster": None}, False)]
+        for quest, ok in cases:
+            self.assertEqual(G.quest_ok(WORLD, base | quest), ok, quest)
 
     def test_old_format_starts_over(self):
         old = {"id": "h2", "name": "アリス", "day": 37, "lap": 1, "pos": 26, "hero": {"level": 7}}

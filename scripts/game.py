@@ -55,8 +55,8 @@ def new_season_stats() -> dict:
 def new_state(world: dict, hero_id: str = "h1", name: str = "勇者") -> dict:
     return {"id": hero_id, "name": name, "season": None, "season_day": 0, "day": 0, "last_date": None,
             "hero": new_hero(world), "inventory": {}, "place": world["start"], "home_town": world["start"],
-            "road": None, "quest": None, "season_stats": new_season_stats(), "last": None, "journal": [],
-            "seasons": []}
+            "road": None, "quest": None, "taken": [], "season_stats": new_season_stats(), "last": None,
+            "journal": [], "seasons": []}
 
 
 def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者") -> dict:
@@ -75,6 +75,7 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
     state["season_stats"] = {**new_season_stats(), **state["season_stats"]}
     places = world["places"]
     state["inventory"] = {k: v for k, v in state["inventory"].items() if k in world["items"]}
+    state["season_stats"]["rares"] = [i for i in state["season_stats"]["rares"] if i in world["items"]]
     if state["place"] not in places:
         state.update(place=world["start"], road=None)
     if places.get(state["home_town"], {}).get("type") != "town":
@@ -90,9 +91,14 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
     return state
 
 
+QUEST_PLACE_TYPES = {"hunt": "field", "patrol": "field", "deliver": "town"}
+
+
 def quest_ok(world: dict, quest: dict) -> bool:
+    """依頼の参照先が今の world/ にあり、種類も合っているか（討伐・見回りは野外、配達は町）。"""
     places = world["places"]
-    if quest.get("place") not in places:
+    want = QUEST_PLACE_TYPES.get(quest.get("type"))
+    if want is None or places.get(quest.get("place"), {}).get("type") != want:
         return False
     if quest.get("report") is not None and places.get(quest["report"], {}).get("type") != "town":
         return False
@@ -142,9 +148,10 @@ def board(world: dict, town: str, d: date, season: int) -> list[dict]:
     templates = world["quests"]
     weights = [t["weight"] for t in templates]
     quests = []
-    for _ in range(cfg["board_size"]):
+    for i in range(cfg["board_size"]):
         quest = make_quest(world, rng.choices(templates, weights)[0], town, d, rng)
         if quest:
+            quest["id"] = f"{d.isoformat()}-{town}-{i}"
             quests.append(quest)
     return quests
 
@@ -348,9 +355,11 @@ class Day:
 
     def take_quest(self, town: str) -> None:
         level = self.hero["level"]
-        quests = [q for q in board(self.world, town, self.today, self.state["season"]) if suitable(q, level)]
+        quests = [q for q in board(self.world, town, self.today, self.state["season"])
+                  if suitable(q, level) and q["id"] not in self.state["taken"]]  # その日に受けた依頼はもう受けない
         if quests:
             quest = self.rng.choice(quests)
+            self.state["taken"].append(quest["id"])
             self.log(f"{self.world['places'][town]['name']}のギルドで依頼を受けた: {quest_text(self.world, quest)}")
         else:
             quest = patrol(self.world, self.state)
@@ -426,15 +435,31 @@ class Day:
             return True
         return self.field_event(road["to"])
 
+    def turn_back(self) -> None:
+        """道の途中で、引き返したほうが町に早く着くなら引き返す。"""
+        state, world = self.state, self.world
+        road, origin = state["road"], state["place"]
+        if world["places"][road["to"]]["type"] == "town":
+            return
+        total = world["roads"][(origin, road["to"])]
+        town_dist = {p: min(world["dist"][p][t] for t in world["towns"]) for p in (origin, road["to"])}
+        back = total - road["left"] + town_dist[origin]
+        forward = road["left"] + town_dist[road["to"]]
+        if back < forward:
+            state.update(place=road["to"], road={"to": origin, "left": total - road["left"]})
+            self.log(f"HP が心もとないので{world['places'][origin]['name']}へ引き返した")
+
     def act(self) -> bool:
         """1 行動。力尽きたら False。"""
         state, world, hero = self.state, self.world, self.hero
         for _ in range(5):  # 町での受注・報告は行動回数を使わない
+            low = hero["hp"] < self.stats["max_hp"] * self.cfg["retreat_hp_rate"] and not hero["potions"]
             if state["road"]:
+                if low:
+                    self.turn_back()
                 return self.move_toward(state["road"]["to"])
             place = state["place"]
             in_town = world["places"][place]["type"] == "town"
-            low = hero["hp"] < self.stats["max_hp"] * self.cfg["retreat_hp_rate"] and not hero["potions"]
             if low and not in_town:
                 return self.move_toward(nearest_town(world, place))
             quest = state["quest"]
@@ -485,6 +510,7 @@ def advance(world: dict, state: dict, today: date, actions: int | None = None) -
     state["day"] += 1
     state["season_day"] += 1
     state["last_date"] = today.isoformat()
+    state["taken"] = []
     day = Day(world, state, today, rng)
     if new_season:
         day.log(f"シーズン{season}が始まった（レベルは 1 に戻り、持ち物はそのまま）")

@@ -15,6 +15,14 @@ JST = timezone(timedelta(hours=9))
 LINE_MAX = 49
 
 
+class GistAPIError(SystemExit):
+    """Gist API のエラー（status は HTTP のステータスコード）。SystemExit なので、捕まえなければ終了する。"""
+
+    def __init__(self, status: int, message: str):
+        super().__init__(message)
+        self.status = status
+
+
 def warn(msg: str) -> None:
     """GitHub Actions のサマリーに警告として表示する（ローカルではただの出力）。"""
     print(f"::warning::{msg}", file=sys.stderr)
@@ -54,7 +62,7 @@ def create_gist(token: str, filename: str, content: str, description: str) -> di
         return api("POST", "https://api.github.com/gists", token, body)
     except urllib.error.HTTPError as e:
         hint = "（Classic PAT の gist スコープと期限を確認してください）" if e.code in (401, 403, 404) else ""
-        raise SystemExit(f"Gist API エラー {e.code}{hint}: {e.read().decode(errors='replace')}")
+        raise GistAPIError(e.code, f"Gist API エラー {e.code}{hint}: {e.read().decode(errors='replace')}")
     except urllib.error.URLError as e:  # POST は冪等でないので再試行しない
         raise SystemExit(f"Gist API に接続できません: {e.reason}")
 
@@ -84,6 +92,6 @@ def update_gist(gist_id: str, token: str, filename: str, content: str, descripti
         api("PATCH", f"https://api.github.com/gists/{gist_id}", token, body)
     except urllib.error.HTTPError as e:
         hint = "（Classic PAT の gist スコープ・期限と Gist ID を確認してください）" if e.code in (401, 403, 404) else ""
-        raise SystemExit(f"Gist API エラー {e.code}{hint}: {e.read().decode(errors='replace')}")
+        raise GistAPIError(e.code, f"Gist API エラー {e.code}{hint}: {e.read().decode(errors='replace')}")
     changed = [x for x, key in ((filename, "files"), ("説明", "description")) if key in body]
     print(f"Gist を更新しました: {'・'.join(changed)}")

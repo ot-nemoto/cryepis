@@ -26,6 +26,19 @@ QUEST_TYPES = ("hunt", "deliver")
 FIELD_EVENTS = ("battle", "treasure", "nothing")
 STATS = ("atk", "def", "hp")
 NONE = "none"  # ドロップ表の「何も出ない」
+BIG = 10 ** 9
+# season.json の必須項目: 名前 → (型, 最小, 最大)
+SEASON_KEYS = {
+    "months": (int, 1, 120), "rest_heal_rate": (float, 0, 1), "retreat_hp_rate": (float, 0, 1),
+    "board_size": (int, 1, 50), "hunt_range": (int, 0, BIG), "deliver_range": (int, 1, BIG),
+    "patrol_battles": (int, 1, BIG), "hunt_battle_boost": (float, 0.01, BIG), "balance_level": (int, 1, BIG),
+    "item_power_rate": (float, 0.01, BIG),
+}
+HERO_KEYS = {"max_hp": (int, 1, BIG), "atk": (int, 0, BIG), "def": (int, 0, BIG), "gold": (int, 0, BIG),
+             "potions": (int, 0, BIG)}
+LEVEL_UP_KEYS = {"hp": (int, 0, BIG), "atk": (int, 0, BIG), "def": (int, 0, BIG), "exp_base": (float, 0.01, BIG),
+                 "exp_power": (float, 0.01, 10)}
+POTION_KEYS = {"price": (int, 1, BIG), "heal_rate": (float, 0.01, 1), "keep": (int, 0, BIG)}
 
 
 def read_json(path: Path) -> dict:
@@ -101,17 +114,30 @@ def validate(raw: dict) -> list[str]:
 
     # season.json
     try:
-        date.fromisoformat(season["start"])
+        if date.fromisoformat(season["start"]).day > 28:  # どの月にもある日でないと、シーズンの区切りが作れない
+            err("season.json: start の日は 1〜28 にしてください")
     except (KeyError, TypeError, ValueError):
         err("season.json: start は YYYY-MM-DD で指定してください")
-    if not (isinstance(season.get("months"), int) and season["months"] >= 1):
-        err("season.json: months は 1 以上の整数にしてください")
     if not _weights_ok(season.get("action_weights")) or any(
             not isinstance(a, int) or a < 0 for a, _ in season.get("action_weights") or []):
         err("season.json: action_weights は [行動回数, 正の重み] の一覧にしてください")
-    for key in ("hero", "level_up", "potion"):
-        if not isinstance(season.get(key), dict):
-            err(f"season.json: {key} がありません")
+    for where, obj, spec in (("season.json", season, SEASON_KEYS),
+                             ("season.json の hero", season.get("hero"), HERO_KEYS),
+                             ("season.json の level_up", season.get("level_up"), LEVEL_UP_KEYS),
+                             ("season.json の potion", season.get("potion"), POTION_KEYS)):
+        if not isinstance(obj, dict):
+            err(f"{where} がありません")
+            continue
+        for key, (kind, low, high) in spec.items():
+            value = obj.get(key)
+            ok = isinstance(value, int) if kind is int else isinstance(value, (int, float))
+            if not ok or isinstance(value, bool) or not low <= value <= high:
+                name = "整数" if kind is int else "数"
+                err(f"{where}: {key} は {low}〜{high} の{name}にしてください")
+    for key in ("rest", "scenery"):
+        texts = season.get(key)
+        if not isinstance(texts, list) or not texts or not all(isinstance(t, str) and t for t in texts):
+            err(f"season.json: {key} は文字列の一覧（1 つ以上）にしてください")
     table_ok("season.json の treasure", season.get("treasure"))
 
     # map.json
@@ -217,7 +243,7 @@ def validate(raw: dict) -> list[str]:
 
     # 釣り合い: 部位ごとに最も強い装備を足しても、典型的なレベルの基本能力値の一定割合を超えない
     if not errors:
-        level, rate = season.get("balance_level", 20), season.get("item_power_rate", 0.3)
+        level, rate = season["balance_level"], season["item_power_rate"]
         for stat in STATS:
             best = sum(max((it.get(stat, 0) for it in items.values() if it["slot"] == slot), default=0)
                        for slot in SLOTS)

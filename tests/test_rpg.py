@@ -77,6 +77,15 @@ class DisplayTest(unittest.TestCase):
         self.assertIn("開幕前", lines[0])
         self.assertIn("今日も勇者たちは冒険中", lines[4])
 
+    def test_same_level_gets_the_same_medal(self):
+        entries = []
+        for i, exp in enumerate((5, 30, 10)):
+            state = play(1, f"h{i}")
+            state["hero"].update(level=13, exp=exp)
+            entries.append(({"id": f"h{i}", "name": f"勇者{i}", "gist_url": "u"}, state))
+        line = rpg.build_board(WORLD, entries, DAY).splitlines()[1]
+        self.assertEqual(line.count("🥇"), 3, line)
+
     def test_ranked_shares_rank_on_ties(self):
         rows = [({"name": n}, {"v": v}) for n, v in (("a", 5), ("b", 7), ("c", 5), ("d", 1))]
         self.assertEqual([(r, h["name"]) for r, h, _ in rpg.ranked(rows, lambda s: s["v"])],
@@ -242,6 +251,35 @@ class HeroesTest(unittest.TestCase):
         self.assertEqual(len(board), 1)
         self.assertEqual(board[0].args[2], rpg.BOARD_FILENAME)
         self.assertEqual(board[0].kwargs["description"], "勇者ランキング シーズン1")
+
+    def test_board_is_recreated_when_the_gist_is_gone(self):
+        self.new_game("アリス")
+        with mock.patch.object(common, "update_gist"):
+            self.run_main(["--date", "2026-12-01"], {"GIST_PAT": "p"})
+        self.create_board.return_value = {"id": "board2", "html_url": "https://g/board2"}
+
+        def gone(gist_id, *_, **__):
+            if gist_id == "board":
+                raise common.GistAPIError(404, "Gist API エラー 404")
+
+        with mock.patch.object(common, "update_gist", side_effect=gone), mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.run_main(["--date", "2026-12-02"], {"GIST_PAT": "p"}), 0)
+        warn.assert_called_once()
+        self.assertEqual(rpg.load_board()["gist_id"], "board2")
+
+    def test_board_other_errors_are_not_recreated(self):
+        self.new_game("アリス")
+        with mock.patch.object(common, "update_gist"):
+            self.run_main(["--date", "2026-12-01"], {"GIST_PAT": "p"})
+
+        def denied(gist_id, *_, **__):
+            if gist_id == "board":
+                raise common.GistAPIError(403, "Gist API エラー 403")
+
+        with mock.patch.object(common, "update_gist", side_effect=denied), mock.patch.object(common, "warn"):
+            self.assertEqual(self.run_main(["--date", "2026-12-02"], {"GIST_PAT": "p"}), 1)
+        self.assertEqual(self.create_board.call_count, 1)
+        self.assertEqual(rpg.load_board()["gist_id"], "board")
 
     def test_board_failure_fails_the_run_but_keeps_heroes(self):
         self.new_game("アリス")
