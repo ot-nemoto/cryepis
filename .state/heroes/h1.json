@@ -1,0 +1,27 @@
+{
+  "id": "h1",
+  "name": "GOLD HILDR",
+  "day": 0,
+  "lap": 1,
+  "lap_day": 0,
+  "pos": 0,
+  "boss_cleared": [],
+  "hero": {
+    "level": 1,
+    "exp": 0,
+    "max_hp": 30,
+    "hp": 30,
+    "base_atk": 5,
+    "base_def": 2,
+    "gold": 50,
+    "potions": 1,
+    "weapon": null,
+    "armor": null
+  },
+  "kills": 0,
+  "deaths": 0,
+  "last_date": null,
+  "last": null,
+  "journal": [],
+  "records": []
+}

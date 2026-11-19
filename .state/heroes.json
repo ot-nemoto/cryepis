@@ -1,0 +1,12 @@
+{
+  "heroes": [
+    {
+      "id": "h1",
+      "name": "GOLD HILDR",
+      "gist_id": "7dc7ea3d1ccddfe0817fea9063813419",
+      "gist_url": "https://gist.github.com/ot-nemoto/7dc7ea3d1ccddfe0817fea9063813419",
+      "created": "2026-11-19",
+      "active": true
+    }
+  ]
+}
