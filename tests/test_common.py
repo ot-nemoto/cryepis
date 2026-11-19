@@ -33,6 +33,25 @@ class UpdateGistTest(unittest.TestCase):
             common.update_gist("g", "t", "rank.txt", "same")
         self.assertEqual(api.call_count, 1)
 
+    def test_syncs_description_even_when_content_is_unchanged(self):
+        gist = {"description": "old", "files": {"rank.txt": {"content": "same"}}}
+        with mock.patch.object(common, "api", side_effect=[gist, {}]) as api, mock.patch("sys.stdout", io.StringIO()):
+            common.update_gist("g", "t", "rank.txt", "same", description="GOLD HILDR")
+        self.assertEqual(api.call_args.args[3], {"description": "GOLD HILDR"})  # 中身は送らない
+
+    def test_updates_content_and_description_together(self):
+        gist = {"description": "old", "files": {"rank.txt": {"content": "x"}}}
+        with mock.patch.object(common, "api", side_effect=[gist, {}]) as api, mock.patch("sys.stdout", io.StringIO()):
+            common.update_gist("g", "t", "rank.txt", "new", description="GOLD HILDR")
+        self.assertEqual(api.call_args.args[3],
+                         {"files": {"rank.txt": {"content": "new"}}, "description": "GOLD HILDR"})
+
+    def test_skips_when_content_and_description_are_unchanged(self):
+        gist = {"description": "GOLD HILDR", "files": {"rank.txt": {"content": "same"}}}
+        with mock.patch.object(common, "api", return_value=gist) as api, mock.patch("sys.stdout", io.StringIO()):
+            common.update_gist("g", "t", "rank.txt", "same", description="GOLD HILDR")
+        self.assertEqual(api.call_count, 1)
+
     def test_gist_api_error_exits_with_hint(self):
         err = common.urllib.error.HTTPError("u", 404, "nf", {}, io.BytesIO(b"Not Found"))
         with mock.patch.object(common, "api", side_effect=err), self.assertRaises(SystemExit) as cm:
