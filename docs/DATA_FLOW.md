@@ -9,7 +9,7 @@ flowchart LR
     subgraph daily["hero-adventure.yml（毎日 JST 7:17）"]
         direction TB
         test["Test<br/>（unittest）"]
-        rpg["rpg.py<br/>現役の勇者を全員 1 日進める"]
+        rpg["rpg.py（world.py・game.py）<br/>現役の勇者を全員 1 日進める"]
         commit["Commit state<br/>（master に直接コミット）"]
         test ==> rpg ==> commit
     end
@@ -21,11 +21,11 @@ flowchart LR
 
     subgraph state[".state/（master にコミット）"]
         heroes[("heroes.json<br/>勇者管理シート")]
-        heroState[("heroes/&lt;id&gt;.json<br/>勇者ごとの状態・日誌・周回の記録")]
+        heroState[("heroes/&lt;id&gt;.json<br/>勇者ごとの状態・持ち物・日誌・シーズンの記録")]
         lastRun[("last-run<br/>keepalive 用の日付")]
     end
 
-    world[("rpg_world.json<br/>エリア・敵・アイテム・歩数の確率")]
+    world[("world/*.json<br/>シーズン・MAP・敵・アイテム・依頼")]
     gists["勇者ごとの Gist<br/>（Pin は好きなものを最大 6 件）"]
 
     world --> rpg
@@ -47,15 +47,15 @@ flowchart LR
 
 | ファイル | 書き込み元 | 中身 | 使い道 |
 |---|---|---|---|
-| `rpg_world.json` | 人（手で編集） | テキスト RPG の世界（エリア・敵・ボス・店・イベントの起こりやすさ・歩数の確率） | `rpg.py` の入力 |
+| `world/*.json` | 人（手で編集） | テキスト RPG の世界（シーズン・MAP・敵・アイテム・ギルドの依頼）。形式は README の「世界を広げる」 | `rpg.py` の入力（Test で検証してから使う） |
 | `.state/heroes.json` | `rpg.py`（New game / Retire hero） | 勇者の一覧（ID・名前・Gist の ID と URL・作成日・現役かどうか）。最大 6 人 | 毎日の更新の対象と、更新先の Gist |
-| `.state/heroes/<id>.json` | `rpg.py` | 勇者の状態（位置・HP・レベル・装備など）、直近 30 日の日誌、周回の記録 | 翌日の続きと、Gist の表示 |
+| `.state/heroes/<id>.json` | `rpg.py` | 勇者の状態（場所・HP・レベル・依頼など）、持ち物、直近 30 日の日誌、シーズンの記録 | 翌日の続きと、Gist の表示 |
 | `.state/last-run` | Commit state ステップ | 最終実行日（JST） | 60 日無活動で scheduled workflow が止まるのを防ぐ（keepalive） |
 
 `.state/` の各ファイルの JSON 構成・項目の意味・例は [STATE_FORMAT.md](STATE_FORMAT.md) を参照してください。
 
 保持期間:
-- `heroes/<id>.json` は毎日上書きします（日誌は直近 30 日分、周回の記録は無制限）。引退した勇者のファイルはそのまま残ります。
+- `heroes/<id>.json` は毎日上書きします（日誌は直近 30 日分、シーズンの記録と持ち物は無制限）。引退した勇者のファイルはそのまま残ります。
 - `heroes.json` は勇者の追加・引退のときだけ書き換えます。
 - `last-run` は毎回上書きします。
 
@@ -75,7 +75,7 @@ sequenceDiagram
     WF->>RP: 実行
     RP->>S: heroes.json から現役の勇者を読む
     loop 現役の勇者ごと（失敗は勇者ごとに隔離）
-        RP->>S: heroes/<id>.json を 1 日分進める（歩数は乱数。処理済みなら進めない。実行されなかった日があればさかのぼって進める）
+        RP->>S: heroes/<id>.json を 1 日分進める（行動回数は乱数。シーズンが変わったら持ち物以外をリセット。処理済みなら進めない。実行されなかった日があればさかのぼって進める）
         RP->>G: その勇者の Gist を更新
     end
     Note over WF,M: Commit state は前のステップが失敗しても実行（!cancelled()）

@@ -1,0 +1,26 @@
+{
+  "rarities": ["common", "rare", "epic", "legendary"],
+  "items": [
+    {"id": "wooden_sword", "name": "木の剣", "slot": "weapon", "rarity": "common", "atk": 2, "price": 30},
+    {"id": "copper_sword", "name": "銅の剣", "slot": "weapon", "rarity": "common", "atk": 3, "price": 70},
+    {"id": "iron_sword", "name": "鉄の剣", "slot": "weapon", "rarity": "common", "atk": 5, "price": 250},
+    {"id": "steel_sword", "name": "鋼の剣", "slot": "weapon", "rarity": "common", "atk": 7, "price": 700},
+    {"id": "hunter_dagger", "name": "狩人の短剣", "slot": "weapon", "rarity": "rare", "atk": 6, "drop_level": 5},
+    {"id": "blue_flame_sword", "name": "蒼炎の剣", "slot": "weapon", "rarity": "rare", "atk": 9, "drop_level": 12},
+    {"id": "dragon_fang", "name": "竜牙の剣", "slot": "weapon", "rarity": "epic", "atk": 11, "drop_level": 18},
+    {"id": "star_sword", "name": "星の剣", "slot": "weapon", "rarity": "legendary", "atk": 12, "drop_level": 25},
+
+    {"id": "cloth_armor", "name": "布の服", "slot": "armor", "rarity": "common", "def": 1, "price": 20},
+    {"id": "leather_armor", "name": "革の鎧", "slot": "armor", "rarity": "common", "def": 2, "price": 60},
+    {"id": "chain_mail", "name": "鎖かたびら", "slot": "armor", "rarity": "common", "def": 3, "price": 250},
+    {"id": "steel_armor", "name": "鋼の鎧", "slot": "armor", "rarity": "common", "def": 4, "price": 700},
+    {"id": "knight_armor", "name": "騎士の鎧", "slot": "armor", "rarity": "rare", "def": 4, "hp": 10, "drop_level": 10},
+    {"id": "dragon_scale", "name": "竜鱗の鎧", "slot": "armor", "rarity": "epic", "def": 5, "hp": 15, "drop_level": 18},
+    {"id": "sky_armor", "name": "天空の鎧", "slot": "armor", "rarity": "legendary", "def": 6, "hp": 20, "drop_level": 25},
+
+    {"id": "lucky_charm", "name": "幸運のお守り", "slot": "accessory", "rarity": "common", "hp": 5, "price": 120},
+    {"id": "miner_charm", "name": "坑夫のお守り", "slot": "accessory", "rarity": "rare", "hp": 15, "drop_level": 8},
+    {"id": "power_ring", "name": "力の指輪", "slot": "accessory", "rarity": "rare", "atk": 1, "hp": 10, "drop_level": 10},
+    {"id": "life_pendant", "name": "命のペンダント", "slot": "accessory", "rarity": "epic", "hp": 30, "drop_level": 15}
+  ]
+}

@@ -6,7 +6,7 @@
 | ファイル | 書き込み元 | 中身 |
 |---|---|---|
 | [`heroes.json`](#heroesjson) | `scripts/rpg.py`（New game / Retire hero） | 勇者管理シート（勇者の一覧と Gist の ID） |
-| [`heroes/<id>.json`](#heroesidjson) | `scripts/rpg.py` | 勇者ごとの状態・日誌・周回の記録 |
+| [`heroes/<id>.json`](#heroesidjson) | `scripts/rpg.py` | 勇者ごとの状態・持ち物・日誌・シーズンの記録 |
 | [`last-run`](#last-run) | hero-adventure.yml の Commit state ステップ | 最終実行日 |
 
 共通の決まり:
@@ -43,45 +43,55 @@
 ## `heroes/<id>.json`
 
 勇者ごとの状態です（テキスト RPG は [README](../README.md#勇者の冒険テキスト-rpg)）。`scripts/rpg.py` が毎日 1 日分進めて上書きします。
-世界の設定（エリア・敵・アイテム）は `rpg_world.json` にあり、ここには勇者の状態だけを持ちます。
+世界の設定（MAP・敵・アイテム・依頼）は `world/` にあり、ここには勇者の状態だけを持ちます。場所・敵・アイテムは `world/` の ID で参照します。
 
 ```json
 {
   "id": "h1",
   "name": "アリス",
-  "day": 37,
-  "lap": 1,
-  "lap_day": 37,
-  "pos": 26,
-  "boss_cleared": ["草原"],
-  "hero": {"level": 7, "exp": 120, "max_hp": 90, "hp": 74, "base_atk": 23, "base_def": 8,
-           "gold": 340, "potions": 2, "weapon": {"name": "鉄の剣", "power": 7}, "armor": null},
-  "kills": 41,
-  "deaths": 0,
-  "last_date": "2026-11-11",
-  "last": {"date": "2026-11-11", "steps": 2, "events": ["ウルフを倒した！ (+10EXP)", "…"]},
-  "journal": [{"date": "2026-11-11", "steps": 2, "text": "ウルフを倒した！ (+10EXP) / …"}],
-  "records": [{"lap": 1, "days": 92, "deaths": 1, "level": 12, "cleared_on": "2027-01-05"}]
+  "season": 1,
+  "season_day": 40,
+  "day": 40,
+  "last_date": "2027-01-09",
+  "hero": {"level": 12, "exp": 120, "max_hp": 118, "hp": 117, "base_atk": 28, "base_def": 13,
+           "gold": 1587, "potions": 3},
+  "inventory": {"wooden_sword": 1, "iron_sword": 1, "chain_mail": 1, "lucky_charm": 1},
+  "place": "lost_forest",
+  "home_town": "town_mori",
+  "road": null,
+  "quest": {"type": "hunt", "name": "討伐", "template": "hunt", "town": "town_mori", "place": "lost_forest",
+            "report": "town_mori", "monster": "wolf", "count": 4, "progress": 1, "level": [7, 12],
+            "deadline": "2027-01-14", "reward": {"exp": 112, "gold": 140, "item": [["none", 85], ["common", 10], ["rare", 5]]}},
+  "season_stats": {"quests_done": 12, "quests_failed": 1, "kills": 61, "deaths": 0, "rares": []},
+  "last": {"date": "2027-01-09", "actions": 4, "events": ["ウルフを倒した (+17EXP)", "…"]},
+  "journal": [{"date": "2027-01-09", "actions": 4, "text": "ウルフを倒した (+17EXP) / …"}],
+  "seasons": [{"season": 0, "days": 90, "level": 21, "quests_done": 30, "quests_failed": 2, "kills": 144,
+               "deaths": 1, "rares": ["blue_flame_sword"], "ended_on": "2026-11-30"}]
 }
 ```
 
 | 項目 | 中身 |
 |---|---|
 | `id` / `name` | 勇者の ID と名前（`heroes.json` と同じ） |
-| `day` | 通算の日数（周回をまたいで数える） |
-| `lap` / `lap_day` | 何周目か / その周の何日目か |
-| `pos` | 今いるマス（0 から。エリアの最初のマスが町、最後のマスがボス） |
-| `boss_cleared` | この周で倒したボスのエリア名 |
-| `hero` | レベル、経験値（次のレベルまでの途中の値）、HP、基本の攻撃力・防御力、所持金、回復薬、装備 |
-| `kills` / `deaths` | この周で倒した敵の数 / 力尽きた回数 |
+| `season` / `season_day` | 今のシーズンの番号（まだ一度も進めていなければ `null`）/ そのシーズンで進めた日数 |
+| `day` | 通算の日数（シーズンをまたいで数える） |
 | `last_date` | 最後に進めた日（JST）。この日以前の日付では進めない（同じ日に再実行しても進まない） |
-| `last` | 最後に進めた日の結果（`date` は進めた日、`steps` は進んだ歩数（乱数で決まる）、`events` は出来事） |
+| `hero` | レベル、経験値（次のレベルまでの途中の値）、HP、基本の最大 HP・攻撃力・防御力（装備なし）、所持金、回復薬 |
+| `inventory` | 持ち物（アイテムの ID → 個数）。**シーズンをまたいで持ち越す**。装備は持ち物から部位ごとにいちばん強いものを毎回選ぶ（状態には持たない） |
+| `place` | 今いる場所の ID |
+| `home_town` | 最後に寄った町（力尽きたらここで目を覚ます） |
+| `road` | 距離 2 以上の道を進んでいる途中なら `{"to": 行き先, "left": 残りの行動回数}`、そうでなければ `null` |
+| `quest` | 受けている依頼（なければ `null`）。`type` は `hunt`（討伐）/ `deliver`（配達）/ `patrol`（見回り。報酬なし）。`place` が目的地、`report` が報告する町（見回りは `null`）、`progress` / `count` が進み具合、`deadline` が期限 |
+| `season_stats` | 今のシーズンの成績（達成・失敗した依頼の数、倒した敵の数、力尽きた回数、手に入れたレアアイテムの ID） |
+| `last` | 最後に進めた日の結果（`date` は進めた日、`actions` はその日の行動回数（乱数で決まる）、`events` は出来事） |
 | `journal` | 日誌。新しい順に直近 30 日分（`JOURNAL_DAYS`） |
-| `records` | クリアした周の記録（何日でクリアしたか、力尽きた回数、レベル）。無制限に残す |
+| `seasons` | 終わったシーズンの記録（日数、最後のレベル、成績、終わった日）。無制限に残す |
 
-- 魔王を倒すと `records` に記録を足し、`lap` を 1 増やして、`pos`・`hero`・`kills`・`deaths` を最初の状態に戻します。
+- シーズンが変わった最初の実行で、`seasons` に記録を足し、`inventory` 以外（`hero`・`place`・`quest`・`season_stats` など）を最初の状態に戻します。
 - workflow が動かなかった日は、次の実行で `last_date` の翌日から 1 日ずつ進めます（最大 7 日分。`CATCH_UP_DAYS`）。
-- 読み込むときに、足りない項目は初期値で補い、`rpg_world.json` を縮めて世界の外に出た `pos` は最後のマスに戻します。
+- 読み込むときに、足りない項目は初期値で補います。`world/` から消えた場所にいれば最初の町に戻し、消えたアイテムは持ち物から外し、
+  消えた場所・町・敵を参照する依頼は取り消します。
+- 前の形式（一本道の RPG。`season` がない）の状態は、読み込むときに新しい形式で最初から作り直します（ID と名前だけ引き継ぐ）。
 
 ---
 
@@ -106,7 +116,8 @@ import json
 with open(".state/heroes/h1.json", encoding="utf-8") as f:
     state = json.load(f)
 hero = state["hero"]
-print(f"{state['lap']}周目 {state['lap_day']}日目 Lv.{hero['level']} HP {hero['hp']}/{hero['max_hp']}")
-for r in state["records"]:
-    print(f"{r['lap']}周目: {r['days']}日でクリア")
+print(f"シーズン{state['season']} {state['season_day']}日目 Lv.{hero['level']} 所持金 {hero['gold']}G")
+print("持ち物:", ", ".join(f"{k} ×{n}" for k, n in state["inventory"].items()))
+for r in state["seasons"]:
+    print(f"シーズン{r['season']}: Lv.{r['level']} 依頼達成 {r['quests_done']}")
 ```

@@ -1,0 +1,269 @@
+"""シーズン制 RPG の世界（world/ の下のデータファイル）を読み込み、検証する。
+
+world/
+  season.json   シーズンの長さ・初期ステータス・レベルアップ・1 日の行動回数など
+  map.json      場所（町・野外）と道
+  monsters.json 敵
+  items.json    アイテム（珍しさの一覧を含む）
+  quests.json   ギルドの依頼のひな形
+
+参照はすべて ID で行う。データに誤りがあれば validate() がその一覧を返し、load_world() は止まる。
+"""
+from __future__ import annotations
+
+import heapq
+import json
+from datetime import date
+from pathlib import Path
+
+import common
+
+WORLD_DIR = common.ROOT / "world"
+SLOTS = ("weapon", "armor", "accessory")
+SLOT_NAMES = {"weapon": "武器", "armor": "防具", "accessory": "装飾品"}
+PLACE_TYPES = ("town", "field")
+QUEST_TYPES = ("hunt", "deliver")
+FIELD_EVENTS = ("battle", "treasure", "nothing")
+STATS = ("atk", "def", "hp")
+NONE = "none"  # ドロップ表の「何も出ない」
+
+
+def read_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise SystemExit(f"{path} がありません")
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"{path} が JSON として読めません: {e}")
+
+
+def load_raw(directory: Path | None = None) -> dict:
+    d = directory or WORLD_DIR
+    items = read_json(d / "items.json")
+    return {
+        "season": read_json(d / "season.json"),
+        "map": read_json(d / "map.json"),
+        "monsters": read_json(d / "monsters.json")["monsters"],
+        "rarities": items["rarities"],
+        "items": items["items"],
+        "quests": read_json(d / "quests.json")["templates"],
+    }
+
+
+def load_world(directory: Path | None = None) -> dict:
+    raw = load_raw(directory)
+    errors = validate(raw)
+    if errors:
+        raise SystemExit("world/ のデータに誤りがあります:\n" + "\n".join(f"  - {e}" for e in errors))
+    return build(raw)
+
+
+# ---- 検証 ---------------------------------------------------------------------------
+def _range_ok(value) -> bool:
+    return (isinstance(value, list) and len(value) == 2 and all(isinstance(v, int) for v in value)
+            and 1 <= value[0] <= value[1])
+
+
+def _weights_ok(pairs) -> bool:
+    return (isinstance(pairs, list) and pairs
+            and all(isinstance(p, list) and len(p) == 2 and isinstance(p[1], (int, float)) and p[1] > 0 for p in pairs))
+
+
+def stat_at(season: dict, stat: str, level: int) -> int:
+    """レベル level の基本能力値（装備なし）。"""
+    base = {"atk": "atk", "def": "def", "hp": "max_hp"}[stat]
+    return season["hero"][base] + season["level_up"][stat] * (level - 1)
+
+
+def validate(raw: dict) -> list[str]:
+    """データの誤りの一覧（空なら問題なし）。"""
+    errors: list[str] = []
+    err = errors.append
+    season, mp = raw["season"], raw["map"]
+    places = {p.get("id"): p for p in mp.get("places", [])}
+    monsters = {m.get("id"): m for m in raw["monsters"]}
+    items = {i.get("id"): i for i in raw["items"]}
+    rarities = raw["rarities"]
+
+    for label, rows in (("map.json の places", mp.get("places", [])), ("monsters.json", raw["monsters"]),
+                        ("items.json", raw["items"]), ("quests.json", raw["quests"])):
+        ids = [r.get("id") for r in rows]
+        for i in sorted({i for i in ids if ids.count(i) > 1 or not i}, key=str):
+            err(f"{label}: ID が空か重複しています: {i!r}")
+
+    def table_ok(where: str, table) -> None:
+        if not _weights_ok(table):
+            err(f"{where}: [キー, 正の重み] の一覧にしてください")
+            return
+        for key, _ in table:
+            if key != NONE and key not in rarities and key not in items:
+                err(f"{where}: {key!r} は none・珍しさ・アイテムの ID のどれでもありません")
+
+    # season.json
+    try:
+        date.fromisoformat(season["start"])
+    except (KeyError, TypeError, ValueError):
+        err("season.json: start は YYYY-MM-DD で指定してください")
+    if not (isinstance(season.get("months"), int) and season["months"] >= 1):
+        err("season.json: months は 1 以上の整数にしてください")
+    if not _weights_ok(season.get("action_weights")) or any(
+            not isinstance(a, int) or a < 0 for a, _ in season.get("action_weights") or []):
+        err("season.json: action_weights は [行動回数, 正の重み] の一覧にしてください")
+    for key in ("hero", "level_up", "potion"):
+        if not isinstance(season.get(key), dict):
+            err(f"season.json: {key} がありません")
+    table_ok("season.json の treasure", season.get("treasure"))
+
+    # map.json
+    start = mp.get("start")
+    if places.get(start, {}).get("type") != "town":
+        err(f"map.json: start（{start!r}）は町の ID にしてください")
+    for pid, p in places.items():
+        where = f"map.json の {pid}"
+        if p.get("type") not in PLACE_TYPES:
+            err(f"{where}: type は {'/'.join(PLACE_TYPES)} のどれかにしてください")
+        if not p.get("name"):
+            err(f"{where}: name がありません")
+        if p.get("type") == "town":
+            for iid in p.get("shop", []):
+                if iid not in items:
+                    err(f"{where}: 店の {iid!r} が items.json にありません")
+                elif not isinstance(items[iid].get("price"), int) or items[iid]["price"] <= 0:
+                    err(f"{where}: 店の {iid!r} に price（正の整数）がありません")
+        if p.get("type") == "field":
+            if not _range_ok(p.get("level")):
+                err(f"{where}: level は [下限, 上限]（1 以上）にしてください")
+            if not p.get("monsters"):
+                err(f"{where}: monsters がありません")
+            for mid in p.get("monsters", []):
+                if mid not in monsters:
+                    err(f"{where}: 敵 {mid!r} が monsters.json にありません")
+            events = p.get("events", {})
+            if not events or any(k not in FIELD_EVENTS or not isinstance(v, (int, float)) or v < 0
+                                 for k, v in events.items()) or sum(events.values()) <= 0:
+                err(f"{where}: events は {'/'.join(FIELD_EVENTS)} の重み（0 以上、合計が正）にしてください")
+            if "treasure" in p:
+                table_ok(f"{where} の treasure", p["treasure"])
+    for i, r in enumerate(mp.get("roads", [])):
+        where = f"map.json の roads[{i}]"
+        for end in ("from", "to"):
+            if r.get(end) not in places:
+                err(f"{where}: {end} の {r.get(end)!r} が places にありません")
+        if r.get("from") == r.get("to"):
+            err(f"{where}: 同じ場所どうしをつないでいます")
+        if not isinstance(r.get("distance"), int) or r["distance"] < 1:
+            err(f"{where}: distance は 1 以上の整数にしてください")
+    if start in places:
+        adj: dict = {pid: set() for pid in places}
+        for r in mp.get("roads", []):
+            if r.get("from") in places and r.get("to") in places:
+                adj[r["from"]].add(r["to"])
+                adj[r["to"]].add(r["from"])
+        seen, todo = {start}, [start]
+        while todo:
+            for nxt in adj[todo.pop()] - seen:
+                seen.add(nxt)
+                todo.append(nxt)
+        for pid in places:
+            if pid not in seen:
+                err(f"map.json: {pid} に start から行けません（道がつながっていません）")
+    if not any(p.get("type") == "field" for p in places.values()):
+        err("map.json: 野外（field）が 1 つもありません")
+
+    # monsters.json
+    for mid, m in monsters.items():
+        if not m.get("name"):
+            err(f"monsters.json の {mid}: name がありません")
+        for key, low in (("level", 1), ("hp", 1), ("atk", 0), ("def", 0), ("exp", 0), ("gold", 0)):
+            if not isinstance(m.get(key), int) or m[key] < low:
+                err(f"monsters.json の {mid}: {key} は {low} 以上の整数にしてください")
+
+    # items.json
+    if not rarities or len(set(rarities)) != len(rarities) or NONE in rarities:
+        err("items.json: rarities は重複のない一覧にしてください（none は使えません）")
+    for iid, it in items.items():
+        where = f"items.json の {iid}"
+        if iid in rarities:
+            err(f"{where}: ID に珍しさの名前は使えません")
+        if not it.get("name"):
+            err(f"{where}: name がありません")
+        if it.get("slot") not in SLOTS:
+            err(f"{where}: slot は {'/'.join(SLOTS)} のどれかにしてください")
+        if it.get("rarity") not in rarities:
+            err(f"{where}: rarity は {'/'.join(rarities)} のどれかにしてください")
+        for key in (*STATS, "drop_level"):
+            if key in it and (not isinstance(it[key], int) or it[key] < 0):
+                err(f"{where}: {key} は 0 以上の整数にしてください")
+        if "price" in it and (not isinstance(it["price"], int) or it["price"] <= 0):
+            err(f"{where}: price は正の整数にしてください")
+
+    # quests.json
+    for q in raw["quests"]:
+        where = f"quests.json の {q.get('id')}"
+        if q.get("type") not in QUEST_TYPES:
+            err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
+        if not isinstance(q.get("weight"), (int, float)) or q["weight"] <= 0:
+            err(f"{where}: weight は正の数にしてください")
+        if not isinstance(q.get("days"), int) or q["days"] < 1:
+            err(f"{where}: days は 1 以上の整数にしてください")
+        reward = q.get("reward", {})
+        for key in ("exp", "gold"):
+            if not isinstance(reward.get(key), (int, float)) or reward[key] < 0:
+                err(f"{where}: reward.{key} は 0 以上の数にしてください")
+        if "item" in reward:
+            table_ok(f"{where} の reward.item", reward["item"])
+        if q.get("type") == "hunt" and not _range_ok(q.get("count")):
+            err(f"{where}: count は [最小, 最大]（1 以上）にしてください")
+
+    # 釣り合い: 部位ごとに最も強い装備を足しても、典型的なレベルの基本能力値の一定割合を超えない
+    if not errors:
+        level, rate = season.get("balance_level", 20), season.get("item_power_rate", 0.3)
+        for stat in STATS:
+            best = sum(max((it.get(stat, 0) for it in items.values() if it["slot"] == slot), default=0)
+                       for slot in SLOTS)
+            limit = stat_at(season, stat, level) * rate
+            if best > limit:
+                err(f"items.json: 部位ごとの最強装備の {stat} の合計 {best} が、Lv.{level} の基本値の "
+                    f"{rate:.0%}（{limit:.1f}）を超えています（アイテムが強すぎます）")
+    return errors
+
+
+# ---- 組み立て -------------------------------------------------------------------------
+def build(raw: dict) -> dict:
+    mp = raw["map"]
+    places = {p["id"]: p for p in mp["places"]}
+    order = {pid: i for i, pid in enumerate(places)}
+    adj: dict[str, list[tuple[str, int]]] = {pid: [] for pid in places}
+    for r in mp["roads"]:
+        adj[r["from"]].append((r["to"], r["distance"]))
+        adj[r["to"]].append((r["from"], r["distance"]))
+    dist: dict[str, dict[str, int]] = {}
+    nxt: dict[str, dict[str, str]] = {}
+    for src in places:  # 場所ごとに最短経路（同じ距離なら places の並び順が先の道を選ぶ）
+        d, first = {src: 0}, {src: src}
+        heap = [(0, order[src], src)]
+        while heap:
+            du, _, u = heapq.heappop(heap)
+            if du > d[u]:
+                continue
+            for v, w in sorted(adj[u], key=lambda e: order[e[0]]):
+                if v not in d or du + w < d[v]:
+                    d[v] = du + w
+                    first[v] = v if u == src else first[u]
+                    heapq.heappush(heap, (d[v], order[v], v))
+        dist[src], nxt[src] = d, first
+    return {
+        "season": raw["season"],
+        "start": mp["start"],
+        "places": places,
+        "towns": [pid for pid, p in places.items() if p["type"] == "town"],
+        "fields": [pid for pid, p in places.items() if p["type"] == "field"],
+        "roads": {(r["from"], r["to"]): r["distance"] for r in mp["roads"]}
+                 | {(r["to"], r["from"]): r["distance"] for r in mp["roads"]},
+        "dist": dist,
+        "next": nxt,
+        "monsters": {m["id"]: m for m in raw["monsters"]},
+        "rarities": raw["rarities"],
+        "items": {i["id"]: i for i in raw["items"]},
+        "quests": raw["quests"],
+    }
