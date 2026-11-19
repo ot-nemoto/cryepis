@@ -37,7 +37,6 @@ WORLD_PATH = common.ROOT / "rpg_world.json"
 HEROES_PATH = common.ROOT / ".state" / "heroes.json"
 HERO_DIR = common.ROOT / ".state" / "heroes"
 FILENAME = "hero-adventure.txt"
-GIST_DESCRIPTION = "勇者の冒険 — 毎日ランダムに進むテキスト RPG"
 MAX_HEROES = 6  # 同時に冒険できる（引退していない）勇者の数
 NAME_WIDTH_MAX = 16  # 勇者の名前の表示幅（全角 = 2）
 JOURNAL_DAYS = 30
@@ -444,7 +443,7 @@ def new_game(world: dict, raw_name: str, today: date) -> int:
         raise SystemExit(f"勇者「{name}」はすでにいます")
     hero_id = f"h{max((int(h['id'][1:]) for h in heroes), default=0) + 1}"
     state = new_state(world, hero_id, name)
-    gist = common.create_gist(token, FILENAME, build_text(world, state), GIST_DESCRIPTION)
+    gist = common.create_gist(token, FILENAME, build_text(world, state), name)  # Gist の説明は勇者の名前
     print(f"Gist を作りました: {gist['html_url']}")  # 以降の保存・コミットが失敗しても、孤立した Gist を探せるように
     heroes.append({"id": hero_id, "name": name, "gist_id": gist["id"], "gist_url": gist["html_url"],
                    "created": today.isoformat(), "active": True})
@@ -486,7 +485,7 @@ def run_hero(world: dict, hero: dict, today: date, steps: int | None, dry_run: b
     content = build_text(world, state)
     print(content)
     if not dry_run:
-        common.update_gist(hero["gist_id"], token, FILENAME, content)
+        common.update_gist(hero["gist_id"], token, FILENAME, content, description=hero["name"])
 
 
 def advance_all(world: dict, today: date, steps: int | None, dry_run: bool) -> int:

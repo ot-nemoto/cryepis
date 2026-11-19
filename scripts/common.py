@@ -59,23 +59,31 @@ def create_gist(token: str, filename: str, content: str, description: str) -> di
         raise SystemExit(f"Gist API に接続できません: {e.reason}")
 
 
-def update_gist(gist_id: str, token: str, filename: str, content: str) -> None:
+def update_gist(gist_id: str, token: str, filename: str, content: str, description: str | None = None) -> None:
+    """filename の中身を更新する。description を渡すと、Gist の説明も（違っていれば）そろえる。"""
     try:
-        files = api("GET", f"https://api.github.com/gists/{gist_id}", token).get("files", {})
+        gist = api("GET", f"https://api.github.com/gists/{gist_id}", token)
+        files = gist.get("files", {})
+        new_description = description if description is not None and description != gist.get("description") else None
         if len(files) > 1 and min(files) != filename:
             # Pinned カードには名前順で先頭のファイルが出る
             warn(f"Gist {gist_id} には複数のファイルがあり、Pin には {min(files)} が表示されます")
-        if files.get(filename, {}).get("content") == content:
+        body: dict = {}
+        if files.get(filename, {}).get("content") != content:
+            if filename not in files and len(files) == 1:
+                # 作成時の仮ファイル名を置き換える（Pinned には名前順で先頭のファイルが出るため）
+                (old,) = files
+                body["files"] = {old: {"filename": filename, "content": content}}
+            else:
+                body["files"] = {filename: {"content": content}}
+        if new_description is not None:
+            body["description"] = new_description
+        if not body:
             print(f"変更なし: {filename} の更新をスキップ")
             return
-        if filename not in files and len(files) == 1:
-            # 作成時の仮ファイル名を置き換える（Pinned には名前順で先頭のファイルが出るため）
-            (old,) = files
-            patch = {old: {"filename": filename, "content": content}}
-        else:
-            patch = {filename: {"content": content}}
-        api("PATCH", f"https://api.github.com/gists/{gist_id}", token, {"files": patch})
+        api("PATCH", f"https://api.github.com/gists/{gist_id}", token, body)
     except urllib.error.HTTPError as e:
         hint = "（Classic PAT の gist スコープ・期限と Gist ID を確認してください）" if e.code in (401, 403, 404) else ""
         raise SystemExit(f"Gist API エラー {e.code}{hint}: {e.read().decode(errors='replace')}")
-    print(f"Gist を更新しました: {filename}")
+    changed = [x for x, key in ((filename, "files"), ("説明", "description")) if key in body]
+    print(f"Gist を更新しました: {'・'.join(changed)}")

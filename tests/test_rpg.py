@@ -250,8 +250,8 @@ class HeroesTest(unittest.TestCase):
 
     def test_new_game_registers_hero_and_creates_gist(self):
         create = self.new_game("アリス")
-        token, filename, content, _ = create.call_args.args
-        self.assertEqual((token, filename), ("p", rpg.FILENAME))
+        token, filename, content, description = create.call_args.args
+        self.assertEqual((token, filename, description), ("p", rpg.FILENAME, "アリス"))  # 説明は勇者の名前
         self.assertTrue(content.startswith("⚔️ Day 0  アリス Lv.1"))
         (hero,) = rpg.load_heroes()
         self.assertEqual((hero["id"], hero["name"], hero["gist_id"], hero["active"]), ("h1", "アリス", "g1", True))
@@ -299,6 +299,7 @@ class HeroesTest(unittest.TestCase):
             self.assertEqual(self.run_main(["--date", "2026-10-06"], {"GIST_PAT": "p"}), 0)
         self.assertEqual([c.args[:3] for c in gist.call_args_list],
                          [("g1", "p", rpg.FILENAME), ("g2", "p", rpg.FILENAME)])
+        self.assertEqual([c.kwargs["description"] for c in gist.call_args_list], ["アリス", "ボブ"])
         self.assertEqual(rpg.load_state(WORLD, rpg.hero_state_path("h1"))["day"], 1)
         self.assertEqual(rpg.load_state(WORLD, rpg.hero_state_path("h3"))["day"], 0)  # 引退者は進まない
 
@@ -315,7 +316,7 @@ class HeroesTest(unittest.TestCase):
         self.new_game("アリス", "g1")
         self.new_game("ボブ", "g2")
 
-        def fail_first(gist_id, *_):
+        def fail_first(gist_id, *_, **__):
             if gist_id == "g1":
                 raise SystemExit("Gist API エラー 404")
 
