@@ -27,16 +27,37 @@ class RenderTest(unittest.TestCase):
         root = ET.fromstring(mapsvg.render(WORLD, []))
         ids = {g.get("id") for g in root.iter(f"{NS}g") if g.get("id")}
         self.assertEqual(ids, {f"place-{pid}" for pid in WORLD["places"]})
-        texts = "".join(t.text or "" for t in root.iter(f"{NS}text"))
-        for ring in WORLD["layout"]["rings"]:
-            self.assertIn(ring["label"], texts)
+        texts = [t.text or "" for t in root.iter(f"{NS}text")]
+        for p in WORLD["places"].values():  # 町は名前と呼び名、ダンジョンは名前
+            self.assertIn(p["name"], texts)
+            if p.get("alias"):
+                self.assertIn(p["alias"], texts)
 
     def test_every_road_shows_its_cost(self):
         root = ET.fromstring(mapsvg.render(WORLD, []))
         costs = [g for g in root.iter(f"{NS}g") if g.get("class") == "road-cost"]
-        self.assertEqual(len(costs), len(WORLD["roads"]) // 2)
+        expected = [d for (a, b), d in WORLD["roads"].items() if a < b] + [r["distance"] for r in WORLD["trails"]]
         shown = sorted(int(g.find(f"{NS}text").text) for g in costs)
-        self.assertEqual(shown, sorted(d for (a, b), d in WORLD["roads"].items() if a < b))
+        self.assertEqual(shown, sorted(expected))
+
+    def test_road_kinds_are_drawn(self):
+        root = ET.fromstring(mapsvg.render(WORLD, []))
+        kinds = [p.get("class") for p in root.iter(f"{NS}path") if (p.get("class") or "").startswith("road-")]
+        self.assertEqual(kinds.count("road-sea"), sum(1 for (a, b), i in WORLD["road_info"].items()
+                                                      if a < b and i["kind"] == "sea"))
+        self.assertEqual(kinds.count("road-trail"), len(WORLD["trails"]))
+
+    def test_hero_on_a_road_is_drawn_along_the_road(self):
+        town = WORLD["starts"][0]
+        to = WORLD["neighbors"][town][0]
+        info, total = WORLD["road_info"][(town, to)], WORLD["roads"][(town, to)]
+        _, state = hero(1, "アリス", town)
+        state["road"] = {"to": to, "left": total}
+        self.assertEqual(mapsvg.hero_spot(WORLD, state), tuple(info["path"][0]))  # 出発したばかり
+        state["road"] = {"to": to, "left": 0}
+        spot = mapsvg.hero_spot(WORLD, state)
+        self.assertAlmostEqual(spot[0], info["path"][-1][0])  # 着く直前
+        self.assertAlmostEqual(spot[1], info["path"][-1][1])
 
     def test_heroes_are_marked_and_names_escaped(self):
         place = WORLD["starts"][0]
@@ -52,12 +73,8 @@ class RenderTest(unittest.TestCase):
         texts = [t.text for t in ET.fromstring(mapsvg.render(WORLD, entries)).iter(f"{NS}text")]
         self.assertIn("🧙 ほか 2 人", texts)
 
-    def test_rings_are_stretched_for_a_landscape_map(self):
+    def test_canvas_fits_the_map(self):
         root = ET.fromstring(mapsvg.render(WORLD, []))
-        ellipses = list(root.iter(f"{NS}ellipse"))
-        self.assertEqual(len(ellipses), len(WORLD["layout"]["rings"]))
-        for e in ellipses:
-            self.assertAlmostEqual(float(e.get("rx")), float(e.get("ry")) * WORLD["layout"]["stretch_x"])
         self.assertEqual(root.get("width"), str(WORLD["layout"]["size"][0] + 2 * mapsvg.PAD_X))
 
     def test_no_layout_means_no_image(self):
@@ -88,7 +105,7 @@ class BackgroundTest(unittest.TestCase):
         (self.dir / "map.json").write_text(json.dumps(mp, ensure_ascii=False), encoding="utf-8")
         return W.validate(W.load_raw(self.dir))
 
-    def test_background_is_embedded_and_rings_are_not_drawn(self):
+    def test_background_is_embedded(self):
         self.assertEqual(self.use("map-base.svg"), [])
         world = W.load_world(self.dir)
         self.assertTrue(world["background"].startswith("data:image/svg+xml;base64,"))
@@ -96,7 +113,10 @@ class BackgroundTest(unittest.TestCase):
         images = list(root.iter(f"{NS}image"))
         self.assertEqual(len(images), 1)
         self.assertEqual(images[0].get("href"), world["background"])
-        self.assertEqual(list(root.iter(f"{NS}ellipse")), [])  # 輪は描かない
+
+    def test_without_background_the_sea_is_drawn(self):
+        root = ET.fromstring(mapsvg.render({**WORLD, "background": None}, []))
+        self.assertEqual(list(root.iter(f"{NS}image")), [])
 
     def test_background_errors(self):
         self.assertTrue(any("ありません" in e for e in self.use("none.svg", None)))

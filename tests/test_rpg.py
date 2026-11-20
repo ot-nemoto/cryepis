@@ -338,7 +338,7 @@ class HeroesTest(unittest.TestCase):
         self.new_game("アリス")
         out = self.dir / "grid.svg"
         self.assertEqual(self.run_main(["--map-grid", str(out)]), 0)
-        self.assertIn("town_", out.read_text(encoding="utf-8"))
+        self.assertIn("aurea (850, 495)", out.read_text(encoding="utf-8"))  # 確認用: 場所の ID と座標
         self.assertEqual(load("h1")["day"], 0)
         self.assertFalse((rpg.PAGE_DIR / rpg.MAP_IMAGE).exists())  # 毎日の地図は書き換えない
 

@@ -139,7 +139,7 @@ def location(world: dict, state: dict) -> str:
         elif quest["type"] == "deliver":
             goal = f"{world['places'][quest['place']]['name']}へ配達"
         else:
-            goal = "見回り"
+            goal = f"{world['places'][quest['place']]['name']}へ旅"
         done = quest["report"] and quest["progress"] >= quest["count"]
         text += f" 🎯 {goal}" + ("（報告へ）" if done else "")
     return text
@@ -236,7 +236,7 @@ def build_map(world: dict, entries: list[tuple[dict, dict]]) -> str:
     lines = ["# 世界の MAP", ""]
     if world.get("layout"):
         lines += [f"![世界の MAP]({MAP_IMAGE})", "",
-                  "外側ほど易しく、中心ほど難しい。道の上の数字は、移動にかかる行動回数です。", ""]
+                  f"道の上の数字は、移動にかかる行動回数です（勇者は 1 日に {world['season']['actions_per_day']} 回行動します）。", ""]
     else:
         lines += ["地図の画像はありません（world/map.json に layout と、場所ごとの pos を書くと描かれます）。", ""]
     lines += ["## 勇者の居場所", ""]
