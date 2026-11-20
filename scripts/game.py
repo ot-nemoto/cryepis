@@ -217,7 +217,10 @@ def last_open_day(world: dict, entry: dict) -> date:
 def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[str] | None = None) -> None:
     """日付 d の朝の掲示板にする（towns を省くと全部の町。町ごとに、その日の最初の 1 回だけ）。
     達成された依頼と、受付が終わった依頼をはがし、失敗した依頼は受付中に戻して、空いた枠に新しい依頼を貼る。
-    シーズンが変わったら全部貼り直す。"""
+    シーズンが変わったら全部貼り直す。掲示板より前の日（遅れている勇者がさかのぼって進めるとき）は貼り替えない
+    （同じ依頼の ID が二重にできたり、今の掲示板が消えたりしないように）。"""
+    if guild.get("season") is not None and season < guild["season"]:
+        return
     if guild.get("season") != season:
         guild.update(season=season, towns={}, refreshed={})
     boards, refreshed = guild.setdefault("towns", {}), guild.setdefault("refreshed", {})
@@ -225,7 +228,7 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
         del boards[town]
         refreshed.pop(town, None)
     for town in towns or world["towns"]:
-        if refreshed.get(town) == d.isoformat():
+        if refreshed.get(town, "") >= d.isoformat():
             continue
         kept = []
         for e in boards.get(town, []):

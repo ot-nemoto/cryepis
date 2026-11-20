@@ -292,6 +292,28 @@ class HeroesTest(unittest.TestCase):
         self.assertIn("🧙 アリス Lv.", text)  # 保存してある状態で載せる
         self.assertIn("🧙 ボブ Lv.", text)
 
+    def test_failed_heros_changes_to_the_guild_are_undone(self):
+        guild = game.new_guild()
+        state = game.new_state(rpg.load_world(), "h1", "アリス")
+        state["hero"]["level"] = 99
+
+        def take_then_fail(world, st, day, actions, g):
+            game.refresh_guild(world, g, day, 1)
+            next(e for es in g["towns"].values() for e in es).update(status="held", holder="h1")
+            raise RuntimeError("壊れた")
+        with mock.patch.object(game, "advance", side_effect=take_then_fail):
+            errors = rpg.advance_heroes(rpg.load_world(), {"h1": ({"id": "h1"}, state, [date(2026, 12, 1)])},
+                                        date(2026, 12, 1), None, guild)
+        self.assertIn("h1", errors)
+        self.assertEqual(guild, game.new_guild())  # 掲示板は進める前のまま
+
+    def test_broken_guild_file(self):
+        rpg.GUILD_PATH.write_text("[]", encoding="utf-8")
+        self.assertEqual(rpg.load_guild(), game.new_guild())
+        rpg.GUILD_PATH.write_text("{", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            rpg.load_guild()
+
     def test_map_failure_does_not_stop_the_board(self):
         self.new_game("アリス")
         with mock.patch.object(rpg, "save_map", side_effect=KeyError("pos")), \

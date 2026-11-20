@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import os
 import shutil
 import sys
@@ -202,11 +203,11 @@ document.querySelectorAll('.board').forEach(card=>{let n=0;
 card.querySelectorAll('tr[data-rank]').forEach(tr=>{const ok=!r.size||r.has(tr.dataset.rank);tr.hidden=!ok;if(ok)n++;});
 card.hidden=(t.size&&!t.has(card.dataset.town))||n===0;if(!card.hidden)shown++;});
 none.hidden=shown>0;clear.hidden=!t.size&&!r.size;
-history.replaceState(null,'',t.size?'#'+[...t].join(','):location.pathname);};
+history.replaceState(null,'',location.pathname+location.search+(t.size?'#'+[...t].join(','):''));};
 const toggle=c=>c.addEventListener('click',()=>{c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();});
 towns.forEach(toggle);ranks.forEach(toggle);
 clear.addEventListener('click',()=>{towns.concat(ranks).forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
-const ids=decodeURIComponent(location.hash.slice(1)).split(',');towns.forEach(c=>{if(ids.includes(c.dataset.town))c.setAttribute('aria-pressed','true');});
+let raw=location.hash.slice(1);try{raw=decodeURIComponent(raw);}catch(e){}const ids=raw.split(',');towns.forEach(c=>{if(ids.includes(c.dataset.town))c.setAttribute('aria-pressed','true');});
 apply();})();
 """
 
@@ -219,15 +220,20 @@ def guild_status(world: dict, e: dict, today: date) -> str:
         return '<span class="stamp">ACCEPTED</span>' + (f'<div class="note">{note}</div>' if note else "")
     last = game.last_open_day(world, e)
     left = (last - today).days
+    if left < 0:
+        return '<span class="free">受付終了</span>'
     when = f"あと {left} 日（{last.month}/{last.day} まで）" if left > 0 else "今日まで（明日入れ替え）"
     return f'<span class="open">受付中</span><div class="note">{when}</div>'
 
 
 def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guild: dict) -> str:
     """町ごとのギルドの掲示板（日をまたいで残る。早い者勝ち）。町とレアリティで絞り込める。"""
-    if not guild.get("towns"):  # まだ誰も進めていない: その日の朝の掲示板を見せる
-        guild = game.new_guild()
-        game.refresh_guild(world, guild, today, game.season_of(world, today))
+    season = game.season_of(world, today)
+    if not guild.get("towns") or guild.get("season") != season or any(
+            guild.get("refreshed", {}).get(t, "") < today.isoformat() for t in world["towns"]):
+        # まだ誰も進めていない・その日の掲示板になっていない: その日の朝の掲示板を見せる（保存はしない）
+        guild = copy.deepcopy(guild) if guild.get("season") == season else game.new_guild()
+        game.refresh_guild(world, guild, today, season)
     places, days = world["places"], world["season"]["quest_open_days"]
     towns = "".join(f'<button type="button" class="chip" data-town="{escape(t)}" aria-pressed="false">'
                     f'{escape(places[t].get("emoji", ""))} {escape(places[t]["name"])}</button>' for t in world["towns"])

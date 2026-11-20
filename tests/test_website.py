@@ -110,6 +110,16 @@ class SiteTest(unittest.TestCase):
         last = today + timedelta(days=days - 1)
         self.assertIn(f"あと {days - 1} 日（{last.month}/{last.day} まで）", html)  # 今日貼られた依頼
 
+    def test_guild_page_for_a_later_day_than_the_board(self):
+        entries, guild, today = party(2, 2)
+        later = today + timedelta(days=WORLD["season"]["quest_open_days"] + 2)
+        html = website.build_guild(WORLD, entries, later, guild)
+        self.assertNotIn("受付終了", html)  # その日の朝の掲示板に貼り替えて見せる
+        self.assertIn(f"あと {WORLD['season']['quest_open_days'] - 1} 日", html)
+        self.assertEqual(guild["refreshed"][WORLD["towns"][0]], today.isoformat())  # 元の掲示板は変えない
+        e = {"posted": (today - timedelta(days=10)).isoformat(), "status": "open"}
+        self.assertIn("受付終了", website.guild_status(WORLD, e, today))
+
     def test_guild_before_anyone_played(self):
         html = website.build_guild(WORLD, [], DAY, game.new_guild())
         self.assertIn('<span class="open">受付中</span>', html)

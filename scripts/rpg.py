@@ -24,6 +24,7 @@ workflow の最後のステップで master にコミットする。
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 import random
@@ -524,7 +525,7 @@ def load_guild(path: Path | None = None) -> dict:
         return game.new_guild()
     except json.JSONDecodeError as e:
         raise SystemExit(f"{path} が JSON として読めません（マージ衝突などを確認してください）: {e}")
-    if not isinstance(data.get("towns"), dict):
+    if not isinstance(data, dict) or not isinstance(data.get("towns"), dict):
         return game.new_guild()
     return {**game.new_guild(), **data}
 
@@ -560,10 +561,13 @@ def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, 
         random.Random(f"order-{day.isoformat()}").shuffle(order)
         for hid in order:
             hero, state, _ = loaded[hid]
+            before = copy.deepcopy(guild)  # 失敗したら、その勇者が掲示板に加えた変更も取り消す
             try:
                 game.advance(world, state, day, actions, guild)
             except (Exception, SystemExit) as e:  # noqa: BLE001  勇者ごとに失敗を隔離する
                 errors[hid] = e
+                guild.clear()
+                guild.update(before)
     return errors
 
 

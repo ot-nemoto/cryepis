@@ -659,6 +659,14 @@ class GuildBoardTest(unittest.TestCase):
         self.assertEqual(G.release_orphans(self.guild, states, keep={"h3"}), 1)
         self.assertEqual([a["status"], b["status"], c["status"]], ["held", "failed", "held"])
 
+    def test_older_days_do_not_rewind_the_board(self):
+        board = self.next_day(2)
+        snapshot = json.dumps(self.guild, sort_keys=True)
+        G.refresh_guild(WORLD, self.guild, START + timedelta(days=1), 1)  # 遅れている勇者がさかのぼって進める
+        G.refresh_guild(WORLD, self.guild, START, 0)  # 前のシーズンの日
+        self.assertEqual(json.dumps(self.guild, sort_keys=True), snapshot)
+        self.assertTrue(board)
+
     def test_new_season_reposts_everything(self):
         self.board[0].update(status="held", holder="h1")
         G.refresh_guild(WORLD, self.guild, START + timedelta(days=1), 2)
