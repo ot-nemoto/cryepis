@@ -289,7 +289,7 @@ apply();})();
 
 
 def item_rows(world: dict) -> dict[str, list[dict]]:
-    """開放した地域で手に入るアイテム（部位ごと。珍しい順・強い順）: {部位: [{id, item, shops, towns}]}。"""
+    """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）: {部位: [{id, item, shops, towns}]}。"""
     places, items = world["places"], world["items"]
     shops: dict[str, list[str]] = {}
     for t in world["towns"]:
@@ -337,13 +337,14 @@ def build_items(world: dict) -> str:
             else:
                 how = "店: " + ("・".join(escape(t) for t in r["shops"]) or "なし") + '<div class="note">宝箱・依頼の報酬でも出る</div>'
             special = r["specialty"]
-            trs.append(f'<tr data-rarity="{it["rarity"]}"><td><span class="mark">{escape(game.RARITY_MARKS.get(it["rarity"], ""))}</span>'
-                       f'{escape(it["name"])}' + ('<span class="tag">特産</span>' if special else "") + "</td>"
+            trs.append(f'<tr data-rarity="{it["rarity"]}"><td class="mark">{escape(game.RARITY_MARKS.get(it["rarity"], ""))}</td>'
+                       f'<td>{escape(it["name"])}' + ('<span class="tag">特産</span>' if special else "") + "</td>"
                        f'<td>{escape(rpg.item_power(it))}</td>'
                        f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>')
         body.append(f'<div class="card board" data-slot="{slot}"><h3>{W.SLOT_NAMES[slot]}</h3>'
-                    '<div class="scroll"><table class="wide-table"><colgroup><col style="width:15em"><col style="width:9em">'
-                    '<col style="width:5.5em"><col></colgroup><tr><th>名前</th><th>性能</th><th class="num">値段</th>'
+                    '<div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em"><col style="width:13em">'
+                    '<col style="width:9em"><col style="width:5.5em"><col></colgroup>'
+                    '<tr><th></th><th>名前</th><th>性能</th><th class="num">値段</th>'
                     '<th>手に入れ方</th></tr>' + "".join(trs) + "</table></div></div>")
     body.append(f'<div class="card"><h3>回復薬</h3><div>どの町の店でも {potion["price"]}G。戦いで倒れそうになったときに使い、'
                 f'最大 HP の {potion["heal_rate"]:.0%} まで回復します（町で {potion["keep"]} 個まで買い足します）。</div></div>')
