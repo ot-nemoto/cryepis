@@ -314,8 +314,9 @@ class Day:
             self.log(f"レベルが上がった！ Lv.{hero['level']}")
 
     # アイテム -------------------------------------------------------------------------
-    def draw(self, table: list | None) -> str | None:
-        """ドロップ表から抽選する。珍しさが当たったら、その珍しさのアイテムから均等に選ぶ（レベルの制限はない）。"""
+    def draw(self, table: list | None, town: str | None = None) -> str | None:
+        """ドロップ表から抽選する。珍しさが当たったら、その珍しさのアイテムから均等に選ぶ。
+        レア（common 以外）は、その町（town。依頼を出した町）の依頼で出るもの（items.json の towns）だけ。"""
         if not table:
             return None
         keys, weights = zip(*table)
@@ -324,7 +325,8 @@ class Day:
             return None
         if key in self.world["items"]:
             return key
-        pool = sorted(i for i, it in self.world["items"].items() if it["rarity"] == key)
+        pool = sorted(i for i, it in self.world["items"].items()
+                      if it["rarity"] == key and (key == "common" or town in it.get("towns", [])))
         return self.rng.choice(pool) if pool else None
 
     def obtain(self, iid: str, source: str) -> None:
@@ -358,7 +360,7 @@ class Day:
         self.state["season_stats"]["quests_done"] += 1
         self.state["quest"] = None
         self.log(f"依頼達成！{quest_text(self.world, quest)}（+{reward['exp']}EXP +{reward['gold']}G）")
-        iid = self.draw(reward.get("item"))
+        iid = self.draw(reward.get("item"), quest["town"])
         if iid:
             self.obtain(iid, "報酬で")
         self.gain_exp(reward["exp"])

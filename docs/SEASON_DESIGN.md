@@ -100,7 +100,8 @@ MAP は**場所（ノード）と道（エッジ）のつながり**として持
 
 - 部位は `weapon`（武器）・`helmet`（兜）・`armor`（鎧）・`shield`（盾）・`accessory`（装飾品）の 5 か所
 - 珍しさ（`rarity`）は `common` / `rare` / `epic` / `legendary`。カードや日誌での目立たせ方に使う
-- common は店で売る（町ごとの品ぞろえは `tools/worldgen/build_world.py`）。レアは宝箱と依頼の報酬だけ。レベルの制限はなく、出やすさはドロップ表の重み（`season.json` の `treasure`、`quests.json` の `reward.item`）で決める
+- common は店で売る（町ごとの品ぞろえは `tools/worldgen/build_world.py`。どの町にも、そこでしか買えない特産品がある）。宝箱からは common・お金・回復薬だけが出る
+- レア（rare 以上）は、`items.json` の `towns` に書いた町のギルドの依頼の報酬でしか出ない。レベルの制限はなく、出やすさはドロップ表の重み（`quests.json` の `reward.item`）で決める
 - 手に入れたアイテムはすべて持ち物に入り、**部位ごとにいちばん強いものを自動で装備する**
 - シーズンをまたいで持ち物を持ち越す。同じアイテムは重ねず、個数だけ数える
 

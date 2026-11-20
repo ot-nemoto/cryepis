@@ -44,13 +44,22 @@ TOWN_INFO = {
     "雨林の村": ("yashum", "🌿", "東の雨林", BASIC + MID),
     "霧氷の修道院": ("astol", "🔭", "霧氷の半島", MID),
     "蔦の集落": ("urka", "🍃", "西の密林", BASIC + MID),
-    "赤岩の鉱山町": ("rubela", "💎", "赤い荒野", MID + SMITH + ["ruby_ring"]),  # 宝石の町の特産
+    "赤岩の鉱山町": ("rubela", "💎", "赤い荒野", MID + SMITH),
     "西の港": ("novaris", "⛵", "西大陸の東の海岸", BASIC + MID),
-    "南の森の村": ("rowen", "🏹", "南の森", BASIC + ["hunter_bow"]),  # 狩人の村の特産
+    "南の森の村": ("rowen", "🏹", "南の森", BASIC),
     "干潟の港": ("salina", "🐚", "南の干潟", BASIC + MID),
     "大草原の町": ("eques", "🐎", "南の大草原", BASIC),
     "南壁の砦": ("muralis", "🛡️", "南壁山脈", MID + SMITH),
     "焔の湯治場": ("homura", "♨️", "炎の列島", MID + SMITH),
+}
+# 町の特産（その町でしか買えない common）
+SPECIALTY = {
+    "古木の町": "bark_shield", "北の漁村": "fur_hat", "湖畔の村": "waterweed_bangle", "暁の港": "trader_dagger",
+    "南の森の村": "hunter_bow", "大草原の町": "cavalry_lance", "王都": "royal_shield", "河港": "sailor_hat",
+    "天門の町": "mountain_helm", "霧沼の村": "reed_shield", "鋼山の町": "battle_axe", "椰子の港": "coral_necklace",
+    "風巻きの宿": "nomad_bow", "氷牙の砦": "wolf_fur_armor", "凍土の集落": "polar_fur", "オアシスの町": "sand_hood",
+    "雨林の村": "jade_ring", "霧氷の修道院": "stargazer_amulet", "蔦の集落": "blowgun", "赤岩の鉱山町": "ruby_ring",
+    "西の港": "settler_armor", "干潟の港": "shell_shield", "南壁の砦": "wall_shield", "焔の湯治場": "volcanic_blade",
 }
 DUNGEON_INFO = {
     "始祖竜の頭骨": ("dragon_skull", "天の頂"), "翠国の王墓": ("jade_tomb", "灼熱の大砂漠"),
@@ -95,7 +104,7 @@ def main():
     for name, x, y in TOWNS:
         tid, emoji, region, shop = TOWN_INFO[name]
         places.append({"id": tid, "type": "town", "name": NAMES[name], "alias": name, "region": region,
-                       "emoji": emoji, "shop": shop, "pos": [x, y]} | ({"label": LABEL[name]} if name in LABEL else {}))
+                       "emoji": emoji, "shop": shop + [SPECIALTY[name]], "pos": [x, y]} | ({"label": LABEL[name]} if name in LABEL else {}))
     for name, x, y in DUNGEONS:
         did, region = DUNGEON_INFO[name]
         places.append({"id": did, "type": "dungeon", "name": name, "region": region, "pos": [x, y]}

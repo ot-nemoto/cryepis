@@ -104,6 +104,25 @@ class ValidateTest(unittest.TestCase):
     def test_drop_level_is_no_longer_used(self):
         self.assertError(lambda r: r["items"][5].update(drop_level=5), ["drop_level"])
 
+    def test_rare_items_need_quest_towns(self):
+        self.assertError(lambda r: r["items"][-1].pop("towns"), ["dragon_heart_stone", "towns"])
+        self.assertError(lambda r: r["items"][-1].update(towns=["jade_tomb"]), ["towns", "jade_tomb"])
+        self.assertError(lambda r: r["items"][0].update(towns=["aurea"]), ["wooden_sword", "common"])
+
+    def test_treasure_cannot_hold_rares(self):
+        self.assertError(lambda r: r["season"]["treasure"].append(["rare", 1]), ["treasure", "rare"])
+        self.assertError(lambda r: r["season"]["treasure"].append(["star_sword", 1]), ["treasure", "star_sword"])
+
+    def test_every_town_has_its_own_specialty(self):
+        shops = {p["id"]: set(p["shop"]) for p in RAW["map"]["places"] if p["type"] == "town"}
+        for town, items in shops.items():
+            only_here = {i for i in items if all(i not in other for t, other in shops.items() if t != town)}
+            self.assertTrue(only_here, town)
+
+    def test_every_town_quest_has_some_rare(self):
+        towns = {tid for i in RAW["items"] for tid in i.get("towns", [])}
+        self.assertEqual(towns, {p["id"] for p in RAW["map"]["places"] if p["type"] == "town"})
+
     def test_every_slot_has_items_in_a_shop(self):
         sold = {sid for p in RAW["map"]["places"] for sid in p.get("shop", [])}
         items = {i["id"]: i for i in RAW["items"]}
@@ -111,7 +130,8 @@ class ValidateTest(unittest.TestCase):
 
     def test_too_strong_item(self):
         def change(r):
-            r["items"].append({"id": "god_sword", "name": "神の剣", "slot": "weapon", "rarity": "legendary", "atk": 99})
+            r["items"].append({"id": "god_sword", "name": "神の剣", "slot": "weapon", "rarity": "legendary", "atk": 99,
+                               "towns": ["aurea"]})
         self.assertError(change, ["強すぎ"])
 
     def test_season_start_day_must_exist_in_every_month(self):

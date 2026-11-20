@@ -161,6 +161,9 @@ def validate(raw: dict) -> list[str]:
         if not isinstance(texts, list) or not texts or not all(isinstance(t, str) and t for t in texts):
             err(f"season.json: {key} は文字列の一覧（1 つ以上）にしてください")
     table_ok("season.json の treasure", season.get("treasure"))
+    for key, _ in season.get("treasure") or []:  # レアは依頼の報酬だけで出る
+        if key in rarities[1:] or items.get(key, {}).get("rarity", "common") != "common":
+            err(f"season.json の treasure: {key!r} は宝箱からは出せません（レアは町の依頼の報酬だけで出る）")
     events = season.get("road_events")
     if (not isinstance(events, dict) or not events
             or any(k not in ROAD_EVENTS or not isinstance(v, (int, float)) or v < 0 for k, v in events.items())
@@ -303,6 +306,16 @@ def validate(raw: dict) -> list[str]:
                 err(f"{where}: {key} は 0 以上の整数にしてください")
         if "drop_level" in it:
             err(f"{where}: drop_level はもう使いません（出やすさはドロップ表の重みで決める）")
+        towns = it.get("towns")
+        if it.get("rarity") == "common":
+            if towns is not None:
+                err(f"{where}: common に towns は書けません（common は店で売る。宝箱と依頼の報酬ではどの町でも出る）")
+        elif it.get("rarity") in rarities:
+            if not isinstance(towns, list) or not towns:
+                err(f"{where}: レアには towns（依頼の報酬で出る町の ID の一覧）を書いてください")
+            for tid in towns or []:
+                if places.get(tid, {}).get("type") != "town":
+                    err(f"{where}: towns の {tid!r} は町の ID にしてください")
         if "price" in it and (not isinstance(it["price"], int) or it["price"] <= 0):
             err(f"{where}: price は正の整数にしてください")
 
