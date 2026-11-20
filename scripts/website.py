@@ -315,7 +315,7 @@ def build_items(world: dict) -> str:
     slot_chips = "".join(f'<button type="button" class="chip" data-slot="{s}" aria-pressed="false">{W.SLOT_NAMES[s]}</button>'
                          for s in W.SLOTS)
     rarity_chips = "".join(f'<button type="button" class="chip" data-rarity="{r}" aria-pressed="false">'
-                           f'<span class="chip-mark">{escape(game.RARITY_MARKS.get(r, r))}</span></button>'
+                           f'<span class="chip-mark">{escape(game.rarity_mark(world, r))}</span></button>'
                            for r in used)
     potion = world["season"]["potion"]
     body = ["<h2>アイテム一覧</h2>",
@@ -337,7 +337,7 @@ def build_items(world: dict) -> str:
             else:
                 how = "店: " + ("・".join(escape(t) for t in r["shops"]) or "なし") + '<div class="note">宝箱・依頼の報酬でも出る</div>'
             special = r["specialty"]
-            trs.append(f'<tr data-rarity="{it["rarity"]}"><td class="mark">{escape(game.RARITY_MARKS.get(it["rarity"], ""))}</td>'
+            trs.append(f'<tr data-rarity="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
                        f'<td>{escape(it["name"])}' + ('<span class="tag">特産</span>' if special else "") + "</td>"
                        f'<td>{escape(rpg.item_power(it))}</td>'
                        f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>')

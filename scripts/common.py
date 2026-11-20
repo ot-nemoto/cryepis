@@ -44,9 +44,12 @@ def api(method: str, url: str, token: str | None, body: dict | None = None) -> d
         return json.load(res)
 
 
+WIDE = "★"  # 幅が決まっていない（East Asian Width が A）が、全角で出ることが多い文字
+
+
 def width(s: str) -> int:
-    """全角文字を 2 として数えた表示幅。"""
-    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in s)
+    """全角文字を 2 として数えた表示幅。★ は日本語のフォントでは全角で出ることが多いので、2 として数える。"""
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" or c in WIDE else 1 for c in s)
 
 
 def bar(value: int, top: int, bar_w: int) -> str:

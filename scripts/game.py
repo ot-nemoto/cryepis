@@ -18,8 +18,10 @@ from pathlib import Path
 import world as W
 
 JOURNAL_DAYS = 30
-# アイテムのレアリティの印（依頼のレアリティと同じく ★ から始まる。ふつうの装備も ★）
-RARITY_MARKS = {"common": "★", "rare": "★★", "epic": "★★★", "legendary": "★★★★"}
+def rarity_mark(world: dict, rarity: str) -> str:
+    """アイテムのレアリティの印。items.json の rarities の順に ★・★★・★★★…（依頼のレアリティと同じく ★ から始まる）。"""
+    rarities = world["rarities"]
+    return "★" * (rarities.index(rarity) + 1) if rarity in rarities else ""
 
 
 # ---- シーズン -------------------------------------------------------------------------
@@ -483,7 +485,7 @@ class Day:
         item, inv = self.world["items"][iid], self.state["inventory"]
         before = equipment(self.world, self.state)[item["slot"]]
         inv[iid] = inv.get(iid, 0) + 1
-        mark = RARITY_MARKS.get(item["rarity"], "")
+        mark = rarity_mark(self.world, item["rarity"])
         if item["rarity"] != "common":
             self.state["season_stats"]["rares"].append(iid)
         text = f"{source}{mark}「{item['name']}」を手に入れた"

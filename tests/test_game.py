@@ -383,6 +383,11 @@ class BattleAndItemTest(unittest.TestCase):
         G.Day(world, state, START, random.Random("t")).report(quest)
         self.assertIn("x_legend", state["inventory"])
 
+    def test_rarity_marks_follow_the_rarities(self):
+        self.assertEqual([G.rarity_mark(WORLD, r) for r in WORLD["rarities"]], ["★", "★★", "★★★", "★★★★"])
+        world = {**WORLD, "rarities": WORLD["rarities"] + ["mythic"]}  # 増やしても ★ が 1 つずつ増える
+        self.assertEqual(G.rarity_mark(world, "mythic"), "★★★★★")
+
     def test_four_slots_are_equipped(self):
         self.assertEqual(W.SLOTS, ("weapon", "helmet", "shield", "accessory"))  # 鎧はない
         state = G.new_state(WORLD)

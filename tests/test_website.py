@@ -133,12 +133,12 @@ class SiteTest(unittest.TestCase):
         self.assertNotIn("鎧</h3>", html)  # 鎧の部位はない
         self.assertEqual(html.count('class="chip" data-slot='), 4)
         self.assertLess(html.index('f-label">アイテム<'), html.index('f-label">レアリティ<'))
-        self.assertIn("依頼の報酬: ムラリス", html)  # ★騎士の剣
+        self.assertIn("依頼の報酬: ムラリス", html)  # ★★騎士の剣
         self.assertIn('騎兵の槍<span class="tag">特産</span>', html)
         self.assertNotIn('鋼の剣<span class="tag">特産</span>', html)  # 開放していない町でも売っている
         self.assertIn('<td class="mark">★★</td><td>騎士の剣</td>', html)  # ★ は先頭の列
         for slot in ("weapon", "helmet", "shield", "accessory"):  # ★ の多い順
-            marks = [len(game.RARITY_MARKS[r["item"]["rarity"]]) for r in website.item_rows(WORLD)[slot]]
+            marks = [len(game.rarity_mark(WORLD, r["item"]["rarity"])) for r in website.item_rows(WORLD)[slot]]
             self.assertEqual(marks, sorted(marks, reverse=True))
 
     def test_guild_before_anyone_played(self):
