@@ -4,7 +4,7 @@
 ページ:
   index.html          世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、勇者の一覧
-  guild.html          町ごとのギルドの掲示板（受付中・あと何日 / 受注中の勇者 / 達成・失敗）
+  guild.html          町ごとのギルドの掲示板（受付中・あと何日 / 受けられた依頼は ACCEPTED。町とレアリティで絞り込める）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
 
 データは .state/（勇者の状態・ギルドの受けられた依頼）と world/ から読む。
@@ -59,13 +59,20 @@ a{color:var(--accent)}
 table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--sub);font-weight:normal;font-size:13px;white-space:nowrap}
-.wide-table{min-width:560px}
+.wide-table{min-width:640px;table-layout:fixed}
 .num{text-align:right;white-space:nowrap}
 .scroll{overflow-x:auto}
 .mark{color:#b7791f;white-space:nowrap;width:5em}
 .taken{color:var(--hero);white-space:nowrap}
 .free{color:var(--sub);white-space:nowrap}
 .open{color:#15803d;white-space:nowrap}
+.stamp{display:inline-block;padding:1px 8px;border:2.5px solid #c0262d;border-radius:4px;color:#c0262d;font-weight:bold;
+font-size:13px;letter-spacing:.12em;transform:rotate(-8deg);opacity:.85;margin:2px 0 4px;font-family:Georgia,'Times New Roman',serif}
+.filters{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
+.filters select{font:inherit;padding:2px 6px}
+.chip-mark{color:#b7791f;white-space:nowrap}
+.ranks{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:14px;padding:0 10px;cursor:pointer}
 pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;
 font:13.5px/1.6 ui-monospace,'SFMono-Regular',Menlo,Consolas,'Noto Sans Mono CJK JP',monospace;white-space:pre-wrap}
 #map{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6efdc;
@@ -179,18 +186,27 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
 
 
 # ---- ギルド -------------------------------------------------------------------------------
-def guild_status(world: dict, e: dict, today: date, heroes: dict[str, tuple[dict, dict]]) -> str:
-    """掲示板の依頼の状態（受付中・あと何日 / 受注中・誰が・進み具合 / 達成 / 失敗）。"""
-    who = heroes.get(e.get("holder"))
-    name = (f'<a href="{hero_href(e["holder"])}">{escape(who[0]["name"])}</a>' if who
-            else escape(e.get("holder") or ""))
-    if e["status"] == "held":
-        quest = (who[1]["quest"] if who else None) or e
-        return f'<span class="taken">受注中</span> {name}<div class="note">{quest["progress"]}/{quest["count"]}</div>'
-    if e["status"] == "done":
-        return f'<span class="free">達成</span> {name}<div class="note">明日入れ替え</div>'
-    if e["status"] == "failed":
-        return f'<span class="taken">失敗</span> {name}<div class="note">明日また受付</div>'
+# ギルドの絞り込み（町・レアリティ）。町は URL の #町の ID でも選べる
+GUILD_JS = """
+(()=>{const town=document.getElementById('f-town'),ranks=[...document.querySelectorAll('.f-rank')],
+none=document.getElementById('f-none');
+const apply=()=>{const on=new Set(ranks.filter(r=>r.checked).map(r=>r.value));let shown=0;
+document.querySelectorAll('.board').forEach(card=>{let n=0;
+card.querySelectorAll('tr[data-rank]').forEach(tr=>{const ok=on.has(tr.dataset.rank);tr.hidden=!ok;if(ok)n++;});
+card.hidden=(town.value&&card.dataset.town!==town.value)||n===0;if(!card.hidden)shown++;});none.hidden=shown>0;};
+const fromHash=()=>{const id=decodeURIComponent(location.hash.slice(1));
+if([...town.options].some(o=>o.value===id&&id)){town.value=id;}apply();};
+town.addEventListener('change',()=>{history.replaceState(null,'',town.value?'#'+town.value:location.pathname);apply();});
+ranks.forEach(r=>r.addEventListener('change',apply));window.addEventListener('hashchange',fromHash);fromHash();})();
+"""
+
+
+def guild_status(world: dict, e: dict, today: date) -> str:
+    """掲示板の依頼の状態。誰かが受けた依頼は、名前を出さずに「ACCEPTED」のスタンプを押す。
+    受付中なら、受けられる残りの日数。"""
+    if e["status"] in ("held", "done", "failed"):
+        note = {"done": "明日入れ替え", "failed": "明日また受付"}.get(e["status"])
+        return '<span class="stamp">ACCEPTED</span>' + (f'<div class="note">{note}</div>' if note else "")
     last = game.last_open_day(world, e)
     left = (last - today).days
     when = f"あと {left} 日（{last.month}/{last.day} まで）" if left > 0 else "今日まで（明日入れ替え）"
@@ -198,35 +214,40 @@ def guild_status(world: dict, e: dict, today: date, heroes: dict[str, tuple[dict
 
 
 def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guild: dict) -> str:
-    """町ごとのギルドの掲示板（日をまたいで残る）と、受けた勇者（早い者勝ち）。"""
+    """町ごとのギルドの掲示板（日をまたいで残る。早い者勝ち）。町とレアリティで絞り込める。"""
     if not guild.get("towns"):  # まだ誰も進めていない: その日の朝の掲示板を見せる
         guild = game.new_guild()
         game.refresh_guild(world, guild, today, game.season_of(world, today))
-    heroes = {h["id"]: (h, s) for h, s in entries}
     places, days = world["places"], world["season"]["quest_open_days"]
+    towns = "".join(f'<option value="{escape(t)}">{escape(places[t]["name"])}（{escape(places[t].get("alias", ""))}）</option>'
+                    for t in world["towns"])
+    ranks = "".join(f'<label class="chip"><input type="checkbox" class="f-rank" value="{i}" checked>'
+                    f'<span class="chip-mark">{escape(r["mark"])}</span></label>'
+                    for i, r in enumerate(world["quest_ranks"], 1))
     body = [f"<h2>町のギルドの掲示板（{today.isoformat()}）</h2>",
-            '<p class="note">町ごとに決まった数の依頼が貼られていて、早い者勝ちです（受注中の依頼は、ほかの勇者は受けられません）。'
+            '<p class="note">町ごとに決まった数の依頼が貼られていて、早い者勝ちです（受けられた依頼は、ほかの勇者は受けられません）。'
             f"誰も受けないまま {days} 日たった依頼は入れ替わります。達成された依頼は翌日に新しい依頼に入れ替わり、"
-            "失敗した依頼は翌日にまた受け付けます。勇者は 1 日に 1 つ依頼を受け、必要な行動力を使ってこなします（期限はありません）。</p>"]
+            "失敗した依頼は翌日にまた受け付けます。勇者は 1 日に 1 つ依頼を受け、必要な行動力を使ってこなします（期限はありません）。</p>",
+            f'<div class="filters card"><label>町 <select id="f-town"><option value="">すべての町</option>{towns}</select></label>'
+            f'<span class="ranks">レアリティ {ranks}</span></div>',
+            '<p id="f-none" class="note" hidden>条件に合う依頼はありません。</p>']
     for town in world["towns"]:
         p = places[town]
         rows = []
         for e in guild.get("towns", {}).get(town, []):
             mark, _, rest = game.quest_text(world, e).partition(" ")
             notes = ([f"「{escape(e['text'])}」"] if e.get("text") else []) + (["前の勇者が失敗した依頼"] if e.get("returned") else [])
-            rows.append(f'<tr><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
+            rows.append(f'<tr data-rank="{e["rank"]}"><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
                         + "".join(f'<div class="note">{n}</div>' for n in notes)
                         + f'</td><td class="num">{e["cost"]}</td>'
                         f'<td class="num">{e["reward"]["exp"]}EXP<br>{e["reward"]["gold"]}G</td>'
-                        f"<td>{guild_status(world, e, today, heroes)}</td></tr>")
-        here = [h for h, s in entries if s["place"] == town and not s["road"]]
-        who_here = "、".join(f'<a href="{hero_href(h["id"])}">{escape(h["name"])}</a>' for h in here)
-        body.append(f'<div class="card" id="{escape(town)}"><h3>{escape(p.get("emoji", ""))} {escape(p["name"])}'
-                    f'<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span></h3>'
-                    + (f'<div class="note">滞在中: {who_here}</div>' if who_here else "")
-                    + '<div class="scroll"><table class="wide-table"><tr><th></th><th>依頼</th><th class="num">行動力</th>'
+                        f"<td>{guild_status(world, e, today)}</td></tr>")
+        body.append(f'<div class="card board" id="{escape(town)}" data-town="{escape(town)}"><h3>{escape(p.get("emoji", ""))} '
+                    f'{escape(p["name"])}<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span></h3>'
+                    '<div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em"><col><col style="width:4.5em">'
+                    '<col style="width:6.5em"><col style="width:13em"></colgroup><tr><th></th><th>依頼</th><th class="num">行動力</th>'
                     '<th class="num">報酬</th><th>状態</th></tr>' + "".join(rows) + "</table></div></div>")
-    return page("ギルド", "".join(body), "guild.html")
+    return page("ギルド", "".join(body), "guild.html", script=GUILD_JS)
 
 
 # ---- 勇者の詳細 ---------------------------------------------------------------------------

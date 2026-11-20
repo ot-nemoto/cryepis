@@ -95,12 +95,17 @@ class SiteTest(unittest.TestCase):
     def test_guild_shows_who_took_todays_quests(self):
         entries, guild, today = party(4, 3)
         html = website.build_guild(WORLD, entries, today, guild)
-        held = [e for es in guild["towns"].values() for e in es if e["status"] == "held"]
-        self.assertTrue(held)
-        for e in held:
-            self.assertIn(f'<span class="taken">受注中</span> <a href="heroes/{e["holder"]}.html">', html)
+        taken = [e for es in guild["towns"].values() for e in es if e["status"] != "open"]
+        self.assertTrue(taken)
+        self.assertEqual(html.count('<span class="stamp">ACCEPTED</span>'), len(taken))
+        self.assertNotIn("heroes/", html.split("<main")[1])  # 受けた勇者の名前は出さない
+        self.assertNotIn("滞在中", html)
         total = sum(len(es) for es in guild["towns"].values())
-        self.assertEqual(html.count("<tr><td class=\"mark\">"), total)
+        self.assertEqual(html.count("<tr data-rank="), total)
+        for town in WORLD["towns"]:  # 町とレアリティで絞り込める
+            self.assertIn(f'data-town="{town}"', html)
+            self.assertIn(f'<option value="{town}">', html)
+        self.assertEqual(html.count('class="f-rank"'), len(WORLD["quest_ranks"]))
         days = WORLD["season"]["quest_open_days"]
         last = today + timedelta(days=days - 1)
         self.assertIn(f"あと {days - 1} 日（{last.month}/{last.day} まで）", html)  # 今日貼られた依頼
@@ -108,7 +113,7 @@ class SiteTest(unittest.TestCase):
     def test_guild_before_anyone_played(self):
         html = website.build_guild(WORLD, [], DAY, game.new_guild())
         self.assertIn('<span class="open">受付中</span>', html)
-        self.assertNotIn('<span class="taken">受注中</span>', html)
+        self.assertNotIn("ACCEPTED</span>", html)
         for p in (WORLD["places"][t] for t in WORLD["towns"]):
             self.assertIn(p["name"], html)
 
