@@ -95,7 +95,7 @@ sequenceDiagram
     WF->>M: .state/* に変更があればコミットし、pull --rebase してから push
 ```
 
-毎日の実行が終わると（成功・失敗にかかわらず）、`pages.yml` がコミットされた最新の状態からサイトを書き出して GitHub Pages に公開する。
+毎日の実行が終わると（成功・失敗にかかわらず）、`pages.yml` がコミットされた最新の状態で CI（リンター・フォーマット・テスト）を確かめ、通ったらサイトを書き出して GitHub Pages に公開する。
 毎日の実行のコミットは GITHUB_TOKEN で push するので push では動かず、`workflow_run` で受ける（勇者の登録・引退のあとも同じ）。
 
 ## 勇者を追加・引退させる workflow
