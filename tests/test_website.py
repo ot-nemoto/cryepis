@@ -50,8 +50,8 @@ class SiteTest(unittest.TestCase):
         entries, guild, today = party()
         written = website.write_site(WORLD, entries, today, guild, self.out)
         rels = {p.relative_to(self.out).as_posix() for p in written}
-        self.assertEqual(rels, {"index.html", "ranking.html", "guild.html", "heroes/h1.html", "heroes/h2.html",
-                                "heroes/h3.html"})
+        self.assertEqual(rels, {"index.html", "ranking.html", "guild.html", "items.html", "heroes/h1.html",
+                                "heroes/h2.html", "heroes/h3.html"})
         for path in written:  # サイトの中のリンクは、すべて書き出したファイルを指す
             parser = Links()
             parser.feed(path.read_text(encoding="utf-8"))
@@ -121,6 +121,20 @@ class SiteTest(unittest.TestCase):
         e = {"posted": (today - timedelta(days=10)).isoformat(), "status": "open"}
         self.assertIn("受付終了", website.guild_status(WORLD, e, today))
 
+    def test_items_page_lists_the_open_region(self):
+        html = website.build_items(WORLD, DAY)
+        names = {it["name"] for it in WORLD["items"].values()}
+        shown = {n for n in names if f"{n}<" in html or f"{n}</td>" in html}
+        expected = {WORLD["items"][i]["name"] for i in WORLD["region_items"]} | {
+            it["name"] for it in WORLD["items"].values() if it["rarity"] != "common"}
+        self.assertEqual(shown, expected)
+        self.assertNotIn("戦斧", html)  # 開放していない地域の特産は出さない
+        self.assertNotIn("鎧</h3>", html)  # 鎧の部位はない
+        self.assertEqual(html.count('class="chip" data-slot='), 4)
+        self.assertIn("依頼の報酬: ムラリス", html)  # ★騎士の剣
+        self.assertIn('騎兵の槍<span class="tag">特産</span>', html)
+        self.assertNotIn('鋼の剣<span class="tag">特産</span>', html)  # 開放していない町でも売っている
+
     def test_guild_before_anyone_played(self):
         html = website.build_guild(WORLD, [], DAY, game.new_guild())
         self.assertIn('<span class="open">受付中</span>', html)
@@ -142,7 +156,7 @@ class SiteTest(unittest.TestCase):
             item["name"] *= 3
         hero = {"id": "h1", "name": "勇者"}
         state = game.new_state(world, "h1", "勇者")
-        state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "chain_mail": 1, "iron_shield": 1, "lucky_charm": 1}
+        state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "iron_shield": 1, "lucky_charm": 1}
         gear = "装備: " + rpg.gear_text(world, state)
         self.assertNotIn(gear, rpg.build_text(world, state))  # Gist では幅に収まるように詰める
         self.assertIn(escape(gear), website.build_hero(world, hero, state))

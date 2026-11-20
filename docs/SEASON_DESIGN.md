@@ -98,7 +98,7 @@ MAP は**場所（ノード）と道（エッジ）のつながり**として持
 
 ## アイテム
 
-- 部位は `weapon`（武器）・`helmet`（兜）・`armor`（鎧）・`shield`（盾）・`accessory`（装飾品）の 5 か所
+- 部位は `weapon`（武器）・`helmet`（兜）・`shield`（盾）・`accessory`（装飾品）の 4 か所（鎧はない）
 - 珍しさ（`rarity`）は `common` / `rare` / `epic` / `legendary`。カードや日誌での目立たせ方に使う
 - common は店で売る（町ごとの品ぞろえは `tools/worldgen/build_world.py`。どの町にも、そこでしか買えない特産品がある）。宝箱からは common・お金・回復薬だけが出る
 - レア（rare 以上）は、`items.json` の `towns` に書いた町のギルドの依頼の報酬でしか出ない。レベルの制限はなく、出やすさはドロップ表の重み（`quests.json` の `reward.item`）で決める
@@ -181,7 +181,7 @@ world/
 {
   "templates": [
     {"id": "hunt_basic", "type": "hunt", "level": [1, 6], "count": [2, 4], "days": 3,
-     "reward": {"exp": 20, "gold": 30, "item": [["none", 90], ["leather_armor", 10]]},
+     "reward": {"exp": 20, "gold": 30, "item": [["none", 90], ["leather_cap", 10]]},
      "text": "{place}で{monster}を{count}体討伐"},
     {"id": "deliver", "type": "deliver", "level": [1, 99], "days": 5,
      "reward": {"exp": 10, "gold": 50}, "text": "{town}へ荷物を届ける"}

@@ -23,9 +23,9 @@ TERRAIN = {
 }
 
 # 呼び名 → (ID, 絵文字, 地域, 店)
-BASIC = ["wooden_sword", "copper_sword", "leather_cap", "cloth_armor", "leather_armor", "wooden_shield"]
-MID = ["iron_sword", "iron_helm", "chain_mail", "iron_shield", "lucky_charm", "travel_bangle"]
-SMITH = ["steel_sword", "steel_helm", "steel_armor", "steel_shield"]
+BASIC = ["wooden_sword", "copper_sword", "leather_cap", "wooden_shield"]
+MID = ["iron_sword", "iron_helm", "iron_shield", "lucky_charm", "travel_bangle"]
+SMITH = ["steel_sword", "steel_helm", "steel_shield"]
 TOWN_INFO = {
     "王都": ("aurea", "🏰", "黄金平原", BASIC + MID + SMITH),
     "河港": ("flumen", "⚓", "大河の三角州", BASIC + MID),
@@ -58,10 +58,10 @@ SPECIALTY = {
     "古木の町": "bark_shield", "北の漁村": "fur_hat", "湖畔の村": "waterweed_bangle", "暁の港": "trader_dagger",
     "南の森の村": "hunter_bow", "大草原の町": "cavalry_lance", "王都": "royal_shield", "河港": "sailor_hat",
     "天門の町": "mountain_helm", "霧沼の村": "reed_shield", "鋼山の町": "battle_axe", "椰子の港": "coral_necklace",
-    "風巻きの宿": "nomad_bow", "氷牙の砦": "wolf_fur_armor", "凍土の集落": "polar_fur", "オアシスの町": "sand_hood",
+    "風巻きの宿": "nomad_bow", "氷牙の砦": "wolf_fang_necklace", "凍土の集落": "polar_fur", "オアシスの町": "sand_hood",
     "雨林の村": "jade_ring", "霧氷の修道院": "stargazer_amulet", "蔦の集落": "blowgun", "赤岩の鉱山町": "ruby_ring",
-    "西の港": "settler_armor", "干潟の港": "shell_shield", "南壁の砦": "wall_shield", "焔の湯治場": "volcanic_blade",
-    "凍原の村": "reindeer_coat",
+    "西の港": "settler_shield", "干潟の港": "shell_shield", "南壁の砦": "wall_shield", "焔の湯治場": "volcanic_blade",
+    "凍原の村": "reindeer_charm",
 }
 # 1 日にギルドに出る依頼の数（町の大きさ。書いていない町は season.json の board_size）
 QUESTS_PER_DAY = {

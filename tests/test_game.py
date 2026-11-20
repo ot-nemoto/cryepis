@@ -334,7 +334,7 @@ class BattleAndItemTest(unittest.TestCase):
         state = G.new_state(WORLD)
         state["inventory"] = {"wooden_sword": 1, "iron_sword": 1, "lucky_charm": 1}
         worn = G.equipment(WORLD, state)
-        self.assertEqual((worn["weapon"], worn["armor"], worn["accessory"]), ("iron_sword", None, "lucky_charm"))
+        self.assertEqual((worn["weapon"], worn["helmet"], worn["accessory"]), ("iron_sword", None, "lucky_charm"))
         s = G.stats(WORLD, state)
         self.assertEqual(s["atk"], state["hero"]["base_atk"] + 5)
         self.assertEqual(s["max_hp"], state["hero"]["max_hp"] + 5)
@@ -380,15 +380,15 @@ class BattleAndItemTest(unittest.TestCase):
         G.Day(world, state, START, random.Random("t")).report(quest)
         self.assertIn("x_legend", state["inventory"])
 
-    def test_five_slots_are_equipped(self):
+    def test_four_slots_are_equipped(self):
+        self.assertEqual(W.SLOTS, ("weapon", "helmet", "shield", "accessory"))  # 鎧はない
         state = G.new_state(WORLD)
-        state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "chain_mail": 1, "iron_shield": 1, "lucky_charm": 1,
-                              "wooden_shield": 1}
+        state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "iron_shield": 1, "lucky_charm": 1, "wooden_shield": 1}
         worn = G.equipment(WORLD, state)
-        self.assertEqual(list(worn.values()), ["iron_sword", "iron_helm", "chain_mail", "iron_shield", "lucky_charm"])
+        self.assertEqual(list(worn.values()), ["iron_sword", "iron_helm", "iron_shield", "lucky_charm"])
         s = G.stats(WORLD, state)
-        self.assertEqual(s["def"], state["hero"]["base_def"] + 1 + 2 + 1)
-        self.assertEqual(s["max_hp"], state["hero"]["max_hp"] + 5 + 5 + 5)
+        self.assertEqual(s["def"], state["hero"]["base_def"] + 1 + 1)
+        self.assertEqual(s["max_hp"], state["hero"]["max_hp"] + 5 + 5)
 
 
 class RoadTest(unittest.TestCase):

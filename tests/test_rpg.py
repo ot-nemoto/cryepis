@@ -41,11 +41,11 @@ class DisplayTest(unittest.TestCase):
             self.assertTrue(lines[4].startswith("今日: "))
 
     def test_gear_shows_rares_first(self):
-        world = {**WORLD, "items": {**WORLD["items"], "x_epic": {"id": "x_epic", "name": "試しの鎧", "slot": "armor",
+        world = {**WORLD, "items": {**WORLD["items"], "x_epic": {"id": "x_epic", "name": "試しの兜", "slot": "helmet",
                                                                  "rarity": "epic", "def": 9, "towns": ["salina"]}}}
         state = game.new_state(world)
         state["inventory"] = {"wooden_sword": 1, "leather_cap": 1, "x_epic": 1, "turtle_shield": 1}
-        self.assertEqual(rpg.gear_text(world, state), "★★試しの鎧/★亀甲の盾/木の剣/革の帽子")
+        self.assertEqual(rpg.gear_text(world, state), "★★試しの兜/★亀甲の盾/木の剣")
 
     def test_quest_marks_are_not_rare_items(self):
         events = ["アウレアのギルドで依頼を受けた: ★ 王家の書状（カエルムへ荷物を届ける）", "野犬を倒した (+9EXP)",

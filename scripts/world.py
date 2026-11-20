@@ -21,8 +21,8 @@ from pathlib import Path
 import common
 
 WORLD_DIR = common.ROOT / "world"
-SLOTS = ("weapon", "helmet", "armor", "shield", "accessory")
-SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "armor": "鎧", "shield": "盾", "accessory": "装飾品"}
+SLOTS = ("weapon", "helmet", "shield", "accessory")  # 鎧はない
+SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "shield": "盾", "accessory": "装飾品"}
 PLACE_TYPES = ("town", "dungeon")
 # 道の種類: 陸路・航路は町どうしを結び、勇者が通る。ダンジョンへの道は地図に描くだけ（第 2 段階で使う）
 ROAD_KINDS = ("land", "sea", "trail")
