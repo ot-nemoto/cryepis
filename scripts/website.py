@@ -486,6 +486,12 @@ def build_towns(world: dict) -> str:
       f'<span class="note">（{escape(rpg.item_power(it))}）</span>'
     )
 
+  p = world["season"]["potion"]  # 回復薬はどの町の店でも売る（装備のあとに出す）
+  potion = (
+    f'回復薬<span class="note">（{p["price"]}G。戦いで倒れそうになったときに使い、最大 HP の {p["heal_rate"]:.0%} まで回復。'
+    f"町で {p['keep']} 個まで買い足す）</span>"
+  )
+
   def rows_of(town: str) -> list[tuple[str, str]]:
     size = f"依頼の枠 {game.quests_per_day(world, town)} 件"
     if town not in opened:
@@ -515,7 +521,7 @@ def build_towns(world: dict) -> str:
       ("ギルドの規模", f'{size}（<a href="guild.html#{escape(town)}">掲示板を見る</a>）'),
       ("特産品", "<br>".join(label(i) for i in shop if sellers.get(i) == 1) or "-"),
       ("依頼の報酬で出るレア", "<br>".join(label(i) for i in rares) or "-"),
-      ("店の品ぞろえ", "<br>".join(label(i) for i in shop) or "-"),
+      ("店の品ぞろえ", "<br>".join([label(i) for i in shop] + [potion])),
       ("道（行き先と行動回数）", "・".join(roads) or "-"),
     ]
 
@@ -566,7 +572,6 @@ def build_items(world: dict) -> str:
   rows = item_rows(world)
   used = [r for r in world["rarities"] if any(x["item"]["rarity"] == r for rs in rows.values() for x in rs)]
   slots = [slot for slot in W.SLOTS if rows[slot]]  # 開放した地域で手に入る装備のない種類は、タブを出さない
-  potion = world["season"]["potion"]
   body = [
     "<h2>アイテム一覧</h2>",
     tab_bar([(slot, W.SLOT_NAMES[slot]) for slot in slots]),
@@ -598,10 +603,6 @@ def build_items(world: dict) -> str:
       + "</table></div></div>"
     )
     body.append(tab_panel(slot, escape(W.SLOT_NAMES[slot]), table))
-  body.append(
-    f'<div class="card"><h3>回復薬</h3><div>どの町の店でも {potion["price"]}G。戦いで倒れそうになったときに使い、'
-    f"最大 HP の {potion['heal_rate']:.0%} まで回復します（町で {potion['keep']} 個まで買い足します）。</div></div>"
-  )
   return page("アイテム", "".join(body), "items.html", script=FILTER_JS + TABS_JS)
 
 

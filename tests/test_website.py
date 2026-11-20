@@ -168,6 +168,7 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn('data-tab="armor"', html)  # 鎧の部位はない
     self.assertNotIn("data-slot=", html)  # 装備の種類の絞り込みはない
     self.assertNotIn("手に入る装備です", html)  # 説明文は出さない
+    self.assertNotIn("回復薬", html)  # 回復薬は町の店の品ぞろえに出す
     for slot in ("weapon", "helmet", "shield", "accessory"):  # 装備の種類ごとのタブ
       self.assertIn(f'role="tab" id="tab-{slot}"', html)
       self.assertIn(f'id="panel-{slot}"', html)
@@ -214,7 +215,9 @@ class SiteTest(unittest.TestCase):
     self.assertIn("南壁の巣穴（ダンジョン・まだ入れない）", muralis)
     self.assertIn("カルン（陸路 6）", muralis)
     shop = muralis.split("店の品ぞろえ</th><td>")[1].split("</td>")[0]  # 種類の順、同じ種類なら値段の高い順
-    names = [n.split("</span>")[1].split("<span")[0] for n in shop.split("<br>")]
+    *equips, potion = shop.split("<br>")  # 装備のあとに回復薬
+    self.assertTrue(potion.startswith("回復薬<span"))
+    names = [n.split("</span>")[1].split("<span")[0] for n in equips]
     by_name = {it["name"]: it for it in WORLD["items"].values()}
     keys = [(W.SLOTS.index(by_name[n]["slot"]), -by_name[n]["price"]) for n in names]
     self.assertEqual(keys, sorted(keys))
