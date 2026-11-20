@@ -1,7 +1,7 @@
 """シーズン制 RPG の世界（world/ の下のデータファイル）を読み込み、検証する。
 
 world/
-  season.json   シーズンの長さ・初期ステータス・レベルアップ・1 日の行動回数など
+  season.json   シーズンの長さ・初期ステータス・レベルアップ・1 日の行動回数（固定）など
   map.json      場所（町・野外）と道
   monsters.json 敵
   items.json    アイテム（珍しさの一覧を含む）
@@ -34,7 +34,7 @@ BACKGROUND_MAX_BYTES = 1024 * 1024
 BIG = 10 ** 9
 # season.json の必須項目: 名前 → (型, 最小, 最大)
 SEASON_KEYS = {
-    "months": (int, 1, 120), "rest_heal_rate": (float, 0, 1), "retreat_hp_rate": (float, 0, 1),
+    "months": (int, 1, 120), "actions_per_day": (int, 1, 50), "rest_heal_rate": (float, 0, 1), "retreat_hp_rate": (float, 0, 1),
     "board_size": (int, 1, 50), "hunt_range": (int, 0, BIG), "deliver_range": (int, 1, BIG),
     "patrol_battles": (int, 1, BIG), "hunt_battle_boost": (float, 0.01, BIG), "balance_level": (int, 1, BIG),
     "item_power_rate": (float, 0.01, BIG),
@@ -135,9 +135,6 @@ def validate(raw: dict) -> list[str]:
             err("season.json: start の日は 1〜28 にしてください")
     except (KeyError, TypeError, ValueError):
         err("season.json: start は YYYY-MM-DD で指定してください")
-    if not _weights_ok(season.get("action_weights")) or any(
-            not isinstance(a, int) or a < 0 for a, _ in season.get("action_weights") or []):
-        err("season.json: action_weights は [行動回数, 正の重み] の一覧にしてください")
     for where, obj, spec in (("season.json", season, SEASON_KEYS),
                              ("season.json の hero", season.get("hero"), HERO_KEYS),
                              ("season.json の level_up", season.get("level_up"), LEVEL_UP_KEYS),

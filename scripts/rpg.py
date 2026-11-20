@@ -539,7 +539,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true", help="状態を保存せず、Gist も更新しない")
     ap.add_argument("--date", help="進める日付（既定は今日の JST）")
-    ap.add_argument("--actions", type=int, help="その日の行動回数を指定する（乱数で決めない）")
+    ap.add_argument("--actions", type=int, help="その日の行動回数を指定する（試すとき用。ふだんは season.json の actions_per_day）")
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--new-game", metavar="NAME", help="新しい勇者を登録する（冒険は進めない）")
     mode.add_argument("--retire", metavar="NAME_OR_ID", help="勇者を引退させる")

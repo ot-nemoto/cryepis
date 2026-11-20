@@ -490,11 +490,6 @@ class Day:
         return True
 
 
-def roll_actions(world: dict, rng: random.Random) -> int:
-    actions, weights = zip(*world["season"]["action_weights"])
-    return rng.choices(actions, weights)[0]
-
-
 def start_season(world: dict, state: dict, season: int) -> None:
     """シーズンを切り替える: 記録を残し、持ち物以外を最初の状態に戻す。"""
     if state["season"] is not None and state["season_day"] > 0:
@@ -508,7 +503,7 @@ def start_season(world: dict, state: dict, season: int) -> None:
 
 
 def advance(world: dict, state: dict, today: date, actions: int | None = None) -> bool:
-    """today の分を進める（actions を省くと乱数で決める）。処理済み（last_date 以前の日付）なら何もせず False。"""
+    """today の分を進める（actions を省くと season.json の actions_per_day。毎日同じ回数で、出来事が乱数で決まる）。処理済み（last_date 以前の日付）なら何もせず False。"""
     if state["last_date"] and today.isoformat() <= state["last_date"]:
         return False
     season = season_of(world, today)
@@ -524,7 +519,7 @@ def advance(world: dict, state: dict, today: date, actions: int | None = None) -
     if new_season:
         day.log(f"シーズン{season}が始まった（レベルは 1 に戻り、持ち物はそのまま）")
     if actions is None:
-        actions = roll_actions(world, rng)
+        actions = world["season"]["actions_per_day"]
     if state["quest"] and state["quest"]["deadline"] and today.isoformat() > state["quest"]["deadline"]:
         day.fail_quest("期限切れ")
     town = state["place"]

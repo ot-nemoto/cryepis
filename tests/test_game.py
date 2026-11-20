@@ -73,6 +73,11 @@ class AdvanceTest(unittest.TestCase):
     def test_hero_id_changes_the_dice(self):
         self.assertNotEqual(play(10, "h1")["journal"], play(10, "h2")["journal"])
 
+    def test_actions_are_the_same_every_day(self):
+        state = play(10)
+        per_day = WORLD["season"]["actions_per_day"]
+        self.assertEqual({e["actions"] for e in state["journal"]}, {per_day})
+
     def test_rest_day_heals_and_does_not_move(self):
         state = play(1, actions=0)
         state["hero"]["hp"] = 1

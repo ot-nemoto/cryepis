@@ -95,7 +95,7 @@
 | `road` | 距離 2 以上の道を進んでいる途中なら `{"to": 行き先, "left": 残りの行動回数}`、そうでなければ `null` |
 | `quest` | 受けている依頼（なければ `null`）。`type` は `hunt`（討伐）/ `deliver`（配達）/ `patrol`（見回り。報酬なし）。`place` が目的地、`report` が報告する町（見回りは `null`）、`progress` / `count` が進み具合、`deadline` が期限 |
 | `season_stats` | 今のシーズンの成績（達成・失敗した依頼の数、倒した敵の数、力尽きた回数、手に入れたレアアイテムの ID） |
-| `last` | 最後に進めた日の結果（`date` は進めた日、`actions` はその日の行動回数（乱数で決まる）、`events` は出来事） |
+| `last` | 最後に進めた日の結果（`date` は進めた日、`actions` はその日の行動回数（season.json の actions_per_day）、`events` は出来事） |
 | `journal` | 日誌。新しい順に直近 30 日分（`JOURNAL_DAYS`） |
 | `seasons` | 終わったシーズンの記録（日数、最後のレベル、成績、終わった日）。無制限に残す |
 

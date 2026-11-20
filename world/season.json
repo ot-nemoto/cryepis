@@ -6,7 +6,7 @@
   "potion": {"price": 15, "heal_rate": 0.5, "keep": 3},
   "rest_heal_rate": 0.25,
   "retreat_hp_rate": 0.3,
-  "action_weights": [[0, 15], [2, 20], [3, 25], [4, 20], [5, 12], [6, 8]],
+  "actions_per_day": 3,
   "board_size": 4,
   "hunt_range": 4,
   "deliver_range": 6,
