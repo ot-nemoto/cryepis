@@ -4,9 +4,11 @@ name: Publish site (GitHub Pages)
 # - PR を作った・更新したとき: CI だけ（公開はしない）
 # - master に push されたとき（世界やプログラムを変えたとき）: CI が通ったら公開する
 # - 毎日の実行・勇者の登録・引退のあと（それらのコミットは GITHUB_TOKEN なので push では動かないため workflow_run で受ける）:
-#   CI が通ったら公開する
+#   CI が通ったら公開する（毎日の公開は、テストが通れば公開する。リンター・フォーマットの失敗では止めない）
+# - 手動: 選んだブランチで CI を走らせ、master のときだけ公開する
 # 公開: 今の状態（.state/）と世界（world/）から、地図・ランキング・町・ギルド・アイテムのサイトを書き出して
 # GitHub Pages に公開する（scripts/website.py。冒険は進めない。書き出したファイルはコミットしない）。
+# CI と公開は、最初に決めた同じコミット（resolve の sha）で行う（途中で master が進んでも、確かめていないものは公開しない）。
 # リポジトリの Settings → Pages の Source を「GitHub Actions」にしておくこと。
 # リンターとフォーマッターは Ruff（設定は pyproject.toml。インデントはスペース 2）。
 
@@ -19,10 +21,10 @@ on:
     types: [completed]
   workflow_dispatch:
 
-# PR は同じ PR の古い実行を取り消す。公開は途中で止めると壊れることがあるので、実行中のものは止めない
-# （待っている古い実行は新しいものに置き換わる）
+# PR は同じ PR の古い実行を取り消す。それ以外は取り消さない（コミットごとに CI の結果を残す）。
+# 公開どうしの順番は、publish ジョブの concurrency で決める
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('ci-{0}', github.ref) || 'pages' }}
+  group: ${{ github.event_name == 'pull_request' && format('ci-{0}', github.ref) || format('run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -30,17 +32,38 @@ permissions:
 
 env:
   RUFF_VERSION: "0.17.4"
-  # PR のときは PR の中身、それ以外（push・workflow_run・手動）はコミットされた master の最新を取る
-  CHECKOUT_REF: ${{ github.event_name != 'pull_request' && github.event.repository.default_branch || '' }}
 
 jobs:
+  # CI と公開で使うコミットを 1 つに決める。
+  # PR・push・手動はそのきっかけのコミット、workflow_run は、毎日の実行などがコミットしたあとの master の先端
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - id: sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$EVENT" = "workflow_run" ]; then
+            sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${BRANCH}" --jq .sha)
+          else
+            sha="$GITHUB_SHA"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "使うコミット: $sha"
+
   lint:
+    needs: resolve
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.CHECKOUT_REF }}
+          ref: ${{ needs.resolve.outputs.sha }}
 
       - uses: actions/setup-python@v6
         with:
@@ -56,12 +79,13 @@ jobs:
         run: ruff format --check --diff .
 
   test:
+    needs: resolve
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.CHECKOUT_REF }}
+          ref: ${{ needs.resolve.outputs.sha }}
 
       - uses: actions/setup-python@v6
         with:
@@ -71,10 +95,20 @@ jobs:
         run: python -m unittest discover -s tests
 
   publish:
-    needs: [lint, test]
-    if: ${{ github.event_name != 'pull_request' }}
+    needs: [resolve, lint, test]
+    # master のときだけ公開する。テストは必ず通っていること。リンター・フォーマットは、毎日の実行のあと（workflow_run）は
+    # 失敗していても公開する（コードの書き方の問題で、毎日の状態の公開を止めないため）
+    if: >-
+      ${{ always() && github.event_name != 'pull_request'
+          && (github.event_name == 'workflow_run' || github.ref_name == github.event.repository.default_branch)
+          && needs.resolve.result == 'success' && needs.test.result == 'success'
+          && (needs.lint.result == 'success' || github.event_name == 'workflow_run') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # 公開は途中で止めると壊れることがあるので、実行中のものは止めない（待っている古い公開は、新しいものに置き換わる）
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write
@@ -85,7 +119,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.CHECKOUT_REF }}
+          ref: ${{ needs.resolve.outputs.sha }}
 
       - uses: actions/setup-python@v6
         with:

@@ -169,7 +169,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `.state/heroes/<id>.json` | 勇者ごとの状態・持ち物・日誌・シーズンの記録（形式は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md)） |
 | `.github/workflows/hero-adventure.yml` | 毎日 JST 7:17 に rpg.py を動かし（ランキングの Gist を更新）、`.state/` と `heroes/` をコミットする |
 | `.github/workflows/new-game.yml` / `retire-hero.yml` | 勇者の追加・引退（手動実行） |
-| `.github/workflows/pages.yml` | CI（Ruff のリンター・フォーマット、テスト）と、サイトの公開。PR ではCIだけ、master への push と毎日の実行・勇者の登録・引退のあとは CI が通ったら website.py でサイトを書き出して GitHub Pages に公開する（Settings → Pages の Source は「GitHub Actions」） |
+| `.github/workflows/pages.yml` | CI（Ruff のリンター・フォーマット、テスト）と、サイトの公開。PR では CI だけ、master への push と毎日の実行・勇者の登録・引退のあとは CI が通ったら（CI と公開は同じコミットで行う） website.py でサイトを書き出して GitHub Pages に公開する（Settings → Pages の Source は「GitHub Actions」） |
 
 ```sh
 python scripts/rpg.py --dry-run --actions 4       # 記録せずに今日の分を試す（行動回数を指定。勇者が登録済みのとき）
