@@ -45,12 +45,12 @@ class DisplayTest(unittest.TestCase):
                                                                  "rarity": "epic", "def": 9, "towns": ["salina"]}}}
         state = game.new_state(world)
         state["inventory"] = {"wooden_sword": 1, "leather_cap": 1, "x_epic": 1, "turtle_shield": 1}
-        self.assertEqual(rpg.gear_text(world, state), "★★試しの兜/★亀甲の盾/木の剣")
+        self.assertEqual(rpg.gear_text(world, state), "★★★試しの兜/★★亀甲の盾/★木の剣")
 
     def test_quest_marks_are_not_rare_items(self):
         events = ["アウレアのギルドで依頼を受けた: ★ 王家の書状（カエルムへ荷物を届ける）", "野犬を倒した (+9EXP)",
-                  "宝箱から★「狩人の短剣」を手に入れた！"]
-        self.assertEqual(rpg.highlights(events, 1), ["宝箱から★「狩人の短剣」を手に入れた！"])
+                  "宝箱から★「木の剣」を手に入れた", "宝箱から★★「狩人の短剣」を手に入れた！"]
+        self.assertEqual(rpg.highlights(events, 1), ["宝箱から★★「狩人の短剣」を手に入れた！"])
 
     def test_detail_shows_the_current_quest(self):
         state = play(1)
@@ -71,7 +71,7 @@ class DisplayTest(unittest.TestCase):
         state["seasons"].append({"season": 0, "days": 90, "level": 20, "quests_done": 30, "quests_failed": 2,
                                  "kills": 140, "deaths": 1, "rares": ["power_ring"], "ended_on": "2026-11-30"})
         text = rpg.build_text(WORLD, state)
-        self.assertIn("★力の指輪", text)
+        self.assertIn("★★力の指輪", text)
         self.assertIn("シーズン0: Lv.20", text)
 
     def test_board_card_fits_and_ranks(self):
@@ -135,8 +135,8 @@ class DisplayTest(unittest.TestCase):
     def test_highlights_prefer_important_events_and_merge_level_ups(self):
         events = ["スライムを倒した", "レベルが上がった！ Lv.2", "レベルが上がった！ Lv.3", "依頼達成！x", "景色"]
         self.assertEqual(rpg.highlights(events), ["レベルが上がった！ Lv.3", "依頼達成！x"])
-        self.assertEqual(rpg.highlights(["a", "宝箱から★「蒼炎の剣」を手に入れた！", "力尽きた…"]),
-                         ["宝箱から★「蒼炎の剣」を手に入れた！", "力尽きた…"])
+        self.assertEqual(rpg.highlights(["a", "宝箱から★★「蒼炎の剣」を手に入れた！", "力尽きた…"]),
+                         ["宝箱から★★「蒼炎の剣」を手に入れた！", "力尽きた…"])
 
     def test_fit(self):
         self.assertEqual(rpg.fit("abc", 5), "abc")

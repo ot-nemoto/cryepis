@@ -4,7 +4,7 @@
 ページ:
   index.html          世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、勇者の一覧
-  items.html          開放した地域で手に入るアイテム（部位と珍しさで絞り込める）
+  items.html          開放した地域で手に入るアイテム（アイテムの部位とレアリティで絞り込める）
   guild.html          町ごとのギルドの掲示板（受付中・あと何日 / 受けられた依頼は ACCEPTED。町とレアリティで絞り込める）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
 
@@ -246,8 +246,8 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
             '<p class="note">町ごとに決まった数の依頼が貼られていて、早い者勝ちです（受けられた依頼は、ほかの勇者は受けられません）。'
             f"誰も受けないまま {days} 日たった依頼は入れ替わります。達成された依頼は翌日に新しい依頼に入れ替わり、"
             "失敗した依頼は翌日にまた受け付けます。勇者は 1 日に 1 つ依頼を受け、必要な行動力を使ってこなします（期限はありません）。</p>",
-            f'<div class="filters card"><div class="f-row"><span class="f-label">レアリティ</span>{ranks}</div>'
-            f'<div class="f-row"><span class="f-label">町</span>{towns}</div>'
+            f'<div class="filters card"><div class="f-row"><span class="f-label">町</span>{towns}</div>'
+            f'<div class="f-row"><span class="f-label">レアリティ</span>{ranks}</div>'
             '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
             '<button type="button" id="f-clear" class="link" hidden>選択を解除</button></div></div>',
             '<p id="f-none" class="note" hidden>条件に合う依頼はありません。</p>']
@@ -271,7 +271,7 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
 
 
 # ---- アイテム ---------------------------------------------------------------------------
-# アイテムの絞り込み（部位・珍しさ。どちらも複数選べて、何も選ばなければすべて）
+# アイテムの絞り込み（アイテムの部位・レアリティ。どちらも複数選べて、何も選ばなければすべて）
 ITEMS_JS = """
 (()=>{const chips=k=>[...document.querySelectorAll('.chip[data-'+k+']')],slots=chips('slot'),rars=chips('rarity'),
 none=document.getElementById('f-none'),clear=document.getElementById('f-clear');
@@ -286,11 +286,10 @@ c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'t
 clear.addEventListener('click',()=>{slots.concat(rars).forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
 apply();})();
 """
-RARITY_LABELS = {"common": "ふつう"}
 
 
 def item_rows(world: dict) -> dict[str, list[dict]]:
-    """開放した地域で手に入るアイテム（部位ごと。珍しい順・強い順）: {部位: [{id, item, shops, towns}]}。"""
+    """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）: {部位: [{id, item, shops, towns}]}。"""
     places, items = world["places"], world["items"]
     shops: dict[str, list[str]] = {}
     for t in world["towns"]:
@@ -310,22 +309,22 @@ def item_rows(world: dict) -> dict[str, list[dict]]:
 
 
 def build_items(world: dict) -> str:
-    """開放した地域で手に入るアイテムの一覧。部位と珍しさで絞り込める。"""
+    """開放した地域で手に入るアイテムの一覧。アイテムの部位とレアリティで絞り込める。"""
     rows = item_rows(world)
     used = [r for r in world["rarities"] if any(x["item"]["rarity"] == r for rs in rows.values() for x in rs)]
     slot_chips = "".join(f'<button type="button" class="chip" data-slot="{s}" aria-pressed="false">{W.SLOT_NAMES[s]}</button>'
                          for s in W.SLOTS)
     rarity_chips = "".join(f'<button type="button" class="chip" data-rarity="{r}" aria-pressed="false">'
-                           f'<span class="chip-mark">{escape(game.RARITY_MARKS.get(r) or RARITY_LABELS.get(r, r))}</span></button>'
+                           f'<span class="chip-mark">{escape(game.RARITY_MARKS.get(r, r))}</span></button>'
                            for r in used)
     potion = world["season"]["potion"]
     body = ["<h2>アイテム一覧</h2>",
             '<p class="note">開放した地域（' + "・".join(escape(world["places"][t]["name"]) for t in world["towns"]) +
             "）で手に入る装備です。部位は武器・兜・盾・装飾品の 4 つで、部位ごとにいちばん強いものを自動で装備します。"
-            "ふつうの装備は町の店で買え、宝箱や依頼の報酬でも出ます（開放した地域の店の品だけ）。"
-            "★ のレアは、その町のギルドの依頼の報酬でしか出ません。</p>",
-            f'<div class="filters card"><div class="f-row"><span class="f-label">部位</span>{slot_chips}</div>'
-            f'<div class="f-row"><span class="f-label">珍しさ</span>{rarity_chips}</div>'
+            "★ の装備は町の店で買え、宝箱や依頼の報酬でも出ます（開放した地域の店の品だけ）。"
+            "★★ 以上のレアは、その町のギルドの依頼の報酬でしか出ません。</p>",
+            f'<div class="filters card"><div class="f-row"><span class="f-label">アイテム</span>{slot_chips}</div>'
+            f'<div class="f-row"><span class="f-label">レアリティ</span>{rarity_chips}</div>'
             '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
             '<button type="button" id="f-clear" class="link" hidden>選択を解除</button></div></div>',
             '<p id="f-none" class="note" hidden>条件に合うアイテムはありません。</p>']
@@ -338,13 +337,14 @@ def build_items(world: dict) -> str:
             else:
                 how = "店: " + ("・".join(escape(t) for t in r["shops"]) or "なし") + '<div class="note">宝箱・依頼の報酬でも出る</div>'
             special = r["specialty"]
-            trs.append(f'<tr data-rarity="{it["rarity"]}"><td><span class="mark">{escape(game.RARITY_MARKS.get(it["rarity"], ""))}</span>'
-                       f'{escape(it["name"])}' + ('<span class="tag">特産</span>' if special else "") + "</td>"
+            trs.append(f'<tr data-rarity="{it["rarity"]}"><td class="mark">{escape(game.RARITY_MARKS.get(it["rarity"], ""))}</td>'
+                       f'<td>{escape(it["name"])}' + ('<span class="tag">特産</span>' if special else "") + "</td>"
                        f'<td>{escape(rpg.item_power(it))}</td>'
                        f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>')
         body.append(f'<div class="card board" data-slot="{slot}"><h3>{W.SLOT_NAMES[slot]}</h3>'
-                    '<div class="scroll"><table class="wide-table"><colgroup><col style="width:15em"><col style="width:9em">'
-                    '<col style="width:5.5em"><col></colgroup><tr><th>名前</th><th>性能</th><th class="num">値段</th>'
+                    '<div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em"><col style="width:13em">'
+                    '<col style="width:9em"><col style="width:5.5em"><col></colgroup>'
+                    '<tr><th></th><th>名前</th><th>性能</th><th class="num">値段</th>'
                     '<th>手に入れ方</th></tr>' + "".join(trs) + "</table></div></div>")
     body.append(f'<div class="card"><h3>回復薬</h3><div>どの町の店でも {potion["price"]}G。戦いで倒れそうになったときに使い、'
                 f'最大 HP の {potion["heal_rate"]:.0%} まで回復します（町で {potion["keep"]} 個まで買い足します）。</div></div>')

@@ -52,7 +52,7 @@ MAP の上で勇者たちが毎日それぞれ動き、町のギルドの依頼�
 - **勇者ごとの詳細のページ**（`heroes/<id>.md`。リポジトリの中）: その勇者のステータス・装備・持ち物・日誌。毎日のコミットで更新する
 - **MAP のページ**（`heroes/MAP.md`）: 世界の地図の画像（`heroes/MAP.svg`。世界オルドラの地形の上に町・ダンジョン・陸路・航路、道の上に移動にかかる行動回数、勇者が今いる場所（道の途中なら道の上）に名前の札）と、勇者の居場所の一覧。毎日のコミットで更新する
 - **サイト**（GitHub Pages。https://ot-nemoto.github.io/cryepis/ ）: 地図（拡大・移動ができ、町や勇者にマウスを乗せると説明が出る。勇者の札から詳細へ飛べる）、
-  ランキングと勇者の一覧、町ごとのギルドの掲示板、開放した地域で手に入るアイテムの一覧（部位と珍しさで絞り込める）、勇者ごとの詳細。
+  ランキングと勇者の一覧、町ごとのギルドの掲示板、開放した地域で手に入るアイテムの一覧（アイテムの部位とレアリティで絞り込める）、勇者ごとの詳細。
   `scripts/website.py` が `.state/` と `world/` から書き出し、`pages.yml` が毎日の実行・勇者の登録・引退のあとと、master への push のあとに公開する（書き出したファイルはコミットしない）
 
 ランキングのカード:
@@ -71,8 +71,8 @@ Lv   🥇カイ 13 🥈ゴール… 13 🥉ボブ 13
 ```
 ■ アリス  Lv.12  📍 迷いの森 🎯 ウルフ 1/4
   HP 117/123  攻33 防16  1587G  回復薬 3
-  装備: 鉄の剣 / 鎖かたびら / 幸運のお守り
-  レア: ★狩人の短剣
+  装備: ★★狩人の短剣/★鉄の兜/★幸運のお守り
+  レア: ★★狩人の短剣
   今日: ウルフを倒した (+17EXP)、木漏れ日が揺れている
   詳細: https://github.com/<owner>/<repo>/blob/master/heroes/h1.md
 ```
@@ -138,7 +138,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `world/map-base.svg` | ベースの地図（地形の絵） |
 | `tools/worldgen/` | 地図づくりのスクリプト。`python tools/worldgen/make.py` で地形・陸路・航路・行動回数を作り直し、`world/map.json` と `world/map-base.svg` を書き出す（町の配置は `places.py`、名前は `names.py`、山脈・地域・川は `terrain.py`） |
 | `world/monsters.json` | 魔物（出る地形 `terrain` と性質 `trait`）と、性質の一覧（`traits`） |
-| `world/items.json` | アイテム（いまは 61 種類）と珍しさ（common / rare / epic / legendary）。店で売るもの（common）は `price` を書く。レア（rare 以上）は `towns` に書いた町の依頼の報酬でしか出ない（レベルの制限なし）。町ごとの特産とレアは [docs/WORLD.md](docs/WORLD.md) |
+| `world/items.json` | アイテムと珍しさ（common / rare / epic / legendary。印は ★〜★★★★ で、依頼のレアリティと同じく ★ から始まる）。店で売るもの（common）は `price` を書く。レア（rare 以上）は `towns` に書いた町の依頼の報酬でしか出ない（レベルの制限なし）。町ごとの特産とレアは [docs/WORLD.md](docs/WORLD.md) |
 | `world/quests.json` | ギルドの依頼。1 行動あたりの報酬（`reward`）、レアリティ（`ranks`: ★〜★★★★ の出やすさ・報酬の倍率・アイテムのドロップ表）、共通の依頼（`templates`）、町ごとの依頼（`towns`: 名前・内容・ギルドの言葉。開放した町だけに書く。いまは南大陸の 4 町で 16 件） |
 
 - 参照はすべて ID。編集したら `python -m unittest discover -s tests` で確かめる（`tests/test_world.py` がデータの誤りを、

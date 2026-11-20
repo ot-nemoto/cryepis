@@ -18,7 +18,8 @@ from pathlib import Path
 import world as W
 
 JOURNAL_DAYS = 30
-RARITY_MARKS = {"common": "", "rare": "★", "epic": "★★", "legendary": "★★★"}
+# アイテムのレアリティの印（依頼のレアリティと同じく ★ から始まる。ふつうの装備も ★）
+RARITY_MARKS = {"common": "★", "rare": "★★", "epic": "★★★", "legendary": "★★★★"}
 
 
 # ---- シーズン -------------------------------------------------------------------------
@@ -488,7 +489,7 @@ class Day:
         text = f"{source}{mark}「{item['name']}」を手に入れた"
         if equipment(self.world, self.state)[item["slot"]] == iid and before != iid:
             text += "（装備した）"
-        self.log(text + ("！" if mark else ""))
+        self.log(text + ("！" if item["rarity"] != W.COMMON else ""))
 
     # 町 --------------------------------------------------------------------------------
     def visit_town(self, town: str) -> None:
