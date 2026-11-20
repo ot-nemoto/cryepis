@@ -47,6 +47,14 @@ class RenderTest(unittest.TestCase):
                                                       if a < b and i["kind"] == "sea"))
         self.assertEqual(kinds.count("road-trail"), len(WORLD["trails"]))
 
+    def test_hero_at_the_hunting_ground_is_drawn_on_the_road(self):
+        town = WORLD["starts"][0]
+        _, state = hero(1, "アリス", town)
+        q = next(x for x in WORLD["town_quests"][town] if x["type"] == "hunt")
+        state["quest"] = game.make_town_quest(WORLD, q, town, game.date(2026, 12, 1)) | {"away": 1}
+        info, total = WORLD["road_info"][(town, q["to"])], WORLD["roads"][(town, q["to"])]
+        self.assertEqual(mapsvg.hero_spot(WORLD, state), mapsvg.point_along(info["path"], 1 / total))
+
     def test_hero_on_a_road_is_drawn_along_the_road(self):
         town = WORLD["starts"][0]
         to = WORLD["neighbors"][town][0]

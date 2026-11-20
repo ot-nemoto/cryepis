@@ -7,9 +7,9 @@
  ],
  "reward": {"hunt": {"exp": 4, "gold": 5}, "deliver": {"exp": 3, "gold": 6}},
  "templates": [
-  {"id": "hunt", "type": "hunt", "name": "討伐", "rank": 1, "weight": 3, "count": [2, 4], "days": 3},
-  {"id": "hunt_big", "type": "hunt", "name": "大物討伐", "rank": 2, "weight": 1, "count": [5, 7], "days": 5},
-  {"id": "deliver", "type": "deliver", "name": "配達", "rank": 1, "weight": 2, "days": 2}
+  {"id": "hunt", "type": "hunt", "name": "討伐", "rank": 1, "weight": 3, "count": [2, 4]},
+  {"id": "hunt_big", "type": "hunt", "name": "大物討伐", "rank": 2, "weight": 1, "count": [5, 7]},
+  {"id": "deliver", "type": "deliver", "name": "配達", "rank": 1, "weight": 2}
  ],
  "towns": {
   "aurea": [

@@ -9,7 +9,6 @@
   "actions_per_day": 3,
   "board_size": 4,
   "deliver_range": 6,
-  "hunt_battle_boost": 2,
   "road_events": {"battle": 40, "treasure": 8, "nothing": 52},
   "balance_level": 20,
   "item_power_rate": 0.4,

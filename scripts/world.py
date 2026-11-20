@@ -43,7 +43,7 @@ BIG = 10 ** 9
 SEASON_KEYS = {
     "months": (int, 1, 120), "actions_per_day": (int, 1, 50), "rest_heal_rate": (float, 0, 1), "retreat_hp_rate": (float, 0, 1),
     "board_size": (int, 1, 50), "deliver_range": (int, 1, BIG),
-    "hunt_battle_boost": (float, 0.01, BIG), "balance_level": (int, 1, BIG),
+    "balance_level": (int, 1, BIG),
     "item_power_rate": (float, 0.01, BIG),
 }
 HERO_KEYS = {"max_hp": (int, 1, BIG), "atk": (int, 0, BIG), "def": (int, 0, BIG), "gold": (int, 0, BIG),
@@ -367,8 +367,6 @@ def validate(raw: dict) -> list[str]:
         rank_ok(where, q.get("rank"))
         if not isinstance(q.get("weight"), (int, float)) or q["weight"] <= 0:
             err(f"{where}: weight は正の数にしてください")
-        if not isinstance(q.get("days"), int) or q["days"] < 1:
-            err(f"{where}: days は 1 以上の整数にしてください")
         if q.get("type") == "hunt" and not _range_ok(q.get("count")):
             err(f"{where}: count は [最小, 最大]（1 以上）にしてください")
     if not any(q.get("rank") == 1 for q in raw["quests"]):

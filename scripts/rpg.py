@@ -137,7 +137,8 @@ def location(world: dict, state: dict) -> str:
     quest = state["quest"]
     if quest:
         if quest["type"] == "hunt":
-            goal = f"{world['monsters'][quest['monster']]['name']} {quest['progress']}/{quest['count']}"
+            phase = {"go": "（狩り場へ）", "hunt": "", "back": "（帰り道）"}[quest["steps"][0][0]] if quest["steps"] else ""
+            goal = f"{world['monsters'][quest['monster']]['name']} {quest['progress']}/{quest['count']}{phase}"
         elif quest["type"] == "deliver":
             goal = f"{world['places'][quest['place']]['name']}へ配達"
         else:
@@ -199,7 +200,9 @@ def build_text(world: dict, state: dict) -> str:
         detail += ["", "── 受けている依頼 ──", game.quest_text(world, quest)]
         if quest.get("text"):
             detail.append(f"「{quest['text']}」（{world['places'][quest['town']]['name']}のギルド）")
-        detail.append(f"進み具合 {quest['progress']}/{quest['count']}  期限 {quest['deadline']}  "
+        left = sum(n for _, n in quest["steps"]) if quest["type"] == "hunt" else None
+        detail.append(f"必要な行動力 {quest.get('cost', '-')}" + (f"（残り {left}）" if left is not None else "")
+                      + f"  進み具合 {quest['progress']}/{quest['count']}  "
                       f"報酬 {quest['reward']['exp']}EXP {quest['reward']['gold']}G")
     detail += ["", "── 今シーズンの成績 ──",
                f"依頼達成 {ss['quests_done']}  依頼失敗 {ss['quests_failed']}  倒した敵 {ss['kills']}  "
