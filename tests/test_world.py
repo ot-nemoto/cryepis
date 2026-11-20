@@ -101,9 +101,46 @@ class ValidateTest(unittest.TestCase):
             r["quests"][0]["reward"]["item"] = [["mythic", 1]]
         self.assertError(change, ["mythic"])
 
+    def test_drop_level_is_no_longer_used(self):
+        self.assertError(lambda r: r["items"][5].update(drop_level=5), ["drop_level"])
+
+    def test_rare_items_need_quest_towns(self):
+        self.assertError(lambda r: r["items"][-1].pop("towns"), ["dragon_heart_stone", "towns"])
+        self.assertError(lambda r: r["items"][-1].update(towns=["jade_tomb"]), ["towns", "jade_tomb"])
+        self.assertError(lambda r: r["items"][0].update(towns=["aurea"]), ["wooden_sword", "common"])
+        for bad in (5, "aurea", [["aurea"]]):  # 型が違っても落ちずにエラーを返す
+            self.assertError(lambda r, bad=bad: r["items"][-1].update(towns=bad), ["dragon_heart_stone", "towns"])
+
+    def test_every_town_needs_a_rare(self):
+        def change(r):
+            for it in r["items"]:
+                if it["rarity"] == "rare" and "vike" in it["towns"]:
+                    it["towns"].remove("vike")
+        self.assertError(change, ["vike", "rare"])
+
+    def test_treasure_cannot_hold_rares(self):
+        self.assertError(lambda r: r["season"]["treasure"].append(["rare", 1]), ["treasure", "rare"])
+        self.assertError(lambda r: r["season"]["treasure"].append(["star_sword", 1]), ["treasure", "star_sword"])
+
+    def test_every_town_has_its_own_specialty(self):
+        shops = {p["id"]: set(p["shop"]) for p in RAW["map"]["places"] if p["type"] == "town"}
+        for town, items in shops.items():
+            only_here = {i for i in items if all(i not in other for t, other in shops.items() if t != town)}
+            self.assertTrue(only_here, town)
+
+    def test_every_town_quest_has_some_rare(self):
+        towns = {tid for i in RAW["items"] if i["rarity"] == "rare" for tid in i["towns"]}
+        self.assertEqual(towns, {p["id"] for p in RAW["map"]["places"] if p["type"] == "town"})
+
+    def test_every_slot_has_items_in_a_shop(self):
+        sold = {sid for p in RAW["map"]["places"] for sid in p.get("shop", [])}
+        items = {i["id"]: i for i in RAW["items"]}
+        self.assertEqual({items[i]["slot"] for i in sold}, set(W.SLOTS))
+
     def test_too_strong_item(self):
         def change(r):
-            r["items"].append({"id": "god_sword", "name": "神の剣", "slot": "weapon", "rarity": "legendary", "atk": 99})
+            r["items"].append({"id": "god_sword", "name": "神の剣", "slot": "weapon", "rarity": "legendary", "atk": 99,
+                               "towns": ["aurea"]})
         self.assertError(change, ["強すぎ"])
 
     def test_season_start_day_must_exist_in_every_month(self):

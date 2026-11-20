@@ -21,8 +21,8 @@ from pathlib import Path
 import common
 
 WORLD_DIR = common.ROOT / "world"
-SLOTS = ("weapon", "armor", "accessory")
-SLOT_NAMES = {"weapon": "武器", "armor": "防具", "accessory": "装飾品"}
+SLOTS = ("weapon", "helmet", "armor", "shield", "accessory")
+SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "armor": "鎧", "shield": "盾", "accessory": "装飾品"}
 PLACE_TYPES = ("town", "dungeon")
 # 道の種類: 陸路・航路は町どうしを結び、勇者が通る。ダンジョンへの道は地図に描くだけ（第 2 段階で使う）
 ROAD_KINDS = ("land", "sea", "trail")
@@ -33,6 +33,7 @@ QUEST_TYPES = ("hunt", "deliver")
 ROAD_EVENTS = ("battle", "treasure", "nothing")
 STATS = ("atk", "def", "hp")
 NONE = "none"  # ドロップ表の「何も出ない」
+COMMON = "common"  # 店で売り、どの町でも出る珍しさ（それ以外はレアで、決めた町の依頼でしか出ない）
 # ベースの地図（layout.background）に使える形式と、大きさの上限
 BACKGROUND_TYPES = {".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
                     ".webp": "image/webp"}
@@ -161,6 +162,9 @@ def validate(raw: dict) -> list[str]:
         if not isinstance(texts, list) or not texts or not all(isinstance(t, str) and t for t in texts):
             err(f"season.json: {key} は文字列の一覧（1 つ以上）にしてください")
     table_ok("season.json の treasure", season.get("treasure"))
+    for key, _ in season.get("treasure") or []:  # レアは依頼の報酬だけで出る
+        if (key in rarities and key != COMMON) or items.get(key, {}).get("rarity", COMMON) != COMMON:
+            err(f"season.json の treasure: {key!r} は宝箱からは出せません（レアは町の依頼の報酬だけで出る）")
     events = season.get("road_events")
     if (not isinstance(events, dict) or not events
             or any(k not in ROAD_EVENTS or not isinstance(v, (int, float)) or v < 0 for k, v in events.items())
@@ -286,8 +290,8 @@ def validate(raw: dict) -> list[str]:
                 err(f"monsters.json の {mid}: {key} は {low} 以上の整数にしてください")
 
     # items.json
-    if not rarities or len(set(rarities)) != len(rarities) or NONE in rarities:
-        err("items.json: rarities は重複のない一覧にしてください（none は使えません）")
+    if not rarities or len(set(rarities)) != len(rarities) or NONE in rarities or COMMON not in rarities:
+        err(f"items.json: rarities は重複のない一覧にし、{COMMON} を入れてください（none は使えません）")
     for iid, it in items.items():
         where = f"items.json の {iid}"
         if iid in rarities:
@@ -298,11 +302,33 @@ def validate(raw: dict) -> list[str]:
             err(f"{where}: slot は {'/'.join(SLOTS)} のどれかにしてください")
         if it.get("rarity") not in rarities:
             err(f"{where}: rarity は {'/'.join(rarities)} のどれかにしてください")
-        for key in (*STATS, "drop_level"):
+        for key in STATS:
             if key in it and (not isinstance(it[key], int) or it[key] < 0):
                 err(f"{where}: {key} は 0 以上の整数にしてください")
+        if "drop_level" in it:
+            err(f"{where}: drop_level はもう使いません（出やすさはドロップ表の重みで決める）")
+        towns = it.get("towns")
+        if it.get("rarity") == COMMON:
+            if towns is not None:
+                err(f"{where}: common に towns は書けません（common は店で売る。宝箱と依頼の報酬ではどの町でも出る）")
+        elif it.get("rarity") in rarities:
+            if not isinstance(towns, list) or not towns:
+                err(f"{where}: レアには towns（依頼の報酬で出る町の ID の一覧）を書いてください")
+            else:
+                for tid in towns:
+                    if not isinstance(tid, str) or places.get(tid, {}).get("type") != "town":
+                        err(f"{where}: towns の {tid!r} は町の ID にしてください")
         if "price" in it and (not isinstance(it["price"], int) or it["price"] <= 0):
             err(f"{where}: price は正の整数にしてください")
+
+    # どの町の依頼にも、いちばん下のレア（rare）がある（上のレアがない町では、当たったら 1 つ下に落とすため）
+    if COMMON in rarities and rarities.index(COMMON) + 1 < len(rarities):
+        lowest = rarities[rarities.index(COMMON) + 1]
+        have = {t for it in items.values() if it.get("rarity") == lowest and isinstance(it.get("towns"), list)
+                for t in it["towns"] if isinstance(t, str)}
+        for pid, p in places.items():
+            if p.get("type") == "town" and pid not in have:
+                err(f"items.json: {pid} の依頼で出る {lowest} がありません（どの町にも 1 つ以上置いてください）")
 
     # quests.json
     for q in raw["quests"]:

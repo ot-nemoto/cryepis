@@ -314,19 +314,29 @@ class Day:
             self.log(f"レベルが上がった！ Lv.{hero['level']}")
 
     # アイテム -------------------------------------------------------------------------
-    def draw(self, table: list | None, level: int) -> str | None:
-        """ドロップ表から抽選する。珍しさが当たったら、その珍しさで level 以下で出るアイテムから選ぶ。"""
+    def draw(self, table: list | None, town: str | None = None) -> str | None:
+        """ドロップ表から抽選する。珍しさが当たったら、その珍しさのアイテムから均等に選ぶ。
+        レア（common 以外）は、その町（town。依頼を出した町）の依頼で出るもの（items.json の towns）だけ。
+        その町にない珍しさが当たったら、1 つ下の珍しさに落として選び直す（どの町にも rare は必ずある）。"""
         if not table:
             return None
         keys, weights = zip(*table)
         key = self.rng.choices(keys, weights)[0]
         if key == W.NONE:
             return None
-        if key in self.world["items"]:
-            return key
-        pool = sorted(i for i, it in self.world["items"].items()
-                      if it["rarity"] == key and it.get("drop_level", 1) <= level)
-        return self.rng.choice(pool) if pool else None
+        items = self.world["items"]
+        if key in items:  # アイテムの ID を直接書いたとき（レアなら、その町のものだけ）
+            item = items[key]
+            return key if item["rarity"] == W.COMMON or town in item.get("towns", []) else None
+        rarities = self.world["rarities"]
+        for rarity in reversed(rarities[rarities.index(W.COMMON):rarities.index(key) + 1]):
+            pool = sorted(i for i, it in items.items()
+                          if it["rarity"] == rarity and (rarity == W.COMMON or town in it.get("towns", [])))
+            if pool:
+                return self.rng.choice(pool)
+            if rarity == rarities[rarities.index(W.COMMON) + 1]:
+                return None  # rare もない（宝箱など、町のない抽選）なら何も出ない
+        return None
 
     def obtain(self, iid: str, source: str) -> None:
         item, inv = self.world["items"][iid], self.state["inventory"]
@@ -359,7 +369,7 @@ class Day:
         self.state["season_stats"]["quests_done"] += 1
         self.state["quest"] = None
         self.log(f"依頼達成！{quest_text(self.world, quest)}（+{reward['exp']}EXP +{reward['gold']}G）")
-        iid = self.draw(reward.get("item"), max(quest["level"][0], self.hero["level"]))
+        iid = self.draw(reward.get("item"), quest["town"])
         if iid:
             self.obtain(iid, "報酬で")
         self.gain_exp(reward["exp"])
@@ -429,7 +439,7 @@ class Day:
                 if quest["progress"] >= quest["count"]:
                     self.log(f"討伐の目標を果たした（{quest['count']}体）")
         elif kind == "treasure":
-            iid = self.draw(self.cfg["treasure"], self.hero["level"])
+            iid = self.draw(self.cfg["treasure"])
             if iid:
                 self.obtain(iid, "宝箱から")
             elif self.rng.random() < 0.3:

@@ -1,10 +1,5 @@
-{
-  "templates": [
-    {"id": "hunt", "type": "hunt", "name": "討伐", "weight": 3, "count": [2, 4], "days": 3,
-     "reward": {"exp": 4, "gold": 5, "item": [["none", 85], ["common", 10], ["rare", 5]]}},
-    {"id": "hunt_big", "type": "hunt", "name": "大物討伐", "weight": 1, "count": [5, 7], "days": 5,
-     "reward": {"exp": 5, "gold": 6, "item": [["none", 65], ["common", 15], ["rare", 15], ["epic", 5]]}},
-    {"id": "deliver", "type": "deliver", "name": "配達", "weight": 2, "days": 2,
-     "reward": {"exp": 3, "gold": 6, "item": [["none", 92], ["common", 6], ["rare", 2]]}}
-  ]
-}
+{"templates": [
+  {"id": "hunt", "type": "hunt", "name": "討伐", "weight": 3, "count": [2, 4], "days": 3, "reward": {"exp": 4, "gold": 5, "item": [["none", 85], ["common", 10], ["rare", 4], ["epic", 1]]}},
+  {"id": "hunt_big", "type": "hunt", "name": "大物討伐", "weight": 1, "count": [5, 7], "days": 5, "reward": {"exp": 5, "gold": 6, "item": [["none", 65], ["common", 15], ["rare", 13], ["epic", 6], ["legendary", 1]]}},
+  {"id": "deliver", "type": "deliver", "name": "配達", "weight": 2, "days": 2, "reward": {"exp": 3, "gold": 6, "item": [["none", 92], ["common", 6], ["rare", 2]]}}
+]}
