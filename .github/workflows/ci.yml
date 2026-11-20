@@ -8,10 +8,10 @@ on:
   push:
     branches: [master]
 
-# 同じ PR の古い実行は取り消す
+# 同じ PR の古い実行は取り消す（master への push は、コミットごとに結果が残るよう取り消さない）
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

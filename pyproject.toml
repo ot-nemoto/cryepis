@@ -5,6 +5,8 @@
 target-version = "py312"
 line-length = 120
 indent-width = 2
+# scripts/ と tools/worldgen/ のモジュールは、sys.path に足して読み込む（import の並び順で、自分たちのモジュールとして扱う）
+src = [".", "scripts", "tools/worldgen"]
 
 [tool.ruff.lint]
 # E/W: 書き方（pycodestyle）、F: 使っていない変数・import など（Pyflakes）、I: import の並び順、
@@ -13,10 +15,6 @@ select = ["E", "W", "F", "I", "B", "UP"]
 # E501（1 行の長さ）はフォーマッターに任せる（日本語の文字列は折り返せないことがある）
 # B905（zip の strict）は、隣どうしの点を組にする zip(pts, pts[1:]) が多く、長さが違うのが正しいので使わない
 ignore = ["E501", "B905"]
-
-[tool.ruff.lint.isort]
-# scripts/ と tools/worldgen/ のモジュール（sys.path に足して読み込む）
-known-first-party = ["common", "game", "mapsvg", "rpg", "website", "world", "paths", "places", "names", "lore", "land", "terrain", "roads", "sea", "actions", "vectorize", "build_world"]
 
 [tool.ruff.format]
 quote-style = "double"
