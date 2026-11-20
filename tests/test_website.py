@@ -15,6 +15,7 @@ import game  # noqa: E402
 import mapsvg  # noqa: E402
 import rpg  # noqa: E402
 import website  # noqa: E402
+import world as W  # noqa: E402
 
 WORLD = rpg.load_world()
 DAY = date.fromisoformat(WORLD["season"]["start"])
@@ -168,6 +169,12 @@ class SiteTest(unittest.TestCase):
         self.assertIn("騎士の剣", muralis.split("店の品ぞろえ")[0])  # レア
         self.assertIn("南壁の巣穴（ダンジョン・まだ入れない）", muralis)
         self.assertIn("カルン（陸路 6）", muralis)
+        shop = muralis.split("店の品ぞろえ</th><td>")[1].split("</td>")[0]  # 種類の順、同じ種類なら値段の高い順
+        names = [n.split("</span>")[1].split("<span")[0] for n in shop.split("<br>")]
+        by_name = {it["name"]: it for it in WORLD["items"].values()}
+        keys = [(W.SLOTS.index(by_name[n]["slot"]), -by_name[n]["price"]) for n in names]
+        self.assertEqual(keys, sorted(keys))
+        self.assertEqual(names[:2], ["鋼の剣", "鉄の剣"])
 
     def test_guild_before_anyone_played(self):
         html = website.build_guild(WORLD, [], DAY, game.new_guild())

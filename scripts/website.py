@@ -311,7 +311,9 @@ def build_towns(world: dict) -> str:
         if town not in opened:
             return [("ギルドの規模", size)] + [(k, "-") for k in ("特産品", "依頼の報酬で出るレア", "店の品ぞろえ",
                                                                  "道（行き先と行動回数）")]
-        shop = sorted(places[town].get("shop", []), key=lambda i: (-game.item_score(items[i]), i))
+        # 店の品ぞろえは、アイテムの種類（武器・兜・盾・装飾品）の順に、同じ種類なら値段の高い順
+        shop = sorted(places[town].get("shop", []),
+                      key=lambda i: (W.SLOTS.index(items[i]["slot"]), -items[i].get("price", 0), i))
         rares = sorted((i for i, it in items.items() if town in it.get("towns", [])),
                        key=lambda i: -world["rarities"].index(items[i]["rarity"]))
         kinds = {"land": "陸路", "sea": "航路"}
