@@ -129,6 +129,35 @@ class QuestTest(unittest.TestCase):
                         pool = [m for m, _ in WORLD["road_info"][(town, q["place"])]["monsters"]]
                         self.assertIn(q["monster"], pool)
 
+    def test_board_has_town_quests_once_a_day(self):
+        names = {q["name"] for t in WORLD["town_quests"].values() for q in t}
+        seen = 0
+        for town in WORLD["towns"]:
+            for i in range(10):
+                board = G.board(WORLD, town, START + timedelta(days=i), 1)
+                own = [q["template"] for q in board if q["template"] in {x["id"] for x in WORLD["town_quests"][town]}]
+                self.assertEqual(len(own), len(set(own)))  # 同じ町の依頼は 1 日に 1 度だけ
+                seen += len(own)
+                for q in board:
+                    self.assertTrue(q["name"] in names or q["template"] in {t["id"] for t in WORLD["quests"]})
+        self.assertGreater(seen, 0)
+
+    def test_quest_rank_sets_reward_and_items(self):
+        town = "homura"
+        q4 = next(q for q in WORLD["town_quests"][town] if q["rank"] == 4)
+        q1 = next(q for q in WORLD["town_quests"][town] if q["rank"] == 1 and q["type"] == q4["type"])
+        a, b = G.make_town_quest(WORLD, q1, town, START), G.make_town_quest(WORLD, q4, town, START)
+        per = lambda q: q["reward"]["exp"] / q["count"]  # noqa: E731
+        self.assertEqual(per(b) / per(a), WORLD["quest_ranks"][3]["reward"] / WORLD["quest_ranks"][0]["reward"])
+        self.assertEqual(b["reward"]["item"], WORLD["quest_ranks"][3]["item"])
+        self.assertTrue(G.quest_text(WORLD, b).startswith("★★★★ " + q4["name"] + "（"))
+        self.assertEqual(b["text"], q4["text"])
+
+    def test_rank_falls_back_to_what_the_town_has(self):
+        for i in range(60):  # ヴィーケには ★★★★ の依頼がない
+            for q in G.board(WORLD, "vike", START + timedelta(days=i), 1):
+                self.assertLessEqual(q["rank"], max(x["rank"] for x in WORLD["town_quests"]["vike"]))
+
     def test_hunt_report_gives_reward(self):
         state = play(1, actions=0)
         quest = a_hunt()

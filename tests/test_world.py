@@ -98,7 +98,7 @@ class ValidateTest(unittest.TestCase):
 
     def test_bad_drop_table(self):
         def change(r):
-            r["quests"][0]["reward"]["item"] = [["mythic", 1]]
+            r["quest_ranks"][0]["item"] = [["mythic", 1]]
         self.assertError(change, ["mythic"])
 
     def test_drop_level_is_no_longer_used(self):
@@ -136,6 +136,33 @@ class ValidateTest(unittest.TestCase):
         sold = {sid for p in RAW["map"]["places"] for sid in p.get("shop", [])}
         items = {i["id"]: i for i in RAW["items"]}
         self.assertEqual({items[i]["slot"] for i in sold}, set(W.SLOTS))
+
+    def test_town_quests_are_checked(self):
+        def town_quest(**change):
+            def apply(r):
+                r["town_quests"]["aurea"][0].update(change)
+            return apply
+        self.assertError(town_quest(to="zafra"), ["aurea_1", "直接つながる"])         # 道がない
+        self.assertError(town_quest(monster="ice_wolf"), ["aurea_1", "その道に出る"])  # その道にいない魔物
+        self.assertError(town_quest(rank=9), ["aurea_1", "rank"])
+        self.assertError(town_quest(count=0), ["aurea_1", "count"])
+        self.assertError(town_quest(type="deliver", to="aurea"), ["aurea_1", "別の町"])
+        self.assertError(town_quest(id="hunt"), ["重複"])  # 共通の依頼と同じ ID
+        self.assertError(lambda r: r["town_quests"].update(jade_tomb=[]), ["jade_tomb", "町の ID"])
+
+    def test_quest_ranks_are_checked(self):
+        self.assertError(lambda r: r["quest_ranks"][0].update(weight=0), ["ranks[1]", "weight"])
+        self.assertError(lambda r: r["quest_ranks"].clear(), ["ranks"])
+        def no_rank1(r):
+            for t in r["quests"]:
+                t["rank"] = 2
+        self.assertError(no_rank1, ["rank 1"])
+
+    def test_every_town_has_its_own_quests(self):
+        towns = {p["id"] for p in RAW["map"]["places"] if p["type"] == "town"}
+        self.assertEqual(set(RAW["town_quests"]), towns)
+        for tid, qs in RAW["town_quests"].items():
+            self.assertTrue(any(q["rank"] >= 2 for q in qs), tid)  # どの町にもレアな依頼がある
 
     def test_too_strong_item(self):
         def change(r):

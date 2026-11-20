@@ -6,7 +6,7 @@ world/
   map-base.svg  ベースの地図（地形の絵。map.json の layout.background）
   monsters.json 敵（出る地形と性質）と、性質の一覧
   items.json    アイテム（珍しさの一覧を含む）
-  quests.json   ギルドの依頼のひな形
+  quests.json   ギルドの依頼（レアリティ・共通のひな形・町ごとの依頼）
 
 参照はすべて ID で行う。データに誤りがあれば validate() がその一覧を返し、load_world() は止まる。
 """
@@ -67,6 +67,7 @@ def load_raw(directory: Path | None = None) -> dict:
     items = read_json(d / "items.json")
     mp = read_json(d / "map.json")
     monsters = read_json(d / "monsters.json")
+    quests = read_json(d / "quests.json")
     background = None
     name = (mp.get("layout") or {}).get("background") if isinstance(mp.get("layout"), dict) else None
     if isinstance(name, str) and name and "/" not in name and "\\" not in name:
@@ -80,7 +81,10 @@ def load_raw(directory: Path | None = None) -> dict:
         "traits": monsters.get("traits", {}),
         "rarities": items["rarities"],
         "items": items["items"],
-        "quests": read_json(d / "quests.json")["templates"],
+        "quests": quests["templates"],
+        "quest_ranks": quests.get("ranks"),
+        "quest_reward": quests.get("reward"),
+        "town_quests": quests.get("towns", {}),
     }
 
 
@@ -331,22 +335,77 @@ def validate(raw: dict) -> list[str]:
                 err(f"items.json: {pid} の依頼で出る {lowest} がありません（どの町にも 1 つ以上置いてください）")
 
     # quests.json
+    ranks = raw.get("quest_ranks") or []
+    if not isinstance(ranks, list) or not ranks:
+        err("quests.json: ranks（依頼のレアリティの一覧）を 1 つ以上書いてください")
+        ranks = []
+    for n, r in enumerate(ranks, 1):
+        where = f"quests.json の ranks[{n}]"
+        if not isinstance(r, dict) or not r.get("mark"):
+            err(f"{where}: mark（★ の表示）を書いてください")
+            continue
+        for key in ("weight", "reward"):
+            if not isinstance(r.get(key), (int, float)) or isinstance(r.get(key), bool) or r[key] <= 0:
+                err(f"{where}: {key} は正の数にしてください")
+        table_ok(f"{where} の item", r.get("item"))
+    for typ in QUEST_TYPES:
+        base = (raw.get("quest_reward") or {}).get(typ)
+        if not isinstance(base, dict) or any(not isinstance(base.get(k), (int, float)) or base[k] < 0
+                                             for k in ("exp", "gold")):
+            err(f"quests.json: reward.{typ} には exp と gold（0 以上の数）を書いてください")
+
+    def rank_ok(where: str, rank) -> None:
+        if not isinstance(rank, int) or isinstance(rank, bool) or not 1 <= rank <= max(len(ranks), 1):
+            err(f"{where}: rank は 1〜{len(ranks)} の整数にしてください")
     for q in raw["quests"]:
         where = f"quests.json の {q.get('id')}"
         if q.get("type") not in QUEST_TYPES:
             err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
+        rank_ok(where, q.get("rank"))
         if not isinstance(q.get("weight"), (int, float)) or q["weight"] <= 0:
             err(f"{where}: weight は正の数にしてください")
         if not isinstance(q.get("days"), int) or q["days"] < 1:
             err(f"{where}: days は 1 以上の整数にしてください")
-        reward = q.get("reward", {})
-        for key in ("exp", "gold"):
-            if not isinstance(reward.get(key), (int, float)) or reward[key] < 0:
-                err(f"{where}: reward.{key} は 0 以上の数にしてください")
-        if "item" in reward:
-            table_ok(f"{where} の reward.item", reward["item"])
         if q.get("type") == "hunt" and not _range_ok(q.get("count")):
             err(f"{where}: count は [最小, 最大]（1 以上）にしてください")
+    if not any(q.get("rank") == 1 for q in raw["quests"]):
+        err("quests.json: rank 1 の共通の依頼（templates）を 1 つ以上書いてください（掲示板の空いた枠に入る）")
+    # 町の依頼: 討伐は町から出る道（陸路・航路）と、その道に出る魔物。配達は別の町へ
+    road_terrain = {}
+    for r in mp.get("roads", []):
+        if r.get("kind", "land") != "trail" and _weights_ok(r.get("terrain")):
+            terr = {t for t, _ in r["terrain"]}
+            road_terrain[(r.get("from"), r.get("to"))] = road_terrain[(r.get("to"), r.get("from"))] = terr
+    town_quests = raw.get("town_quests") or {}
+    if not isinstance(town_quests, dict):
+        err("quests.json: towns は {町の ID: 依頼の一覧} にしてください")
+        town_quests = {}
+    seen_ids = [q.get("id") for q in raw["quests"]]
+    for tid, qs in town_quests.items():
+        if places.get(tid, {}).get("type") != "town":
+            err(f"quests.json の towns: {tid!r} は町の ID にしてください")
+            continue
+        for q in qs if isinstance(qs, list) else []:
+            where = f"quests.json の {tid} の {q.get('id')}"
+            if not q.get("id") or q["id"] in seen_ids:
+                err(f"{where}: id が空か重複しています")
+            seen_ids.append(q.get("id"))
+            if not q.get("name"):
+                err(f"{where}: name がありません")
+            rank_ok(where, q.get("rank"))
+            to = q.get("to")
+            if q.get("type") == "hunt":
+                if (tid, to) not in road_terrain:
+                    err(f"{where}: to の {to!r} は、{tid} から陸路・航路で直接つながる町にしてください")
+                elif monsters.get(q.get("monster"), {}).get("terrain") not in road_terrain[(tid, to)]:
+                    err(f"{where}: monster の {q.get('monster')!r} は、その道に出る魔物にしてください")
+                if not isinstance(q.get("count"), int) or q["count"] < 1:
+                    err(f"{where}: count は 1 以上の整数にしてください")
+            elif q.get("type") == "deliver":
+                if to == tid or places.get(to, {}).get("type") != "town":
+                    err(f"{where}: to は別の町の ID にしてください")
+            else:
+                err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
 
     # 釣り合い: 部位ごとに最も強い装備を足しても、典型的なレベルの基本能力値の一定割合を超えない
     if not errors:
@@ -433,4 +492,7 @@ def build(raw: dict) -> dict:
         "rarities": raw["rarities"],
         "items": {i["id"]: i for i in raw["items"]},
         "quests": raw["quests"],
+        "quest_ranks": raw["quest_ranks"],
+        "quest_reward": raw["quest_reward"],
+        "town_quests": raw.get("town_quests", {}),
     }

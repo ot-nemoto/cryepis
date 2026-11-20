@@ -158,44 +158,76 @@ def monster_level(world: dict) -> int:
 
 # ---- ギルドの依頼 ---------------------------------------------------------------------
 def board(world: dict, town: str, d: date, season: int) -> list[dict]:
-    """町 town の、日付 d の依頼の掲示板（全員共通）。"""
-    cfg = world["season"]
+    """町 town の、日付 d の依頼の掲示板（全員共通）。
+    枠ごとにレアリティ（★〜）を重みで選び、その町の依頼から選ぶ。その町に当たったレアリティの依頼がなければ
+    1 つ下に落とす。町の依頼は同じ日に 1 度だけ出て、足りない枠には共通の依頼（templates）が入る。"""
+    cfg, ranks = world["season"], world["quest_ranks"]
     rng = random.Random(f"board-{d.isoformat()}-{season}-{town}")
-    templates = world["quests"]
-    weights = [t["weight"] for t in templates]
+    own = list(world["town_quests"].get(town, []))
     quests = []
     for i in range(cfg["board_size"]):
-        quest = make_quest(world, rng.choices(templates, weights)[0], town, d, rng)
+        rank = rng.choices(range(1, len(ranks) + 1), [r["weight"] for r in ranks])[0]
+        while True:
+            mine = [q for q in own if q["rank"] == rank]
+            common = [t for t in world["quests"] if t["rank"] == rank]
+            if mine or common or rank == 1:
+                break
+            rank -= 1
+        if mine and (not common or rng.random() < 0.8):  # 町の依頼を優先する
+            q = rng.choice(mine)
+            own.remove(q)
+            quest = make_town_quest(world, q, town, d)
+        else:
+            quest = make_quest(world, rng.choices(common, [t["weight"] for t in common])[0], town, d, rng)
         if quest:
             quest["id"] = f"{d.isoformat()}-{town}-{i}"
             quests.append(quest)
     return quests
 
 
+def finish_quest(world: dict, quest: dict, town: str, d: date, days: int, unit: int) -> dict:
+    """報酬（種類ごとの基本 × 魔物のレベル × 数か距離 × レアリティの倍率）と期限をつける。"""
+    lvl, rank = monster_level(world), quest["rank"]
+    base, cfg = world["quest_reward"][quest["type"]], world["quest_ranks"][rank - 1]
+    quest.update(town=town, progress=0, level=[lvl, lvl], deadline=(d + timedelta(days=days)).isoformat(),
+                 reward={"exp": round(base["exp"] * lvl * unit * cfg["reward"]),
+                         "gold": round(base["gold"] * lvl * unit * cfg["reward"]), "item": cfg["item"]})
+    return quest
+
+
+def make_town_quest(world: dict, q: dict, town: str, d: date) -> dict:
+    """町の依頼（quests.json の towns）から、掲示板に出す依頼を作る。"""
+    if q["type"] == "hunt":
+        road = world["roads"][(town, q["to"])]
+        quest = {"type": "hunt", "place": q["to"], "report": town, "monster": q["monster"], "count": q["count"]}
+        days, unit = 2 + q["count"] // 2 + 2 * road, q["count"]
+    else:
+        dist = world["dist"][town][q["to"]]
+        quest = {"type": "deliver", "place": q["to"], "report": q["to"], "monster": None, "count": 1}
+        days, unit = 2 + dist, dist
+    quest.update(template=q["id"], name=q["name"], rank=q["rank"], text=q.get("text", ""))
+    return finish_quest(world, quest, town, d, days, unit)
+
+
 def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> dict | None:
-    """討伐: 町から出る道の 1 本で、その道に出る魔物を倒す。配達: 近くの町へ荷物を届ける。"""
+    """共通の依頼。討伐: 町から出る道の 1 本で、その道に出る魔物を倒す。配達: 近くの町へ荷物を届ける。"""
     cfg, dist = world["season"], world["dist"][town]
-    lvl = monster_level(world)
     if t["type"] == "hunt":
         other = rng.choice(world["neighbors"][town])
         mids, weights = zip(*world["road_info"][(town, other)]["monsters"])
         count = rng.randint(*t["count"])
         quest = {"type": "hunt", "place": other, "report": town, "monster": rng.choices(mids, weights)[0],
-                 "count": count, "days": t["days"] + 2 * world["roads"][(town, other)]}
-        unit = count
+                 "count": count}
+        days, unit = t["days"] + 2 * world["roads"][(town, other)], count
     else:  # deliver
         towns = [p for p in world["towns"] if p != town and dist.get(p, cfg["deliver_range"] + 1) <= cfg["deliver_range"]]
         if not towns:
             return None
         to = rng.choice(towns)
-        quest = {"type": "deliver", "place": to, "report": to, "monster": None, "count": 1, "days": t["days"] + dist[to]}
-        unit = dist[to]
-    reward = t["reward"]
-    quest.update(template=t["id"], name=t.get("name", t["type"]), town=town, progress=0, level=[lvl, lvl],
-                 deadline=(d + timedelta(days=quest.pop("days"))).isoformat(),
-                 reward={"exp": round(reward["exp"] * lvl * unit), "gold": round(reward["gold"] * lvl * unit),
-                         "item": reward.get("item")})
-    return quest
+        quest = {"type": "deliver", "place": to, "report": to, "monster": None, "count": 1}
+        days, unit = t["days"] + dist[to], dist[to]
+    quest.update(template=t["id"], name=t.get("name", t["type"]), rank=t["rank"], text="")
+    return finish_quest(world, quest, town, d, days, unit)
 
 
 def suitable(quest: dict, level: int) -> bool:
@@ -211,7 +243,7 @@ def patrol(world: dict, state: dict, rng: random.Random) -> dict:
             "count": 1, "progress": 0, "level": [lvl, lvl], "deadline": None, "reward": None}
 
 
-def quest_text(world: dict, quest: dict) -> str:
+def quest_detail(world: dict, quest: dict) -> str:
     places = world["places"]
     place = places[quest["place"]]["name"]
     if quest["type"] == "hunt":
@@ -220,6 +252,17 @@ def quest_text(world: dict, quest: dict) -> str:
     if quest["type"] == "deliver":
         return f"{place}へ荷物を届ける"
     return f"{place}へ旅をする"
+
+
+def quest_text(world: dict, quest: dict) -> str:
+    """依頼の表示。レアリティと名前があれば「★★ 砂漠の盗賊団（〜を 6 体討伐）」の形にする。"""
+    detail = quest_detail(world, quest)
+    if quest["type"] == "patrol":
+        return detail
+    rank = quest.get("rank", 1)
+    marks = world["quest_ranks"]
+    mark = marks[rank - 1]["mark"] if 1 <= rank <= len(marks) else ""
+    return f"{mark} {quest.get('name', '依頼')}（{detail}）"
 
 
 def route(world: dict, a: str, b: str) -> list[str]:

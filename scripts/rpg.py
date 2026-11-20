@@ -49,7 +49,8 @@ MEDALS = ("🥇", "🥈", "🥉")
 NAME_WIDTH_MAX = 16  # 勇者の名前の表示幅（全角 = 2）
 CATCH_UP_DAYS = 7  # 実行されなかった日をさかのぼって進める最大の日数
 # カードに優先して出す出来事（前ほど優先）
-HIGHLIGHTS = ("★", "シーズン", "依頼達成", "力尽きた", "依頼失敗", "レベルが上がった", "手に入れた", "買った",
+HIGHLIGHTS = ("★「",  # レアのアイテム（★「…」。依頼のレアリティの ★ とは区別する）
+              "シーズン", "依頼達成", "力尽きた", "依頼失敗", "レベルが上がった", "手に入れた", "買った",
               "目標を果たした", "依頼を受けた")
 TEASERS = ("新しい依頼を探している…", "次の町を目指している…", "腕が鳴る…")
 
@@ -192,6 +193,13 @@ def build_text(world: dict, state: dict) -> str:
                  key=lambda kv: (-rank[world["items"][kv[0]]["rarity"]], -game.item_score(world["items"][kv[0]]), kv[0]))
     detail += ["", "── 持ち物（シーズンをまたいで持ち越す）──"]
     detail += [f"{item_label(world, iid)}" + (f" ×{n}" if n > 1 else "") for iid, n in inv] or ["なし"]
+    quest = state["quest"]
+    if quest and quest["type"] != "patrol":
+        detail += ["", "── 受けている依頼 ──", game.quest_text(world, quest)]
+        if quest.get("text"):
+            detail.append(f"「{quest['text']}」（{world['places'][quest['town']]['name']}のギルド）")
+        detail.append(f"進み具合 {quest['progress']}/{quest['count']}  期限 {quest['deadline']}  "
+                      f"報酬 {quest['reward']['exp']}EXP {quest['reward']['gold']}G")
     detail += ["", "── 今シーズンの成績 ──",
                f"依頼達成 {ss['quests_done']}  依頼失敗 {ss['quests_failed']}  倒した敵 {ss['kills']}  "
                f"力尽きた回数 {ss['deaths']}",

@@ -106,6 +106,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 - 1 日の**行動回数**は毎日同じ（`world/season.json` の `actions_per_day`、今は 3 回）。何が起きるか（魔物・宝箱・景色など）が乱数で決まる
 - 町に着くと HP が全回復し、店で今より良い装備と回復薬を買う。ギルドの掲示板（町ごと・日ごとに全員共通）から、
   依頼を 1 つ受ける。依頼がなければ、となりの町へ旅をする（報酬なし）
+- ギルドには、町の特色に合わせた**町の依頼**と、どの町にもある**共通の依頼**がある。依頼にはレアリティ（★〜★★★★）があり、★ が多いほど出にくく、報酬が多く、レアのアイテムが出やすい（[docs/WORLD.md](docs/WORLD.md)）
 - 依頼は**討伐**（町から出る道の 1 本で、その道に出る魔物を指定の数だけ倒す。道を行き来して探す）と**配達**（別の町へ届ける。報告は届け先の町）。報告すると経験値・お金と、
   確率でアイテムがもらえる。期限を過ぎると失敗
 - 道の出来事は、戦闘・宝箱（common の装備・お金・回復薬）・景色のどれか（起こりやすさは `season.json` の `road_events`）
@@ -128,7 +129,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `tools/worldgen/` | 地図づくりのスクリプト。`python tools/worldgen/make.py` で地形・陸路・航路・行動回数を作り直し、`world/map.json` と `world/map-base.svg` を書き出す（町の配置は `places.py`、名前は `names.py`、山脈・地域・川は `terrain.py`） |
 | `world/monsters.json` | 魔物（出る地形 `terrain` と性質 `trait`）と、性質の一覧（`traits`） |
 | `world/items.json` | アイテム（いまは 61 種類）と珍しさ（common / rare / epic / legendary）。店で売るもの（common）は `price` を書く。レア（rare 以上）は `towns` に書いた町の依頼の報酬でしか出ない（レベルの制限なし）。町ごとの特産とレアは [docs/WORLD.md](docs/WORLD.md) |
-| `world/quests.json` | ギルドの依頼のひな形（種類・出やすさ・期限・報酬・アイテムのドロップ表） |
+| `world/quests.json` | ギルドの依頼。レアリティ（`ranks`: ★〜★★★★ の出やすさ・報酬の倍率・アイテムのドロップ表）、共通の依頼（`templates`）、町ごとの依頼（`towns`: 名前・内容・ギルドの言葉。いまは 24 町で 101 件） |
 
 - 参照はすべて ID。編集したら `python -m unittest discover -s tests` で確かめる（`tests/test_world.py` がデータの誤りを、
   `tests/test_game.py` の BalanceTest がシーズン末のレベルや依頼の成功率を調べる）

@@ -44,6 +44,19 @@ class DisplayTest(unittest.TestCase):
         state["inventory"] = {"wooden_sword": 1, "leather_cap": 1, "dragon_scale": 1, "turtle_shield": 1}
         self.assertEqual(rpg.gear_text(WORLD, state), "★★竜鱗の鎧/★亀甲の盾/木の剣/革の帽子")
 
+    def test_quest_marks_are_not_rare_items(self):
+        events = ["アウレアのギルドで依頼を受けた: ★ 王家の書状（カエルムへ荷物を届ける）", "野犬を倒した (+9EXP)",
+                  "宝箱から★「狩人の短剣」を手に入れた！"]
+        self.assertEqual(rpg.highlights(events, 1), ["宝箱から★「狩人の短剣」を手に入れた！"])
+
+    def test_detail_shows_the_current_quest(self):
+        state = play(1)
+        q = next(x for x in WORLD["town_quests"]["aurea"] if x["type"] == "deliver")
+        state["quest"] = game.make_town_quest(WORLD, q, "aurea", DAY)
+        text = rpg.build_text(WORLD, state)
+        self.assertIn("── 受けている依頼 ──", text)
+        self.assertIn(q["text"], text)
+
     def test_card_before_the_journey(self):
         lines = rpg.build_text(WORLD, game.new_state(WORLD, "h1", "アリス")).splitlines()
         self.assertEqual(lines[0], "⚔️ アリス Lv.1  旅立ち前 Day 0")
