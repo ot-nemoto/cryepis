@@ -256,6 +256,31 @@ class HeroesTest(unittest.TestCase):
         self.assertIn("■ ボブ", board)  # 進められた勇者だけでランキングを作る
         self.assertNotIn("■ アリス", board)
 
+    def test_hero_that_failed_stays_on_the_map(self):
+        self.new_game("アリス")
+        self.new_game("ボブ")
+        self.daily("2026-12-01")
+        original = rpg.run_hero
+
+        def fail_alice(world, hero, *args):
+            if hero["id"] == "h1":
+                raise RuntimeError("壊れた")
+            return original(world, hero, *args)
+        with mock.patch.object(rpg, "run_hero", side_effect=fail_alice), mock.patch.object(common, "warn"):
+            self.assertEqual(self.daily("2026-12-02"), 1)
+        text = (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8")
+        self.assertIn("🧙 アリス Lv.", text)  # 保存してある状態で載せる
+        self.assertIn("🧙 ボブ Lv.", text)
+
+    def test_map_failure_does_not_stop_the_board(self):
+        self.new_game("アリス")
+        with mock.patch.object(rpg, "save_map", side_effect=KeyError("pos")), \
+             mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.daily(), 1)
+        warn.assert_called_once()
+        self.create_board.assert_called_once()  # ランキングは更新する
+        self.assertEqual(load("h1")["day"], 1)
+
     def test_board_is_updated_after_it_is_created(self):
         self.new_game("アリス")
         self.daily("2026-12-01")

@@ -513,19 +513,28 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
     token = os.environ.get("GIST_PAT")
     if not token and not dry_run:
         raise SystemExit("GIST_PAT を環境変数で指定してください")
-    failed, entries = 0, []
+    failed, entries, on_map = 0, [], []
     for hero in heroes:
         try:
             state = run_hero(world, hero, today, actions, dry_run)
             entries.append((hero, state))
+            on_map.append((hero, state))
             print(build_text(world, state))
             if not dry_run:
                 save_page(world, state)
         except (Exception, SystemExit) as e:  # noqa: BLE001  勇者ごとに失敗を隔離する
             failed += 1
             common.warn(f"{hero['name']}（{hero['id']}）を進められませんでした: {e}")
+            try:  # 進められなかった勇者も、保存してある状態で地図に載せる
+                on_map.append((hero, game.load_state(world, hero_state_path(hero["id"]), hero["id"], hero["name"])))
+            except (Exception, SystemExit):  # noqa: BLE001
+                pass
     if not dry_run:
-        save_map(world, entries)
+        try:  # 地図を書き出せなくても、ランキングの Gist は更新する
+            save_map(world, on_map)
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            failed += 1
+            common.warn(f"MAP のページを書き出せませんでした: {e}")
     if entries:
         try:
             update_board(world, entries, today, dry_run, token)

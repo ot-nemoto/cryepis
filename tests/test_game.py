@@ -279,6 +279,16 @@ class RoadTest(unittest.TestCase):
         self.assertEqual((state["place"], state["road"]), (to, None))
         self.assertTrue(any("に着いた" in e for e in day.events))
 
+    def test_deliver_to_the_town_you_are_in_completes(self):
+        state = play(1, actions=0)
+        town = state["place"]
+        state["quest"] = {"type": "deliver", "name": "配達", "template": "deliver", "town": "x", "place": town,
+                          "report": town, "monster": None, "count": 1, "progress": 0, "level": [1, 1],
+                          "deadline": "2099-01-01", "reward": {"exp": 1, "gold": 1, "item": None}}
+        day = day_of(state)
+        self.assertTrue(day.act())
+        self.assertEqual(state["season_stats"]["quests_done"], 1)
+
     def test_hunt_goes_back_and_forth_on_its_road(self):
         state = play(1, actions=0)
         quest = a_hunt(state["place"]) | {"count": 99, "deadline": "2099-01-01"}
@@ -398,6 +408,9 @@ class StateFileTest(unittest.TestCase):
                  ({"type": "deliver", "place": "jade_tomb", "monster": None}, False),  # ダンジョンへは配達しない
                  ({"type": "deliver", "place": far, "monster": None}, True),
                  ({"type": "teleport", "place": near, "monster": None}, False)]
+        no_report = {k: v for k, v in (base | {"type": "hunt", "place": near, "monster": "wild_dog"}).items()
+                     if k != "report"}
+        self.assertFalse(G.quest_ok(WORLD, no_report))  # 報告先のない討伐は捨てる（エラーにしない）
         for quest, ok in cases:
             self.assertEqual(G.quest_ok(WORLD, base | quest), ok, quest)
 

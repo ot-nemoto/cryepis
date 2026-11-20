@@ -120,6 +120,14 @@ class ValidateTest(unittest.TestCase):
             r["season"]["road_events"] = {"battle": -1}
         self.assertError(bad_events, ["road_events"])
 
+        def no_battle(r):
+            r["season"]["road_events"] = {"battle": 0, "nothing": 10}
+        self.assertError(no_battle, ["road_events", "battle"])
+
+        def bad_scenery(r):
+            r["season"]["terrain_scenery"] = ["草原"]
+        self.assertError(bad_scenery, ["terrain_scenery"])
+
         def bad_hero(r):
             del r["season"]["hero"]["atk"]
         self.assertError(bad_hero, ["hero", "atk"])
@@ -145,6 +153,10 @@ class ValidateTest(unittest.TestCase):
         def bad_layout(r):
             del r["map"]["layout"]["size"]
         self.assertError(bad_layout, ["layout", "size"])
+
+        def no_pos(r):
+            del r["map"]["places"][0]["pos"]
+        self.assertError(no_pos, ["aurea", "pos"])
 
         def bad_path(r):
             r["map"]["roads"][0]["path"] = [[1, 2]]

@@ -111,7 +111,7 @@ def quest_ok(world: dict, quest: dict) -> bool:
     if quest.get("report") is not None and places.get(quest["report"], {}).get("type") != "town":
         return False
     if quest["type"] == "hunt":
-        return (quest["report"], quest["place"]) in world["roads"] and quest.get("monster") in world["monsters"]
+        return (quest.get("report"), quest["place"]) in world["roads"] and quest.get("monster") in world["monsters"]
     return True
 
 
@@ -515,6 +515,9 @@ class Day:
                 if place == quest["place"]:
                     return self.go(quest["report"])
                 return self.move_toward(quest["report"])
+            if place == quest["place"]:  # もう目的の町にいる（地図が変わって町に戻されたときなど）
+                self.visit_town(place)
+                continue
             return self.move_toward(quest["place"])
         return True
 

@@ -166,7 +166,13 @@ def validate(raw: dict) -> list[str]:
             or any(k not in ROAD_EVENTS or not isinstance(v, (int, float)) or v < 0 for k, v in events.items())
             or sum(events.values()) <= 0):
         err(f"season.json: road_events は {'/'.join(ROAD_EVENTS)} の重み（0 以上、合計が正）にしてください")
-    for key, texts in (season.get("terrain_scenery") or {}).items():
+    elif not events.get("battle", 0) > 0:  # 戦闘が起きないと、討伐の依頼がこなせない
+        err("season.json: road_events の battle は正の数にしてください（0 だと討伐の依頼が終わりません）")
+    scenery = season.get("terrain_scenery", {})
+    if not isinstance(scenery, dict):
+        err("season.json: terrain_scenery は {地形: 文字列の一覧} にしてください")
+        scenery = {}
+    for key, texts in scenery.items():
         if key not in TERRAINS or not isinstance(texts, list) or not all(isinstance(t, str) and t for t in texts):
             err(f"season.json: terrain_scenery の {key!r} は地形（{'/'.join(TERRAINS)}）と文字列の一覧にしてください")
 
@@ -200,6 +206,9 @@ def validate(raw: dict) -> list[str]:
                     err(f"{where}: 店の {iid!r} に price（正の整数）がありません")
     layout = mp.get("layout")
     if layout is not None:
+        for pid, p in places.items():  # 地図を描くなら、どの場所にも座標がいる（道の線がない道は、両端の座標を結ぶ）
+            if "pos" not in p:
+                err(f"map.json の {pid}: layout（地図）があるときは pos（地図の座標）を書いてください")
         if not isinstance(layout, dict) or not _point_ok(layout.get("size")):
             err("map.json: layout には size（[幅, 高さ]）を書いてください")
         else:
