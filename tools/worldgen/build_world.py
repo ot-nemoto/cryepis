@@ -23,9 +23,9 @@ TERRAIN = {
 }
 
 # 呼び名 → (ID, 絵文字, 地域, 店)
-BASIC = ["wooden_sword", "copper_sword", "leather_cap", "cloth_armor", "leather_armor", "wooden_shield"]
-MID = ["iron_sword", "iron_helm", "chain_mail", "iron_shield", "lucky_charm", "travel_bangle"]
-SMITH = ["steel_sword", "steel_helm", "steel_armor", "steel_shield"]
+BASIC = ["wooden_sword", "copper_sword", "leather_cap", "wooden_shield"]
+MID = ["iron_sword", "iron_helm", "iron_shield", "lucky_charm", "travel_bangle"]
+SMITH = ["steel_sword", "steel_helm", "steel_shield"]
 TOWN_INFO = {
     "王都": ("aurea", "🏰", "黄金平原", BASIC + MID + SMITH),
     "河港": ("flumen", "⚓", "大河の三角州", BASIC + MID),
@@ -51,28 +51,35 @@ TOWN_INFO = {
     "大草原の町": ("eques", "🐎", "南の大草原", BASIC),
     "南壁の砦": ("muralis", "🛡️", "南壁山脈", MID + SMITH),
     "焔の湯治場": ("homura", "♨️", "炎の列島", MID + SMITH),
+    "凍原の村": ("karun", "🦌", "南の凍原", BASIC),
 }
 # 町の特産（その町でしか買えない common）
 SPECIALTY = {
     "古木の町": "bark_shield", "北の漁村": "fur_hat", "湖畔の村": "waterweed_bangle", "暁の港": "trader_dagger",
     "南の森の村": "hunter_bow", "大草原の町": "cavalry_lance", "王都": "royal_shield", "河港": "sailor_hat",
     "天門の町": "mountain_helm", "霧沼の村": "reed_shield", "鋼山の町": "battle_axe", "椰子の港": "coral_necklace",
-    "風巻きの宿": "nomad_bow", "氷牙の砦": "wolf_fur_armor", "凍土の集落": "polar_fur", "オアシスの町": "sand_hood",
+    "風巻きの宿": "nomad_bow", "氷牙の砦": "wolf_fang_necklace", "凍土の集落": "polar_fur", "オアシスの町": "sand_hood",
     "雨林の村": "jade_ring", "霧氷の修道院": "stargazer_amulet", "蔦の集落": "blowgun", "赤岩の鉱山町": "ruby_ring",
-    "西の港": "settler_armor", "干潟の港": "shell_shield", "南壁の砦": "wall_shield", "焔の湯治場": "volcanic_blade",
+    "西の港": "settler_shield", "干潟の港": "shell_shield", "南壁の砦": "wall_shield", "焔の湯治場": "volcanic_blade",
+    "凍原の村": "reindeer_charm",
 }
 # 1 日にギルドに出る依頼の数（町の大きさ。書いていない町は season.json の board_size）
 QUESTS_PER_DAY = {
     "王都": 6,
     "河港": 5, "暁の港": 5, "干潟の港": 5, "西の港": 5, "椰子の港": 5, "オアシスの町": 5, "天門の町": 5,
     "霧沼の村": 3, "氷牙の砦": 3, "凍土の集落": 3, "雨林の村": 3, "霧氷の修道院": 3, "蔦の集落": 3, "南壁の砦": 3,
+    "凍原の村": 3,
 }
 DUNGEON_INFO = {
     "始祖竜の頭骨": ("dragon_skull", "天の頂"), "翠国の王墓": ("jade_tomb", "灼熱の大砂漠"),
     "竜の心臓の火口": ("heart_crater", "炎の列島"), "沈んだ神殿": ("sunken_temple", "霧の大湿原"),
     "氷牙の氷窟": ("ice_cave", "氷牙山地"), "古木の根の洞": ("root_hollow", "古の大森林"),
+    "南壁の巣穴": ("wall_den", "南壁山脈"),
 }
-STARTS = ["古木の町", "北の漁村", "湖畔の村", "暁の港", "南の森の村", "大草原の町"]
+# 開放した町（勇者が行ける範囲）。ほかの町は地図に出すが、道（陸路・航路・ダンジョンへの道）は出さず、行けない。
+# 少しずつ開放していく（今は南大陸だけ）
+OPEN = ["干潟の港", "大草原の町", "南壁の砦", "凍原の村"]
+STARTS = ["干潟の港", "大草原の町", "凍原の村"]  # 安い装備を売る町から始める（南壁の砦は高い装備だけ）
 
 
 def pid(name):
@@ -126,7 +133,7 @@ def main():
         roads.append({"from": pid(r["from"]), "to": pid(r["to"]), "distance": r["actions"], "kind": "sea",
                       "terrain": [["sea", 100]], "path": [[round(x), round(y)] for x, y in r["path"]]})
 
-    mp = {"starts": [pid(n) for n in STARTS],
+    mp = {"open": [pid(n) for n in OPEN], "starts": [pid(n) for n in STARTS],
           "layout": {"size": [1600, 1000], "background": "map-base.svg"},
           "places": places, "roads": roads}
     # 道の線（path）や小さな一覧は 1 行にまとめて読みやすくする

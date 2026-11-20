@@ -6,8 +6,8 @@
 
 ## 勇者の居場所
 
-- 🧙 GOLD HILDR Lv.1  📍 リンデ
-- 🧙 CASSIA Lv.1  📍 ヴィーケ
-- 🧙 BERENICE Lv.1  📍 シルウェン
+- 🧙 GOLD HILDR Lv.1  📍 エクエス
+- 🧙 CASSIA Lv.1  📍 サリナ
+- 🧙 BERENICE Lv.1  📍 サリナ
 
 このページは毎日の実行で書き出します（手で編集しない。MAP を変えるときは world/map.json を編集する）。

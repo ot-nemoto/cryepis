@@ -1,11 +1,14 @@
 {
+ "open": [
+  "salina",
+  "eques",
+  "muralis",
+  "karun"
+ ],
  "starts": [
-  "silwen",
-  "vike",
-  "linde",
-  "fajil",
-  "rowen",
-  "eques"
+  "salina",
+  "eques",
+  "karun"
  ],
  "layout": {
   "size": [
@@ -22,7 +25,7 @@
    "alias": "王都",
    "region": "黄金平原",
    "emoji": "🏰",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_armor","steel_shield","royal_shield"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_shield","royal_shield"],
    "pos": [850,495],
    "quests_per_day": 6
   },
@@ -33,7 +36,7 @@
    "alias": "河港",
    "region": "大河の三角州",
    "emoji": "⚓",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","sailor_hat"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","sailor_hat"],
    "pos": [926,426],
    "quests_per_day": 5,
    "label": "left"
@@ -45,7 +48,7 @@
    "alias": "天門の町",
    "region": "竜骨山脈・天の頂のふもと",
    "emoji": "🗻",
-   "shop": ["iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_armor","steel_shield","mountain_helm"],
+   "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_shield","mountain_helm"],
    "pos": [905,352],
    "quests_per_day": 5,
    "label": "right"
@@ -57,7 +60,7 @@
    "alias": "古木の町",
    "region": "古の大森林",
    "emoji": "🌳",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","bark_shield"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","bark_shield"],
    "pos": [381,234]
   },
   {
@@ -67,7 +70,7 @@
    "alias": "北の漁村",
    "region": "中央大陸の北の海岸",
    "emoji": "🐟",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","fur_hat"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","fur_hat"],
    "pos": [650,238]
   },
   {
@@ -77,7 +80,7 @@
    "alias": "霧沼の村",
    "region": "霧の大湿原",
    "emoji": "🛖",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","reed_shield"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","reed_shield"],
    "pos": [300,452],
    "quests_per_day": 3
   },
@@ -88,7 +91,7 @@
    "alias": "鋼山の町",
    "region": "竜骨山脈の西のふもと",
    "emoji": "⚒️",
-   "shop": ["iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_armor","steel_shield","battle_axe"],
+   "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_shield","battle_axe"],
    "pos": [640,482]
   },
   {
@@ -98,7 +101,7 @@
    "alias": "椰子の港",
    "region": "熱帯の半島",
    "emoji": "🌴",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","coral_necklace"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","coral_necklace"],
    "pos": [600,646],
    "quests_per_day": 5
   },
@@ -109,7 +112,7 @@
    "alias": "風巻きの宿",
    "region": "風の草原",
    "emoji": "🏕️",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","nomad_bow"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","nomad_bow"],
    "pos": [1070,330]
   },
   {
@@ -119,7 +122,7 @@
    "alias": "湖畔の村",
    "region": "湖沼地帯",
    "emoji": "🛶",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","waterweed_bangle"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","waterweed_bangle"],
    "pos": [1235,280]
   },
   {
@@ -129,7 +132,7 @@
    "alias": "氷牙の砦",
    "region": "氷牙山地",
    "emoji": "🧊",
-   "shop": ["iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_armor","steel_shield","wolf_fur_armor"],
+   "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_shield","wolf_fang_necklace"],
    "pos": [1185,150],
    "quests_per_day": 3,
    "label": "right"
@@ -141,7 +144,7 @@
    "alias": "凍土の集落",
    "region": "中央大陸の北の凍土",
    "emoji": "❄️",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","polar_fur"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","polar_fur"],
    "pos": [300,82],
    "quests_per_day": 3
   },
@@ -152,7 +155,7 @@
    "alias": "オアシスの町",
    "region": "灼熱の大砂漠",
    "emoji": "🏺",
-   "shop": ["iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","sand_hood"],
+   "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","sand_hood"],
    "pos": [1195,470],
    "quests_per_day": 5
   },
@@ -163,7 +166,7 @@
    "alias": "暁の港",
    "region": "東の草原の海岸",
    "emoji": "🌅",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","trader_dagger"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","trader_dagger"],
    "pos": [1220,590],
    "quests_per_day": 5
   },
@@ -174,7 +177,7 @@
    "alias": "雨林の村",
    "region": "東の雨林",
    "emoji": "🌿",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","jade_ring"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","jade_ring"],
    "pos": [1460,420],
    "quests_per_day": 3
   },
@@ -185,7 +188,7 @@
    "alias": "霧氷の修道院",
    "region": "霧氷の半島",
    "emoji": "🔭",
-   "shop": ["iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","stargazer_amulet"],
+   "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","stargazer_amulet"],
    "pos": [735,165],
    "quests_per_day": 3
   },
@@ -196,7 +199,7 @@
    "alias": "蔦の集落",
    "region": "西の密林",
    "emoji": "🍃",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","blowgun"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","blowgun"],
    "pos": [94,563],
    "quests_per_day": 3
   },
@@ -207,7 +210,7 @@
    "alias": "赤岩の鉱山町",
    "region": "赤い荒野",
    "emoji": "💎",
-   "shop": ["iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_armor","steel_shield","ruby_ring"],
+   "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_shield","ruby_ring"],
    "pos": [150,668]
   },
   {
@@ -217,7 +220,7 @@
    "alias": "西の港",
    "region": "西大陸の東の海岸",
    "emoji": "⛵",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","settler_armor"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","settler_shield"],
    "pos": [330,772],
    "quests_per_day": 5
   },
@@ -228,7 +231,7 @@
    "alias": "南の森の村",
    "region": "南の森",
    "emoji": "🏹",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","hunter_bow"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","hunter_bow"],
    "pos": [175,835]
   },
   {
@@ -238,7 +241,7 @@
    "alias": "干潟の港",
    "region": "南の干潟",
    "emoji": "🐚",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","shell_shield"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","shell_shield"],
    "pos": [880,728],
    "quests_per_day": 5
   },
@@ -249,7 +252,7 @@
    "alias": "大草原の町",
    "region": "南の大草原",
    "emoji": "🐎",
-   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","cavalry_lance"],
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","cavalry_lance"],
    "pos": [820,830]
   },
   {
@@ -259,7 +262,7 @@
    "alias": "南壁の砦",
    "region": "南壁山脈",
    "emoji": "🛡️",
-   "shop": ["iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_armor","steel_shield","wall_shield"],
+   "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_shield","wall_shield"],
    "pos": [1103,740],
    "quests_per_day": 3
   },
@@ -270,9 +273,20 @@
    "alias": "焔の湯治場",
    "region": "炎の列島",
    "emoji": "♨️",
-   "shop": ["iron_sword","iron_helm","chain_mail","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_armor","steel_shield","volcanic_blade"],
+   "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_shield","volcanic_blade"],
    "pos": [1384,780],
    "label": "left"
+  },
+  {
+   "id": "karun",
+   "type": "town",
+   "name": "カルン",
+   "alias": "凍原の村",
+   "region": "南の凍原",
+   "emoji": "🦌",
+   "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","reindeer_charm"],
+   "pos": [935,875],
+   "quests_per_day": 3
   },
   {
    "id": "dragon_skull",
@@ -319,6 +333,13 @@
    "region": "古の大森林",
    "pos": [290,210],
    "label": "up"
+  },
+  {
+   "id": "wall_den",
+   "type": "dungeon",
+   "name": "南壁の巣穴",
+   "region": "南壁山脈",
+   "pos": [1015,870]
   }
  ],
  "roads": [
@@ -499,6 +520,22 @@
    "path": [[881,729],[881,749],[903,755],[935,755],[937,751],[1045,751],[1053,743],[1063,743],[1073,737],[1087,753],[1091,753],[1103,741]]
   },
   {
+   "from": "eques",
+   "to": "karun",
+   "distance": 2,
+   "kind": "land",
+   "terrain": [["plain",83],["snow",11]],
+   "path": [[821,831],[845,855],[915,857],[935,875]]
+  },
+  {
+   "from": "muralis",
+   "to": "karun",
+   "distance": 6,
+   "kind": "land",
+   "terrain": [["plain",57],["mountain",18],["forest",13],["snow",12]],
+   "path": [[1103,741],[1091,753],[1087,753],[1075,737],[1063,743],[1043,745],[989,799],[989,815],[935,869],[935,875]]
+  },
+  {
    "from": "dragon_skull",
    "to": "caelum",
    "distance": 5,
@@ -545,6 +582,14 @@
    "kind": "trail",
    "terrain": [["forest",88]],
    "path": [[291,211],[323,211],[343,231],[353,229],[359,235],[381,235]]
+  },
+  {
+   "from": "wall_den",
+   "to": "muralis",
+   "distance": 5,
+   "kind": "trail",
+   "terrain": [["mountain",32],["forest",27],["snow",22],["plain",18]],
+   "path": [[1015,871],[1035,871],[1069,819],[1067,809],[1071,797],[1081,787],[1093,785],[1109,769],[1119,769],[1123,765],[1123,761],[1103,741]]
   },
   {
    "from": "flumen",

@@ -41,9 +41,11 @@ class DisplayTest(unittest.TestCase):
             self.assertTrue(lines[4].startswith("今日: "))
 
     def test_gear_shows_rares_first(self):
-        state = game.new_state(WORLD)
-        state["inventory"] = {"wooden_sword": 1, "leather_cap": 1, "dragon_scale": 1, "turtle_shield": 1}
-        self.assertEqual(rpg.gear_text(WORLD, state), "★★竜鱗の鎧/★亀甲の盾/木の剣/革の帽子")
+        world = {**WORLD, "items": {**WORLD["items"], "x_epic": {"id": "x_epic", "name": "試しの兜", "slot": "helmet",
+                                                                 "rarity": "epic", "def": 9, "towns": ["salina"]}}}
+        state = game.new_state(world)
+        state["inventory"] = {"wooden_sword": 1, "leather_cap": 1, "x_epic": 1, "turtle_shield": 1}
+        self.assertEqual(rpg.gear_text(world, state), "★★試しの兜/★亀甲の盾/木の剣")
 
     def test_quest_marks_are_not_rare_items(self):
         events = ["アウレアのギルドで依頼を受けた: ★ 王家の書状（カエルムへ荷物を届ける）", "野犬を倒した (+9EXP)",
@@ -52,8 +54,8 @@ class DisplayTest(unittest.TestCase):
 
     def test_detail_shows_the_current_quest(self):
         state = play(1)
-        q = next(x for x in WORLD["town_quests"]["aurea"] if x["type"] == "deliver")
-        state["quest"] = game.make_town_quest(WORLD, q, "aurea", DAY)
+        q = next(x for x in WORLD["town_quests"]["salina"] if x["type"] == "deliver")
+        state["quest"] = game.make_town_quest(WORLD, q, "salina", DAY)
         text = rpg.build_text(WORLD, state)
         self.assertIn("── 受けている依頼 ──", text)
         self.assertIn(q["text"], text)
@@ -65,11 +67,11 @@ class DisplayTest(unittest.TestCase):
 
     def test_detail_lists_items_and_past_seasons(self):
         state = play(3)
-        state["inventory"]["blue_flame_sword"] = 1
+        state["inventory"]["power_ring"] = 1
         state["seasons"].append({"season": 0, "days": 90, "level": 20, "quests_done": 30, "quests_failed": 2,
-                                 "kills": 140, "deaths": 1, "rares": ["blue_flame_sword"], "ended_on": "2026-11-30"})
+                                 "kills": 140, "deaths": 1, "rares": ["power_ring"], "ended_on": "2026-11-30"})
         text = rpg.build_text(WORLD, state)
-        self.assertIn("★蒼炎の剣", text)
+        self.assertIn("★力の指輪", text)
         self.assertIn("シーズン0: Lv.20", text)
 
     def test_board_card_fits_and_ranks(self):

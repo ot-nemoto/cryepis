@@ -40,7 +40,9 @@ class DataTest(unittest.TestCase):
                 self.assertGreater(weight, 0)
 
     def test_sea_routes_have_sea_monsters(self):
-        world = W.load_world()
+        raw = copy.deepcopy(RAW)
+        raw["map"].pop("open", None)  # 開放していない航路も含めて
+        world = W.build(raw)
         sea = [k for k, i in world["road_info"].items() if i["kind"] == "sea"]
         self.assertTrue(sea)
         for key in sea:
@@ -69,7 +71,8 @@ class ValidateTest(unittest.TestCase):
 
     def test_disconnected_place(self):
         def change(r):
-            r["map"]["places"].append({"id": "island", "type": "town", "name": "離れ小島"})
+            r["map"]["places"].append({"id": "island", "type": "town", "name": "離れ小島", "pos": [1, 1]})
+            r["map"]["open"].append("island")
         self.assertError(change, ["island", "行けません"])
 
     def test_bad_road(self):
@@ -90,11 +93,33 @@ class ValidateTest(unittest.TestCase):
         def change(r):
             r["map"]["starts"] = ["jade_tomb"]
         self.assertError(change, ["starts", "jade_tomb"])
+        self.assertError(lambda r: r["map"].update(starts=["aurea"]), ["starts", "aurea", "開放"])
+
+    def test_open_must_be_towns(self):
+        self.assertError(lambda r: r["map"].update(open=["jade_tomb"]), ["open", "jade_tomb"])
+        self.assertError(lambda r: r["map"].update(open=[]), ["open"])
+
+    def test_closed_roads_are_not_used(self):
+        world = W.load_world()
+        opened = set(RAW["map"]["open"])
+        self.assertEqual(set(world["towns"]), opened)
+        for a, b in world["roads"]:
+            self.assertTrue(a in opened and b in opened, (a, b))
+        for r in world["trails"]:
+            self.assertTrue({r["from"], r["to"]} & opened, r)
+        self.assertFalse(any(i["kind"] == "sea" for i in world["road_info"].values()))  # サリナからの航路は出さない
+        self.assertEqual(len(world["places"]), len(RAW["map"]["places"]))  # 町・ダンジョンは地図に出す
+
+    def test_without_open_every_town_is_open(self):
+        raw = copy.deepcopy(RAW)
+        raw["map"].pop("open")
+        world = W.build(raw)
+        self.assertEqual(set(world["towns"]), {p["id"] for p in RAW["map"]["places"] if p["type"] == "town"})
 
     def test_shop_item_needs_price(self):
         def change(r):
-            r["map"]["places"][0]["shop"].append("blue_flame_sword")
-        self.assertError(change, ["blue_flame_sword", "price"])
+            r["map"]["places"][0]["shop"].append("power_ring")
+        self.assertError(change, ["power_ring", "price"])
 
     def test_bad_drop_table(self):
         def change(r):
@@ -105,22 +130,23 @@ class ValidateTest(unittest.TestCase):
         self.assertError(lambda r: r["items"][5].update(drop_level=5), ["drop_level"])
 
     def test_rare_items_need_quest_towns(self):
-        self.assertError(lambda r: r["items"][-1].pop("towns"), ["dragon_heart_stone", "towns"])
+        self.assertError(lambda r: r["items"][-1].pop("towns"), ["power_ring", "towns"])
         self.assertError(lambda r: r["items"][-1].update(towns=["jade_tomb"]), ["towns", "jade_tomb"])
-        self.assertError(lambda r: r["items"][0].update(towns=["aurea"]), ["wooden_sword", "common"])
-        for bad in (5, "aurea", [["aurea"]]):  # 型が違っても落ちずにエラーを返す
-            self.assertError(lambda r, bad=bad: r["items"][-1].update(towns=bad), ["dragon_heart_stone", "towns"])
+        self.assertError(lambda r: r["items"][0].update(towns=["salina"]), ["wooden_sword", "common"])
+        self.assertError(lambda r: r["items"][-1].update(towns=["aurea"]), ["power_ring", "aurea", "開放"])  # 開放していない町
+        for bad in (5, "salina", [["salina"]]):  # 型が違っても落ちずにエラーを返す
+            self.assertError(lambda r, bad=bad: r["items"][-1].update(towns=bad), ["power_ring", "towns"])
 
     def test_every_town_needs_a_rare(self):
         def change(r):
             for it in r["items"]:
-                if it["rarity"] == "rare" and "vike" in it["towns"]:
-                    it["towns"].remove("vike")
-        self.assertError(change, ["vike", "rare"])
+                if it["rarity"] == "rare" and "karun" in it["towns"]:
+                    it["towns"].remove("karun")
+        self.assertError(change, ["karun", "rare"])
 
     def test_treasure_cannot_hold_rares(self):
         self.assertError(lambda r: r["season"]["treasure"].append(["rare", 1]), ["treasure", "rare"])
-        self.assertError(lambda r: r["season"]["treasure"].append(["star_sword", 1]), ["treasure", "star_sword"])
+        self.assertError(lambda r: r["season"]["treasure"].append(["power_ring", 1]), ["treasure", "power_ring"])
 
     def test_every_town_has_its_own_specialty(self):
         shops = {p["id"]: set(p["shop"]) for p in RAW["map"]["places"] if p["type"] == "town"}
@@ -130,7 +156,7 @@ class ValidateTest(unittest.TestCase):
 
     def test_every_town_quest_has_some_rare(self):
         towns = {tid for i in RAW["items"] if i["rarity"] == "rare" for tid in i["towns"]}
-        self.assertEqual(towns, {p["id"] for p in RAW["map"]["places"] if p["type"] == "town"})
+        self.assertEqual(towns, set(RAW["map"]["open"]))
 
     def test_every_slot_has_items_in_a_shop(self):
         sold = {sid for p in RAW["map"]["places"] for sid in p.get("shop", [])}
@@ -140,15 +166,18 @@ class ValidateTest(unittest.TestCase):
     def test_town_quests_are_checked(self):
         def town_quest(**change):
             def apply(r):
-                r["town_quests"]["aurea"][0].update(change)
+                r["town_quests"]["salina"][0].update(change)
             return apply
-        self.assertError(town_quest(to="zafra"), ["aurea_1", "直接つながる"])         # 道がない
-        self.assertError(town_quest(monster="ice_wolf"), ["aurea_1", "その道に出る"])  # その道にいない魔物
-        self.assertError(town_quest(rank=9), ["aurea_1", "rank"])
-        self.assertError(town_quest(count=0), ["aurea_1", "count"])
-        self.assertError(town_quest(type="deliver", to="aurea"), ["aurea_1", "別の町"])
+        self.assertError(town_quest(to="karun"), ["salina_1", "直接つながる"])        # 道がない
+        self.assertError(town_quest(to="flumen"), ["salina_1", "直接つながる"])       # 開放していない航路
+        self.assertError(town_quest(monster="ice_wolf"), ["salina_1", "その道に出る"])  # その道にいない魔物
+        self.assertError(town_quest(rank=9), ["salina_1", "rank"])
+        self.assertError(town_quest(count=0), ["salina_1", "count"])
+        self.assertError(town_quest(type="deliver", to="salina"), ["salina_1", "別の町"])
+        self.assertError(town_quest(type="deliver", to="aurea"), ["salina_1", "開放した別の町"])
         self.assertError(town_quest(id="hunt"), ["重複"])  # 共通の依頼と同じ ID
         self.assertError(lambda r: r["town_quests"].update(jade_tomb=[]), ["jade_tomb", "町の ID"])
+        self.assertError(lambda r: r["town_quests"].update(aurea=[]), ["aurea", "開放した町"])
 
     def test_quest_reward_is_checked(self):
         self.assertError(lambda r: r["quest_reward"].pop("gold"), ["reward", "gold"])
@@ -162,15 +191,14 @@ class ValidateTest(unittest.TestCase):
         self.assertError(no_rank1, ["rank 1"])
 
     def test_every_town_has_its_own_quests(self):
-        towns = {p["id"] for p in RAW["map"]["places"] if p["type"] == "town"}
-        self.assertEqual(set(RAW["town_quests"]), towns)
+        self.assertEqual(set(RAW["town_quests"]), set(RAW["map"]["open"]))
         for tid, qs in RAW["town_quests"].items():
             self.assertTrue(any(q["rank"] >= 2 for q in qs), tid)  # どの町にもレアな依頼がある
 
     def test_too_strong_item(self):
         def change(r):
             r["items"].append({"id": "god_sword", "name": "神の剣", "slot": "weapon", "rarity": "legendary", "atk": 99,
-                               "towns": ["aurea"]})
+                               "towns": ["salina"]})
         self.assertError(change, ["強すぎ"])
 
     def test_season_start_day_must_exist_in_every_month(self):

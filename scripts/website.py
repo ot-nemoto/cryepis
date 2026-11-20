@@ -4,6 +4,7 @@
 ページ:
   index.html          世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、勇者の一覧
+  items.html          開放した地域で手に入るアイテム（部位と珍しさで絞り込める）
   guild.html          町ごとのギルドの掲示板（受付中・あと何日 / 受けられた依頼は ACCEPTED。町とレアリティで絞り込める）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
 
@@ -29,9 +30,10 @@ import common  # noqa: E402
 import game  # noqa: E402
 import mapsvg  # noqa: E402
 import rpg  # noqa: E402
+import world as W  # noqa: E402
 
 TITLE = "オルドラ冒険記"
-PAGES = (("index.html", "地図"), ("ranking.html", "ランキング"), ("guild.html", "ギルド"))
+PAGES = (("index.html", "地図"), ("ranking.html", "ランキング"), ("guild.html", "ギルド"), ("items.html", "アイテム"))
 
 CSS = """
 :root{--bg:#f6efdc;--card:#fffaf0;--ink:#3f2f22;--sub:#6b5a48;--line:#d9c9a8;--accent:#7a5530;--hero:#b91c1c;
@@ -73,6 +75,7 @@ font-size:13px;letter-spacing:.12em;transform:rotate(-8deg);opacity:.85;margin:2
 .f-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .f-label{font-size:13px;color:var(--sub);width:5.5em}
 .chip-mark{color:#b7791f;white-space:nowrap}
+.tag{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #e8833a;border-radius:4px;color:#c2621c;font-size:11px}
 .chip{font:inherit;font-size:14px;font-weight:bold;color:var(--ink);background:var(--card);border:1.5px solid #f0a868;
 border-radius:999px;padding:4px 14px;cursor:pointer;box-shadow:0 0 0 2px rgba(240,168,104,.15)}
 .chip:hover{border-color:#e8833a}
@@ -267,6 +270,87 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
     return page("ギルド", "".join(body), "guild.html", script=GUILD_JS)
 
 
+# ---- アイテム ---------------------------------------------------------------------------
+# アイテムの絞り込み（部位・珍しさ。どちらも複数選べて、何も選ばなければすべて）
+ITEMS_JS = """
+(()=>{const chips=k=>[...document.querySelectorAll('.chip[data-'+k+']')],slots=chips('slot'),rars=chips('rarity'),
+none=document.getElementById('f-none'),clear=document.getElementById('f-clear');
+const on=list=>new Set(list.filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>c.dataset.slot||c.dataset.rarity));
+const apply=()=>{const s=on(slots),r=on(rars);let shown=0;
+document.querySelectorAll('.board').forEach(card=>{let n=0;
+card.querySelectorAll('tr[data-rarity]').forEach(tr=>{const ok=!r.size||r.has(tr.dataset.rarity);tr.hidden=!ok;if(ok)n++;});
+card.hidden=(s.size&&!s.has(card.dataset.slot))||n===0;if(!card.hidden)shown++;});
+none.hidden=shown>0;clear.hidden=!s.size&&!r.size;};
+slots.concat(rars).forEach(c=>c.addEventListener('click',()=>{
+c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();}));
+clear.addEventListener('click',()=>{slots.concat(rars).forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
+apply();})();
+"""
+RARITY_LABELS = {"common": "ふつう"}
+
+
+def item_rows(world: dict) -> dict[str, list[dict]]:
+    """開放した地域で手に入るアイテム（部位ごと。珍しい順・強い順）: {部位: [{id, item, shops, towns}]}。"""
+    places, items = world["places"], world["items"]
+    shops: dict[str, list[str]] = {}
+    for t in world["towns"]:
+        for iid in places[t].get("shop", []):
+            shops.setdefault(iid, []).append(places[t]["name"])
+    rank = {r: i for i, r in enumerate(world["rarities"])}
+    rows: dict[str, list[dict]] = {slot: [] for slot in W.SLOTS}
+    for iid, it in items.items():
+        towns = [places[t]["name"] for t in it.get("towns", []) if t in world["towns"]]
+        if iid in world["region_items"] or towns:
+            sellers = [t for t, p in places.items() if p["type"] == "town" and iid in p.get("shop", [])]
+            rows[it["slot"]].append({"id": iid, "item": it, "shops": shops.get(iid, []), "towns": towns,
+                                     "specialty": len(sellers) == 1})  # 世界でその町だけが売る品
+    for slot in rows:
+        rows[slot].sort(key=lambda r: (-rank[r["item"]["rarity"]], -game.item_score(r["item"]), r["item"].get("price", 0)))
+    return rows
+
+
+def build_items(world: dict) -> str:
+    """開放した地域で手に入るアイテムの一覧。部位と珍しさで絞り込める。"""
+    rows = item_rows(world)
+    used = [r for r in world["rarities"] if any(x["item"]["rarity"] == r for rs in rows.values() for x in rs)]
+    slot_chips = "".join(f'<button type="button" class="chip" data-slot="{s}" aria-pressed="false">{W.SLOT_NAMES[s]}</button>'
+                         for s in W.SLOTS)
+    rarity_chips = "".join(f'<button type="button" class="chip" data-rarity="{r}" aria-pressed="false">'
+                           f'<span class="chip-mark">{escape(game.RARITY_MARKS.get(r) or RARITY_LABELS.get(r, r))}</span></button>'
+                           for r in used)
+    potion = world["season"]["potion"]
+    body = ["<h2>アイテム一覧</h2>",
+            '<p class="note">開放した地域（' + "・".join(escape(world["places"][t]["name"]) for t in world["towns"]) +
+            "）で手に入る装備です。部位は武器・兜・盾・装飾品の 4 つで、部位ごとにいちばん強いものを自動で装備します。"
+            "ふつうの装備は町の店で買え、宝箱や依頼の報酬でも出ます（開放した地域の店の品だけ）。"
+            "★ のレアは、その町のギルドの依頼の報酬でしか出ません。</p>",
+            f'<div class="filters card"><div class="f-row"><span class="f-label">部位</span>{slot_chips}</div>'
+            f'<div class="f-row"><span class="f-label">珍しさ</span>{rarity_chips}</div>'
+            '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
+            '<button type="button" id="f-clear" class="link" hidden>選択を解除</button></div></div>',
+            '<p id="f-none" class="note" hidden>条件に合うアイテムはありません。</p>']
+    for slot in W.SLOTS:
+        trs = []
+        for r in rows[slot]:
+            it = r["item"]
+            if r["towns"]:
+                how = "依頼の報酬: " + "・".join(escape(t) for t in r["towns"])
+            else:
+                how = "店: " + ("・".join(escape(t) for t in r["shops"]) or "なし") + '<div class="note">宝箱・依頼の報酬でも出る</div>'
+            special = r["specialty"]
+            trs.append(f'<tr data-rarity="{it["rarity"]}"><td><span class="mark">{escape(game.RARITY_MARKS.get(it["rarity"], ""))}</span>'
+                       f'{escape(it["name"])}' + ('<span class="tag">特産</span>' if special else "") + "</td>"
+                       f'<td>{escape(rpg.item_power(it))}</td>'
+                       f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>')
+        body.append(f'<div class="card board" data-slot="{slot}"><h3>{W.SLOT_NAMES[slot]}</h3>'
+                    '<div class="scroll"><table class="wide-table"><colgroup><col style="width:15em"><col style="width:9em">'
+                    '<col style="width:5.5em"><col></colgroup><tr><th>名前</th><th>性能</th><th class="num">値段</th>'
+                    '<th>手に入れ方</th></tr>' + "".join(trs) + "</table></div></div>")
+    body.append(f'<div class="card"><h3>回復薬</h3><div>どの町の店でも {potion["price"]}G。戦いで倒れそうになったときに使い、'
+                f'最大 HP の {potion["heal_rate"]:.0%} まで回復します（町で {potion["keep"]} 個まで買い足します）。</div></div>')
+    return page("アイテム", "".join(body), "items.html", script=ITEMS_JS)
+
+
 # ---- 勇者の詳細 ---------------------------------------------------------------------------
 def build_hero(world: dict, hero: dict, state: dict) -> str:
     body = (f'<h2>{escape(hero["name"])}（{escape(hero["id"])}）</h2>'
@@ -298,6 +382,7 @@ def write_site(world: dict, entries: list[tuple[dict, dict]], today: date, guild
         "index.html": build_index(world, entries, today),
         "ranking.html": build_ranking(world, entries, today),
         "guild.html": build_guild(world, entries, today, guild),
+        "items.html": build_items(world),
     }
     for hero, state in entries:
         files[f"heroes/{hero['id']}.html"] = build_hero(world, hero, state)
