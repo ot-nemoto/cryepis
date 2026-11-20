@@ -72,7 +72,7 @@ class ValidateTest(unittest.TestCase):
     def test_disconnected_place(self):
         def change(r):
             r["map"]["places"].append({"id": "island", "type": "town", "name": "離れ小島", "pos": [1, 1],
-                                       "quests_per_day": 3})
+                                       "quests_per_day": 3, "area": "crownlands"})
             r["map"]["open"].append("island")
         self.assertError(change, ["island", "行けません"])
 
@@ -95,6 +95,18 @@ class ValidateTest(unittest.TestCase):
             r["map"]["starts"] = ["jade_tomb"]
         self.assertError(change, ["starts", "jade_tomb"])
         self.assertError(lambda r: r["map"].update(starts=["aurea"]), ["starts", "aurea", "開放"])
+
+    def test_areas_and_english_names(self):
+        self.assertError(lambda r: r["map"]["places"][0].update(area="moon"), ["area", "地方"])
+        self.assertError(lambda r: r["map"]["places"][0].pop("area"), ["area", "地方"])
+        self.assertError(lambda r: r["map"]["areas"].append({"id": "crownlands", "name": "x"}), ["areas", "重複"])
+        self.assertError(lambda r: r["map"]["places"][0].update(en=""), ["en"])
+        world = W.load_world()
+        self.assertEqual(len(world["areas"]), 8)
+        for p in world["places"].values():  # どの町・ダンジョンにも地方と英語名がある
+            self.assertIn(p["area"], world["areas"])
+            self.assertTrue(p["en"])
+        self.assertEqual({world["places"][t]["area"] for t in world["towns"]}, {"austral_land"})
 
     def test_every_town_has_a_guild_size(self):
         self.assertError(lambda r: r["map"]["places"][0].pop("quests_per_day"), ["quests_per_day", "ギルドの規模"])

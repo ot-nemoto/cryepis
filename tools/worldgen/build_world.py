@@ -7,7 +7,7 @@ import math
 import paths
 import shutil
 
-from lore import TEXT
+from lore import AREAS, DUNGEON_EN, TEXT
 from names import NAMES
 from places import DUNGEONS, LABEL, TOWNS
 
@@ -116,15 +116,18 @@ def terrain_mix(path):
 
 
 def main():
+    area_of = {member: aid for aid, _, _, members in AREAS for member in members}
     places = []
     for name, x, y in TOWNS:
         tid, emoji, region, shop = TOWN_INFO[name]
-        places.append({"id": tid, "type": "town", "name": NAMES[name], "alias": name, "region": region,
+        places.append({"id": tid, "type": "town", "name": NAMES[name], "en": tid.capitalize(), "alias": name,
+                       "area": area_of[name], "region": region,
                        "emoji": emoji, "text": TEXT[name], "shop": shop + [SPECIALTY[name]], "pos": [x, y]}
                       | {"quests_per_day": QUESTS_PER_DAY[name]} | ({"label": LABEL[name]} if name in LABEL else {}))
     for name, x, y in DUNGEONS:
         did, region = DUNGEON_INFO[name]
-        places.append({"id": did, "type": "dungeon", "name": name, "region": region, "pos": [x, y]}
+        places.append({"id": did, "type": "dungeon", "name": name, "en": DUNGEON_EN[name], "area": area_of[name],
+                       "region": region, "pos": [x, y]}
                       | ({"label": LABEL[name]} if name in LABEL else {}))
 
     roads = []
@@ -136,11 +139,16 @@ def main():
         roads.append({"from": pid(r["from"]), "to": pid(r["to"]), "distance": r["actions"], "kind": "sea",
                       "terrain": [["sea", 100]], "path": [[round(x), round(y)] for x, y in r["path"]]})
 
-    mp = {"open": [pid(n) for n in OPEN], "starts": [pid(n) for n in STARTS],
+    areas = [{"id": aid, "name": n, "en": en} for aid, n, en, _ in AREAS]
+    mp = {"areas": areas, "open": [pid(n) for n in OPEN], "starts": [pid(n) for n in STARTS],
           "layout": {"size": [1600, 1000], "background": "map-base.svg"},
           "places": places, "roads": roads}
     # 道の線（path）や小さな一覧は 1 行にまとめて読みやすくする
     inline = {}
+    for i, area in enumerate(areas):  # 地方は 1 つ 1 行
+        token = f"@@{len(inline)}@@"
+        inline[token] = json.dumps(area, ensure_ascii=False, separators=(", ", ": "))
+        areas[i] = token
     for obj in places + roads:
         for key in ("pos", "shop", "terrain", "path"):
             if key in obj:

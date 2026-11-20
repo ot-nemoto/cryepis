@@ -41,6 +41,22 @@
 開放していない町の依頼と、そこでしか出ないレア以上のアイテムは、データから外している（開放するときに作り直す）。
 宝箱と依頼の報酬で出る common も、開放した町の店で売っている品だけ（ほかの地域の特産品は出ない）。
 
+## 3.6 地方
+
+町とダンジョンは 8 つの地方に分かれる（`world/map.json` の `areas` と、場所ごとの `area`。`tools/worldgen/lore.py` の `AREAS`）。
+地方・町・ダンジョンには英語名もある（`en`。町の英語名は ID を大文字で始めたもの）。
+
+| 地方 | 英語名 | 町 | ダンジョン |
+|---|---|---|---|
+| **王領** | The Crownlands | アウレア Aurea・フルメン Flumen・カエルム Caelum・ドゥルガン Durgan・ココラ Cocora | 始祖竜の頭骨 The Primordial Skull |
+| **森の民の地** | Sylvan Reach | シルウェン Silwen・モルナ Morna | 沈んだ神殿 The Sunken Temple・古木の根の洞 Elderroot Hollow |
+| **北辺** | The Northmarch | ヴィーケ Vike・ヤルカ Yarka・アストル Astol | - |
+| **東の高原** | Eastern Highlands | カザル Kazal・リンデ Linde・イスヴァル Isval | 氷牙の氷窟 Icefang Grotto |
+| **翠国の故地** | Old Jade Realm | ザフラ Zafra・ファジル Fajil・ヤシュム Yashum | 翠国の王墓 Tomb of the Jade Kings |
+| **西方開拓地** | Western Frontier | ウルカ Urka・ルベラ Rubela・ノヴァリス Novaris・ロウエン Rowen | - |
+| **南大陸** | Austral Land | サリナ Salina・エクエス Eques・ムラリス Muralis・カルン Karun | 南壁の巣穴 Southwall Den |
+| **炎の列島** | Ember Isles | ホムラ Homura | 竜の心臓の火口 Dragonheart Crater |
+
 ## 4. 町の一覧（25 町）
 
 特徴の文は `world/map.json` の町の `text`（`tools/worldgen/lore.py`）にも入れていて、サイトの町のページに出る。

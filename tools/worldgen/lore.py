@@ -26,3 +26,21 @@ TEXT = {
     "焔の湯治場": "竜の心臓の熱でわく温泉の町。傷を癒しに勇者が集まる。火山の火で鍛えた武具が名物",
     "天門の町": "始祖竜の頭骨（天の頂）へ続く、最後の町。竜気がもっとも濃く、選ばれた勇者だけが門をくぐる",
 }
+
+# 地方: (ID, 名前, 英語名, その地方の町・ダンジョン（呼び名・ダンジョンの名前）)
+AREAS = [
+    ("crownlands", "王領", "The Crownlands", ["王都", "河港", "天門の町", "鋼山の町", "椰子の港", "始祖竜の頭骨"]),
+    ("sylvan_reach", "森の民の地", "Sylvan Reach", ["古木の町", "霧沼の村", "沈んだ神殿", "古木の根の洞"]),
+    ("northmarch", "北辺", "The Northmarch", ["北の漁村", "凍土の集落", "霧氷の修道院"]),
+    ("eastern_highlands", "東の高原", "Eastern Highlands", ["風巻きの宿", "湖畔の村", "氷牙の砦", "氷牙の氷窟"]),
+    ("old_jade_realm", "翠国の故地", "Old Jade Realm", ["オアシスの町", "暁の港", "雨林の村", "翠国の王墓"]),
+    ("western_frontier", "西方開拓地", "Western Frontier", ["蔦の集落", "赤岩の鉱山町", "西の港", "南の森の村"]),
+    ("austral_land", "南大陸", "Austral Land", ["干潟の港", "大草原の町", "南壁の砦", "凍原の村", "南壁の巣穴"]),
+    ("ember_isles", "炎の列島", "Ember Isles", ["焔の湯治場", "竜の心臓の火口"]),
+]
+# ダンジョンの英語名（町の英語名は ID を大文字で始めたもの）
+DUNGEON_EN = {
+    "始祖竜の頭骨": "The Primordial Skull", "翠国の王墓": "Tomb of the Jade Kings", "竜の心臓の火口": "Dragonheart Crater",
+    "沈んだ神殿": "The Sunken Temple", "氷牙の氷窟": "Icefang Grotto", "古木の根の洞": "Elderroot Hollow",
+    "南壁の巣穴": "Southwall Den",
+}
