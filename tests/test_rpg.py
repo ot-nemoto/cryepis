@@ -99,6 +99,18 @@ class DisplayTest(unittest.TestCase):
         text = rpg.build_board(WORLD, [({"id": "h1", "name": "アリス", "gist_url": "u"}, state)], DAY)
         self.assertIn("シーズン1: 最高レベル アリス Lv.22  討伐数 アリス 150体", text)
 
+    def test_map_page_has_image_and_hero_positions(self):
+        state = play(5)
+        text = rpg.build_map(WORLD, [({"id": "h1", "name": "アリス", "gist_url": "u"}, state)])
+        self.assertIn(f"![世界の MAP]({rpg.MAP_IMAGE})", text)
+        self.assertNotIn("mermaid", text)
+        self.assertIn(f"- 🧙 アリス Lv.{state['hero']['level']}  📍 {WORLD['places'][state['place']]['name']}", text)
+
+    def test_map_page_without_heroes_or_layout(self):
+        text = rpg.build_map({**WORLD, "layout": None}, [])
+        self.assertNotIn("![", text)
+        self.assertIn("- まだいない", text)
+
     def test_highlights_prefer_important_events_and_merge_level_ups(self):
         events = ["スライムを倒した", "レベルが上がった！ Lv.2", "レベルが上がった！ Lv.3", "依頼達成！x", "景色"]
         self.assertEqual(rpg.highlights(events), ["レベルが上がった！ Lv.3", "依頼達成！x"])
@@ -244,6 +256,31 @@ class HeroesTest(unittest.TestCase):
         self.assertIn("■ ボブ", board)  # 進められた勇者だけでランキングを作る
         self.assertNotIn("■ アリス", board)
 
+    def test_hero_that_failed_stays_on_the_map(self):
+        self.new_game("アリス")
+        self.new_game("ボブ")
+        self.daily("2026-12-01")
+        original = rpg.run_hero
+
+        def fail_alice(world, hero, *args):
+            if hero["id"] == "h1":
+                raise RuntimeError("壊れた")
+            return original(world, hero, *args)
+        with mock.patch.object(rpg, "run_hero", side_effect=fail_alice), mock.patch.object(common, "warn"):
+            self.assertEqual(self.daily("2026-12-02"), 1)
+        text = (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8")
+        self.assertIn("🧙 アリス Lv.", text)  # 保存してある状態で載せる
+        self.assertIn("🧙 ボブ Lv.", text)
+
+    def test_map_failure_does_not_stop_the_board(self):
+        self.new_game("アリス")
+        with mock.patch.object(rpg, "save_map", side_effect=KeyError("pos")), \
+             mock.patch.object(common, "warn") as warn:
+            self.assertEqual(self.daily(), 1)
+        warn.assert_called_once()
+        self.create_board.assert_called_once()  # ランキングは更新する
+        self.assertEqual(load("h1")["day"], 1)
+
     def test_board_is_updated_after_it_is_created(self):
         self.new_game("アリス")
         self.daily("2026-12-01")
@@ -307,6 +344,29 @@ class HeroesTest(unittest.TestCase):
         self.assertEqual(self.daily(), 0)
         self.create_board.assert_not_called()
 
+    def test_daily_writes_the_map_with_positions(self):
+        self.new_game("アリス")
+        self.daily()
+        text = (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8")
+        self.assertIn("🧙 アリス Lv.", text)
+        self.assertIn(f"![世界の MAP]({rpg.MAP_IMAGE})", text)  # 地図の画像を貼る
+        self.assertIn("🧙 アリス Lv.", (rpg.PAGE_DIR / rpg.MAP_IMAGE).read_text(encoding="utf-8"))
+
+    def test_map_option_writes_only_the_map(self):
+        self.new_game("アリス")
+        self.assertEqual(self.run_main(["--map"]), 0)
+        self.assertIn("🧙 アリス Lv.1", (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8"))
+        self.assertEqual(load("h1")["day"], 0)  # 冒険は進めない
+        self.create_board.assert_not_called()
+
+    def test_map_grid_writes_a_file_without_advancing(self):
+        self.new_game("アリス")
+        out = self.dir / "grid.svg"
+        self.assertEqual(self.run_main(["--map-grid", str(out)]), 0)
+        self.assertIn("aurea (850, 495)", out.read_text(encoding="utf-8"))  # 確認用: 場所の ID と座標
+        self.assertEqual(load("h1")["day"], 0)
+        self.assertFalse((rpg.PAGE_DIR / rpg.MAP_IMAGE).exists())  # 毎日の地図は書き換えない
+
     def test_dry_run_writes_nothing(self):
         self.new_game("アリス")
         page = rpg.page_path("h1").read_text(encoding="utf-8")
@@ -316,6 +376,7 @@ class HeroesTest(unittest.TestCase):
         self.assertEqual(load("h1")["day"], 0)
         self.assertEqual(rpg.page_path("h1").read_text(encoding="utf-8"), page)
         self.assertIsNone(rpg.load_board())
+        self.assertFalse((rpg.PAGE_DIR / rpg.MAP_NAME).exists())
 
 
 if __name__ == "__main__":

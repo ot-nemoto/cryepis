@@ -53,6 +53,7 @@ flowchart LR
 |---|---|---|---|
 | `world/*.json` | 人（手で編集） | テキスト RPG の世界（シーズン・MAP・敵・アイテム・ギルドの依頼）。形式は README の「世界を広げる」 | `rpg.py` の入力（Test で検証してから使う） |
 | `.state/heroes.json` | `rpg.py`（New game / Retire hero） | 勇者の一覧（ID・名前・Gist の ID と URL・作成日・現役かどうか）。現役は最大 30 人 | 毎日の更新の対象と、更新先の Gist |
+| `heroes/MAP.md` / `MAP.svg` | `rpg.py` | 世界の地図の画像（SVG）と、勇者の居場所の一覧 | GitHub 上で見る。ランキングの Gist からリンクする |
 | `heroes/<id>.md` | `rpg.py` | 勇者ごとの詳細（ステータス・装備・持ち物・日誌・シーズンの記録）を読むためのページ | GitHub 上で読む。ランキングの Gist からリンクする |
 | `.state/heroes/<id>.json` | `rpg.py` | 勇者の状態（場所・HP・レベル・依頼など）、持ち物、直近 30 日の日誌、シーズンの記録 | 翌日の続きと、Gist の表示 |
 | `.state/board.json` | `rpg.py`（最初の毎日の実行） | ランキングの Gist の ID と URL | 毎日更新するランキングの Gist |
@@ -82,9 +83,10 @@ sequenceDiagram
     WF->>RP: 実行
     RP->>S: heroes.json から現役の勇者を読む
     loop 現役の勇者ごと（失敗は勇者ごとに隔離）
-        RP->>S: heroes/<id>.json を 1 日分進める（行動回数は乱数。シーズンが変わったら持ち物以外をリセット。処理済みなら進めない。実行されなかった日があればさかのぼって進める）
+        RP->>S: heroes/<id>.json を 1 日分進める（行動回数は毎日同じ、出来事は乱数。シーズンが変わったら持ち物以外をリセット。処理済みなら進めない。実行されなかった日があればさかのぼって進める）
         RP->>S: heroes/<id>.md（詳細のページ）を書き出す
     end
+    RP->>S: heroes/MAP.md と MAP.svg（地図）を書き出す
     RP->>G: ランキングの Gist を更新（board.json がなければ作って記録）
     Note over WF,M: Commit state は前のステップが失敗しても実行（!cancelled()）
     WF->>S: last-run を更新

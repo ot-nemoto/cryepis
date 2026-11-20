@@ -35,6 +35,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(__file__))
 import common  # noqa: E402
 import game  # noqa: E402
+import mapsvg  # noqa: E402
 import world as W  # noqa: E402
 
 HEROES_PATH = common.ROOT / ".state" / "heroes.json"
@@ -138,7 +139,7 @@ def location(world: dict, state: dict) -> str:
         elif quest["type"] == "deliver":
             goal = f"{world['places'][quest['place']]['name']}へ配達"
         else:
-            goal = "見回り"
+            goal = f"{world['places'][quest['place']]['name']}へ旅"
         done = quest["report"] and quest["progress"] >= quest["count"]
         text += f" 🎯 {goal}" + ("（報告へ）" if done else "")
     return text
@@ -204,7 +205,11 @@ def page_path(hero_id: str) -> Path:
 
 def page_url(hero_id: str) -> str:
     """勇者の詳細のページの URL（GitHub Actions の外では、リポジトリの中のパス）。"""
-    rel = f"heroes/{hero_id}.md"
+    return repo_url(f"heroes/{hero_id}.md")
+
+
+def repo_url(rel: str) -> str:
+    """リポジトリの中のファイルの GitHub 上の URL（GitHub Actions の外では、そのままのパス）。"""
     server, repo = os.environ.get("GITHUB_SERVER_URL"), os.environ.get("GITHUB_REPOSITORY")
     branch = os.environ.get("GITHUB_REF_NAME")
     return f"{server}/{repo}/blob/{branch}/{rel}" if server and repo and branch else rel
@@ -218,6 +223,68 @@ def build_page(world: dict, state: dict) -> str:
 def save_page(world: dict, state: dict) -> None:
     PAGE_DIR.mkdir(parents=True, exist_ok=True)
     page_path(state["id"]).write_text(build_page(world, state), encoding="utf-8")
+
+
+# ---- MAP（地図の画像のページ）--------------------------------------------------------
+MAP_NAME = "MAP.md"
+MAP_IMAGE = "MAP.svg"
+
+
+def build_map(world: dict, entries: list[tuple[dict, dict]]) -> str:
+    """MAP のページ（Markdown）。地図の画像と、勇者の居場所の一覧。"""
+    places = world["places"]
+    lines = ["# 世界の MAP", ""]
+    if world.get("layout"):
+        lines += [f"![世界の MAP]({MAP_IMAGE})", "",
+                  f"道の上の数字は、移動にかかる行動回数です（勇者は 1 日に {world['season']['actions_per_day']} 回行動します）。", ""]
+    else:
+        lines += ["地図の画像はありません（world/map.json に layout と、場所ごとの pos を書くと描かれます）。", ""]
+    lines += ["## 勇者の居場所", ""]
+    for hero, state in entries:
+        where = places[state["place"]]["name"]
+        if state["road"]:
+            where += f" → {places[state['road']['to']]['name']}"
+        lines.append(f"- 🧙 {hero['name']} Lv.{state['hero']['level']}  📍 {where}")
+    if not entries:
+        lines.append("- まだいない")
+    lines += ["", "このページは毎日の実行で書き出します（手で編集しない。MAP を変えるときは world/map.json を編集する）。"]
+    return "\n".join(lines) + "\n"
+
+
+def save_map(world: dict, entries: list[tuple[dict, dict]]) -> None:
+    """MAP のページと、地図の画像（SVG。map.json に layout があるとき）を書き出す。"""
+    PAGE_DIR.mkdir(parents=True, exist_ok=True)
+    (PAGE_DIR / MAP_NAME).write_text(build_map(world, entries), encoding="utf-8")
+    svg = mapsvg.render(world, entries)
+    if svg:
+        (PAGE_DIR / MAP_IMAGE).write_text(svg, encoding="utf-8")
+
+
+def current_entries(world: dict) -> list[tuple[dict, dict]]:
+    """現役の勇者の今の状態（冒険は進めない）。"""
+    entries = []
+    for hero in [h for h in load_heroes() if h["active"]]:
+        path = hero_state_path(hero["id"])
+        if path.exists():
+            entries.append((hero, game.load_state(world, path, hero["id"], hero["name"])))
+    return entries
+
+
+def write_map(world: dict) -> int:
+    """現役の勇者の今の位置で、MAP のページだけを書き出す（冒険は進めない）。"""
+    save_map(world, current_entries(world))
+    print(f"{PAGE_DIR / MAP_NAME} を書き出しました")
+    return 0
+
+
+def write_map_grid(world: dict, out: str) -> int:
+    """座標の目盛りと場所の ID を重ねた確認用の地図を out に書き出す（pos を決めるときに使う。コミットしない）。"""
+    svg = mapsvg.render(world, current_entries(world), grid=True)
+    if svg is None:
+        raise SystemExit("world/map.json に layout がないので、地図を描けません")
+    Path(out).write_text(svg, encoding="utf-8")
+    print(f"{out} を書き出しました（ブラウザで開いて、場所の pos を決めるのに使ってください）")
+    return 0
 
 
 # ---- ランキング（Pin 用の Gist）------------------------------------------------------
@@ -283,7 +350,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
     lines.append("📰 " + (today_news[0] if today_news else "今日も勇者たちは冒険中…"))
     card = [fit(line) for line in lines]
 
-    detail = ["", f"── シーズン{season}（{first}〜{last}）──"]
+    detail = ["", f"── シーズン{season}（{first}〜{last}）──", f"MAP: {repo_url('heroes/' + MAP_NAME)}"]
     for title, _, key, value, unit in RANKINGS:
         detail += ["", f"── {title} ──"]
         detail += [f"{r:>2}. {h['name']}  " + (f"Lv.{value(s)}" if title == "レベル" else f"{value(s)}{unit}")
@@ -437,7 +504,7 @@ def run_hero(world: dict, hero: dict, today: date, actions: int | None, dry_run:
 
 
 def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) -> int:
-    """現役の勇者を全員進めて、それぞれの Gist とランキングの Gist を更新する。
+    """現役の勇者を全員進めて、詳細のページ・MAP のページ・ランキングの Gist を更新する。
     1 人が失敗しても残りは続け、1 つでも失敗したら終了コード 1。"""
     heroes = [h for h in load_heroes() if h["active"]]
     if not heroes:
@@ -446,17 +513,28 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
     token = os.environ.get("GIST_PAT")
     if not token and not dry_run:
         raise SystemExit("GIST_PAT を環境変数で指定してください")
-    failed, entries = 0, []
+    failed, entries, on_map = 0, [], []
     for hero in heroes:
         try:
             state = run_hero(world, hero, today, actions, dry_run)
             entries.append((hero, state))
+            on_map.append((hero, state))
             print(build_text(world, state))
             if not dry_run:
                 save_page(world, state)
         except (Exception, SystemExit) as e:  # noqa: BLE001  勇者ごとに失敗を隔離する
             failed += 1
             common.warn(f"{hero['name']}（{hero['id']}）を進められませんでした: {e}")
+            try:  # 進められなかった勇者も、保存してある状態で地図に載せる
+                on_map.append((hero, game.load_state(world, hero_state_path(hero["id"]), hero["id"], hero["name"])))
+            except (Exception, SystemExit):  # noqa: BLE001
+                pass
+    if not dry_run:
+        try:  # 地図を書き出せなくても、ランキングの Gist は更新する
+            save_map(world, on_map)
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            failed += 1
+            common.warn(f"MAP のページを書き出せませんでした: {e}")
     if entries:
         try:
             update_board(world, entries, today, dry_run, token)
@@ -470,17 +548,24 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true", help="状態を保存せず、Gist も更新しない")
     ap.add_argument("--date", help="進める日付（既定は今日の JST）")
-    ap.add_argument("--actions", type=int, help="その日の行動回数を指定する（乱数で決めない）")
+    ap.add_argument("--actions", type=int, help="その日の行動回数を指定する（試すとき用。ふだんは season.json の actions_per_day）")
     mode = ap.add_mutually_exclusive_group()
-    mode.add_argument("--new-game", metavar="NAME", help="新しい勇者を登録し、Gist を作る（冒険は進めない）")
+    mode.add_argument("--new-game", metavar="NAME", help="新しい勇者を登録する（冒険は進めない）")
     mode.add_argument("--retire", metavar="NAME_OR_ID", help="勇者を引退させる")
+    mode.add_argument("--map", action="store_true", help="MAP のページ（heroes/MAP.md）だけを書き出す（冒険は進めない）")
+    mode.add_argument("--map-grid", metavar="OUT.svg", help="座標の目盛りを重ねた確認用の地図を書き出す（pos を決めるときに使う）")
     a = ap.parse_args()
-    if (a.new_game is not None or a.retire is not None) and (a.dry_run or a.date or a.actions is not None):
-        ap.error("--new-game / --retire は --dry-run / --date / --actions と一緒に指定できません")
+    if ((a.new_game is not None or a.retire is not None or a.map or a.map_grid)
+            and (a.dry_run or a.date or a.actions is not None)):
+        ap.error("--new-game / --retire / --map / --map-grid は --dry-run / --date / --actions と一緒に指定できません")
 
     if a.retire is not None:
         return retire(a.retire)
     world = load_world()
+    if a.map:
+        return write_map(world)
+    if a.map_grid:
+        return write_map_grid(world, a.map_grid)
     today = date.fromisoformat(a.date) if a.date else datetime.now(timezone.utc).astimezone(common.JST).date()
     if a.new_game is not None:
         return new_game(world, a.new_game, today)

@@ -24,10 +24,27 @@ class DataTest(unittest.TestCase):
 
     def test_load_world_builds_routes(self):
         world = W.load_world()
-        start = world["start"]
-        for pid in world["places"]:
+        start = world["starts"][0]
+        for pid in world["towns"]:  # 町にはどこからでも陸路・航路で行ける
             self.assertIn(pid, world["dist"][start])
         self.assertEqual(world["dist"][start][start], 0)
+        for pid in world["dungeons"]:  # ダンジョンへは（まだ）行けない
+            self.assertNotIn(pid, world["dist"][start])
+
+    def test_every_road_has_monsters(self):
+        world = W.load_world()
+        for key, info in world["road_info"].items():
+            self.assertTrue(info["monsters"], key)
+            for mid, weight in info["monsters"]:
+                self.assertIn(world["monsters"][mid]["terrain"], info["terrain"])
+                self.assertGreater(weight, 0)
+
+    def test_sea_routes_have_sea_monsters(self):
+        world = W.load_world()
+        sea = [k for k, i in world["road_info"].items() if i["kind"] == "sea"]
+        self.assertTrue(sea)
+        for key in sea:
+            self.assertTrue(all(world["monsters"][m]["terrain"] == "sea" for m, _ in world["road_info"][key]["monsters"]))
 
 
 class ValidateTest(unittest.TestCase):
@@ -37,11 +54,18 @@ class ValidateTest(unittest.TestCase):
         errors = errors_after(change)
         self.assertTrue(any(all(w in e for w in words) for e in errors), errors)
 
-    def test_unknown_monster(self):
-        self.assertError(lambda r: r["map"]["places"][5]["monsters"].append("nobody"), ["nobody"])
+    def test_unknown_terrain_and_trait(self):
+        self.assertError(lambda r: r["map"]["roads"][0]["terrain"].append(["lava_sea", 5]), ["terrain"])
+        self.assertError(lambda r: r["monsters"][0].update(terrain="moon"), ["wild_dog", "terrain"])
+        self.assertError(lambda r: r["monsters"][0].update(trait="laser"), ["wild_dog", "trait"])
+
+    def test_road_terrain_needs_a_monster(self):
+        def change(r):
+            r["monsters"] = [m for m in r["monsters"] if m["terrain"] != "sea"]
+        self.assertError(change, ["terrain", "魔物がいません"])
 
     def test_duplicate_id(self):
-        self.assertError(lambda r: r["monsters"].append(dict(r["monsters"][0])), ["重複", "slime"])
+        self.assertError(lambda r: r["monsters"].append(dict(r["monsters"][0])), ["重複", "wild_dog"])
 
     def test_disconnected_place(self):
         def change(r):
@@ -49,18 +73,23 @@ class ValidateTest(unittest.TestCase):
         self.assertError(change, ["island", "行けません"])
 
     def test_bad_road(self):
-        self.assertError(lambda r: r["map"]["roads"].append({"from": "town_hajimari", "to": "x", "distance": 0}),
+        self.assertError(lambda r: r["map"]["roads"].append({"from": "aurea", "to": "x", "distance": 0}),
                          ["distance"])
 
-    def test_bad_level_range(self):
-        def change(r):
-            r["map"]["places"][5]["level"] = [5, 2]
-        self.assertError(change, ["level"])
+    def test_road_kinds_connect_the_right_places(self):
+        def land_to_dungeon(r):
+            r["map"]["roads"].append({"from": "aurea", "to": "jade_tomb", "distance": 1, "kind": "land",
+                                      "terrain": [["plain", 100]]})
+        self.assertError(land_to_dungeon, ["町どうし"])
+
+        def trail_between_towns(r):
+            r["map"]["roads"].append({"from": "aurea", "to": "zafra", "distance": 1, "kind": "trail"})
+        self.assertError(trail_between_towns, ["trail", "ダンジョン"])
 
     def test_start_must_be_a_town(self):
         def change(r):
-            r["map"]["start"] = "north_plain"
-        self.assertError(change, ["start"])
+            r["map"]["starts"] = ["jade_tomb"]
+        self.assertError(change, ["starts", "jade_tomb"])
 
     def test_shop_item_needs_price(self):
         def change(r):
@@ -84,8 +113,20 @@ class ValidateTest(unittest.TestCase):
 
     def test_season_keys_are_checked(self):
         def typo(r):
-            r["season"]["hunt_rang"] = r["season"].pop("hunt_range")
-        self.assertError(typo, ["hunt_range"])
+            r["season"]["deliver_rang"] = r["season"].pop("deliver_range")
+        self.assertError(typo, ["deliver_range"])
+
+        def bad_events(r):
+            r["season"]["road_events"] = {"battle": -1}
+        self.assertError(bad_events, ["road_events"])
+
+        def no_battle(r):
+            r["season"]["road_events"] = {"battle": 0, "nothing": 10}
+        self.assertError(no_battle, ["road_events", "battle"])
+
+        def bad_scenery(r):
+            r["season"]["terrain_scenery"] = ["草原"]
+        self.assertError(bad_scenery, ["terrain_scenery"])
 
         def bad_hero(r):
             del r["season"]["hero"]["atk"]
@@ -98,6 +139,28 @@ class ValidateTest(unittest.TestCase):
         def no_texts(r):
             r["season"]["rest"] = []
         self.assertError(no_texts, ["rest"])
+
+    def test_bad_region(self):
+        def change(r):
+            r["map"]["places"][0]["region"] = ""
+        self.assertError(change, ["region"])
+
+    def test_bad_pos_and_layout(self):
+        def bad_pos(r):
+            r["map"]["places"][0]["pos"] = [1]
+        self.assertError(bad_pos, ["pos"])
+
+        def bad_layout(r):
+            del r["map"]["layout"]["size"]
+        self.assertError(bad_layout, ["layout", "size"])
+
+        def no_pos(r):
+            del r["map"]["places"][0]["pos"]
+        self.assertError(no_pos, ["aurea", "pos"])
+
+        def bad_path(r):
+            r["map"]["roads"][0]["path"] = [[1, 2]]
+        self.assertError(bad_path, ["path"])
 
     def test_bad_season(self):
         def change(r):

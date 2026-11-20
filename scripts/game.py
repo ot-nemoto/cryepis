@@ -1,8 +1,10 @@
 """シーズン制 RPG の 1 日分の進行（勇者の状態・ギルドの依頼・戦闘・アイテム・シーズンの切り替え）。
 
-勇者は毎日、乱数で決まる回数だけ行動する。町のギルドで依頼を受け、目的の場所へ向かって討伐や配達をこなし、
-依頼を出した町（配達なら届け先）で報告して報酬を受け取る。合う依頼がなければ、レベルに合った野外を見回る。
-力尽きたら依頼は失敗になり、最後に寄った町で目を覚ます。
+勇者は毎日、決まった回数だけ行動する。場所は町だけで、町と町は陸路・航路でつながっている。
+町のギルドで依頼を受け、討伐なら依頼の道を行き来して魔物を倒し、配達なら届け先の町へ向かう。
+道を 1 行動進むごとに、道の地形に合った魔物に出会ったり、宝箱を見つけたりする（乱数）。
+魔物の強さはどこでも同じで、地形ごとに性質（先手・毒・群れなど）が違う。
+依頼がなければ、となりの町へ旅をする。力尽きたら依頼は失敗になり、最後に寄った町で目を覚ます。
 シーズンが変わると、アイテム（持ち物）以外は最初の状態に戻る。
 乱数は「日付＋シーズン＋勇者の ID」を種にするので、同じ日に何度実行しても結果は同じ。
 """
@@ -52,9 +54,15 @@ def new_season_stats() -> dict:
     return {"quests_done": 0, "quests_failed": 0, "kills": 0, "deaths": 0, "rares": []}
 
 
+def start_town(world: dict, hero_id: str, season: int | None) -> str:
+    """最初の町（勇者とシーズンごとに、map.json の starts からランダムに決める）。"""
+    return random.Random(f"start-{season or 0}-{hero_id}").choice(world["starts"])
+
+
 def new_state(world: dict, hero_id: str = "h1", name: str = "勇者") -> dict:
+    town = start_town(world, hero_id, None)
     return {"id": hero_id, "name": name, "season": None, "season_day": 0, "day": 0, "last_date": None,
-            "hero": new_hero(world), "inventory": {}, "place": world["start"], "home_town": world["start"],
+            "hero": new_hero(world), "inventory": {}, "place": town, "home_town": town,
             "road": None, "quest": None, "taken": [], "season_stats": new_season_stats(), "last": None,
             "journal": [], "seasons": []}
 
@@ -74,12 +82,13 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
     state["hero"] = {**new_hero(world), **state["hero"]}
     state["season_stats"] = {**new_season_stats(), **state["season_stats"]}
     places = world["places"]
+    fallback = start_town(world, state["id"], state["season"])
     state["inventory"] = {k: v for k, v in state["inventory"].items() if k in world["items"]}
     state["season_stats"]["rares"] = [i for i in state["season_stats"]["rares"] if i in world["items"]]
-    if state["place"] not in places:
-        state.update(place=world["start"], road=None)
+    if state["place"] not in world["towns"]:
+        state.update(place=fallback, road=None)
     if places.get(state["home_town"], {}).get("type") != "town":
-        state["home_town"] = world["start"]
+        state["home_town"] = fallback
     road = state["road"]
     if road and (road.get("to") not in places or (state["place"], road["to"]) not in world["roads"]):
         state["road"] = None
@@ -91,18 +100,19 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
     return state
 
 
-QUEST_PLACE_TYPES = {"hunt": "field", "patrol": "field", "deliver": "town"}
+QUEST_TYPES = ("hunt", "deliver", "patrol")
 
 
 def quest_ok(world: dict, quest: dict) -> bool:
-    """依頼の参照先が今の world/ にあり、種類も合っているか（討伐・見回りは野外、配達は町）。"""
+    """依頼の参照先が今の world/ にあるか（行き先・報告先は町、討伐は報告先からの道と魔物）。"""
     places = world["places"]
-    want = QUEST_PLACE_TYPES.get(quest.get("type"))
-    if want is None or places.get(quest.get("place"), {}).get("type") != want:
+    if quest.get("type") not in QUEST_TYPES or places.get(quest.get("place"), {}).get("type") != "town":
         return False
     if quest.get("report") is not None and places.get(quest["report"], {}).get("type") != "town":
         return False
-    return quest.get("monster") is None or quest["monster"] in world["monsters"]
+    if quest["type"] == "hunt":
+        return (quest.get("report"), quest["place"]) in world["roads"] and quest.get("monster") in world["monsters"]
+    return True
 
 
 def save_state(state: dict, path: Path) -> None:
@@ -140,6 +150,12 @@ def exp_need(world: dict, level: int) -> int:
     return round(up["exp_base"] * level ** up["exp_power"])
 
 
+def monster_level(world: dict) -> int:
+    """道の魔物のふつうのレベル（どこでも同じ強さなので、いちばん多いレベル）。依頼の報酬の目安に使う。"""
+    levels = [m["level"] for m in world["monsters"].values()]
+    return max(set(levels), key=levels.count)
+
+
 # ---- ギルドの依頼 ---------------------------------------------------------------------
 def board(world: dict, town: str, d: date, season: int) -> list[dict]:
     """町 town の、日付 d の依頼の掲示板（全員共通）。"""
@@ -157,29 +173,25 @@ def board(world: dict, town: str, d: date, season: int) -> list[dict]:
 
 
 def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> dict | None:
-    cfg, dist, places = world["season"], world["dist"][town], world["places"]
+    """討伐: 町から出る道の 1 本で、その道に出る魔物を倒す。配達: 近くの町へ荷物を届ける。"""
+    cfg, dist = world["season"], world["dist"][town]
+    lvl = monster_level(world)
     if t["type"] == "hunt":
-        fields = [p for p in world["fields"] if dist[p] <= cfg["hunt_range"]]
-        if not fields:
-            return None
-        place = rng.choice(fields)
-        field = places[place]
+        other = rng.choice(world["neighbors"][town])
+        mids, weights = zip(*world["road_info"][(town, other)]["monsters"])
         count = rng.randint(*t["count"])
-        quest = {"type": "hunt", "place": place, "report": town, "monster": rng.choice(field["monsters"]),
-                 "count": count, "level": list(field["level"]), "days": t["days"] + 2 * dist[place]}
+        quest = {"type": "hunt", "place": other, "report": town, "monster": rng.choices(mids, weights)[0],
+                 "count": count, "days": t["days"] + 2 * world["roads"][(town, other)]}
         unit = count
     else:  # deliver
-        towns = [p for p in world["towns"] if p != town and dist[p] <= cfg["deliver_range"]]
+        towns = [p for p in world["towns"] if p != town and dist.get(p, cfg["deliver_range"] + 1) <= cfg["deliver_range"]]
         if not towns:
             return None
         to = rng.choice(towns)
-        levels = [places[p]["level"] for p in route(world, town, to) if places[p]["type"] == "field"]
-        lo = max((lv[0] for lv in levels), default=1)
-        quest = {"type": "deliver", "place": to, "report": to, "monster": None, "count": 1,
-                 "level": [lo, max((lv[1] for lv in levels), default=lo)], "days": t["days"] + dist[to]}
+        quest = {"type": "deliver", "place": to, "report": to, "monster": None, "count": 1, "days": t["days"] + dist[to]}
         unit = dist[to]
-    lvl, reward = quest["level"][0], t["reward"]
-    quest.update(template=t["id"], name=t.get("name", t["type"]), town=town, progress=0,
+    reward = t["reward"]
+    quest.update(template=t["id"], name=t.get("name", t["type"]), town=town, progress=0, level=[lvl, lvl],
                  deadline=(d + timedelta(days=quest.pop("days"))).isoformat(),
                  reward={"exp": round(reward["exp"] * lvl * unit), "gold": round(reward["gold"] * lvl * unit),
                          "item": reward.get("item")})
@@ -187,28 +199,27 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> 
 
 
 def suitable(quest: dict, level: int) -> bool:
-    lo, hi = quest["level"]
-    return lo <= level + 3 and level <= hi + 3
+    """受けられる依頼か（魔物の強さはどこでも同じなので、強すぎる依頼だけを避ける。弱すぎる依頼も受ける）。"""
+    return quest["level"][0] <= level + 3
 
 
-def patrol(world: dict, state: dict) -> dict:
-    """合う依頼がないときの見回り（報酬なし）。レベルに合ういちばん手ごわい野外の、近いところへ行く。"""
-    level, places = state["hero"]["level"], world["places"]
-    ok = [p for p in world["fields"] if places[p]["level"][0] <= level] or world["fields"][:1]
-    top = max(places[p]["level"][0] for p in ok)
-    place = min((p for p in ok if places[p]["level"][0] == top), key=lambda p: world["dist"][state["place"]][p])
-    return {"type": "patrol", "name": "見回り", "template": None, "town": None, "place": place, "report": None,
-            "monster": None, "count": world["season"]["patrol_battles"], "progress": 0,
-            "level": list(places[place]["level"]), "deadline": None, "reward": None}
+def patrol(world: dict, state: dict, rng: random.Random) -> dict:
+    """合う依頼がないときの旅（報酬なし）。となりの町のどれかへ向かう。"""
+    lvl = monster_level(world)
+    return {"type": "patrol", "name": "旅", "template": None, "town": None,
+            "place": rng.choice(world["neighbors"][state["place"]]), "report": None, "monster": None,
+            "count": 1, "progress": 0, "level": [lvl, lvl], "deadline": None, "reward": None}
 
 
 def quest_text(world: dict, quest: dict) -> str:
-    place = world["places"][quest["place"]]["name"]
+    places = world["places"]
+    place = places[quest["place"]]["name"]
     if quest["type"] == "hunt":
-        return f"{place}で{world['monsters'][quest['monster']]['name']}を{quest['count']}体討伐"
+        return (f"{places[quest['report']]['name']}と{place}の間の道で"
+                f"{world['monsters'][quest['monster']]['name']}を{quest['count']}体討伐")
     if quest["type"] == "deliver":
         return f"{place}へ荷物を届ける"
-    return f"{place}を見回る"
+    return f"{place}へ旅をする"
 
 
 def route(world: dict, a: str, b: str) -> list[str]:
@@ -217,10 +228,6 @@ def route(world: dict, a: str, b: str) -> list[str]:
     while path[-1] != b:
         path.append(world["next"][path[-1]][b])
     return path
-
-
-def nearest_town(world: dict, place: str) -> str:
-    return min(world["towns"], key=lambda t: world["dist"][place][t])
 
 
 # ---- 1 日分を進める -------------------------------------------------------------------
@@ -246,29 +253,53 @@ class Day:
         return max(1, attack - guard // 2 + self.rng.randint(-2, 2))
 
     def battle(self, monster: dict) -> bool:
-        """勝てば True。回復薬が尽きて HP が 0 になったら False。"""
-        hero, hp, s = self.hero, monster["hp"], self.stats
+        """勝てば True。回復薬が尽きて HP が 0 になったら False。魔物の性質（trait）で戦い方が変わる。"""
+        hero, s, trait = self.hero, self.stats, monster.get("trait")
+        hp, atk, guard, hits = monster["hp"], monster["atk"], monster["def"], 1
+        if trait == "fierce":  # 凶暴: 攻撃が強いが、守りが弱い
+            atk, guard = round(atk * 1.3), guard // 2
+        elif trait == "armored":  # 硬い: 守りが固く、攻撃は少し弱い
+            atk, guard = max(1, round(atk * 0.9)), guard * 2 + 1
+        elif trait == "swarm":  # 群れ: 数が多い（倒すのに手間がかかり、攻撃の回数が多い）
+            hp, atk, hits = round(hp * 1.5), max(1, round(atk * 0.6)), 2
+        monster_first = trait == "first_strike"  # 先手: 先に攻撃してくる
         while True:
-            hp -= self.damage(s["atk"], monster["def"])
-            if hp <= 0:
-                break
-            hero["hp"] -= self.damage(monster["atk"], s["def"])
-            if hero["hp"] <= 0:
-                if hero["potions"]:  # 倒れる前に回復薬を使う
-                    hero["potions"] -= 1
-                    hero["hp"] = max(1, int(s["max_hp"] * self.cfg["potion"]["heal_rate"]))
-                    continue
-                hero["hp"] = 0
-                self.log(f"{monster['name']}に敗れた")
-                return False
-        # 自分よりずっと弱い敵からは経験値が少ない（低レベルの場所に居座らないように）
+            if not monster_first:
+                hp -= self.damage(s["atk"], guard)
+                if hp <= 0:
+                    break
+            monster_first = False
+            for _ in range(hits):
+                hero["hp"] -= self.damage(atk, s["def"])
+                if hero["hp"] <= 0:
+                    if hero["potions"]:  # 倒れる前に回復薬を使う
+                        hero["potions"] -= 1
+                        hero["hp"] = max(1, int(s["max_hp"] * self.cfg["potion"]["heal_rate"]))
+                        continue
+                    hero["hp"] = 0
+                    self.log(f"{self.monster_name(monster)}に敗れた")
+                    return False
+        # 自分よりずっと弱い敵からは経験値が少ない
         gap = hero["level"] - monster["level"]
         exp = round(monster["exp"] * (1 if gap <= 3 else max(0.2, 1 - 0.15 * (gap - 3))))
         hero["gold"] += monster["gold"]
         self.state["season_stats"]["kills"] += 1
-        self.log(f"{monster['name']}を倒した (+{exp}EXP)")
+        self.log(f"{self.monster_name(monster)}を倒した (+{exp}EXP)")
+        if trait == "poison":  # 毒: 倒したあとも HP が減る（0 にはならない）
+            lost = min(hero["hp"] - 1, max(1, s["max_hp"] // 10))
+            if lost > 0:
+                hero["hp"] -= lost
+                self.log(f"毒で HP が {lost} 減った")
+        elif trait == "thief" and hero["gold"] > 0 and self.rng.random() < 0.4:  # 盗み
+            stolen = min(hero["gold"], self.rng.randint(5, 20))
+            hero["gold"] -= stolen
+            self.log(f"逃げ際に {stolen}G 盗まれた")
         self.gain_exp(exp)
         return True
+
+    def monster_name(self, monster: dict) -> str:
+        trait = self.world["traits"].get(monster.get("trait"), {})
+        return f"{monster['name']}〔{trait['name']}〕" if trait else monster["name"]
 
     def gain_exp(self, exp: int) -> None:
         hero, up = self.hero, self.cfg["level_up"]
@@ -315,7 +346,7 @@ class Day:
         state, hero = self.state, self.hero
         state["home_town"] = town
         quest = state["quest"]
-        if quest and quest["type"] == "deliver" and quest["place"] == town:
+        if quest and quest["type"] in ("deliver", "patrol") and quest["place"] == town:
             quest["progress"] = quest["count"]
         if quest and quest["report"] == town and quest["progress"] >= quest["count"]:
             self.report(quest)
@@ -328,7 +359,7 @@ class Day:
         self.state["season_stats"]["quests_done"] += 1
         self.state["quest"] = None
         self.log(f"依頼達成！{quest_text(self.world, quest)}（+{reward['exp']}EXP +{reward['gold']}G）")
-        iid = self.draw(reward.get("item"), quest["level"][0])
+        iid = self.draw(reward.get("item"), max(quest["level"][0], self.hero["level"]))
         if iid:
             self.obtain(iid, "報酬で")
         self.gain_exp(reward["exp"])
@@ -362,7 +393,7 @@ class Day:
             self.state["taken"].append(quest["id"])
             self.log(f"{self.world['places'][town]['name']}のギルドで依頼を受けた: {quest_text(self.world, quest)}")
         else:
-            quest = patrol(self.world, self.state)
+            quest = patrol(self.world, self.state, self.rng)
         self.state["quest"] = quest
 
     def fail_quest(self, why: str) -> None:
@@ -372,38 +403,45 @@ class Day:
             self.state["season_stats"]["quests_failed"] += 1
             self.log(f"依頼失敗（{why}）: {quest_text(self.world, quest)}")
 
-    # 野外 --------------------------------------------------------------------------------
-    def field_event(self, place: str) -> bool:
-        """野外の出来事。力尽きたら False。"""
-        field, quest = self.world["places"][place], self.state["quest"]
-        here = quest is not None and quest["place"] == place and quest["progress"] < quest["count"]
-        events = dict(field["events"])
-        if here:  # 目的の場所では敵を探して回る
+    # 道 --------------------------------------------------------------------------------
+    def hunting(self, a: str, b: str) -> bool:
+        """a→b の道が、まだ終わっていない討伐の依頼の道か。"""
+        quest = self.state["quest"]
+        return (quest is not None and quest["type"] == "hunt" and quest["progress"] < quest["count"]
+                and {a, b} == {quest["report"], quest["place"]})
+
+    def road_event(self, a: str, b: str) -> bool:
+        """道を 1 行動進んだときの出来事。力尽きたら False。"""
+        info, quest = self.world["road_info"][(a, b)], self.state["quest"]
+        here = self.hunting(a, b)
+        events = dict(self.cfg["road_events"])
+        if here:  # 依頼の道では魔物を探して歩く
             events["battle"] = events.get("battle", 0) * self.cfg["hunt_battle_boost"]
         kinds, weights = zip(*events.items())
         kind = self.rng.choices(kinds, weights)[0]
         if kind == "battle":
-            target = quest["monster"] if here and quest["type"] == "hunt" else None
-            mid = target if target and self.rng.random() < 0.5 else self.rng.choice(field["monsters"])
+            mids, mw = zip(*info["monsters"])
+            mid = quest["monster"] if here and self.rng.random() < 0.5 else self.rng.choices(mids, mw)[0]
             if not self.battle(self.world["monsters"][mid]):
                 return False
-            if here and (quest["type"] == "patrol" or mid == quest["monster"]):
+            if here and mid == quest["monster"]:
                 quest["progress"] += 1
-                if quest["progress"] >= quest["count"] and quest["type"] == "hunt":
+                if quest["progress"] >= quest["count"]:
                     self.log(f"討伐の目標を果たした（{quest['count']}体）")
         elif kind == "treasure":
-            iid = self.draw(field.get("treasure", self.cfg["treasure"]), field["level"][1])
+            iid = self.draw(self.cfg["treasure"], self.hero["level"])
             if iid:
                 self.obtain(iid, "宝箱から")
             elif self.rng.random() < 0.3:
                 self.hero["potions"] += 1
                 self.log("宝箱から回復薬を見つけた")
             else:
-                gold = self.rng.randint(5, 15) * field["level"][0]
+                gold = self.rng.randint(5, 15) * monster_level(self.world)
                 self.hero["gold"] += gold
                 self.log(f"宝箱から{gold}Gを見つけた")
         else:
-            self.log(self.rng.choice(field.get("scenery") or self.cfg["scenery"]))
+            texts = [t for k in info["terrain"] for t in self.cfg.get("terrain_scenery", {}).get(k, [])]
+            self.log(self.rng.choice(texts or self.cfg["scenery"]))
         return True
 
     def fall(self) -> None:
@@ -417,75 +455,71 @@ class Day:
         self.fallen = True
 
     # 行動 --------------------------------------------------------------------------------
-    def move_toward(self, target: str) -> bool:
-        """target へ向かって 1 行動ぶん進む。力尽きたら False。"""
+    def step(self, road: dict) -> bool:
+        """今の道を 1 行動ぶん進む（出来事が起き、残りが 0 なら町に着く）。力尽きたら False。"""
         state = self.state
-        road = state["road"]
-        if road is None:
-            nxt = self.world["next"][state["place"]][target]
-            road = {"to": nxt, "left": self.world["roads"][(state["place"], nxt)]}
+        origin = state["place"]
         road["left"] -= 1
+        state["road"] = road
+        if not self.road_event(origin, road["to"]):
+            return False
         if road["left"] > 0:  # まだ道の途中
-            state["road"] = road
-            side = road["to"] if self.world["places"][road["to"]]["type"] == "field" else state["place"]
-            return self.field_event(side) if self.world["places"][side]["type"] == "field" else True
-        state.update(place=road["to"], road=None)
-        if self.world["places"][road["to"]]["type"] == "town":
-            self.visit_town(road["to"])
             return True
-        return self.field_event(road["to"])
+        state.update(place=road["to"], road=None)
+        self.log(f"{self.world['places'][road['to']]['name']}に着いた")
+        self.visit_town(road["to"])
+        return True
+
+    def go(self, to: str) -> bool:
+        """となりの町 to への道に出て、1 行動ぶん進む。"""
+        return self.step({"to": to, "left": self.world["roads"][(self.state["place"], to)]})
+
+    def move_toward(self, target: str) -> bool:
+        """target へ最短経路で 1 行動ぶん進む。"""
+        if self.state["road"]:
+            return self.step(self.state["road"])
+        return self.go(self.world["next"][self.state["place"]][target])
 
     def turn_back(self) -> None:
-        """道の途中で、引き返したほうが町に早く着くなら引き返す。"""
+        """道の途中で、引き返したほうが早く町に着くなら引き返す。"""
         state, world = self.state, self.world
         road, origin = state["road"], state["place"]
-        if world["places"][road["to"]]["type"] == "town":
-            return
         total = world["roads"][(origin, road["to"])]
-        town_dist = {p: min(world["dist"][p][t] for t in world["towns"]) for p in (origin, road["to"])}
-        back = total - road["left"] + town_dist[origin]
-        forward = road["left"] + town_dist[road["to"]]
-        if back < forward:
+        if total - road["left"] < road["left"]:
             state.update(place=road["to"], road={"to": origin, "left": total - road["left"]})
             self.log(f"HP が心もとないので{world['places'][origin]['name']}へ引き返した")
 
     def act(self) -> bool:
         """1 行動。力尽きたら False。"""
-        state, world, hero = self.state, self.world, self.hero
+        state, hero = self.state, self.hero
         for _ in range(5):  # 町での受注・報告は行動回数を使わない
-            low = hero["hp"] < self.stats["max_hp"] * self.cfg["retreat_hp_rate"] and not hero["potions"]
             if state["road"]:
-                if low:
+                if hero["hp"] < self.stats["max_hp"] * self.cfg["retreat_hp_rate"] and not hero["potions"]:
                     self.turn_back()
-                return self.move_toward(state["road"]["to"])
-            place = state["place"]
-            in_town = world["places"][place]["type"] == "town"
-            if low and not in_town:
-                return self.move_toward(nearest_town(world, place))
-            quest = state["quest"]
+                return self.step(state["road"])
+            place, quest = state["place"], state["quest"]
             if quest is None:
-                if in_town:
-                    self.take_quest(place)
-                    continue
-                return self.move_toward(nearest_town(world, place))
+                self.take_quest(place)
+                continue
             if quest["progress"] >= quest["count"]:
-                if quest["report"] is None:  # 見回りは報告しない
-                    self.log(f"{world['places'][quest['place']]['name']}の見回りを終えた")
+                if quest["report"] is None:  # 旅は報告しない
                     state["quest"] = None
                     continue
                 if place == quest["report"]:
                     self.visit_town(place)
                     continue
                 return self.move_toward(quest["report"])
-            if place == quest["place"]:
-                return self.field_event(place)
+            if quest["type"] == "hunt":  # 依頼の道を行き来する
+                if place == quest["report"]:
+                    return self.go(quest["place"])
+                if place == quest["place"]:
+                    return self.go(quest["report"])
+                return self.move_toward(quest["report"])
+            if place == quest["place"]:  # もう目的の町にいる（地図が変わって町に戻されたときなど）
+                self.visit_town(place)
+                continue
             return self.move_toward(quest["place"])
         return True
-
-
-def roll_actions(world: dict, rng: random.Random) -> int:
-    actions, weights = zip(*world["season"]["action_weights"])
-    return rng.choices(actions, weights)[0]
 
 
 def start_season(world: dict, state: dict, season: int) -> None:
@@ -494,12 +528,14 @@ def start_season(world: dict, state: dict, season: int) -> None:
         stats_ = state["season_stats"]
         state["seasons"].append({"season": state["season"], "days": state["season_day"],
                                  "level": state["hero"]["level"], **stats_, "ended_on": state["last_date"]})
-    state.update(season=season, season_day=0, hero=new_hero(world), place=world["start"],
-                 home_town=world["start"], road=None, quest=None, season_stats=new_season_stats())
+    # 最初のシーズンは、登録したときに決めた町から。シーズンが変わったら最初の町を決め直す
+    town = state["place"] if state["season"] is None else start_town(world, state["id"], season)
+    state.update(season=season, season_day=0, hero=new_hero(world), place=town,
+                 home_town=town, road=None, quest=None, season_stats=new_season_stats())
 
 
 def advance(world: dict, state: dict, today: date, actions: int | None = None) -> bool:
-    """today の分を進める（actions を省くと乱数で決める）。処理済み（last_date 以前の日付）なら何もせず False。"""
+    """today の分を進める（actions を省くと season.json の actions_per_day。毎日同じ回数で、出来事が乱数で決まる）。処理済み（last_date 以前の日付）なら何もせず False。"""
     if state["last_date"] and today.isoformat() <= state["last_date"]:
         return False
     season = season_of(world, today)
@@ -515,11 +551,12 @@ def advance(world: dict, state: dict, today: date, actions: int | None = None) -
     if new_season:
         day.log(f"シーズン{season}が始まった（レベルは 1 に戻り、持ち物はそのまま）")
     if actions is None:
-        actions = roll_actions(world, rng)
+        actions = world["season"]["actions_per_day"]
     if state["quest"] and state["quest"]["deadline"] and today.isoformat() > state["quest"]["deadline"]:
         day.fail_quest("期限切れ")
-    if state["season_day"] == 1 and state["place"] == world["start"]:  # 旅立ちの日は最初の町で支度する
-        day.visit_town(world["start"])
+    town = state["place"]
+    if state["season_day"] == 1 and world["places"][town]["type"] == "town" and not state["road"]:
+        day.visit_town(town)  # 旅立ちの日は最初の町で支度する
     if actions == 0:
         hero = state["hero"]
         hero["hp"] = min(day.stats["max_hp"], hero["hp"] + int(day.stats["max_hp"] * world["season"]["rest_heal_rate"]))

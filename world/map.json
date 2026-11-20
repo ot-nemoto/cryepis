@@ -1,60 +1,559 @@
 {
-  "start": "town_hajimari",
-  "places": [
-    {"id": "town_hajimari", "type": "town", "name": "はじまりの村", "emoji": "🏠",
-     "shop": ["wooden_sword", "copper_sword", "cloth_armor", "leather_armor"]},
-    {"id": "town_mori", "type": "town", "name": "森の町", "emoji": "🏡", "shop": ["iron_sword", "chain_mail", "lucky_charm"]},
-    {"id": "town_minato", "type": "town", "name": "港町", "emoji": "⚓", "shop": ["iron_sword", "chain_mail", "lucky_charm"]},
-    {"id": "town_kouzan", "type": "town", "name": "鉱山の町", "emoji": "⛏️", "shop": ["steel_sword", "steel_armor"]},
-    {"id": "town_yuki", "type": "town", "name": "雪の町", "emoji": "⛄", "shop": ["steel_sword", "steel_armor"]},
-
-    {"id": "north_plain", "type": "field", "name": "北の草原", "emoji": "🌱", "level": [1, 4],
-     "monsters": ["slime", "rat", "goblin"], "events": {"battle": 50, "treasure": 12, "nothing": 38},
-     "scenery": ["そよ風が草原を渡っていく", "遠くで羊が鳴いている"]},
-    {"id": "east_hill", "type": "field", "name": "東の丘", "emoji": "⛰️", "level": [2, 6],
-     "monsters": ["rat", "goblin", "hornet"], "events": {"battle": 50, "treasure": 12, "nothing": 38},
-     "scenery": ["丘の上から海が見える", "風車がゆっくり回っている"]},
-    {"id": "old_road", "type": "field", "name": "古い街道", "emoji": "🛤️", "level": [4, 9],
-     "monsters": ["wild_dog", "bandit", "wolf"], "events": {"battle": 50, "treasure": 10, "nothing": 40},
-     "scenery": ["石畳が苔むしている", "崩れた道標が立っている"]},
-    {"id": "lost_forest", "type": "field", "name": "迷いの森", "emoji": "🌲", "level": [7, 12],
-     "monsters": ["wolf", "treant", "dark_elf"], "events": {"battle": 55, "treasure": 12, "nothing": 33},
-     "scenery": ["木漏れ日が揺れている", "同じ場所を回っている気がする"]},
-    {"id": "beach", "type": "field", "name": "白い浜辺", "emoji": "🏖️", "level": [8, 13],
-     "monsters": ["crab", "sahagin"], "events": {"battle": 50, "treasure": 14, "nothing": 36},
-     "scenery": ["波の音が心地よい", "貝殻が光っている"]},
-    {"id": "cape", "type": "field", "name": "岬の崖", "emoji": "🌊", "level": [12, 17],
-     "monsters": ["sahagin", "harpy", "sea_serpent"], "events": {"battle": 55, "treasure": 12, "nothing": 33},
-     "scenery": ["崖に波が砕けている", "灯台の光が見える"]},
-    {"id": "rocky", "type": "field", "name": "岩山", "emoji": "🪨", "level": [14, 19],
-     "monsters": ["rock_golem", "gargoyle", "harpy"], "events": {"battle": 55, "treasure": 12, "nothing": 33},
-     "scenery": ["落石の音が響く", "岩肌に鉱石が光っている"]},
-    {"id": "volcano", "type": "field", "name": "火山のふもと", "emoji": "🌋", "level": [18, 24],
-     "monsters": ["salamander", "fire_lizard", "lava_golem"], "events": {"battle": 60, "treasure": 12, "nothing": 28},
-     "scenery": ["地面が熱い", "噴煙が空を覆っている"]},
-    {"id": "snowfield", "type": "field", "name": "雪原", "emoji": "❄️", "level": [20, 26],
-     "monsters": ["snow_wolf", "yeti"], "events": {"battle": 55, "treasure": 12, "nothing": 33},
-     "scenery": ["吹雪で前が見えない", "足跡が雪に消えていく"]},
-    {"id": "ice_valley", "type": "field", "name": "氷の谷", "emoji": "🧊", "level": [25, 32],
-     "monsters": ["yeti", "ice_witch", "frost_giant"], "events": {"battle": 60, "treasure": 14, "nothing": 26},
-     "scenery": ["氷柱が青く光っている", "谷底から冷気が吹き上げる"]}
+ "starts": [
+  "silwen",
+  "vike",
+  "linde",
+  "fajil",
+  "rowen",
+  "eques"
+ ],
+ "layout": {
+  "size": [
+   1600,
+   1000
   ],
-  "roads": [
-    {"from": "town_hajimari", "to": "north_plain", "distance": 1},
-    {"from": "town_hajimari", "to": "east_hill", "distance": 1},
-    {"from": "north_plain", "to": "old_road", "distance": 1},
-    {"from": "old_road", "to": "town_mori", "distance": 1},
-    {"from": "east_hill", "to": "beach", "distance": 2},
-    {"from": "beach", "to": "town_minato", "distance": 1},
-    {"from": "town_mori", "to": "lost_forest", "distance": 1},
-    {"from": "town_mori", "to": "beach", "distance": 2},
-    {"from": "town_minato", "to": "cape", "distance": 1},
-    {"from": "lost_forest", "to": "rocky", "distance": 2},
-    {"from": "cape", "to": "rocky", "distance": 2},
-    {"from": "rocky", "to": "town_kouzan", "distance": 1},
-    {"from": "town_kouzan", "to": "volcano", "distance": 1},
-    {"from": "town_kouzan", "to": "snowfield", "distance": 2},
-    {"from": "snowfield", "to": "town_yuki", "distance": 1},
-    {"from": "town_yuki", "to": "ice_valley", "distance": 1}
-  ]
+  "background": "map-base.svg"
+ },
+ "places": [
+  {
+   "id": "aurea",
+   "type": "town",
+   "name": "アウレア",
+   "alias": "王都",
+   "region": "黄金平原",
+   "emoji": "🏰",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor","iron_sword","chain_mail","lucky_charm","steel_sword","steel_armor"],
+   "pos": [850,495]
+  },
+  {
+   "id": "flumen",
+   "type": "town",
+   "name": "フルメン",
+   "alias": "河港",
+   "region": "大河の三角州",
+   "emoji": "⚓",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor","iron_sword","chain_mail","lucky_charm"],
+   "pos": [926,426],
+   "label": "left"
+  },
+  {
+   "id": "caelum",
+   "type": "town",
+   "name": "カエルム",
+   "alias": "天門の町",
+   "region": "竜骨山脈・天の頂のふもと",
+   "emoji": "🗻",
+   "shop": ["iron_sword","chain_mail","lucky_charm","steel_sword","steel_armor"],
+   "pos": [905,352],
+   "label": "right"
+  },
+  {
+   "id": "silwen",
+   "type": "town",
+   "name": "シルウェン",
+   "alias": "古木の町",
+   "region": "古の大森林",
+   "emoji": "🌳",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor"],
+   "pos": [381,234]
+  },
+  {
+   "id": "vike",
+   "type": "town",
+   "name": "ヴィーケ",
+   "alias": "北の漁村",
+   "region": "中央大陸の北の海岸",
+   "emoji": "🐟",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor"],
+   "pos": [650,238]
+  },
+  {
+   "id": "morna",
+   "type": "town",
+   "name": "モルナ",
+   "alias": "霧沼の村",
+   "region": "霧の大湿原",
+   "emoji": "🛖",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor","iron_sword","chain_mail","lucky_charm"],
+   "pos": [300,452]
+  },
+  {
+   "id": "durgan",
+   "type": "town",
+   "name": "ドゥルガン",
+   "alias": "鋼山の町",
+   "region": "竜骨山脈の西のふもと",
+   "emoji": "⚒️",
+   "shop": ["iron_sword","chain_mail","lucky_charm","steel_sword","steel_armor"],
+   "pos": [640,482]
+  },
+  {
+   "id": "cocora",
+   "type": "town",
+   "name": "ココラ",
+   "alias": "椰子の港",
+   "region": "熱帯の半島",
+   "emoji": "🌴",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor","iron_sword","chain_mail","lucky_charm"],
+   "pos": [600,646]
+  },
+  {
+   "id": "kazal",
+   "type": "town",
+   "name": "カザル",
+   "alias": "風巻きの宿",
+   "region": "風の草原",
+   "emoji": "🏕️",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor","iron_sword","chain_mail","lucky_charm"],
+   "pos": [1070,330]
+  },
+  {
+   "id": "linde",
+   "type": "town",
+   "name": "リンデ",
+   "alias": "湖畔の村",
+   "region": "湖沼地帯",
+   "emoji": "🛶",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor"],
+   "pos": [1235,280]
+  },
+  {
+   "id": "isval",
+   "type": "town",
+   "name": "イスヴァル",
+   "alias": "氷牙の砦",
+   "region": "氷牙山地",
+   "emoji": "🧊",
+   "shop": ["iron_sword","chain_mail","lucky_charm","steel_sword","steel_armor"],
+   "pos": [1185,150],
+   "label": "right"
+  },
+  {
+   "id": "yarka",
+   "type": "town",
+   "name": "ヤルカ",
+   "alias": "凍土の集落",
+   "region": "中央大陸の北の凍土",
+   "emoji": "❄️",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor","iron_sword","chain_mail","lucky_charm"],
+   "pos": [300,82]
+  },
+  {
+   "id": "zafra",
+   "type": "town",
+   "name": "ザフラ",
+   "alias": "オアシスの町",
+   "region": "灼熱の大砂漠",
+   "emoji": "🏺",
+   "shop": ["iron_sword","chain_mail","lucky_charm"],
+   "pos": [1195,470]
+  },
+  {
+   "id": "fajil",
+   "type": "town",
+   "name": "ファジル",
+   "alias": "暁の港",
+   "region": "東の草原の海岸",
+   "emoji": "🌅",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor"],
+   "pos": [1220,590]
+  },
+  {
+   "id": "yashum",
+   "type": "town",
+   "name": "ヤシュム",
+   "alias": "雨林の村",
+   "region": "東の雨林",
+   "emoji": "🌿",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor","iron_sword","chain_mail","lucky_charm"],
+   "pos": [1460,420]
+  },
+  {
+   "id": "astol",
+   "type": "town",
+   "name": "アストル",
+   "alias": "霧氷の修道院",
+   "region": "霧氷の半島",
+   "emoji": "🔭",
+   "shop": ["iron_sword","chain_mail","lucky_charm"],
+   "pos": [735,165]
+  },
+  {
+   "id": "urka",
+   "type": "town",
+   "name": "ウルカ",
+   "alias": "蔦の集落",
+   "region": "西の密林",
+   "emoji": "🍃",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor","iron_sword","chain_mail","lucky_charm"],
+   "pos": [94,563]
+  },
+  {
+   "id": "rubela",
+   "type": "town",
+   "name": "ルベラ",
+   "alias": "赤岩の鉱山町",
+   "region": "赤い荒野",
+   "emoji": "💎",
+   "shop": ["iron_sword","chain_mail","lucky_charm","steel_sword","steel_armor"],
+   "pos": [150,668]
+  },
+  {
+   "id": "novaris",
+   "type": "town",
+   "name": "ノヴァリス",
+   "alias": "西の港",
+   "region": "西大陸の東の海岸",
+   "emoji": "⛵",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor","iron_sword","chain_mail","lucky_charm"],
+   "pos": [330,772]
+  },
+  {
+   "id": "rowen",
+   "type": "town",
+   "name": "ロウエン",
+   "alias": "南の森の村",
+   "region": "南の森",
+   "emoji": "🏹",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor"],
+   "pos": [175,835]
+  },
+  {
+   "id": "salina",
+   "type": "town",
+   "name": "サリナ",
+   "alias": "干潟の港",
+   "region": "南の干潟",
+   "emoji": "🐚",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor","iron_sword","chain_mail","lucky_charm"],
+   "pos": [880,728]
+  },
+  {
+   "id": "eques",
+   "type": "town",
+   "name": "エクエス",
+   "alias": "大草原の町",
+   "region": "南の大草原",
+   "emoji": "🐎",
+   "shop": ["wooden_sword","copper_sword","cloth_armor","leather_armor"],
+   "pos": [820,830]
+  },
+  {
+   "id": "muralis",
+   "type": "town",
+   "name": "ムラリス",
+   "alias": "南壁の砦",
+   "region": "南壁山脈",
+   "emoji": "🛡️",
+   "shop": ["iron_sword","chain_mail","lucky_charm","steel_sword","steel_armor"],
+   "pos": [1103,740]
+  },
+  {
+   "id": "homura",
+   "type": "town",
+   "name": "ホムラ",
+   "alias": "焔の湯治場",
+   "region": "炎の列島",
+   "emoji": "♨️",
+   "shop": ["iron_sword","chain_mail","lucky_charm","steel_sword","steel_armor"],
+   "pos": [1384,780],
+   "label": "left"
+  },
+  {
+   "id": "dragon_skull",
+   "type": "dungeon",
+   "name": "始祖竜の頭骨",
+   "region": "天の頂",
+   "pos": [850,318],
+   "label": "up"
+  },
+  {
+   "id": "jade_tomb",
+   "type": "dungeon",
+   "name": "翠国の王墓",
+   "region": "灼熱の大砂漠",
+   "pos": [1240,505]
+  },
+  {
+   "id": "heart_crater",
+   "type": "dungeon",
+   "name": "竜の心臓の火口",
+   "region": "炎の列島",
+   "pos": [1405,745],
+   "label": "up"
+  },
+  {
+   "id": "sunken_temple",
+   "type": "dungeon",
+   "name": "沈んだ神殿",
+   "region": "霧の大湿原",
+   "pos": [282,487]
+  },
+  {
+   "id": "ice_cave",
+   "type": "dungeon",
+   "name": "氷牙の氷窟",
+   "region": "氷牙山地",
+   "pos": [1140,117],
+   "label": "left"
+  },
+  {
+   "id": "root_hollow",
+   "type": "dungeon",
+   "name": "古木の根の洞",
+   "region": "古の大森林",
+   "pos": [290,210],
+   "label": "up"
+  }
+ ],
+ "roads": [
+  {
+   "from": "aurea",
+   "to": "flumen",
+   "distance": 1,
+   "kind": "land",
+   "terrain": [["plain",81],["wetland",10]],
+   "path": [[851,495],[875,471],[883,471],[927,427]]
+  },
+  {
+   "from": "aurea",
+   "to": "durgan",
+   "distance": 7,
+   "kind": "land",
+   "terrain": [["plain",68],["mountain",18],["jungle",12]],
+   "path": [[851,495],[763,489],[759,485],[709,485],[679,459],[653,461],[641,473],[641,483]]
+  },
+  {
+   "from": "aurea",
+   "to": "cocora",
+   "distance": 6,
+   "kind": "land",
+   "terrain": [["plain",57],["jungle",34]],
+   "path": [[851,495],[763,581],[741,581],[723,599],[701,599],[697,603],[703,623],[701,635],[683,653],[655,653],[637,667],[627,669],[601,647]]
+  },
+  {
+   "from": "flumen",
+   "to": "caelum",
+   "distance": 2,
+   "kind": "land",
+   "terrain": [["jungle",37],["plain",25],["wetland",21],["mountain",13]],
+   "path": [[927,427],[915,417],[919,413],[919,399],[905,385],[905,353]]
+  },
+  {
+   "from": "flumen",
+   "to": "fajil",
+   "distance": 6,
+   "kind": "land",
+   "terrain": [["plain",51],["desert",24],["jungle",20]],
+   "path": [[927,427],[927,435],[989,493],[997,493],[1007,501],[1023,501],[1031,507],[1051,501],[1075,501],[1125,551],[1135,555],[1185,555],[1221,591]]
+  },
+  {
+   "from": "caelum",
+   "to": "kazal",
+   "distance": 3,
+   "kind": "land",
+   "terrain": [["plain",62],["mountain",18],["jungle",12]],
+   "path": [[905,353],[933,333],[975,333],[979,329],[987,333],[1071,331]]
+  },
+  {
+   "from": "caelum",
+   "to": "astol",
+   "distance": 7,
+   "kind": "land",
+   "terrain": [["plain",37],["forest",32],["mountain",15],["jungle",10]],
+   "path": [[905,353],[907,325],[901,317],[877,299],[791,211],[775,209],[735,165]]
+  },
+  {
+   "from": "silwen",
+   "to": "vike",
+   "distance": 4,
+   "kind": "land",
+   "terrain": [["forest",56],["plain",43]],
+   "path": [[381,235],[613,235],[625,241],[651,239]]
+  },
+  {
+   "from": "silwen",
+   "to": "morna",
+   "distance": 5,
+   "kind": "land",
+   "terrain": [["forest",38],["plain",33],["wetland",28]],
+   "path": [[381,235],[379,271],[395,283],[395,291],[403,303],[401,327],[369,359],[351,367],[349,377],[325,401],[325,421],[307,435],[307,447],[301,453]]
+  },
+  {
+   "from": "silwen",
+   "to": "yarka",
+   "distance": 4,
+   "kind": "land",
+   "terrain": [["forest",39],["mountain",34],["snow",27]],
+   "path": [[381,235],[377,227],[331,181],[331,113],[301,83]]
+  },
+  {
+   "from": "vike",
+   "to": "durgan",
+   "distance": 4,
+   "kind": "land",
+   "terrain": [["plain",59],["forest",20],["jungle",15]],
+   "path": [[651,239],[651,247],[635,263],[635,275],[621,289],[621,439],[623,455],[641,473],[641,483]]
+  },
+  {
+   "from": "vike",
+   "to": "astol",
+   "distance": 2,
+   "kind": "land",
+   "terrain": [["plain",60],["forest",35]],
+   "path": [[651,239],[709,241],[735,213],[735,165]]
+  },
+  {
+   "from": "kazal",
+   "to": "linde",
+   "distance": 3,
+   "kind": "land",
+   "terrain": [["plain",66],["wetland",19],["forest",14]],
+   "path": [[1071,331],[1095,307],[1111,307],[1133,287],[1181,285],[1189,281],[1235,281]]
+  },
+  {
+   "from": "kazal",
+   "to": "zafra",
+   "distance": 4,
+   "kind": "land",
+   "terrain": [["desert",47],["plain",44]],
+   "path": [[1071,331],[1095,355],[1127,377],[1143,393],[1145,421],[1195,471]]
+  },
+  {
+   "from": "linde",
+   "to": "isval",
+   "distance": 6,
+   "kind": "land",
+   "terrain": [["forest",37],["wetland",17],["mountain",17],["plain",16],["snow",13]],
+   "path": [[1235,281],[1235,235],[1223,223],[1213,203],[1175,163],[1177,155],[1185,151]]
+  },
+  {
+   "from": "zafra",
+   "to": "fajil",
+   "distance": 3,
+   "kind": "land",
+   "terrain": [["desert",72],["plain",28]],
+   "path": [[1195,471],[1195,485],[1205,495],[1209,579],[1221,591]]
+  },
+  {
+   "from": "fajil",
+   "to": "yashum",
+   "distance": 8,
+   "kind": "land",
+   "terrain": [["jungle",44],["desert",35],["plain",22]],
+   "path": [[1221,591],[1221,579],[1235,565],[1247,559],[1251,559],[1271,579],[1285,583],[1321,583],[1329,575],[1345,575],[1371,541],[1371,511],[1461,421]]
+  },
+  {
+   "from": "urka",
+   "to": "rubela",
+   "distance": 2,
+   "kind": "land",
+   "terrain": [["desert",44],["plain",35],["jungle",22]],
+   "path": [[95,563],[95,601],[131,637],[131,649],[151,669]]
+  },
+  {
+   "from": "rubela",
+   "to": "rowen",
+   "distance": 4,
+   "kind": "land",
+   "terrain": [["forest",55],["desert",31]],
+   "path": [[151,669],[151,811],[175,835]]
+  },
+  {
+   "from": "novaris",
+   "to": "rowen",
+   "distance": 5,
+   "kind": "land",
+   "terrain": [["forest",63],["mountain",16],["plain",13]],
+   "path": [[331,773],[315,773],[303,785],[279,785],[245,819],[245,837],[227,855],[217,847],[213,851],[215,867],[201,877],[191,877],[187,873],[185,845],[175,835]]
+  },
+  {
+   "from": "salina",
+   "to": "eques",
+   "distance": 2,
+   "kind": "land",
+   "terrain": [["plain",83],["wetland",17]],
+   "path": [[881,729],[877,775],[821,831]]
+  },
+  {
+   "from": "salina",
+   "to": "muralis",
+   "distance": 6,
+   "kind": "land",
+   "terrain": [["plain",68],["wetland",15],["mountain",13]],
+   "path": [[881,729],[881,749],[903,755],[935,755],[937,751],[1045,751],[1053,743],[1063,743],[1073,737],[1087,753],[1091,753],[1103,741]]
+  },
+  {
+   "from": "dragon_skull",
+   "to": "caelum",
+   "distance": 5,
+   "kind": "trail",
+   "terrain": [["mountain",41],["jungle",25],["plain",11],["forest",11]],
+   "path": [[851,319],[851,329],[875,355],[901,357],[905,353]]
+  },
+  {
+   "from": "jade_tomb",
+   "to": "zafra",
+   "distance": 2,
+   "kind": "trail",
+   "terrain": [["desert",100]],
+   "path": [[1241,505],[1221,489],[1215,489],[1195,471]]
+  },
+  {
+   "from": "heart_crater",
+   "to": "homura",
+   "distance": 1,
+   "kind": "trail",
+   "terrain": [["volcano",53],["plain",38]],
+   "path": [[1405,745],[1405,755],[1409,759],[1385,781]]
+  },
+  {
+   "from": "sunken_temple",
+   "to": "morna",
+   "distance": 1,
+   "kind": "trail",
+   "terrain": [["wetland",89],["plain",11]],
+   "path": [[283,487],[295,471],[295,459],[301,453]]
+  },
+  {
+   "from": "ice_cave",
+   "to": "isval",
+   "distance": 5,
+   "kind": "trail",
+   "terrain": [["mountain",36],["forest",30],["snow",23],["plain",11]],
+   "path": [[1141,117],[1145,109],[1157,109],[1173,119],[1191,143],[1185,151]]
+  },
+  {
+   "from": "root_hollow",
+   "to": "silwen",
+   "distance": 2,
+   "kind": "trail",
+   "terrain": [["forest",88]],
+   "path": [[291,211],[323,211],[343,231],[353,229],[359,235],[381,235]]
+  },
+  {
+   "from": "flumen",
+   "to": "salina",
+   "distance": 4,
+   "kind": "sea",
+   "terrain": [["sea",100]],
+   "path": [[926,426],[929,419],[957,419],[961,423],[991,423],[1017,449],[1017,463],[1023,471],[1023,479],[1043,499],[1043,503],[1045,505],[1045,529],[895,679],[895,687],[887,695],[887,717],[881,725],[880,728]]
+  },
+  {
+   "from": "cocora",
+   "to": "novaris",
+   "distance": 3,
+   "kind": "sea",
+   "terrain": [["sea",100]],
+   "path": [[600,646],[615,669],[615,685],[611,689],[609,689],[593,705],[589,707],[573,707],[565,715],[415,715],[361,769],[347,769],[343,773],[337,773],[330,772]]
+  },
+  {
+   "from": "fajil",
+   "to": "homura",
+   "distance": 4,
+   "kind": "sea",
+   "terrain": [["sea",100]],
+   "path": [[1220,590],[1223,593],[1225,597],[1225,613],[1219,619],[1219,639],[1221,641],[1359,641],[1369,651],[1371,651],[1447,727],[1447,737],[1467,757],[1467,763],[1463,767],[1445,771],[1435,779],[1415,789],[1409,789],[1399,795],[1385,795],[1379,789],[1384,780]]
+  }
+ ]
 }

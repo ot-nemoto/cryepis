@@ -1,1 +1,4 @@
 __pycache__/
+
+# 地図づくりの途中のファイル（tools/worldgen/make.py）
+tools/worldgen/.cache/
