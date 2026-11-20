@@ -42,7 +42,7 @@ BIG = 10 ** 9
 # season.json の必須項目: 名前 → (型, 最小, 最大)
 SEASON_KEYS = {
     "months": (int, 1, 120), "actions_per_day": (int, 1, 50), "rest_heal_rate": (float, 0, 1), "retreat_hp_rate": (float, 0, 1),
-    "board_size": (int, 1, 50), "deliver_range": (int, 1, BIG),
+    "board_size": (int, 1, 50), "quest_open_days": (int, 1, 30), "deliver_range": (int, 1, BIG),
     "balance_level": (int, 1, BIG),
     "item_power_rate": (float, 0.01, BIG),
 }

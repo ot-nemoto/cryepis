@@ -205,21 +205,26 @@ class QuestTest(unittest.TestCase):
         self.assertEqual(state["quest"]["type"], "patrol")  # 受けられる依頼が尽きたら見回り
 
     def test_quests_taken_by_others_cannot_be_taken(self):
-        guild = {}
+        guild = G.new_guild()
         a, b = play(1, "a", actions=0), play(1, "b", actions=0)
         town = a["place"]
         b["place"] = town
-        quests = G.board(WORLD, town, START, 1)
-        self.assertEqual(len(quests), G.quests_per_day(WORLD, town))
+        G.refresh_guild(WORLD, guild, START, 1)
+        posted = [e["id"] for e in guild["towns"][town]]
+        self.assertEqual(len(posted), G.quests_per_day(WORLD, town))
+        a["hero"]["level"] = b["hero"]["level"] = 99
         ids = []
-        for state in [a, b] * len(quests):
-            if len(ids) == len(quests):
+        for state in [a, b] * len(posted):
+            if len(ids) == len(posted):
                 break
             state["quest"] = None
             G.Day(WORLD, state, START, random.Random(len(ids)), guild).take_quest(town)
             ids.append(state["quest"]["id"])
-        self.assertEqual(sorted(ids), sorted(q["id"] for q in quests))  # 全部の依頼が 1 度ずつ受けられた
-        self.assertEqual(set(guild), set(ids))
+        self.assertEqual(sorted(ids), sorted(posted))  # 全部の依頼が 1 度ずつ受けられた
+        held = {e["id"]: e["holder"] for e in guild["towns"][town]}
+        self.assertEqual(set(held.values()), {"a", "b"})
+        self.assertTrue(all(e["status"] == "held" for e in guild["towns"][town]))
+        self.assertTrue(all(k not in a["quest"] for k in G.GUILD_FIELDS))  # 勇者の依頼には掲示板の項目を持たせない
         a["quest"] = None
         day = G.Day(WORLD, a, START, random.Random(0), guild)
         day.take_quest(town)  # もう残っていない
@@ -576,6 +581,89 @@ class BalanceTest(unittest.TestCase):
 
     def test_heroes_drift_apart(self):
         self.assertGreater(len({s["place"] for s in self.results}), 2)
+
+
+class GuildBoardTest(unittest.TestCase):
+    TOWN = "aurea"
+
+    def setUp(self):
+        self.guild = G.new_guild()
+        G.refresh_guild(WORLD, self.guild, START, 1)
+        self.board = self.guild["towns"][self.TOWN]
+
+    def next_day(self, n=1):
+        G.refresh_guild(WORLD, self.guild, START + timedelta(days=n), 1)
+        self.board = self.guild["towns"][self.TOWN]
+        return {e["id"]: e for e in self.board}
+
+    def test_every_town_is_filled(self):
+        for town in WORLD["towns"]:
+            board = self.guild["towns"][town]
+            self.assertLessEqual(len(board), G.quests_per_day(WORLD, town))
+            self.assertGreaterEqual(len(board), 1)
+            tids = [e["template"] for e in board if e["template"] in {q["id"] for q in WORLD["town_quests"].get(town, [])}]
+            self.assertEqual(len(tids), len(set(tids)))  # 同じ町の依頼は同時に 1 つだけ
+
+    def test_open_quests_stay_until_the_open_days_end(self):
+        days = WORLD["season"]["quest_open_days"]
+        first = {e["id"] for e in self.board}
+        self.assertEqual(G.last_open_day(WORLD, self.board[0]), START + timedelta(days=days - 1))
+        self.assertEqual(set(self.next_day(days - 1)) & first, first)  # 最後の日まで残る
+        self.assertFalse(set(self.next_day(days)) & first)  # 次の日に入れ替わる
+        self.assertEqual(len(self.board), G.quests_per_day(WORLD, self.TOWN))
+
+    def test_refresh_once_a_day(self):
+        self.board[0]["status"] = "done"
+        G.refresh_guild(WORLD, self.guild, START, 1)  # 同じ日は貼り替えない
+        self.assertEqual(self.guild["towns"][self.TOWN][0]["status"], "done")
+
+    def test_held_quests_stay_and_done_ones_are_replaced_the_next_day(self):
+        held, done = self.board[0], self.board[1]
+        held.update(status="held", holder="h1")
+        done.update(status="done", holder="h2")
+        board = self.next_day(10)
+        self.assertIn(held["id"], board)  # 受注中はずっと残る
+        self.assertNotIn(done["id"], board)
+        self.assertEqual(len(board), G.quests_per_day(WORLD, self.TOWN))
+
+    def test_failed_quests_come_back_the_next_day(self):
+        failed = self.board[0]
+        failed.update(status="failed", holder="h1")
+        board = self.next_day(2)
+        back = board[failed["id"]]
+        self.assertEqual((back["status"], back["holder"], back["returned"]), ("open", None, True))
+        self.assertEqual(back["posted"], (START + timedelta(days=2)).isoformat())  # 受付の日数は戻った日から数える
+
+    def test_report_and_fall_settle_the_board(self):
+        state = play(1, "h1", actions=0)
+        state["place"], state["hero"]["level"] = self.TOWN, 99
+        day = G.Day(WORLD, state, START, random.Random(0), self.guild)
+        day.take_quest(self.TOWN)
+        entry = G.guild_entry(self.guild, state["quest"])
+        self.assertEqual((entry["status"], entry["holder"]), ("held", "h1"))
+        day.fall()
+        self.assertEqual(entry["status"], "failed")
+        state["quest"], state["taken"] = None, []
+        day.take_quest(self.TOWN)
+        entry = G.guild_entry(self.guild, state["quest"])
+        state["quest"]["progress"] = state["quest"]["count"]
+        day.report(state["quest"])
+        self.assertEqual(entry["status"], "done")
+
+    def test_release_orphans(self):
+        a, b, c = self.board[:3]
+        a.update(status="held", holder="h1")
+        b.update(status="held", holder="h2")
+        c.update(status="held", holder="h3")
+        states = {"h1": {"quest": {"id": a["id"]}}, "h2": {"quest": None}}
+        self.assertEqual(G.release_orphans(self.guild, states, keep={"h3"}), 1)
+        self.assertEqual([a["status"], b["status"], c["status"]], ["held", "failed", "held"])
+
+    def test_new_season_reposts_everything(self):
+        self.board[0].update(status="held", holder="h1")
+        G.refresh_guild(WORLD, self.guild, START + timedelta(days=1), 2)
+        self.assertTrue(all(e["status"] == "open" for e in self.guild["towns"][self.TOWN]))
+        self.assertEqual(self.guild["season"], 2)
 
 
 if __name__ == "__main__":

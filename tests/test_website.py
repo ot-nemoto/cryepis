@@ -22,7 +22,7 @@ DAY = date.fromisoformat(WORLD["season"]["start"])
 def party(n=3, days=5):
     """n 人の勇者を、ギルドを共有して days 日進める。(entries, guild, 最後の日)"""
     entries = [({"id": f"h{i}", "name": f"勇者{i}"}, game.new_state(WORLD, f"h{i}", f"勇者{i}")) for i in range(1, n + 1)]
-    guild = {}
+    guild = game.new_guild()
     for k in range(days):
         for _, state in entries:
             game.advance(WORLD, state, DAY + timedelta(days=k), None, guild)
@@ -95,11 +95,20 @@ class SiteTest(unittest.TestCase):
     def test_guild_shows_who_took_todays_quests(self):
         entries, guild, today = party(4, 3)
         html = website.build_guild(WORLD, entries, today, guild)
-        for qid, hid in guild.items():
-            if qid.startswith(today.isoformat()):
-                self.assertIn(f'<a class="taken" href="heroes/{hid}.html">', html)
-        total = sum(game.quests_per_day(WORLD, t) for t in WORLD["towns"])
-        self.assertGreaterEqual(html.count("<tr><td class=\"mark\">"), total - 5)  # 配達先がない枠だけ欠ける
+        held = [e for es in guild["towns"].values() for e in es if e["status"] == "held"]
+        self.assertTrue(held)
+        for e in held:
+            self.assertIn(f'<span class="taken">受注中</span> <a href="heroes/{e["holder"]}.html">', html)
+        total = sum(len(es) for es in guild["towns"].values())
+        self.assertEqual(html.count("<tr><td class=\"mark\">"), total)
+        days = WORLD["season"]["quest_open_days"]
+        last = today + timedelta(days=days - 1)
+        self.assertIn(f"あと {days - 1} 日（{last.month}/{last.day} まで）", html)  # 今日貼られた依頼
+
+    def test_guild_before_anyone_played(self):
+        html = website.build_guild(WORLD, [], DAY, game.new_guild())
+        self.assertIn('<span class="open">受付中</span>', html)
+        self.assertNotIn('<span class="taken">受注中</span>', html)
         for p in (WORLD["places"][t] for t in WORLD["towns"]):
             self.assertIn(p["name"], html)
 

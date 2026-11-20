@@ -4,7 +4,7 @@
 ページ:
   index.html          世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、勇者の一覧
-  guild.html          町ごとのギルドの、今日の依頼と、受けた勇者
+  guild.html          町ごとのギルドの掲示板（受付中・あと何日 / 受注中の勇者 / 達成・失敗）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
 
 データは .state/（勇者の状態・ギルドの受けられた依頼）と world/ から読む。
@@ -65,6 +65,7 @@ th{color:var(--sub);font-weight:normal;font-size:13px;white-space:nowrap}
 .mark{color:#b7791f;white-space:nowrap;width:5em}
 .taken{color:var(--hero);white-space:nowrap}
 .free{color:var(--sub);white-space:nowrap}
+.open{color:#15803d;white-space:nowrap}
 pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;
 font:13.5px/1.6 ui-monospace,'SFMono-Regular',Menlo,Consolas,'Noto Sans Mono CJK JP',monospace;white-space:pre-wrap}
 #map{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6efdc;
@@ -178,38 +179,53 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
 
 
 # ---- ギルド -------------------------------------------------------------------------------
+def guild_status(world: dict, e: dict, today: date, heroes: dict[str, tuple[dict, dict]]) -> str:
+    """掲示板の依頼の状態（受付中・あと何日 / 受注中・誰が・進み具合 / 達成 / 失敗）。"""
+    who = heroes.get(e.get("holder"))
+    name = (f'<a href="{hero_href(e["holder"])}">{escape(who[0]["name"])}</a>' if who
+            else escape(e.get("holder") or ""))
+    if e["status"] == "held":
+        quest = (who[1]["quest"] if who else None) or e
+        return f'<span class="taken">受注中</span> {name}<div class="note">{quest["progress"]}/{quest["count"]}</div>'
+    if e["status"] == "done":
+        return f'<span class="free">達成</span> {name}<div class="note">明日入れ替え</div>'
+    if e["status"] == "failed":
+        return f'<span class="taken">失敗</span> {name}<div class="note">明日また受付</div>'
+    last = game.last_open_day(world, e)
+    left = (last - today).days
+    when = f"あと {left} 日（{last.month}/{last.day} まで）" if left > 0 else "今日まで（明日入れ替え）"
+    return f'<span class="open">受付中</span><div class="note">{when}</div>'
+
+
 def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guild: dict) -> str:
-    """町ごとの、今日の依頼の掲示板と、受けた勇者（早い者勝ち）。"""
-    season = game.season_of(world, today)
-    names = {h["id"]: h["name"] for h, _ in entries}
-    places = world["places"]
-    body = [f"<h2>町のギルドの依頼（{today.isoformat()}）</h2>",
-            '<p class="note">依頼は町ごとに毎日決まった数だけ出て、早い者勝ちです（ほかの勇者が受けた依頼は受けられません）。'
-            "勇者は 1 日に 1 つ依頼を受け、必要な行動力を使ってこなします。</p>"]
+    """町ごとのギルドの掲示板（日をまたいで残る）と、受けた勇者（早い者勝ち）。"""
+    if not guild.get("towns"):  # まだ誰も進めていない: その日の朝の掲示板を見せる
+        guild = game.new_guild()
+        game.refresh_guild(world, guild, today, game.season_of(world, today))
+    heroes = {h["id"]: (h, s) for h, s in entries}
+    places, days = world["places"], world["season"]["quest_open_days"]
+    body = [f"<h2>町のギルドの掲示板（{today.isoformat()}）</h2>",
+            '<p class="note">町ごとに決まった数の依頼が貼られていて、早い者勝ちです（受注中の依頼は、ほかの勇者は受けられません）。'
+            f"誰も受けないまま {days} 日たった依頼は入れ替わります。達成された依頼は翌日に新しい依頼に入れ替わり、"
+            "失敗した依頼は翌日にまた受け付けます。勇者は 1 日に 1 つ依頼を受け、必要な行動力を使ってこなします（期限はありません）。</p>"]
     for town in world["towns"]:
         p = places[town]
         rows = []
-        for q in game.board(world, town, today, season):
-            who = guild.get(q["id"])
-            status = (f'<a class="taken" href="{hero_href(who)}">{escape(names[who])}</a>' if who in names
-                      else '<span class="taken">受注済み</span>' if who else '<span class="free">空き</span>')
-            mark, _, rest = game.quest_text(world, q).partition(" ")
+        for e in guild.get("towns", {}).get(town, []):
+            mark, _, rest = game.quest_text(world, e).partition(" ")
+            notes = ([f"「{escape(e['text'])}」"] if e.get("text") else []) + (["前の勇者が失敗した依頼"] if e.get("returned") else [])
             rows.append(f'<tr><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
-                        + (f'<div class="note">「{escape(q["text"])}」</div>' if q.get("text") else "")
-                        + f'</td><td class="num">{q["cost"]}</td>'
-                        f'<td class="num">{q["reward"]["exp"]}EXP<br>{q["reward"]["gold"]}G</td><td>{status}</td></tr>')
-        doing = "".join(f'<li><a href="{hero_href(h["id"])}">{escape(h["name"])}</a>: {escape(game.quest_text(world, s["quest"]))}'
-                        f'（{s["quest"]["progress"]}/{s["quest"]["count"]}）</li>'
-                        for h, s in entries if s["quest"] and s["quest"].get("town") == town)
+                        + "".join(f'<div class="note">{n}</div>' for n in notes)
+                        + f'</td><td class="num">{e["cost"]}</td>'
+                        f'<td class="num">{e["reward"]["exp"]}EXP<br>{e["reward"]["gold"]}G</td>'
+                        f"<td>{guild_status(world, e, today, heroes)}</td></tr>")
         here = [h for h, s in entries if s["place"] == town and not s["road"]]
         who_here = "、".join(f'<a href="{hero_href(h["id"])}">{escape(h["name"])}</a>' for h in here)
         body.append(f'<div class="card" id="{escape(town)}"><h3>{escape(p.get("emoji", ""))} {escape(p["name"])}'
                     f'<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span></h3>'
                     + (f'<div class="note">滞在中: {who_here}</div>' if who_here else "")
-                    + '<div class="scroll"><table class="wide-table"><tr><th></th><th>今日の依頼</th><th class="num">行動力</th>'
-                    '<th class="num">報酬</th><th>受けた勇者</th></tr>' + "".join(rows) + "</table></div>"
-                    + (f'<div class="note">このギルドの依頼をこなしている勇者:</div><ul>{doing}</ul>' if doing else "")
-                    + "</div>")
+                    + '<div class="scroll"><table class="wide-table"><tr><th></th><th>依頼</th><th class="num">行動力</th>'
+                    '<th class="num">報酬</th><th>状態</th></tr>' + "".join(rows) + "</table></div></div>")
     return page("ギルド", "".join(body), "guild.html")
 
 
@@ -269,7 +285,7 @@ def main() -> int:
     world = rpg.load_world()
     entries = rpg.current_entries(world)
     today = date.fromisoformat(a.date) if a.date else shown_day(entries)
-    written = write_site(world, entries, today, rpg.load_guild(today), Path(a.out))
+    written = write_site(world, entries, today, rpg.load_guild(), Path(a.out))
     print(f"{a.out} に {len(written)} ファイルを書き出しました")
     return 0
 

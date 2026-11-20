@@ -41,7 +41,7 @@ import world as W  # noqa: E402
 HEROES_PATH = common.ROOT / ".state" / "heroes.json"
 HERO_DIR = common.ROOT / ".state" / "heroes"
 BOARD_PATH = common.ROOT / ".state" / "board.json"
-GUILD_PATH = common.ROOT / ".state" / "guild.json"  # 全員で共有する「受けられた依頼」（早い者勝ち）
+GUILD_PATH = common.ROOT / ".state" / "guild.json"  # 全員で共有する、町ごとのギルドの掲示板（早い者勝ち）
 PAGE_DIR = common.ROOT / "heroes"  # 勇者ごとの詳細のページ（GitHub 上で読む）
 BOARD_FILENAME = "hero-ranking.txt"
 MAX_HEROES = 30  # 同時に冒険できる（引退していない）勇者の数
@@ -515,22 +515,29 @@ def retire(key: str) -> int:
     raise SystemExit(f"引退させられる勇者「{key}」がいません（ID か名前で、現役の勇者を指定してください）")
 
 
-def load_guild(today: date) -> dict:
-    """受けられた依頼（依頼の ID → 勇者の ID）。さかのぼって進める日より古いものは捨てる。"""
+def load_guild(path: Path | None = None) -> dict:
+    """町ごとのギルドの掲示板（日をまたいで持ち越す）。前の形式（受けられた依頼の一覧だけ）なら、新しく貼り直す。"""
+    path = path or GUILD_PATH
     try:
-        taken = json.loads(GUILD_PATH.read_text(encoding="utf-8")).get("taken", {})
+        data = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        return {}
+        return game.new_guild()
     except json.JSONDecodeError as e:
-        raise SystemExit(f"{GUILD_PATH} が JSON として読めません（マージ衝突などを確認してください）: {e}")
-    oldest = (today - timedelta(days=CATCH_UP_DAYS)).isoformat()
-    return {qid: hid for qid, hid in taken.items() if qid[:10] >= oldest}  # 依頼の ID は日付で始まる
+        raise SystemExit(f"{path} が JSON として読めません（マージ衝突などを確認してください）: {e}")
+    if not isinstance(data.get("towns"), dict):
+        return game.new_guild()
+    return {**game.new_guild(), **data}
 
 
 def save_guild(guild: dict) -> None:
+    """掲示板を保存する（毎日コミットするので、差分が読みやすいよう依頼 1 件を 1 行にする）。"""
+    one = lambda v: json.dumps(v, ensure_ascii=False, separators=(",", ":"))  # noqa: E731
+    towns = ",\n".join(f" {one(t)}: [\n" + ",\n".join(f"  {one(e)}" for e in es) + "\n ]"
+                       for t, es in guild.get("towns", {}).items())
+    head = {k: v for k, v in guild.items() if k != "towns"}
+    text = "{\n" + "".join(f" {one(k)}: {one(v)},\n" for k, v in head.items()) + ' "towns": {\n' + towns + "\n }\n}\n"
     GUILD_PATH.parent.mkdir(parents=True, exist_ok=True)
-    GUILD_PATH.write_text(json.dumps({"taken": dict(sorted(guild.items()))}, ensure_ascii=False, indent=1) + "\n",
-                          encoding="utf-8")
+    GUILD_PATH.write_text(text, encoding="utf-8")
 
 
 def load_hero(world: dict, hero: dict) -> dict:
@@ -586,8 +593,11 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
             loaded[hero["id"]] = (hero, state, pending_days(state, today))
         except (Exception, SystemExit) as e:  # noqa: BLE001
             fail(hero, e)
-    guild = load_guild(today)
+    guild = load_guild()
     errors = advance_heroes(world, loaded, today, actions, guild)
+    # 引退した勇者などが持っていた依頼は、翌日の朝に受付中に戻す（読めなかった・進められなかった勇者の依頼は残す）
+    game.release_orphans(guild, {hid: st for hid, (_, st, _) in loaded.items()},
+                         keep={h["id"] for h in heroes if h["id"] not in loaded} | set(errors))
     for hero in heroes:
         if hero["id"] not in loaded:
             continue
