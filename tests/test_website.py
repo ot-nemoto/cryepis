@@ -114,12 +114,20 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("heroes/", html.split("<main")[1])  # 受けた勇者の名前は出さない
     self.assertNotIn("滞在中", html)
     total = sum(len(es) for es in guild["towns"].values())
-    self.assertEqual(html.count("<tr data-rank="), total)
-    for town in WORLD["towns"]:  # 町とレアリティで絞り込める
-      self.assertIn(f'data-town="{town}"', html)
-      self.assertIn(f'<button type="button" class="chip" data-town="{town}" aria-pressed="false">', html)
-    self.assertEqual(html.count('class="chip" data-rank='), len(WORLD["quest_ranks"]))
-    self.assertLess(html.index('f-label">町<'), html.index('f-label">レアリティ<'))  # 町が上
+    self.assertEqual(html.count("<tr data-f="), total)
+    self.assertNotIn("町ごとに決まった数の依頼", html)  # 説明文は出さない
+    self.assertNotIn('data-town="', html)  # 町の絞り込みはない
+    self.assertEqual(html.count('class="chip" data-f='), len(WORLD["quest_ranks"]))  # レアリティで絞り込める
+    self.assertIn('data-tab="austral_land" aria-selected="true" tabindex="0">南大陸</button>', html)  # 地方のタブ
+    self.assertIn('id="panel-austral_land"', html)
+    self.assertNotIn('id="panel-crownlands"', html)  # 開放した町のない地方のタブは出さない
+    for town in WORLD["towns"]:  # 町の名前に英語名を添える
+      p = WORLD["places"][town]
+      self.assertIn(f'{p["name"]} <span class="en">{p["en"]}</span>', html)
+      # 町のページの「掲示板を見る」（guild.html#町の ID）が、その地方のタブの中の掲示板を指す
+      panel = html[html.index(f'id="panel-{p["area"]}"') :]
+      panel = panel[: panel.index("</section>")]
+      self.assertIn(f'<div class="card board" id="{town}">', panel)
     days = WORLD["season"]["quest_open_days"]
     last = today + timedelta(days=days - 1)
     self.assertIn(f"あと {days - 1} 日（{last.month}/{last.day} まで）", html)  # 今日貼られた依頼
@@ -134,6 +142,19 @@ class SiteTest(unittest.TestCase):
     e = {"posted": (today - timedelta(days=10)).isoformat(), "status": "open"}
     self.assertIn("受付終了", website.guild_status(WORLD, e, today))
 
+  def test_items_page_skips_empty_kinds(self):
+    world = copy.deepcopy(WORLD)
+    for town in world["towns"]:  # 開放した地域で兜を売らず、依頼でも出ないようにする
+      p = world["places"][town]
+      p["shop"] = [i for i in p["shop"] if world["items"][i]["slot"] != "helmet"]
+    world["region_items"] = [i for i in world["region_items"] if world["items"][i]["slot"] != "helmet"]
+    for it in world["items"].values():
+      if it["slot"] == "helmet":
+        it["towns"] = []
+    html = website.build_items(world)
+    self.assertNotIn('id="tab-helmet"', html)
+    self.assertIn('id="tab-weapon"', html)
+
   def test_items_page_lists_the_open_region(self):
     html = website.build_items(WORLD)
     names = {it["name"] for it in WORLD["items"].values()}
@@ -143,9 +164,14 @@ class SiteTest(unittest.TestCase):
     }
     self.assertEqual(shown, expected)
     self.assertNotIn("戦斧", html)  # 開放していない地域の特産は出さない
-    self.assertNotIn("鎧</h3>", html)  # 鎧の部位はない
-    self.assertEqual(html.count('class="chip" data-slot='), 4)
-    self.assertLess(html.index('f-label">アイテム<'), html.index('f-label">レアリティ<'))
+    self.assertNotIn('data-tab="armor"', html)  # 鎧の部位はない
+    self.assertNotIn("data-slot=", html)  # 装備の種類の絞り込みはない
+    self.assertNotIn("手に入る装備です", html)  # 説明文は出さない
+    for slot in ("weapon", "helmet", "shield", "accessory"):  # 装備の種類ごとのタブ
+      self.assertIn(f'role="tab" id="tab-{slot}"', html)
+      self.assertIn(f'id="panel-{slot}"', html)
+    self.assertIn('data-tab="weapon" aria-selected="true" tabindex="0">武器</button>', html)
+    self.assertEqual(html.count('class="chip" data-f='), 2)  # ★ と ★★
     self.assertIn("依頼の報酬: ムラリス", html)  # ★★騎士の剣
     self.assertIn('騎兵の槍<span class="tag">特産</span>', html)
     self.assertNotIn('鋼の剣<span class="tag">特産</span>', html)  # 開放していない町でも売っている
@@ -167,12 +193,12 @@ class SiteTest(unittest.TestCase):
     self.assertLess(html.index("南大陸 <span"), html.index("王領 <span"))  # 開放した地方が先
     self.assertNotIn("オルドラの町の一覧です", html)  # 説明文は出さない
     self.assertLess(html.index("<h2>町の情報</h2>"), html.index('class="tabs"'))  # タブは見出しのすぐ下
-    self.assertIn('data-area="austral_land" aria-selected="true" tabindex="0">南大陸</button>', html)  # 最初は南大陸
+    self.assertIn('data-tab="austral_land" aria-selected="true" tabindex="0">南大陸</button>', html)  # 最初は南大陸
     for aid in WORLD["areas"]:  # 地方ごとのタブと、タブにつながる中身
       self.assertIn(f'id="tab-{aid}" aria-controls="panel-{aid}"', html)
-      self.assertIn(f'role="tabpanel" id="panel-{aid}" aria-labelledby="tab-{aid}" data-area="{aid}">', html)
+      self.assertIn(f'role="tabpanel" id="panel-{aid}" aria-labelledby="tab-{aid}" data-tab="{aid}">', html)
     self.assertIn('<div class="tabs" role="tablist" hidden>', html)  # JavaScript がなければ全部の地方を見せる
-    self.assertNotIn('data-area="crownlands" hidden', html)
+    self.assertNotIn('data-tab="crownlands" hidden', html)
     for area in WORLD["areas"].values():
       self.assertIn(f'{area["name"]} <span class="en">{area["en"]}</span>', html)
     self.assertIn('サリナ <span class="en">Salina</span>', html)
