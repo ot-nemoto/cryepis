@@ -4,7 +4,7 @@
 ページ:
   index.html          世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、勇者の一覧
-  towns.html          町の情報（全部の町を地方ごとに。地方で絞り込める。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
+  towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（アイテムの部位とレアリティで絞り込める）
   guild.html          町ごとのギルドの掲示板（受付中・あと何日 / 受けられた依頼は ACCEPTED。町とレアリティで絞り込める）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
@@ -80,7 +80,12 @@ font-size:13px;letter-spacing:.12em;transform:rotate(-8deg);opacity:.85;margin:2
 .info th{width:11em;vertical-align:top;padding-top:6px}
 .closed{opacity:.75}
 .en{font-weight:normal;font-style:italic;color:var(--sub);font-size:.85em;letter-spacing:.02em}
-h2.area{margin-top:32px}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:2px solid var(--line);margin:4px 0 14px}
+.tab{font:inherit;font-weight:bold;color:var(--sub);background:none;border:0;border-bottom:3px solid transparent;
+padding:6px 12px;margin-bottom:-2px;cursor:pointer}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:#e8833a}
+h3.area{font-size:17px;margin:6px 0 10px}
 .tag{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #e8833a;border-radius:4px;color:#c2621c;font-size:11px}
 .chip{font:inherit;font-size:14px;font-weight:bold;color:var(--ink);background:var(--card);border:1.5px solid #f0a868;
 border-radius:999px;padding:4px 14px;cursor:pointer;box-shadow:0 0 0 2px rgba(240,168,104,.15)}
@@ -277,16 +282,17 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
 
 
 # ---- 町 ---------------------------------------------------------------------------------
-# 町の絞り込み（地方。複数選べて、何も選ばなければすべて）
+# 町の地方のタブ（1 つずつ切り替える。URL の #地方の ID か #町の ID で、最初に開くタブを選べる）
 TOWNS_JS = """
-(()=>{const chips=[...document.querySelectorAll('.chip[data-area]')],clear=document.getElementById('f-clear');
-const apply=()=>{const on=new Set(chips.filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>c.dataset.area));
-document.querySelectorAll('.area-group').forEach(g=>{g.hidden=on.size>0&&!on.has(g.dataset.area);});
-clear.hidden=!on.size;};
-chips.forEach(c=>c.addEventListener('click',()=>{
-c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();}));
-clear.addEventListener('click',()=>{chips.forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
-apply();})();
+(()=>{const tabs=[...document.querySelectorAll('.tab[data-area]')],groups=[...document.querySelectorAll('.area-group')];
+const show=(id,push)=>{tabs.forEach(t=>t.setAttribute('aria-selected',t.dataset.area===id?'true':'false'));
+groups.forEach(g=>{g.hidden=g.dataset.area!==id;});
+if(push)history.replaceState(null,'',location.pathname+location.search+'#'+id);};
+tabs.forEach(t=>t.addEventListener('click',()=>show(t.dataset.area,true)));
+let raw=location.hash.slice(1);try{raw=decodeURIComponent(raw);}catch(e){}
+const town=raw&&document.getElementById(raw),group=town&&town.closest&&town.closest('.area-group');
+const first=tabs.some(t=>t.dataset.area===raw)?raw:group?group.dataset.area:tabs.length?tabs[0].dataset.area:'';
+show(first,false);if(group)town.scrollIntoView();})();
 """
 
 
@@ -337,23 +343,19 @@ def build_towns(world: dict) -> str:
                 + '<div class="scroll"><table class="info"><colgroup><col style="width:11em"><col></colgroup>'
                 + "".join(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in rows_of(town)) + "</table></div></div>")
 
-    body = ["<h2>町の情報</h2>",
-            '<p class="note">オルドラの町の一覧です（地方ごと）。勇者が行けるのは、開放した町（' +
-            "・".join(escape(places[t]["name"]) for t in world["towns"]) + "）だけです。"
-            "ギルドの規模は、掲示板に貼られる依頼の数（枠）です。特産品は、世界でその町の店だけが売る品です。</p>"]
+    body = ["<h2>町の情報</h2>"]
     groups = [(aid, a, [t for t in towns if places[t].get("area") == aid]) for aid, a in world["areas"].items()]
     groups.append(("other", {"name": "その他"}, [t for t in towns if places[t].get("area") not in world["areas"]]))
     groups = [g for g in groups if g[2]]
     groups.sort(key=lambda g: not any(t in opened for t in g[2]))  # 開放した町のある地方を先に（安定ソート）
-    chips = "".join(f'<button type="button" class="chip" data-area="{escape(aid)}" aria-pressed="false">'
-                    f'{escape(a["name"])}</button>' for aid, a, _ in groups)
-    body.append(f'<div class="filters card"><div class="f-row"><span class="f-label">地方</span>{chips}</div>'
-                '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
-                '<button type="button" id="f-clear" class="link" hidden>選択を解除</button></div></div>')
-    for aid, area, members in groups:
+    tabs = "".join(f'<button type="button" class="tab" role="tab" data-area="{escape(aid)}" '
+                   f'aria-selected="{"true" if i == 0 else "false"}">{escape(a["name"])}</button>'
+                   for i, (aid, a, _) in enumerate(groups))
+    body.append(f'<div class="tabs" role="tablist">{tabs}</div>')
+    for i, (aid, area, members) in enumerate(groups):  # JavaScript がなくても、最初の地方だけは見える
         en = f' <span class="en">{escape(area["en"])}</span>' if area.get("en") else ""
-        body.append(f'<section class="area-group" data-area="{escape(aid)}"><h2 class="area">{escape(area["name"])}{en}</h2>'
-                    + "".join(card(t) for t in members) + "</section>")
+        body.append(f'<section class="area-group" role="tabpanel" data-area="{escape(aid)}"' + ("" if i == 0 else " hidden")
+                    + f'><h3 class="area">{escape(area["name"])}{en}</h3>' + "".join(card(t) for t in members) + "</section>")
     return page("町", "".join(body), "towns.html", script=TOWNS_JS)
 
 
