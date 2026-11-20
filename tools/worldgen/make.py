@@ -13,6 +13,7 @@
 町・ダンジョン・航路は places.py、町の名前は names.py、町の店や ID は build_world.py、
 山脈・地域・川は terrain.py に書いてある。乱数の種が同じなら、何度作り直しても同じ地図になる。
 """
+
 import pickle
 import sys
 import time
@@ -23,32 +24,40 @@ import paths  # noqa: E402
 
 
 def step(name, fn):
-    t = time.time()
-    fn()
-    print(f"  {name}: {time.time() - t:.1f} 秒")
+  t = time.time()
+  fn()
+  print(f"  {name}: {time.time() - t:.1f} 秒")
 
 
 def make_terrain():
-    import terrain
-    kind, height = terrain.generate()
-    paths.CACHE.mkdir(exist_ok=True)
-    pickle.dump({"kind": kind, "height": height, "rivers": terrain.generate.rivers}, open(paths.TERRAIN, "wb"))
+  import terrain
+
+  kind, height = terrain.generate()
+  paths.CACHE.mkdir(exist_ok=True)
+  pickle.dump({"kind": kind, "height": height, "rivers": terrain.generate.rivers}, open(paths.TERRAIN, "wb"))
 
 
 def main():
-    step("地形", make_terrain)
-    import roads
-    step("陸路", roads.main)
-    import sea
-    step("航路", sea.main)
-    import actions
-    step("行動回数", actions.main)
-    import vectorize
-    step("SVG", lambda: vectorize.main(paths.BASE_SVG))
-    import build_world
-    step("world/", build_world.main)
-    print("world/map.json と world/map-base.svg を書き出しました。python -m unittest discover -s tests で確かめてください")
+  step("地形", make_terrain)
+  import roads
+
+  step("陸路", roads.main)
+  import sea
+
+  step("航路", sea.main)
+  import actions
+
+  step("行動回数", actions.main)
+  import vectorize
+
+  step("SVG", lambda: vectorize.main(paths.BASE_SVG))
+  import build_world
+
+  step("world/", build_world.main)
+  print(
+    "world/map.json と world/map-base.svg を書き出しました。python -m unittest discover -s tests で確かめてください"
+  )
 
 
 if __name__ == "__main__":
-    main()
+  main()

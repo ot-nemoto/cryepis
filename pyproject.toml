@@ -1,0 +1,20 @@
+# Python のリンターとフォーマッター（Ruff）の設定。アプリは標準ライブラリだけで動き、Ruff は開発と CI でだけ使う。
+#   ruff check .          # リンター（--fix で直せるものは直す）
+#   ruff format .         # フォーマッター（--check で確かめるだけ）
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+indent-width = 2
+# scripts/ と tools/worldgen/ のモジュールは、sys.path に足して読み込む（import の並び順で、自分たちのモジュールとして扱う）
+src = [".", "scripts", "tools/worldgen"]
+
+[tool.ruff.lint]
+# E/W: 書き方（pycodestyle）、F: 使っていない変数・import など（Pyflakes）、I: import の並び順、
+# B: バグになりやすい書き方（flake8-bugbear）、UP: 新しい Python の書き方（pyupgrade）
+select = ["E", "W", "F", "I", "B", "UP"]
+# E501（1 行の長さ）はフォーマッターに任せる（日本語の文字列は折り返せないことがある）
+# B905（zip の strict）は、隣どうしの点を組にする zip(pts, pts[1:]) が多く、長さが違うのが正しいので使わない
+ignore = ["E501", "B905"]
+
+[tool.ruff.format]
+quote-style = "double"

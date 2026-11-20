@@ -22,11 +22,17 @@ GitHub プロフィールに Pin した Gist の中身を、GitHub Actions の�
 - `.state/last-run` は keepalive 用。毎日コミットし、60 日無活動による scheduled workflow の停止を防ぐ
 - 標準ライブラリのみで動く（Python 3.12）。GitHub API・Gist の更新・表示幅の計算は `scripts/common.py` にまとめている
 
-## テスト
+## テスト・リンター・フォーマッター
 
 ```sh
-python -m unittest discover -s tests
+python -m unittest discover -s tests   # テスト（標準ライブラリだけで動く）
+pip install ruff==0.17.4               # リンターとフォーマッター（開発と CI でだけ使う）
+ruff check .                           # リンター（--fix で直せるものは直す）
+ruff format .                          # フォーマッター（インデントはスペース 2。--check で確かめるだけ）
 ```
+
+- 設定は `pyproject.toml`（Ruff）と `.editorconfig`（エディタ。インデントはスペース 2）
+- PR を作った・更新したとき（と master への push）に、CI（`.github/workflows/ci.yml`）がリンター・フォーマット・テストを確かめる
 
 ## ネタを追加するとき
 
