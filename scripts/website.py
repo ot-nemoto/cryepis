@@ -2,7 +2,8 @@
 """GitHub Pages に載せるサイト（HTML）を書き出す。冒険は進めない（今の状態を見せるだけ）。
 
 ページ:
-  index.html          世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
+  index.html          ストーリー（world/story.md の物語・世界・歴史と、いまの冒険の状況）
+  map.html            世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、勇者の一覧
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
@@ -34,9 +35,11 @@ import mapsvg  # noqa: E402
 import rpg  # noqa: E402
 import world as W  # noqa: E402
 
-TITLE = "オルドラ冒険記"
+TITLE = "クリエピス戦記"
+STORY_PATH = W.WORLD_DIR / "story.md"  # ストーリーのページの文（Markdown の一部だけ使える。md_html を参照）
 PAGES = (
-  ("index.html", "地図"),
+  ("index.html", "ストーリー"),
+  ("map.html", "地図"),
   ("ranking.html", "ランキング"),
   ("towns.html", "町"),
   ("guild.html", "ギルド"),
@@ -85,6 +88,10 @@ font-size:13px;letter-spacing:.12em;transform:rotate(-8deg);opacity:.85;margin:2
 .chip-mark{color:#b7791f;white-space:nowrap}
 .info th{width:11em;vertical-align:top;padding-top:6px}
 .closed{opacity:.75}
+.story-title{font-size:24px;border-left:0;padding-left:0;margin-top:12px;letter-spacing:.05em}
+p.story{line-height:2;margin:10px 0 18px}
+.story-table td:first-child{white-space:nowrap;font-weight:bold}
+ul.plain{margin:0;padding-left:1.2em}
 .en{font-weight:normal;font-style:italic;color:var(--sub);font-size:.85em;letter-spacing:.02em}
 .tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:2px solid var(--line);margin:4px 0 14px}
 .tab{font:inherit;font-weight:bold;color:var(--sub);background:none;border:0;border-bottom:3px solid transparent;
@@ -158,8 +165,90 @@ def updated(today: date) -> str:
   return f'<p class="note">{today.isoformat()} の冒険を終えた状態（毎朝 7 時すぎに更新）</p>'
 
 
+# ---- ストーリー ---------------------------------------------------------------------------
+def inline_md(text: str) -> str:
+  """1 行の中の書式（**太字** だけ）。"""
+  parts = escape(text).split("**")
+  return "".join(f"<strong>{p}</strong>" if i % 2 else p for i, p in enumerate(parts))
+
+
+def md_html(text: str) -> list[str]:
+  """Markdown のごく一部を HTML のかたまりの一覧にする: # 見出し・## 見出し・- 箇条書き・| 表 |・段落（**太字**）。
+  段落の中の改行はそのまま改行にする。"""
+  blocks: list[str] = []
+  lines = text.splitlines() + [""]
+  i = 0
+  while i < len(lines):
+    line = lines[i].rstrip()
+    if not line:
+      i += 1
+    elif line.startswith("## "):
+      blocks.append(f'<h2 class="area">{inline_md(line[3:])}</h2>')
+      i += 1
+    elif line.startswith("# "):
+      blocks.append(f'<h2 class="story-title">{inline_md(line[2:])}</h2>')
+      i += 1
+    elif line.startswith("- "):
+      items = []
+      while i < len(lines) and lines[i].startswith("- "):
+        items.append(f"<li>{inline_md(lines[i][2:].strip())}</li>")
+        i += 1
+      blocks.append(f"<ul>{''.join(items)}</ul>")
+    elif line.startswith("|"):
+      rows = []
+      while i < len(lines) and lines[i].startswith("|"):
+        cells = [c.strip() for c in lines[i].strip().strip("|").split("|")]
+        if not all(set(c) <= set("-: ") for c in cells):  # 区切りの行（|---|）は飛ばす
+          rows.append(cells)
+        i += 1
+      head, *body = rows or [[]]
+      blocks.append(
+        '<div class="scroll"><table class="story-table"><tr>'
+        + "".join(f"<th>{inline_md(c)}</th>" for c in head)
+        + "</tr>"
+        + "".join("<tr>" + "".join(f"<td>{inline_md(c)}</td>" for c in r) + "</tr>" for r in body)
+        + "</table></div>"
+      )
+    else:
+      para = []
+      while i < len(lines) and lines[i].strip() and not lines[i].startswith(("#", "- ", "|")):
+        para.append(inline_md(lines[i].strip()))
+        i += 1
+      blocks.append(f'<p class="story">{"<br>".join(para)}</p>')
+  return blocks
+
+
+def build_story(world: dict, entries: list[tuple[dict, dict]], today: date, story: str | None = None) -> str:
+  """最初のページ: 物語（world/story.md）と、いまの冒険の状況（シーズン・勇者・開放した地方と町）。"""
+  if story is None:
+    story = STORY_PATH.read_text(encoding="utf-8") if STORY_PATH.is_file() else f"# {TITLE}\n"
+  blocks = md_html(story)
+  season = game.season_of(world, today)
+  first, last = game.season_range(world, season)
+  day = "開幕前" if today < first else f"{(today - first).days + 1} 日目（{(last - first).days + 1} 日のうち）"
+  places = world["places"]
+  areas = []
+  for _, area, members in area_groups(world, world["towns"]):
+    towns = "・".join(
+      f'<a href="towns.html#{escape(t)}">{escape(places[t].get("emoji", ""))} {escape(places[t]["name"])}</a>'
+      for t in members
+    )
+    areas.append(f"<li>{name_html(area['name'], area.get('en'))}: {towns}</li>")
+  status = (
+    '<div class="card"><h3>いまの冒険</h3><table class="info"><colgroup><col style="width:11em"><col></colgroup>'
+    f"<tr><th>星の巡り</th><td>シーズン{season}（{first}〜{last}）・{day}</td></tr>"
+    f'<tr><th>旅をしている勇者</th><td>{len(entries)} 人（<a href="ranking.html">ランキング</a>）</td></tr>'
+    f'<tr><th>旅のできる地方</th><td><ul class="plain">{"".join(areas)}</ul></td></tr>'
+    "</table></div>"
+  )
+  # 物語の最初の見出し（## …）の前に、いまの冒険の状況を入れる
+  at = next((i for i, b in enumerate(blocks) if b.startswith('<h2 class="area">')), len(blocks))
+  body = blocks[:at] + [status] + blocks[at:]
+  return page("ストーリー", "".join(body), "index.html")
+
+
 # ---- 地図 -------------------------------------------------------------------------------
-def build_index(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
+def build_map(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
   svg = mapsvg.render(world, entries, links={h["id"]: hero_href(h["id"]) for h, _ in entries})
   body = [f"<h2>世界の地図</h2>{updated(today)}"]
   if svg:
@@ -184,7 +273,7 @@ def build_index(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
     )
   else:
     body.append('<p class="note">まだ勇者がいません。</p>')
-  return page("地図", "".join(body), "index.html", script=MAP_JS if svg else "")
+  return page("地図", "".join(body), "map.html", script=MAP_JS if svg else "")
 
 
 # ---- ランキング ---------------------------------------------------------------------------
@@ -558,7 +647,8 @@ def write_site(world: dict, entries: list[tuple[dict, dict]], today: date, guild
     shutil.rmtree(out)
   (out / "heroes").mkdir(parents=True)
   files = {
-    "index.html": build_index(world, entries, today),
+    "index.html": build_story(world, entries, today),
+    "map.html": build_map(world, entries, today),
     "ranking.html": build_ranking(world, entries, today),
     "guild.html": build_guild(world, entries, today, guild),
     "items.html": build_items(world),

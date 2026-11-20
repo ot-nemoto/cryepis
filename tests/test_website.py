@@ -55,6 +55,7 @@ class SiteTest(unittest.TestCase):
       rels,
       {
         "index.html",
+        "map.html",
         "ranking.html",
         "guild.html",
         "items.html",
@@ -76,7 +77,7 @@ class SiteTest(unittest.TestCase):
     (self.out / "old.html").write_text("x")
     website.write_site(WORLD, [], DAY, {}, self.out)
     self.assertFalse((self.out / "old.html").exists())
-    self.assertIn("まだ勇者がいません", (self.out / "index.html").read_text(encoding="utf-8"))
+    self.assertIn("まだ勇者がいません", (self.out / "map.html").read_text(encoding="utf-8"))
 
   def test_does_not_delete_other_directories(self):
     other = self.out.parent / "other"
@@ -99,7 +100,7 @@ class SiteTest(unittest.TestCase):
 
   def test_map_is_inline_svg_with_hero_links(self):
     entries, guild, today = party(1, 1)
-    html = website.build_index(WORLD, entries, today)
+    html = website.build_map(WORLD, entries, today)
     svg = html[html.index("<svg") : html.index("</svg>") + 6]
     root = ET.fromstring(svg)  # 正しい SVG として埋め込まれている
     links = [a.get("href") for a in root.iter("{http://www.w3.org/2000/svg}a")]
@@ -219,6 +220,34 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(keys, sorted(keys))
     self.assertEqual(names[:2], ["鋼の剣", "鉄の剣"])
 
+  def test_story_page(self):
+    entries, _, today = party(2, 2)
+    html = website.build_story(WORLD, entries, today)
+    self.assertIn("<title>ストーリー | クリエピス戦記</title>", html)
+    self.assertIn('<a href="index.html" class="on">ストーリー</a><a href="map.html">地図</a>', html)  # 地図の前
+    self.assertIn('<h2 class="story-title">クリエピス戦記</h2>', html)  # world/story.md の物語
+    self.assertIn("始祖竜", html)
+    self.assertIn("<th>時代</th>", html)  # 歴史の表
+    self.assertIn("旅をしている勇者</th><td>2 人", html)  # いまの冒険の状況
+    self.assertIn('南大陸 <span class="en">Austral Land</span>', html)
+    self.assertIn('href="towns.html#salina"', html)
+    self.assertLess(html.index("いまの冒険"), html.index('<h2 class="area">世界オルドラ'))  # 最初の見出しの前
+
+  def test_story_markdown(self):
+    blocks = website.md_html(
+      "# 題\n\n一行目\n二行目\n\n## 見出し\n\n- **太字** と <b>\n- 二つ目\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+    )
+    self.assertEqual(
+      blocks,
+      [
+        '<h2 class="story-title">題</h2>',
+        '<p class="story">一行目<br>二行目</p>',
+        '<h2 class="area">見出し</h2>',
+        "<ul><li><strong>太字</strong> と &lt;b&gt;</li><li>二つ目</li></ul>",
+        '<div class="scroll"><table class="story-table"><tr><th>a</th><th>b</th></tr><tr><td>1</td><td>2</td></tr></table></div>',
+      ],
+    )
+
   def test_guild_before_anyone_played(self):
     html = website.build_guild(WORLD, [], DAY, game.new_guild())
     self.assertIn('<span class="open">受付中</span>', html)
@@ -232,7 +261,7 @@ class SiteTest(unittest.TestCase):
     for html in (
       website.build_ranking(WORLD, [(hero, state)], DAY),
       website.build_hero(WORLD, hero, state),
-      website.build_index(WORLD, [(hero, state)], DAY),
+      website.build_map(WORLD, [(hero, state)], DAY),
     ):
       self.assertNotIn("<b>&悪", html)
       self.assertIn("&lt;b&gt;&amp;悪", html)
