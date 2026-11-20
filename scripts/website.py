@@ -4,6 +4,7 @@
 ページ:
   index.html          世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、勇者の一覧
+  towns.html          町の情報（全部の町。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（アイテムの部位とレアリティで絞り込める）
   guild.html          町ごとのギルドの掲示板（受付中・あと何日 / 受けられた依頼は ACCEPTED。町とレアリティで絞り込める）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
@@ -33,7 +34,8 @@ import rpg  # noqa: E402
 import world as W  # noqa: E402
 
 TITLE = "オルドラ冒険記"
-PAGES = (("index.html", "地図"), ("ranking.html", "ランキング"), ("guild.html", "ギルド"), ("items.html", "アイテム"))
+PAGES = (("index.html", "地図"), ("ranking.html", "ランキング"), ("towns.html", "町"), ("guild.html", "ギルド"),
+         ("items.html", "アイテム"))
 
 CSS = """
 :root{--bg:#f6efdc;--card:#fffaf0;--ink:#3f2f22;--sub:#6b5a48;--line:#d9c9a8;--accent:#7a5530;--hero:#b91c1c;
@@ -75,6 +77,10 @@ font-size:13px;letter-spacing:.12em;transform:rotate(-8deg);opacity:.85;margin:2
 .f-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .f-label{font-size:13px;color:var(--sub);width:5.5em}
 .chip-mark{color:#b7791f;white-space:nowrap}
+.info th{width:11em;vertical-align:top;padding-top:6px}
+.closed{opacity:.75}
+.en{font-weight:normal;font-style:italic;color:var(--sub);font-size:.85em;letter-spacing:.02em}
+h2.area{margin-top:32px}
 .tag{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #e8833a;border-radius:4px;color:#c2621c;font-size:11px}
 .chip{font:inherit;font-size:14px;font-weight:bold;color:var(--ink);background:var(--card);border:1.5px solid #f0a868;
 border-radius:999px;padding:4px 14px;cursor:pointer;box-shadow:0 0 0 2px rgba(240,168,104,.15)}
@@ -270,6 +276,66 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
     return page("ギルド", "".join(body), "guild.html", script=GUILD_JS)
 
 
+# ---- 町 ---------------------------------------------------------------------------------
+def build_towns(world: dict) -> str:
+    """町の情報（説明・ギルドの規模・特産品・店の品ぞろえ・依頼で出るレア・道）。全部の町を地方ごとに出し
+    （開放した町のある地方が先）、開放していない町は、特産品などを「-」にする。"""
+    places, items = world["places"], world["items"]
+    opened = set(world["towns"])
+    towns = [t for t, p in places.items() if p["type"] == "town"]
+    sellers: dict[str, int] = {}
+    for t in towns:
+        for iid in places[t].get("shop", []):
+            sellers[iid] = sellers.get(iid, 0) + 1
+
+    def label(iid: str) -> str:
+        it = items[iid]
+        return (f'<span class="chip-mark">{escape(game.rarity_mark(world, it["rarity"]))}</span>{escape(it["name"])}'
+                f'<span class="note">（{escape(rpg.item_power(it))}）</span>')
+
+    def rows_of(town: str) -> list[tuple[str, str]]:
+        size = f"依頼の枠 {game.quests_per_day(world, town)} 件"
+        if town not in opened:
+            return [("ギルドの規模", size)] + [(k, "-") for k in ("特産品", "依頼の報酬で出るレア", "店の品ぞろえ",
+                                                                 "道（行き先と行動回数）")]
+        shop = sorted(places[town].get("shop", []), key=lambda i: (-game.item_score(items[i]), i))
+        rares = sorted((i for i, it in items.items() if town in it.get("towns", [])),
+                       key=lambda i: -world["rarities"].index(items[i]["rarity"]))
+        kinds = {"land": "陸路", "sea": "航路"}
+        roads = [f'{escape(places[b]["name"])}（{kinds.get(world["road_info"][(town, b)]["kind"], "")} '
+                 f'{world["roads"][(town, b)]}）' for b in world["neighbors"][town]]
+        roads += [f'{escape(places[r["from"] if r["to"] == town else r["to"]]["name"])}（ダンジョン・まだ入れない）'
+                  for r in world["trails"] if town in (r["from"], r["to"])]
+        return [("ギルドの規模", f'{size}（<a href="guild.html#{escape(town)}">掲示板を見る</a>）'),
+                ("特産品", "<br>".join(label(i) for i in shop if sellers.get(i) == 1) or "-"),
+                ("依頼の報酬で出るレア", "<br>".join(label(i) for i in rares) or "-"),
+                ("店の品ぞろえ", "<br>".join(label(i) for i in shop) or "-"),
+                ("道（行き先と行動回数）", "・".join(roads) or "-")]
+
+    def card(town: str) -> str:
+        p, is_open = places[town], town in opened
+        en = f' <span class="en">{escape(p["en"])}</span>' if p.get("en") else ""
+        return (f'<div class="card{"" if is_open else " closed"}" id="{escape(town)}"><h3>{escape(p.get("emoji", ""))} '
+                f'{escape(p["name"])}{en}<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span>'
+                + ("" if is_open else '<span class="tag">未開放</span>') + "</h3>"
+                + (f'<p>{escape(p["text"])}</p>' if p.get("text") else "")
+                + '<div class="scroll"><table class="info"><colgroup><col style="width:11em"><col></colgroup>'
+                + "".join(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in rows_of(town)) + "</table></div></div>")
+
+    body = ["<h2>町の情報</h2>",
+            '<p class="note">オルドラの町の一覧です（地方ごと）。勇者が行けるのは、開放した町（' +
+            "・".join(escape(places[t]["name"]) for t in world["towns"]) + "）だけです。"
+            "ギルドの規模は、掲示板に貼られる依頼の数（枠）です。特産品は、世界でその町の店だけが売る品です。</p>"]
+    groups = [(a, [t for t in towns if places[t].get("area") == aid]) for aid, a in world["areas"].items()]
+    groups.append(({"name": "その他"}, [t for t in towns if places[t].get("area") not in world["areas"]]))
+    groups.sort(key=lambda g: not any(t in opened for t in g[1]))  # 開放した町のある地方を先に（安定ソート）
+    for area, members in groups:
+        if members:
+            en = f' <span class="en">{escape(area["en"])}</span>' if area.get("en") else ""
+            body.append(f'<h2 class="area">{escape(area["name"])}{en}</h2>' + "".join(card(t) for t in members))
+    return page("町", "".join(body), "towns.html")
+
+
 # ---- アイテム ---------------------------------------------------------------------------
 # アイテムの絞り込み（アイテムの部位・レアリティ。どちらも複数選べて、何も選ばなければすべて）
 ITEMS_JS = """
@@ -315,7 +381,7 @@ def build_items(world: dict) -> str:
     slot_chips = "".join(f'<button type="button" class="chip" data-slot="{s}" aria-pressed="false">{W.SLOT_NAMES[s]}</button>'
                          for s in W.SLOTS)
     rarity_chips = "".join(f'<button type="button" class="chip" data-rarity="{r}" aria-pressed="false">'
-                           f'<span class="chip-mark">{escape(game.RARITY_MARKS.get(r, r))}</span></button>'
+                           f'<span class="chip-mark">{escape(game.rarity_mark(world, r))}</span></button>'
                            for r in used)
     potion = world["season"]["potion"]
     body = ["<h2>アイテム一覧</h2>",
@@ -337,7 +403,7 @@ def build_items(world: dict) -> str:
             else:
                 how = "店: " + ("・".join(escape(t) for t in r["shops"]) or "なし") + '<div class="note">宝箱・依頼の報酬でも出る</div>'
             special = r["specialty"]
-            trs.append(f'<tr data-rarity="{it["rarity"]}"><td class="mark">{escape(game.RARITY_MARKS.get(it["rarity"], ""))}</td>'
+            trs.append(f'<tr data-rarity="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
                        f'<td>{escape(it["name"])}' + ('<span class="tag">特産</span>' if special else "") + "</td>"
                        f'<td>{escape(rpg.item_power(it))}</td>'
                        f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>')
@@ -383,6 +449,7 @@ def write_site(world: dict, entries: list[tuple[dict, dict]], today: date, guild
         "ranking.html": build_ranking(world, entries, today),
         "guild.html": build_guild(world, entries, today, guild),
         "items.html": build_items(world),
+        "towns.html": build_towns(world),
     }
     for hero, state in entries:
         files[f"heroes/{hero['id']}.html"] = build_hero(world, hero, state)

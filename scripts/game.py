@@ -18,8 +18,10 @@ from pathlib import Path
 import world as W
 
 JOURNAL_DAYS = 30
-# アイテムのレアリティの印（依頼のレアリティと同じく ★ から始まる。ふつうの装備も ★）
-RARITY_MARKS = {"common": "★", "rare": "★★", "epic": "★★★", "legendary": "★★★★"}
+def rarity_mark(world: dict, rarity: str) -> str:
+    """アイテムのレアリティの印。items.json の rarities の順に ★・★★・★★★…（依頼のレアリティと同じく ★ から始まる）。"""
+    rarities = world["rarities"]
+    return "★" * (rarities.index(rarity) + 1) if rarity in rarities else ""
 
 
 # ---- シーズン -------------------------------------------------------------------------
@@ -195,8 +197,8 @@ def draw_quests(world: dict, town: str, d: date, season: int, n: int, exclude: s
 
 
 def quests_per_day(world: dict, town: str) -> int:
-    """町のギルドに 1 日に出る依頼の数（map.json の quests_per_day。なければ season.json の board_size）。"""
-    return world["places"][town].get("quests_per_day", world["season"]["board_size"])
+    """町のギルドの規模（掲示板の依頼の枠の数。map.json の quests_per_day。どの町にも書く）。"""
+    return world["places"][town]["quests_per_day"]
 
 
 # ---- ギルドの掲示板（全員で共有。.state/guild.json に保存して、日をまたいで持ち越す）----------------------
@@ -483,7 +485,7 @@ class Day:
         item, inv = self.world["items"][iid], self.state["inventory"]
         before = equipment(self.world, self.state)[item["slot"]]
         inv[iid] = inv.get(iid, 0) + 1
-        mark = RARITY_MARKS.get(item["rarity"], "")
+        mark = rarity_mark(self.world, item["rarity"])
         if item["rarity"] != "common":
             self.state["season_stats"]["rares"].append(iid)
         text = f"{source}{mark}「{item['name']}」を手に入れた"

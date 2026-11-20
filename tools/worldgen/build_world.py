@@ -7,6 +7,7 @@ import math
 import paths
 import shutil
 
+from lore import AREAS, DUNGEON_EN, TEXT
 from names import NAMES
 from places import DUNGEONS, LABEL, TOWNS
 
@@ -63,10 +64,12 @@ SPECIALTY = {
     "西の港": "settler_shield", "干潟の港": "shell_shield", "南壁の砦": "wall_shield", "焔の湯治場": "volcanic_blade",
     "凍原の村": "reindeer_charm",
 }
-# 1 日にギルドに出る依頼の数（町の大きさ。書いていない町は season.json の board_size）
+# ギルドの規模（掲示板の依頼の枠の数）。どの町にも書く（王都 6、港や大きな町 5、ふつうの町 4、小さな村や砦 3）
 QUESTS_PER_DAY = {
     "王都": 6,
     "河港": 5, "暁の港": 5, "干潟の港": 5, "西の港": 5, "椰子の港": 5, "オアシスの町": 5, "天門の町": 5,
+    "古木の町": 4, "北の漁村": 4, "鋼山の町": 4, "風巻きの宿": 4, "湖畔の村": 4, "赤岩の鉱山町": 4, "南の森の村": 4,
+    "大草原の町": 4, "焔の湯治場": 4,
     "霧沼の村": 3, "氷牙の砦": 3, "凍土の集落": 3, "雨林の村": 3, "霧氷の修道院": 3, "蔦の集落": 3, "南壁の砦": 3,
     "凍原の村": 3,
 }
@@ -113,15 +116,18 @@ def terrain_mix(path):
 
 
 def main():
+    area_of = {member: aid for aid, _, _, members in AREAS for member in members}
     places = []
     for name, x, y in TOWNS:
         tid, emoji, region, shop = TOWN_INFO[name]
-        places.append({"id": tid, "type": "town", "name": NAMES[name], "alias": name, "region": region,
-                       "emoji": emoji, "shop": shop + [SPECIALTY[name]], "pos": [x, y]}
-                      | ({"quests_per_day": QUESTS_PER_DAY[name]} if name in QUESTS_PER_DAY else {}) | ({"label": LABEL[name]} if name in LABEL else {}))
+        places.append({"id": tid, "type": "town", "name": NAMES[name], "en": tid.capitalize(), "alias": name,
+                       "area": area_of[name], "region": region,
+                       "emoji": emoji, "text": TEXT[name], "shop": shop + [SPECIALTY[name]], "pos": [x, y]}
+                      | {"quests_per_day": QUESTS_PER_DAY[name]} | ({"label": LABEL[name]} if name in LABEL else {}))
     for name, x, y in DUNGEONS:
         did, region = DUNGEON_INFO[name]
-        places.append({"id": did, "type": "dungeon", "name": name, "region": region, "pos": [x, y]}
+        places.append({"id": did, "type": "dungeon", "name": name, "en": DUNGEON_EN[name], "area": area_of[name],
+                       "region": region, "pos": [x, y]}
                       | ({"label": LABEL[name]} if name in LABEL else {}))
 
     roads = []
@@ -133,11 +139,16 @@ def main():
         roads.append({"from": pid(r["from"]), "to": pid(r["to"]), "distance": r["actions"], "kind": "sea",
                       "terrain": [["sea", 100]], "path": [[round(x), round(y)] for x, y in r["path"]]})
 
-    mp = {"open": [pid(n) for n in OPEN], "starts": [pid(n) for n in STARTS],
+    areas = [{"id": aid, "name": n, "en": en} for aid, n, en, _ in AREAS]
+    mp = {"areas": areas, "open": [pid(n) for n in OPEN], "starts": [pid(n) for n in STARTS],
           "layout": {"size": [1600, 1000], "background": "map-base.svg"},
           "places": places, "roads": roads}
     # 道の線（path）や小さな一覧は 1 行にまとめて読みやすくする
     inline = {}
+    for i, area in enumerate(areas):  # 地方は 1 つ 1 行
+        token = f"@@{len(inline)}@@"
+        inline[token] = json.dumps(area, ensure_ascii=False, separators=(", ", ": "))
+        areas[i] = token
     for obj in places + roads:
         for key in ("pos", "shop", "terrain", "path"):
             if key in obj:

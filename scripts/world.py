@@ -2,7 +2,7 @@
 
 world/
   season.json   シーズンの長さ・初期ステータス・レベルアップ・1 日の行動回数（固定）など
-  map.json      場所（町・ダンジョン）と道（陸路・航路・ダンジョンへの道）、開放した町（open）
+  map.json      地方（areas）、場所（町・ダンジョン）と道（陸路・航路・ダンジョンへの道）、開放した町（open）
   map-base.svg  ベースの地図（地形の絵。map.json の layout.background）
   monsters.json 敵（出る地形と性質）と、性質の一覧
   items.json    アイテム（珍しさの一覧を含む）
@@ -42,7 +42,7 @@ BIG = 10 ** 9
 # season.json の必須項目: 名前 → (型, 最小, 最大)
 SEASON_KEYS = {
     "months": (int, 1, 120), "actions_per_day": (int, 1, 50), "rest_heal_rate": (float, 0, 1), "retreat_hp_rate": (float, 0, 1),
-    "board_size": (int, 1, 50), "quest_open_days": (int, 1, 30), "deliver_range": (int, 1, BIG),
+    "quest_open_days": (int, 1, 30), "deliver_range": (int, 1, BIG),
     "balance_level": (int, 1, BIG),
     "item_power_rate": (float, 0.01, BIG),
 }
@@ -196,6 +196,21 @@ def validate(raw: dict) -> list[str]:
             err(f"season.json: terrain_scenery の {key!r} は地形（{'/'.join(TERRAINS)}）と文字列の一覧にしてください")
 
     # map.json
+    has_areas = "areas" in mp
+    areas = mp.get("areas")
+    area_ids = set()
+    if has_areas:
+        if not isinstance(areas, list) or not areas:
+            err("map.json: areas（地方）は {id, name, en} の一覧（1 つ以上）にしてください")
+            areas = []
+        for i, a in enumerate(areas):
+            if (not isinstance(a, dict) or not isinstance(a.get("id"), str) or not a["id"]
+                    or not isinstance(a.get("name"), str) or not a["name"] or a["id"] in area_ids):
+                err(f"map.json の areas[{i}]: id（重複しない文字列）と name（文字列）を書いてください")
+                continue
+            if "en" in a and (not isinstance(a["en"], str) or not a["en"]):
+                err(f"map.json の areas[{i}]: en（英語名）は空でない文字列にしてください")
+            area_ids.add(a["id"])
     opened = open_towns(mp)
     if "open" in mp:
         if not isinstance(mp["open"], list) or not mp["open"]:
@@ -220,17 +235,21 @@ def validate(raw: dict) -> list[str]:
             err(f"{where}: type は {'/'.join(PLACE_TYPES)} のどれかにしてください")
         if not p.get("name"):
             err(f"{where}: name がありません")
-        for key in ("alias", "region"):
+        if has_areas and (not isinstance(p.get("area"), str) or p["area"] not in area_ids):
+            err(f"{where}: area（地方）は areas の ID にしてください")
+        for key in ("alias", "region", "text", "en"):
             if key in p and (not isinstance(p[key], str) or not p[key]):
                 err(f"{where}: {key} は空でない文字列にしてください")
         if "pos" in p and not _point_ok(p["pos"]):
             err(f"{where}: pos（地図の座標）は [x, y] の数にしてください")
         if "quests_per_day" in p and (not isinstance(p["quests_per_day"], int) or isinstance(p["quests_per_day"], bool)
                                       or not 1 <= p["quests_per_day"] <= 50):
-            err(f"{where}: quests_per_day（1 日にギルドに出る依頼の数）は 1〜50 の整数にしてください")
+            err(f"{where}: quests_per_day（ギルドの規模。掲示板の依頼の枠の数）は 1〜50 の整数にしてください")
         if "label" in p and p["label"] not in LABEL_SIDES:
             err(f"{where}: label（名前を置く向き）は {'/'.join(LABEL_SIDES)} のどれかにしてください")
         if p.get("type") == "town":
+            if "quests_per_day" not in p:
+                err(f"{where}: quests_per_day（ギルドの規模。掲示板の依頼の枠の数）を書いてください")
             for iid in p.get("shop", []):
                 if iid not in items:
                     err(f"{where}: 店の {iid!r} が items.json にありません")
@@ -506,6 +525,7 @@ def build(raw: dict) -> dict:
         "starts": list(mp["starts"]),
         "layout": mp.get("layout"),
         "background": background_uri(raw.get("background")),
+        "areas": {a["id"]: a for a in mp.get("areas") or []},
         "places": places,
         "towns": towns,
         "dungeons": [pid for pid, p in places.items() if p["type"] == "dungeon"],

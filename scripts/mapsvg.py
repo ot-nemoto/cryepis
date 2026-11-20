@@ -9,9 +9,9 @@ grid=True にすると、座標の目盛りと場所の ID を重ねた確認用
 from __future__ import annotations
 
 import math
+import unicodedata
 from xml.sax.saxutils import escape
 
-import common
 
 PAD_X, PAD_TOP, PAD_BOTTOM = 24, 76, 56  # 地図の周りの余白（見出し・凡例を置く）
 FONT = ("'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans CJK JP','Yu Gothic',Meiryo,sans-serif,"
@@ -27,8 +27,9 @@ BADGE_COLORS = {"land": ("#fff6e0", "#7a5530"), "sea": ("#e8f0f6", "#2f4f6f"), "
 
 
 def text_width(text: str, size: float) -> float:
-    """文字列のおおよその表示幅（px）。全角は size、半角は size の 0.6 倍として数える。"""
-    return sum(size if common.width(c) == 2 else size * 0.6 for c in text)
+    """文字列のおおよその表示幅（px）。全角は size、半角は size の 0.6 倍として数える
+    （★ などの幅の決まっていない文字は、地図のフォントでは半角で出るので、common.width とは別に数える）。"""
+    return sum(size if unicodedata.east_asian_width(c) in "WF" else size * 0.6 for c in text)
 
 
 def badge(x: float, y: float, actions: int, kind: str = "land", cls: str = "road-cost") -> str:

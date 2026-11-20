@@ -11,6 +11,7 @@ import common  # noqa: E402
 class DisplayTest(unittest.TestCase):
     def test_width_counts_wide_chars_as_two(self):
         self.assertEqual(common.width("aあ🗻"), 5)
+        self.assertEqual(common.width("★★木の剣"), 10)  # ★ も全角として数える（Gist のカードからはみ出さないように）
 
     def test_bar(self):
         self.assertEqual(common.bar(0, 100, 4), "    ")

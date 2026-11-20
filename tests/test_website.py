@@ -50,7 +50,7 @@ class SiteTest(unittest.TestCase):
         entries, guild, today = party()
         written = website.write_site(WORLD, entries, today, guild, self.out)
         rels = {p.relative_to(self.out).as_posix() for p in written}
-        self.assertEqual(rels, {"index.html", "ranking.html", "guild.html", "items.html", "heroes/h1.html",
+        self.assertEqual(rels, {"index.html", "ranking.html", "guild.html", "items.html", "towns.html", "heroes/h1.html",
                                 "heroes/h2.html", "heroes/h3.html"})
         for path in written:  # サイトの中のリンクは、すべて書き出したファイルを指す
             parser = Links()
@@ -133,13 +133,38 @@ class SiteTest(unittest.TestCase):
         self.assertNotIn("鎧</h3>", html)  # 鎧の部位はない
         self.assertEqual(html.count('class="chip" data-slot='), 4)
         self.assertLess(html.index('f-label">アイテム<'), html.index('f-label">レアリティ<'))
-        self.assertIn("依頼の報酬: ムラリス", html)  # ★騎士の剣
+        self.assertIn("依頼の報酬: ムラリス", html)  # ★★騎士の剣
         self.assertIn('騎兵の槍<span class="tag">特産</span>', html)
         self.assertNotIn('鋼の剣<span class="tag">特産</span>', html)  # 開放していない町でも売っている
         self.assertIn('<td class="mark">★★</td><td>騎士の剣</td>', html)  # ★ は先頭の列
         for slot in ("weapon", "helmet", "shield", "accessory"):  # ★ の多い順
-            marks = [len(game.RARITY_MARKS[r["item"]["rarity"]]) for r in website.item_rows(WORLD)[slot]]
+            marks = [len(game.rarity_mark(WORLD, r["item"]["rarity"])) for r in website.item_rows(WORLD)[slot]]
             self.assertEqual(marks, sorted(marks, reverse=True))
+
+    def test_towns_page(self):
+        html = website.build_towns(WORLD)
+        towns = [t for t, p in WORLD["places"].items() if p["type"] == "town"]
+        self.assertEqual(len(towns), 25)
+        for town in towns:  # 全部の町を出す
+            p = WORLD["places"][town]
+            self.assertIn(f'id="{town}"', html)
+            self.assertIn(p["text"], html)
+            self.assertIn(f"依頼の枠 {p['quests_per_day']} 件", html)  # ギルドの規模はどの町にもある
+            self.assertEqual(f'href="guild.html#{town}"' in html, town in WORLD["towns"])
+        self.assertLess(html.index("南大陸 <span"), html.index("王領 <span"))  # 開放した地方が先
+        for area in WORLD["areas"].values():
+            self.assertIn(f'{area["name"]} <span class="en">{area["en"]}</span>', html)
+        self.assertIn('サリナ <span class="en">Salina</span>', html)
+        aurea = html[html.index('id="aurea"'):html.index('id="flumen"')]  # 開放していない町
+        self.assertIn("未開放", aurea)
+        self.assertIn("依頼の枠 6 件", aurea)
+        self.assertIn("<tr><th>特産品</th><td>-</td></tr>", aurea)
+        self.assertNotIn("王国の盾", aurea)
+        muralis = html[html.index('id="muralis"'):html.index('id="karun"')]  # 南大陸の中は places の順
+        self.assertIn("城壁の大盾", muralis.split("依頼の報酬で出るレア")[0])  # 特産品
+        self.assertIn("騎士の剣", muralis.split("店の品ぞろえ")[0])  # レア
+        self.assertIn("南壁の巣穴（ダンジョン・まだ入れない）", muralis)
+        self.assertIn("カルン（陸路 6）", muralis)
 
     def test_guild_before_anyone_played(self):
         html = website.build_guild(WORLD, [], DAY, game.new_guild())

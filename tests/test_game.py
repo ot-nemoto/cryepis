@@ -254,7 +254,8 @@ class QuestTest(unittest.TestCase):
     def test_quests_per_day_depends_on_the_town(self):
         self.assertEqual(G.quests_per_day(WORLD, "aurea"), 6)
         self.assertEqual(G.quests_per_day(WORLD, "morna"), 3)
-        self.assertEqual(G.quests_per_day(WORLD, "silwen"), WORLD["season"]["board_size"])
+        self.assertTrue(all(G.quests_per_day(WORLD, t) == WORLD["places"][t]["quests_per_day"]
+                            for t, p in WORLD["places"].items() if p["type"] == "town"))  # どの町にも書いてある
 
     def test_taken_quests_reset_the_next_day(self):
         state = play(1, actions=1)
@@ -382,6 +383,11 @@ class BattleAndItemTest(unittest.TestCase):
         state["quest"] = quest
         G.Day(world, state, START, random.Random("t")).report(quest)
         self.assertIn("x_legend", state["inventory"])
+
+    def test_rarity_marks_follow_the_rarities(self):
+        self.assertEqual([G.rarity_mark(WORLD, r) for r in WORLD["rarities"]], ["★", "★★", "★★★", "★★★★"])
+        world = {**WORLD, "rarities": WORLD["rarities"] + ["mythic"]}  # 増やしても ★ が 1 つずつ増える
+        self.assertEqual(G.rarity_mark(world, "mythic"), "★★★★★")
 
     def test_four_slots_are_equipped(self):
         self.assertEqual(W.SLOTS, ("weapon", "helmet", "shield", "accessory"))  # 鎧はない
