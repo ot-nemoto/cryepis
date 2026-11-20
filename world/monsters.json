@@ -1,0 +1,26 @@
+{
+  "monsters": [
+    {"id": "slime", "name": "スライム", "level": 1, "hp": 14, "atk": 6, "def": 1, "exp": 6, "gold": 5},
+    {"id": "rat", "name": "おおねずみ", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7},
+    {"id": "goblin", "name": "ゴブリン", "level": 3, "hp": 26, "atk": 9, "def": 2, "exp": 12, "gold": 9},
+    {"id": "hornet", "name": "大スズメバチ", "level": 4, "hp": 32, "atk": 11, "def": 3, "exp": 15, "gold": 11},
+    {"id": "wild_dog", "name": "野犬", "level": 5, "hp": 38, "atk": 12, "def": 4, "exp": 18, "gold": 13},
+    {"id": "bandit", "name": "山賊", "level": 6, "hp": 44, "atk": 14, "def": 5, "exp": 21, "gold": 15},
+    {"id": "wolf", "name": "ウルフ", "level": 7, "hp": 50, "atk": 16, "def": 6, "exp": 24, "gold": 17},
+    {"id": "treant", "name": "トレント", "level": 8, "hp": 56, "atk": 18, "def": 6, "exp": 27, "gold": 19},
+    {"id": "dark_elf", "name": "ダークエルフ", "level": 10, "hp": 68, "atk": 21, "def": 8, "exp": 33, "gold": 23},
+    {"id": "crab", "name": "大ガニ", "level": 9, "hp": 62, "atk": 19, "def": 7, "exp": 30, "gold": 21},
+    {"id": "sahagin", "name": "サハギン", "level": 11, "hp": 74, "atk": 23, "def": 9, "exp": 36, "gold": 25},
+    {"id": "harpy", "name": "ハーピー", "level": 13, "hp": 86, "atk": 26, "def": 10, "exp": 42, "gold": 29},
+    {"id": "sea_serpent", "name": "シーサーペント", "level": 15, "hp": 98, "atk": 30, "def": 12, "exp": 48, "gold": 33},
+    {"id": "rock_golem", "name": "ロックゴーレム", "level": 15, "hp": 98, "atk": 30, "def": 12, "exp": 48, "gold": 33},
+    {"id": "gargoyle", "name": "ガーゴイル", "level": 17, "hp": 110, "atk": 33, "def": 14, "exp": 54, "gold": 37},
+    {"id": "salamander", "name": "サラマンダー", "level": 19, "hp": 122, "atk": 36, "def": 15, "exp": 60, "gold": 41},
+    {"id": "fire_lizard", "name": "ファイアリザード", "level": 21, "hp": 134, "atk": 40, "def": 17, "exp": 66, "gold": 45},
+    {"id": "lava_golem", "name": "溶岩ゴーレム", "level": 23, "hp": 146, "atk": 43, "def": 18, "exp": 72, "gold": 49},
+    {"id": "snow_wolf", "name": "スノーウルフ", "level": 21, "hp": 134, "atk": 40, "def": 17, "exp": 66, "gold": 45},
+    {"id": "yeti", "name": "イエティ", "level": 24, "hp": 152, "atk": 45, "def": 19, "exp": 75, "gold": 51},
+    {"id": "ice_witch", "name": "氷の魔女", "level": 27, "hp": 170, "atk": 50, "def": 22, "exp": 84, "gold": 57},
+    {"id": "frost_giant", "name": "フロストジャイアント", "level": 30, "hp": 188, "atk": 55, "def": 24, "exp": 93, "gold": 63}
+  ]
+}

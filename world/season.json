@@ -1,0 +1,20 @@
+{
+  "start": "2026-12-01",
+  "months": 3,
+  "hero": {"max_hp": 30, "atk": 6, "def": 2, "gold": 60, "potions": 1},
+  "level_up": {"hp": 8, "atk": 2, "def": 1, "exp_base": 10, "exp_power": 1.5},
+  "potion": {"price": 15, "heal_rate": 0.5, "keep": 3},
+  "rest_heal_rate": 0.25,
+  "retreat_hp_rate": 0.3,
+  "action_weights": [[0, 15], [2, 20], [3, 25], [4, 20], [5, 12], [6, 8]],
+  "board_size": 4,
+  "hunt_range": 4,
+  "deliver_range": 6,
+  "patrol_battles": 3,
+  "hunt_battle_boost": 2,
+  "balance_level": 20,
+  "item_power_rate": 0.3,
+  "treasure": [["none", 80], ["common", 15], ["rare", 5]],
+  "rest": ["焚き火のそばで体を休めた", "宿で一日のんびり過ごした", "夢の中で冒険の続きを見た"],
+  "scenery": ["風が吹き抜けていく", "道端に小さな花が咲いている", "遠くで鳥が鳴いている"]
+}
