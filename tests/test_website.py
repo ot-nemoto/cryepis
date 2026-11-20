@@ -155,12 +155,12 @@ class SiteTest(unittest.TestCase):
         self.assertLess(html.index("南大陸 <span"), html.index("王領 <span"))  # 開放した地方が先
         self.assertNotIn("オルドラの町の一覧です", html)  # 説明文は出さない
         self.assertLess(html.index("<h2>町の情報</h2>"), html.index('class="tabs"'))  # タブは見出しのすぐ下
-        self.assertIn('data-area="austral_land" aria-selected="true">南大陸</button>', html)  # 最初は南大陸
-        for aid in WORLD["areas"]:  # 地方ごとのタブ
-            self.assertIn(f'role="tab" data-area="{aid}"', html)
-            self.assertIn(f'<section class="area-group" role="tabpanel" data-area="{aid}"', html)
-        self.assertEqual(html.count('role="tabpanel" data-area="austral_land">'), 1)  # 最初の地方だけ見える
-        self.assertEqual(html.count('role="tabpanel" data-area="crownlands" hidden>'), 1)
+        self.assertIn('data-area="austral_land" aria-selected="true" tabindex="0">南大陸</button>', html)  # 最初は南大陸
+        for aid in WORLD["areas"]:  # 地方ごとのタブと、タブにつながる中身
+            self.assertIn(f'id="tab-{aid}" aria-controls="panel-{aid}"', html)
+            self.assertIn(f'role="tabpanel" id="panel-{aid}" aria-labelledby="tab-{aid}" data-area="{aid}">', html)
+        self.assertIn('<div class="tabs" role="tablist" hidden>', html)  # JavaScript がなければ全部の地方を見せる
+        self.assertNotIn('data-area="crownlands" hidden', html)
         for area in WORLD["areas"].values():
             self.assertIn(f'{area["name"]} <span class="en">{area["en"]}</span>', html)
         self.assertIn('サリナ <span class="en">Salina</span>', html)
