@@ -104,8 +104,8 @@ class SiteTest(unittest.TestCase):
         self.assertEqual(html.count("<tr data-rank="), total)
         for town in WORLD["towns"]:  # 町とレアリティで絞り込める
             self.assertIn(f'data-town="{town}"', html)
-            self.assertIn(f'<option value="{town}">', html)
-        self.assertEqual(html.count('class="f-rank"'), len(WORLD["quest_ranks"]))
+            self.assertIn(f'<button type="button" class="chip" data-town="{town}" aria-pressed="false">', html)
+        self.assertEqual(html.count('class="chip" data-rank='), len(WORLD["quest_ranks"]))
         days = WORLD["season"]["quest_open_days"]
         last = today + timedelta(days=days - 1)
         self.assertIn(f"あと {days - 1} 日（{last.month}/{last.day} まで）", html)  # 今日貼られた依頼

@@ -68,11 +68,16 @@ th{color:var(--sub);font-weight:normal;font-size:13px;white-space:nowrap}
 .open{color:#15803d;white-space:nowrap}
 .stamp{display:inline-block;padding:1px 8px;border:2.5px solid #c0262d;border-radius:4px;color:#c0262d;font-weight:bold;
 font-size:13px;letter-spacing:.12em;transform:rotate(-8deg);opacity:.85;margin:2px 0 4px;font-family:Georgia,'Times New Roman',serif}
-.filters{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
-.filters select{font:inherit;padding:2px 6px}
+.filters{display:flex;flex-direction:column;gap:10px}
+.f-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.f-label{font-size:13px;color:var(--sub);width:5.5em}
 .chip-mark{color:#b7791f;white-space:nowrap}
-.ranks{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:14px;padding:0 10px;cursor:pointer}
+.chip{font:inherit;font-size:14px;font-weight:bold;color:var(--ink);background:var(--card);border:1.5px solid #f0a868;
+border-radius:999px;padding:4px 14px;cursor:pointer;box-shadow:0 0 0 2px rgba(240,168,104,.15)}
+.chip:hover{border-color:#e8833a}
+.chip[aria-pressed="true"]{background:#e8833a;border-color:#e8833a;color:#fff}
+.chip[aria-pressed="true"] .chip-mark{color:#fff}
+.link{font:inherit;background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;margin-left:10px}
 pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;
 font:13.5px/1.6 ui-monospace,'SFMono-Regular',Menlo,Consolas,'Noto Sans Mono CJK JP',monospace;white-space:pre-wrap}
 #map{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6efdc;
@@ -186,18 +191,23 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
 
 
 # ---- ギルド -------------------------------------------------------------------------------
-# ギルドの絞り込み（町・レアリティ）。町は URL の #町の ID でも選べる
+# ギルドの絞り込み（町・レアリティ。どちらも複数選べて、何も選ばなければすべて）。
+# 町は URL の #町の ID（複数なら , でつなぐ）でも選べる
 GUILD_JS = """
-(()=>{const town=document.getElementById('f-town'),ranks=[...document.querySelectorAll('.f-rank')],
-none=document.getElementById('f-none');
-const apply=()=>{const on=new Set(ranks.filter(r=>r.checked).map(r=>r.value));let shown=0;
+(()=>{const chips=k=>[...document.querySelectorAll('.chip[data-'+k+']')],towns=chips('town'),ranks=chips('rank'),
+none=document.getElementById('f-none'),clear=document.getElementById('f-clear');
+const on=list=>new Set(list.filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>c.dataset.town||c.dataset.rank));
+const apply=()=>{const t=on(towns),r=on(ranks);let shown=0;
 document.querySelectorAll('.board').forEach(card=>{let n=0;
-card.querySelectorAll('tr[data-rank]').forEach(tr=>{const ok=on.has(tr.dataset.rank);tr.hidden=!ok;if(ok)n++;});
-card.hidden=(town.value&&card.dataset.town!==town.value)||n===0;if(!card.hidden)shown++;});none.hidden=shown>0;};
-const fromHash=()=>{const id=decodeURIComponent(location.hash.slice(1));
-if([...town.options].some(o=>o.value===id&&id)){town.value=id;}apply();};
-town.addEventListener('change',()=>{history.replaceState(null,'',town.value?'#'+town.value:location.pathname);apply();});
-ranks.forEach(r=>r.addEventListener('change',apply));window.addEventListener('hashchange',fromHash);fromHash();})();
+card.querySelectorAll('tr[data-rank]').forEach(tr=>{const ok=!r.size||r.has(tr.dataset.rank);tr.hidden=!ok;if(ok)n++;});
+card.hidden=(t.size&&!t.has(card.dataset.town))||n===0;if(!card.hidden)shown++;});
+none.hidden=shown>0;clear.hidden=!t.size&&!r.size;
+history.replaceState(null,'',t.size?'#'+[...t].join(','):location.pathname);};
+const toggle=c=>c.addEventListener('click',()=>{c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();});
+towns.forEach(toggle);ranks.forEach(toggle);
+clear.addEventListener('click',()=>{towns.concat(ranks).forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
+const ids=decodeURIComponent(location.hash.slice(1)).split(',');towns.forEach(c=>{if(ids.includes(c.dataset.town))c.setAttribute('aria-pressed','true');});
+apply();})();
 """
 
 
@@ -219,17 +229,18 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
         guild = game.new_guild()
         game.refresh_guild(world, guild, today, game.season_of(world, today))
     places, days = world["places"], world["season"]["quest_open_days"]
-    towns = "".join(f'<option value="{escape(t)}">{escape(places[t]["name"])}（{escape(places[t].get("alias", ""))}）</option>'
-                    for t in world["towns"])
-    ranks = "".join(f'<label class="chip"><input type="checkbox" class="f-rank" value="{i}" checked>'
-                    f'<span class="chip-mark">{escape(r["mark"])}</span></label>'
-                    for i, r in enumerate(world["quest_ranks"], 1))
+    towns = "".join(f'<button type="button" class="chip" data-town="{escape(t)}" aria-pressed="false">'
+                    f'{escape(places[t].get("emoji", ""))} {escape(places[t]["name"])}</button>' for t in world["towns"])
+    ranks = "".join(f'<button type="button" class="chip" data-rank="{i}" aria-pressed="false">'
+                    f'<span class="chip-mark">{escape(r["mark"])}</span></button>' for i, r in enumerate(world["quest_ranks"], 1))
     body = [f"<h2>町のギルドの掲示板（{today.isoformat()}）</h2>",
             '<p class="note">町ごとに決まった数の依頼が貼られていて、早い者勝ちです（受けられた依頼は、ほかの勇者は受けられません）。'
             f"誰も受けないまま {days} 日たった依頼は入れ替わります。達成された依頼は翌日に新しい依頼に入れ替わり、"
             "失敗した依頼は翌日にまた受け付けます。勇者は 1 日に 1 つ依頼を受け、必要な行動力を使ってこなします（期限はありません）。</p>",
-            f'<div class="filters card"><label>町 <select id="f-town"><option value="">すべての町</option>{towns}</select></label>'
-            f'<span class="ranks">レアリティ {ranks}</span></div>',
+            f'<div class="filters card"><div class="f-row"><span class="f-label">レアリティ</span>{ranks}</div>'
+            f'<div class="f-row"><span class="f-label">町</span>{towns}</div>'
+            '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
+            '<button type="button" id="f-clear" class="link" hidden>選択を解除</button></div></div>',
             '<p id="f-none" class="note" hidden>条件に合う依頼はありません。</p>']
     for town in world["towns"]:
         p = places[town]
