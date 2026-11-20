@@ -87,7 +87,7 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
     state["season_stats"]["rares"] = [i for i in state["season_stats"]["rares"] if i in world["items"]]
     if state["place"] not in world["towns"]:
         state.update(place=fallback, road=None)
-    if places.get(state["home_town"], {}).get("type") != "town":
+    if state["home_town"] not in world["towns"]:  # 開放していない町も、戻る町にはしない
         state["home_town"] = fallback
     road = state["road"]
     if road and (road.get("to") not in places or (state["place"], road["to"]) not in world["roads"]):
@@ -104,12 +104,13 @@ QUEST_TYPES = ("hunt", "deliver", "patrol")
 
 
 def quest_ok(world: dict, quest: dict) -> bool:
-    """依頼の参照先が今の world/ にあるか（行き先・報告先は町、討伐は報告先からの道と魔物）。"""
-    places = world["places"]
-    if quest.get("type") not in QUEST_TYPES or places.get(quest.get("place"), {}).get("type") != "town":
+    """依頼の参照先が今の world/ にあるか（行き先・報告先・依頼を出した町は開放した町、討伐は報告先からの道と魔物）。"""
+    towns = set(world["towns"])
+    if quest.get("type") not in QUEST_TYPES or quest.get("place") not in towns:
         return False
-    if quest.get("report") is not None and places.get(quest["report"], {}).get("type") != "town":
-        return False
+    for key in ("report", "town"):
+        if quest.get(key) is not None and quest[key] not in towns:
+            return False
     if quest["type"] == "hunt":  # 前の形式（段取りのない討伐）は捨てる
         return ((quest.get("report"), quest["place"]) in world["roads"] and quest.get("monster") in world["monsters"]
                 and isinstance(quest.get("steps"), list))

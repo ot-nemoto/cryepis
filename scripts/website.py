@@ -309,7 +309,7 @@ def item_rows(world: dict) -> dict[str, list[dict]]:
     return rows
 
 
-def build_items(world: dict, today: date) -> str:
+def build_items(world: dict) -> str:
     """開放した地域で手に入るアイテムの一覧。部位と珍しさで絞り込める。"""
     rows = item_rows(world)
     used = [r for r in world["rarities"] if any(x["item"]["rarity"] == r for rs in rows.values() for x in rs)]
@@ -382,7 +382,7 @@ def write_site(world: dict, entries: list[tuple[dict, dict]], today: date, guild
         "index.html": build_index(world, entries, today),
         "ranking.html": build_ranking(world, entries, today),
         "guild.html": build_guild(world, entries, today, guild),
-        "items.html": build_items(world, today),
+        "items.html": build_items(world),
     }
     for hero, state in entries:
         files[f"heroes/{hero['id']}.html"] = build_hero(world, hero, state)

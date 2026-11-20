@@ -122,7 +122,7 @@ class SiteTest(unittest.TestCase):
         self.assertIn("受付終了", website.guild_status(WORLD, e, today))
 
     def test_items_page_lists_the_open_region(self):
-        html = website.build_items(WORLD, DAY)
+        html = website.build_items(WORLD)
         names = {it["name"] for it in WORLD["items"].values()}
         shown = {n for n in names if f"{n}<" in html or f"{n}</td>" in html}
         expected = {WORLD["items"][i]["name"] for i in WORLD["region_items"]} | {

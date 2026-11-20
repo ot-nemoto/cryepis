@@ -546,6 +546,24 @@ class StateFileTest(unittest.TestCase):
             loaded = G.load_state(WORLD, path)
         self.assertEqual(loaded["season_stats"]["rares"], ["power_ring"])
 
+    def test_load_moves_heroes_out_of_closed_towns(self):
+        state = play(2)
+        closed = next(p for p, x in WORLD["places"].items() if x["type"] == "town" and p not in WORLD["towns"])
+        state.update(place=closed, home_town=closed,
+                     quest={"type": "deliver", "name": "x", "template": "t", "town": state["place"], "place": closed,
+                            "report": closed, "monster": None, "count": 1, "progress": 0, "level": [1, 1],
+                            "deadline": None, "reward": {"exp": 1, "gold": 1, "item": None}, "cost": 9})
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "h1.json"
+            G.save_state(state, path)
+            loaded = G.load_state(WORLD, path)
+        self.assertIn(loaded["place"], WORLD["towns"])
+        self.assertIn(loaded["home_town"], WORLD["towns"])  # 力尽きたら戻る町も、開放した町
+        self.assertIsNone(loaded["quest"])  # 開放していない町への依頼は捨てる
+        day = day_of(loaded)
+        day.fall()
+        self.assertTrue(day.act())  # 戻った町から続けられる
+
     def test_load_drops_quests_whose_place_changed_type(self):
         state = play(2)
         base = {"name": "x", "template": "t", "town": TOWN, "report": TOWN, "count": 1,
