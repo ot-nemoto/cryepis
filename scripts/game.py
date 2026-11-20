@@ -197,8 +197,8 @@ def draw_quests(world: dict, town: str, d: date, season: int, n: int, exclude: s
 
 
 def quests_per_day(world: dict, town: str) -> int:
-    """町のギルドに 1 日に出る依頼の数（map.json の quests_per_day。なければ season.json の board_size）。"""
-    return world["places"][town].get("quests_per_day", world["season"]["board_size"])
+    """町のギルドの規模（掲示板の依頼の枠の数。map.json の quests_per_day。どの町にも書く）。"""
+    return world["places"][town]["quests_per_day"]
 
 
 # ---- ギルドの掲示板（全員で共有。.state/guild.json に保存して、日をまたいで持ち越す）----------------------

@@ -96,6 +96,12 @@ class ValidateTest(unittest.TestCase):
         self.assertError(change, ["starts", "jade_tomb"])
         self.assertError(lambda r: r["map"].update(starts=["aurea"]), ["starts", "aurea", "開放"])
 
+    def test_bad_areas_are_reported_not_crashed(self):
+        self.assertError(lambda r: r["map"].update(areas=None), ["areas"])
+        self.assertError(lambda r: r["map"]["areas"].append({"id": ["x"], "name": "y"}), ["areas", "id"])
+        self.assertError(lambda r: r["map"]["areas"].append({"id": "x", "name": 1}), ["areas", "name"])
+        self.assertError(lambda r: r["map"]["places"][0].update(area=["crownlands"]), ["area", "地方"])
+
     def test_areas_and_english_names(self):
         self.assertError(lambda r: r["map"]["places"][0].update(area="moon"), ["area", "地方"])
         self.assertError(lambda r: r["map"]["places"][0].pop("area"), ["area", "地方"])
