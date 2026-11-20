@@ -125,6 +125,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `world/season.json` | シーズンの長さ・初期ステータス・レベルアップ・1 日の行動回数・回復薬・宝箱のドロップ表など |
 | `world/map.json` | 場所（町・ダンジョン）と道、最初の町の候補（`starts`）、地図の大きさとベースの地図（`layout`）。町には名前・呼び名（`alias`）・地域（`region`）・店・地図の座標（`pos`。1600×1000、北が上）。道には種類（`kind`: 陸路 `land`・航路 `sea`・ダンジョンへの道 `trail`）・行動回数（`distance`）・地形の割合（`terrain`。出る魔物が決まる）・地図に描く線（`path`）。いまは町 24・ダンジョン 6・陸路 22・航路 3 |
 | `world/map-base.svg` | ベースの地図（地形の絵） |
+| `tools/worldgen/` | 地図づくりのスクリプト。`python tools/worldgen/make.py` で地形・陸路・航路・行動回数を作り直し、`world/map.json` と `world/map-base.svg` を書き出す（町の配置は `places.py`、名前は `names.py`、山脈・地域・川は `terrain.py`） |
 | `world/monsters.json` | 魔物（出る地形 `terrain` と性質 `trait`）と、性質の一覧（`traits`） |
 | `world/items.json` | アイテムと珍しさ（common / rare / epic / legendary）。店で売るものは `price` を書く |
 | `world/quests.json` | ギルドの依頼のひな形（種類・出やすさ・期限・報酬・アイテムのドロップ表） |
