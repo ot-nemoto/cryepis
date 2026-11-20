@@ -123,6 +123,9 @@ def hero_spot(world: dict, state: dict) -> tuple[float, float] | None:
     places, place, road = world["places"], state["place"], state.get("road")
     if "pos" not in places.get(place, {}):
         return None
+    quest = state.get("quest") or {}
+    if not road and quest.get("type") == "hunt" and quest.get("away") and (place, quest["place"]) in world["roads"]:
+        road = {"to": quest["place"], "left": world["roads"][(place, quest["place"])] - quest["away"]}  # 狩り場にいる
     if not road or (place, road["to"]) not in world["roads"]:
         return tuple(places[place]["pos"])
     info, total = world["road_info"][(place, road["to"])], world["roads"][(place, road["to"])]

@@ -57,6 +57,7 @@ flowchart LR
 | `heroes/<id>.md` | `rpg.py` | 勇者ごとの詳細（ステータス・装備・持ち物・日誌・シーズンの記録）を読むためのページ | GitHub 上で読む。ランキングの Gist からリンクする |
 | `.state/heroes/<id>.json` | `rpg.py` | 勇者の状態（場所・HP・レベル・依頼など）、持ち物、直近 30 日の日誌、シーズンの記録 | 翌日の続きと、Gist の表示 |
 | `.state/board.json` | `rpg.py`（最初の毎日の実行） | ランキングの Gist の ID と URL | 毎日更新するランキングの Gist |
+| `.state/guild.json` | `rpg.py`（毎日の実行） | ギルドの依頼のうち、受けられたもの（直近 7 日分） | ほかの勇者が受けた依頼を受けないようにする（早い者勝ち） |
 | `.state/last-run` | Commit state ステップ | 最終実行日（JST） | 60 日無活動で scheduled workflow が止まるのを防ぐ（keepalive） |
 
 `.state/` の各ファイルの JSON 構成・項目の意味・例は [STATE_FORMAT.md](STATE_FORMAT.md) を参照してください。

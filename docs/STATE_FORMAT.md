@@ -7,6 +7,7 @@
 |---|---|---|
 | [`heroes.json`](#heroesjson) | `scripts/rpg.py`（New game / Retire hero） | 勇者管理シート（勇者の一覧と Gist の ID） |
 | [`board.json`](#boardjson) | `scripts/rpg.py`（最初の毎日の実行） | ランキングの Gist の ID と URL |
+| [`guild.json`](#guildjson) | `scripts/rpg.py`（毎日の実行） | ギルドの依頼のうち、受けられたもの（早い者勝ち） |
 | [`heroes/<id>.json`](#heroesidjson) | `scripts/rpg.py` | 勇者ごとの状態・持ち物・日誌・シーズンの記録 |
 | [`last-run`](#last-run) | hero-adventure.yml の Commit state ステップ | 最終実行日 |
 
@@ -52,6 +53,18 @@
 
 ---
 
+## guild.json
+
+ギルドの依頼は早い者勝ちで、ほかの勇者が受けた依頼は受けられません。その記録です（依頼の ID → 受けた勇者の ID）。
+依頼の ID は「日付-町の ID-枠の番号」です。毎日の実行で書き換え、さかのぼって進める日数（7 日）より古いものは捨てます。
+消しても壊れません（その日に受けられた依頼が、もう一度受けられるようになるだけです）。
+
+```json
+{"taken": {"2026-12-01-aurea-0": "h2", "2026-12-01-aurea-3": "h1"}}
+```
+
+---
+
 ## `heroes/<id>.json`
 
 勇者ごとの状態です（テキスト RPG は [README](../README.md#勇者の冒険テキスト-rpg)）。`scripts/rpg.py` が毎日 1 日分進めて上書きします。
@@ -93,7 +106,7 @@
 | `place` | 今いる町の ID（道の途中なら出発した町） |
 | `home_town` | 最後に寄った町（力尽きたらここで目を覚ます） |
 | `road` | 道を進んでいる途中なら `{"to": 行き先の町, "left": 残りの行動回数}`、町にいれば `null` |
-| `quest` | 受けている依頼（なければ `null`）。`type` は `hunt`（討伐）/ `deliver`（配達）/ `patrol`（となりの町への旅。報酬なし）。`place` が目的地（討伐は依頼の道の向こうの町）、`report` が報告する町（旅は `null`）、`progress` / `count` が進み具合、`deadline` が期限 |
+| `quest` | 受けている依頼（なければ `null`）。`type` は `hunt`（討伐）/ `deliver`（配達）/ `patrol`（となりの町への旅。報酬なし）。`place` が目的地（討伐は依頼の道の向こうの町）、`report` が報告する町（旅は `null`）、`progress` / `count` が進み具合、`cost` が必要な行動力、`steps` が討伐の残りの段取り（`[["go"/"hunt"/"back", 残りの行動力], ...]`）、`away` が討伐で町から何行動ぶん離れているか、`deadline` は使わない（`null`。期限はない）、`rank` がレアリティ（1〜4。★ の数）、`name` が依頼の名前、`text` がギルドの言葉（町の依頼だけ） |
 | `season_stats` | 今のシーズンの成績（達成・失敗した依頼の数、倒した敵の数、力尽きた回数、手に入れたレアアイテムの ID） |
 | `last` | 最後に進めた日の結果（`date` は進めた日、`actions` はその日の行動回数（season.json の actions_per_day）、`events` は出来事） |
 | `journal` | 日誌。新しい順に直近 30 日分（`JOURNAL_DAYS`） |

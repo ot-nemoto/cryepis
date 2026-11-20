@@ -1,5 +1,165 @@
-{"templates": [
-  {"id": "hunt", "type": "hunt", "name": "討伐", "weight": 3, "count": [2, 4], "days": 3, "reward": {"exp": 4, "gold": 5, "item": [["none", 85], ["common", 10], ["rare", 4], ["epic", 1]]}},
-  {"id": "hunt_big", "type": "hunt", "name": "大物討伐", "weight": 1, "count": [5, 7], "days": 5, "reward": {"exp": 5, "gold": 6, "item": [["none", 65], ["common", 15], ["rare", 13], ["epic", 6], ["legendary", 1]]}},
-  {"id": "deliver", "type": "deliver", "name": "配達", "weight": 2, "days": 2, "reward": {"exp": 3, "gold": 6, "item": [["none", 92], ["common", 6], ["rare", 2]]}}
-]}
+{
+ "ranks": [
+  {"mark": "★", "weight": 60, "reward": 1, "item": [["none", 88], ["common", 10], ["rare", 2]]},
+  {"mark": "★★", "weight": 25, "reward": 2, "item": [["none", 65], ["common", 15], ["rare", 18], ["epic", 2]]},
+  {"mark": "★★★", "weight": 12, "reward": 4, "item": [["none", 45], ["common", 10], ["rare", 30], ["epic", 13], ["legendary", 2]]},
+  {"mark": "★★★★", "weight": 3, "reward": 8, "item": [["none", 20], ["rare", 30], ["epic", 35], ["legendary", 15]]}
+ ],
+ "reward": {"exp": 5, "gold": 8},
+ "templates": [
+  {"id": "hunt", "type": "hunt", "name": "討伐", "rank": 1, "weight": 3, "count": [2, 4]},
+  {"id": "hunt_big", "type": "hunt", "name": "大物討伐", "rank": 2, "weight": 1, "count": [5, 7]},
+  {"id": "deliver", "type": "deliver", "name": "配達", "rank": 1, "weight": 2}
+ ],
+ "towns": {
+  "aurea": [
+   {"id": "aurea_1", "rank": 1, "type": "hunt", "name": "王都の街道警備", "to": "flumen", "monster": "wild_dog", "count": 3, "text": "王都と河港を結ぶ街道に出る野犬を追い払ってほしい"},
+   {"id": "aurea_2", "rank": 1, "type": "deliver", "name": "王家の書状", "to": "caelum", "text": "天門の町の守り手へ、王家の書状を届けてほしい"},
+   {"id": "aurea_3", "rank": 2, "type": "hunt", "name": "街道の盗賊団", "to": "durgan", "monster": "goblin", "count": 6, "text": "鋼山へ向かう荷車を襲うゴブリンの一団を討ってほしい"},
+   {"id": "aurea_4", "rank": 3, "type": "hunt", "name": "密林の大蛇狩り", "to": "cocora", "monster": "jungle_serpent", "count": 5, "text": "椰子の港への道をふさぐ大蛇を退治してほしい"},
+   {"id": "aurea_5", "rank": 4, "type": "deliver", "name": "王の使者", "to": "astol", "text": "天の頂の地鳴りについて、星読みの修道院へ王の使者を送り届けてほしい"}
+  ],
+  "flumen": [
+   {"id": "flumen_1", "rank": 1, "type": "hunt", "name": "水路の掃除", "to": "aurea", "monster": "marsh_leech", "count": 3, "text": "三角州の水路にわく沼ヒルを駆除してほしい"},
+   {"id": "flumen_2", "rank": 1, "type": "deliver", "name": "河港の荷揚げ", "to": "aurea", "text": "船で届いた荷を王都へ運んでほしい"},
+   {"id": "flumen_3", "rank": 2, "type": "hunt", "name": "航路の海賊", "to": "salina", "monster": "pirate", "count": 4, "text": "南大陸への航路を荒らす海賊を追い払ってほしい"},
+   {"id": "flumen_4", "rank": 3, "type": "deliver", "name": "新大陸への便り", "to": "novaris", "text": "西大陸の開拓民へ、王都からの便りを届けてほしい"}
+  ],
+  "caelum": [
+   {"id": "caelum_1", "rank": 1, "type": "hunt", "name": "門前の鬼火", "to": "flumen", "monster": "will_o_wisp", "count": 3, "text": "夜ごと天門の前に漂う鬼火を鎮めてほしい"},
+   {"id": "caelum_2", "rank": 1, "type": "deliver", "name": "巡礼者の荷物", "to": "kazal", "text": "天門を訪れた巡礼者の荷を、風巻きの宿へ届けてほしい"},
+   {"id": "caelum_3", "rank": 2, "type": "hunt", "name": "峠の山賊", "to": "kazal", "monster": "mountain_bandit", "count": 5, "text": "天門へ続く峠で巡礼者を襲う山賊を討ってほしい"},
+   {"id": "caelum_4", "rank": 3, "type": "hunt", "name": "竜骨の大鷲", "to": "astol", "monster": "great_eagle", "count": 5, "text": "竜骨山脈を越える道に巣くう大鷲を追い払ってほしい"},
+   {"id": "caelum_5", "rank": 4, "type": "hunt", "name": "始祖竜の頭骨の見張り", "to": "flumen", "monster": "rock_golem", "count": 7, "text": "頭骨から漏れる竜気で動き出した岩ゴーレムを打ち倒してほしい"}
+  ],
+  "silwen": [
+   {"id": "silwen_1", "rank": 1, "type": "hunt", "name": "大木を荒らす蜘蛛", "to": "vike", "monster": "giant_spider", "count": 3, "text": "家の建つ大木に巣を張る大蜘蛛を追い払ってほしい"},
+   {"id": "silwen_2", "rank": 1, "type": "deliver", "name": "森の薬草", "to": "vike", "text": "大森林で摘んだ薬草を、北の漁村へ届けてほしい"},
+   {"id": "silwen_3", "rank": 2, "type": "hunt", "name": "森オオカミの群れ", "to": "yarka", "monster": "forest_wolf", "count": 5, "text": "凍土へ向かう道で群れをなす森オオカミを退けてほしい"},
+   {"id": "silwen_4", "rank": 3, "type": "hunt", "name": "根の洞の異変", "to": "morna", "monster": "treant", "count": 5, "text": "古木の根の洞のあたりで暴れだした木霊を鎮めてほしい"}
+  ],
+  "vike": [
+   {"id": "vike_1", "rank": 1, "type": "hunt", "name": "巡礼路の野犬", "to": "astol", "monster": "wild_dog", "count": 3, "text": "修道院への巡礼路に出る野犬を追い払ってほしい"},
+   {"id": "vike_2", "rank": 1, "type": "deliver", "name": "塩漬けの魚", "to": "silwen", "text": "冬に備えた塩漬けの魚を、古木の町へ届けてほしい"},
+   {"id": "vike_3", "rank": 2, "type": "hunt", "name": "鉱山道の大蜘蛛", "to": "durgan", "monster": "giant_spider", "count": 5, "text": "鋼山へ続く森の道に巣くう大蜘蛛を退治してほしい"},
+   {"id": "vike_4", "rank": 3, "type": "deliver", "name": "凍土への補給", "to": "yarka", "text": "吹雪に閉ざされる前に、凍土の集落へ食料を届けてほしい"}
+  ],
+  "morna": [
+   {"id": "morna_1", "rank": 1, "type": "hunt", "name": "沼ヒル退治", "to": "silwen", "monster": "marsh_leech", "count": 3, "text": "高床の家の下にわく沼ヒルを駆除してほしい"},
+   {"id": "morna_2", "rank": 1, "type": "deliver", "name": "霧沼の薬", "to": "silwen", "text": "沼の薬草で作った薬を、古木の町へ届けてほしい"},
+   {"id": "morna_3", "rank": 2, "type": "hunt", "name": "霧の鬼火", "to": "silwen", "monster": "will_o_wisp", "count": 5, "text": "霧の奥から現れて旅人を迷わせる鬼火を追い払ってほしい"},
+   {"id": "morna_4", "rank": 3, "type": "hunt", "name": "沈んだ神殿の守り", "to": "silwen", "monster": "mud_golem", "count": 6, "text": "沈んだ神殿の方角から現れる泥人形を食い止めてほしい"}
+  ],
+  "durgan": [
+   {"id": "durgan_1", "rank": 1, "type": "hunt", "name": "坑道の大ネズミ", "to": "vike", "monster": "giant_rat", "count": 4, "text": "坑道の食料を荒らす大ネズミを退治してほしい"},
+   {"id": "durgan_2", "rank": 1, "type": "deliver", "name": "鋼の納品", "to": "aurea", "text": "鍛えた鋼を王都へ納めてほしい"},
+   {"id": "durgan_3", "rank": 2, "type": "hunt", "name": "鉱石泥棒", "to": "aurea", "monster": "mountain_bandit", "count": 5, "text": "鉱石を運ぶ荷車を狙う山賊を討ってほしい"},
+   {"id": "durgan_4", "rank": 3, "type": "hunt", "name": "竜の骨の目覚め", "to": "aurea", "monster": "rock_golem", "count": 6, "text": "掘り出した竜の骨のそばで動き出した岩ゴーレムを砕いてほしい"}
+  ],
+  "cocora": [
+   {"id": "cocora_1", "rank": 1, "type": "hunt", "name": "港の毒ガエル", "to": "aurea", "monster": "poison_frog", "count": 3, "text": "港の倉庫に入り込む毒ガエルを追い払ってほしい"},
+   {"id": "cocora_2", "rank": 1, "type": "deliver", "name": "香辛料の船荷", "to": "novaris", "text": "熱帯の香辛料を、海の向こうの西の港へ届けてほしい"},
+   {"id": "cocora_3", "rank": 2, "type": "hunt", "name": "サハギンの襲来", "to": "novaris", "monster": "sahuagin", "count": 5, "text": "西大陸への航路に現れるサハギンを退けてほしい"},
+   {"id": "cocora_4", "rank": 3, "type": "hunt", "name": "海賊船を沈めよ", "to": "novaris", "monster": "pirate", "count": 6, "text": "椰子の港を狙う海賊の一味を討ち取ってほしい"}
+  ],
+  "kazal": [
+   {"id": "kazal_1", "rank": 1, "type": "hunt", "name": "羊を狙う大ネズミ", "to": "linde", "monster": "giant_rat", "count": 3, "text": "放牧の羊を襲う大ネズミを追い払ってほしい"},
+   {"id": "kazal_2", "rank": 1, "type": "deliver", "name": "羊毛の市", "to": "caelum", "text": "市で仕入れた羊毛を、天門の町へ届けてほしい"},
+   {"id": "kazal_3", "rank": 2, "type": "hunt", "name": "遊牧の民の護衛", "to": "zafra", "monster": "desert_bandit", "count": 5, "text": "砂漠の縁を行く遊牧の民を、砂漠の盗賊から守ってほしい"},
+   {"id": "kazal_4", "rank": 3, "type": "hunt", "name": "砂漠の毒尾", "to": "zafra", "monster": "sand_scorpion", "count": 6, "text": "草原まで出てくるようになった砂サソリを退治してほしい"}
+  ],
+  "linde": [
+   {"id": "linde_1", "rank": 1, "type": "hunt", "name": "湖のヒル退治", "to": "kazal", "monster": "marsh_leech", "count": 3, "text": "養魚池を荒らす沼ヒルを駆除してほしい"},
+   {"id": "linde_2", "rank": 1, "type": "deliver", "name": "湖の魚", "to": "kazal", "text": "湖で育てた魚を、風巻きの宿へ届けてほしい"},
+   {"id": "linde_3", "rank": 2, "type": "hunt", "name": "雪どけの森の狼", "to": "isval", "monster": "forest_wolf", "count": 5, "text": "雪どけとともに山から下りてきた森オオカミを退けてほしい"},
+   {"id": "linde_4", "rank": 3, "type": "hunt", "name": "湖を凍らせる氷の精", "to": "isval", "monster": "frost_sprite", "count": 5, "text": "季節外れに湖を凍らせる氷の精を鎮めてほしい"}
+  ],
+  "isval": [
+   {"id": "isval_1", "rank": 1, "type": "hunt", "name": "砦の見回り", "to": "linde", "monster": "ice_wolf", "count": 3, "text": "砦のまわりをうろつく氷狼を追い払ってほしい"},
+   {"id": "isval_2", "rank": 1, "type": "deliver", "name": "砦の物資", "to": "linde", "text": "砦から湖畔の村へ、物資の注文書を届けてほしい"},
+   {"id": "isval_3", "rank": 2, "type": "hunt", "name": "雪男の足跡", "to": "linde", "monster": "yeti", "count": 4, "text": "砦への道に現れた雪男を討ってほしい"},
+   {"id": "isval_4", "rank": 3, "type": "hunt", "name": "氷窟の偵察", "to": "linde", "monster": "frost_sprite", "count": 6, "text": "氷牙の氷窟から湧き出す氷の精を退けてほしい"}
+  ],
+  "yarka": [
+   {"id": "yarka_1", "rank": 1, "type": "hunt", "name": "氷狼の群れ", "to": "silwen", "monster": "ice_wolf", "count": 3, "text": "集落を狙う氷狼の群れを追い払ってほしい"},
+   {"id": "yarka_2", "rank": 1, "type": "deliver", "name": "毛皮の交易", "to": "silwen", "text": "凍土の毛皮を、古木の町へ届けてほしい"},
+   {"id": "yarka_3", "rank": 2, "type": "hunt", "name": "雪男狩り", "to": "silwen", "monster": "yeti", "count": 4, "text": "凍土の道で旅人を襲う雪男を討ってほしい"},
+   {"id": "yarka_4", "rank": 3, "type": "deliver", "name": "北の果ての報せ", "to": "aurea", "text": "凍土の空に見えた不思議な光のことを、王都へ報せてほしい"}
+  ],
+  "zafra": [
+   {"id": "zafra_1", "rank": 1, "type": "deliver", "name": "隊商の護衛", "to": "fajil", "text": "オアシスから暁の港へ向かう隊商の荷を届けてほしい"},
+   {"id": "zafra_2", "rank": 1, "type": "hunt", "name": "毒袋集め", "to": "kazal", "monster": "sand_scorpion", "count": 4, "text": "薬の材料になる砂サソリの毒袋を集めてほしい"},
+   {"id": "zafra_3", "rank": 2, "type": "hunt", "name": "砂漠の盗賊団", "to": "fajil", "monster": "desert_bandit", "count": 6, "text": "隊商を襲う砂漠の盗賊団を討ってほしい"},
+   {"id": "zafra_4", "rank": 3, "type": "deliver", "name": "翠国の遺物を運べ", "to": "aurea", "text": "砂の下から見つかった翠国の遺物を、王都へ運んでほしい"}
+  ],
+  "fajil": [
+   {"id": "fajil_1", "rank": 1, "type": "hunt", "name": "岩トカゲの革", "to": "zafra", "monster": "rock_lizard", "count": 3, "text": "港の職人が使う岩トカゲの革を集めてほしい"},
+   {"id": "fajil_2", "rank": 1, "type": "deliver", "name": "交易品を砂漠へ", "to": "zafra", "text": "港に届いた交易品を、オアシスの町へ届けてほしい"},
+   {"id": "fajil_3", "rank": 2, "type": "hunt", "name": "朝の航路を守れ", "to": "homura", "monster": "sahuagin", "count": 5, "text": "炎の列島への航路に現れるサハギンを退けてほしい"},
+   {"id": "fajil_4", "rank": 3, "type": "hunt", "name": "雨林への道を開け", "to": "yashum", "monster": "jungle_serpent", "count": 5, "text": "雨林の村への道をふさぐ大蛇を退治してほしい"}
+  ],
+  "yashum": [
+   {"id": "yashum_1", "rank": 1, "type": "hunt", "name": "吸血コウモリの巣", "to": "fajil", "monster": "vampire_bat", "count": 3, "text": "村の家畜を襲う吸血コウモリを追い払ってほしい"},
+   {"id": "yashum_2", "rank": 1, "type": "deliver", "name": "雨林の薬草", "to": "fajil", "text": "雨林でしか採れない薬草を、暁の港へ届けてほしい"},
+   {"id": "yashum_3", "rank": 2, "type": "hunt", "name": "毒ガエルの沼", "to": "fajil", "monster": "poison_frog", "count": 6, "text": "村の水場に住みついた毒ガエルを駆除してほしい"},
+   {"id": "yashum_4", "rank": 3, "type": "deliver", "name": "翠国の言い伝え", "to": "zafra", "text": "古い魔法の言い伝えを、同じ翠国の血を引くオアシスの民へ伝えてほしい"},
+   {"id": "yashum_5", "rank": 4, "type": "hunt", "name": "王墓を狙う者たち", "to": "fajil", "monster": "desert_bandit", "count": 7, "text": "翠国の王墓の封印を破ろうとする盗賊を退けてほしい"}
+  ],
+  "astol": [
+   {"id": "astol_1", "rank": 1, "type": "hunt", "name": "巡礼者を守れ", "to": "vike", "monster": "forest_wolf", "count": 3, "text": "修道院を訪れる巡礼者を、森オオカミから守ってほしい"},
+   {"id": "astol_2", "rank": 1, "type": "deliver", "name": "星読みの暦", "to": "vike", "text": "星読みの修道士が作った暦を、北の漁村へ届けてほしい"},
+   {"id": "astol_3", "rank": 2, "type": "hunt", "name": "星見の森の木霊", "to": "caelum", "monster": "treant", "count": 5, "text": "星を見る丘へ続く森で暴れる木霊を鎮めてほしい"},
+   {"id": "astol_4", "rank": 3, "type": "deliver", "name": "星の巡りの記録", "to": "caelum", "text": "星の巡りの記録を、天門の町へ届けてほしい"},
+   {"id": "astol_5", "rank": 4, "type": "hunt", "name": "天の頂への道を拓け", "to": "caelum", "monster": "great_eagle", "count": 7, "text": "始祖竜の目覚めを告げる星を確かめるため、天の頂への道に巣くう大鷲を退けてほしい"}
+  ],
+  "urka": [
+   {"id": "urka_1", "rank": 1, "type": "hunt", "name": "毒ガエルの駆除", "to": "rubela", "monster": "poison_frog", "count": 3, "text": "集落のまわりの毒ガエルを駆除してほしい"},
+   {"id": "urka_2", "rank": 1, "type": "deliver", "name": "香辛料の荷", "to": "rubela", "text": "密林の香辛料を、赤岩の鉱山町へ届けてほしい"},
+   {"id": "urka_3", "rank": 2, "type": "hunt", "name": "密林のコウモリ", "to": "rubela", "monster": "vampire_bat", "count": 5, "text": "夜な夜な集落を襲う吸血コウモリを退治してほしい"},
+   {"id": "urka_4", "rank": 3, "type": "hunt", "name": "蔦の主", "to": "rubela", "monster": "jungle_serpent", "count": 5, "text": "密林の奥に棲む大蛇を討ってほしい"}
+  ],
+  "rubela": [
+   {"id": "rubela_1", "rank": 1, "type": "hunt", "name": "岩トカゲの駆除", "to": "urka", "monster": "rock_lizard", "count": 3, "text": "採掘場に入り込む岩トカゲを追い払ってほしい"},
+   {"id": "rubela_2", "rank": 1, "type": "deliver", "name": "宝石の積み出し", "to": "novaris", "text": "掘り出した宝石を、西の港へ届けてほしい"},
+   {"id": "rubela_3", "rank": 2, "type": "hunt", "name": "宝石泥棒", "to": "rowen", "monster": "desert_bandit", "count": 5, "text": "宝石を狙う荒野の盗賊を討ってほしい"},
+   {"id": "rubela_4", "rank": 3, "type": "hunt", "name": "赤い荒野の毒尾", "to": "urka", "monster": "sand_scorpion", "count": 6, "text": "採掘場を荒らす砂サソリの群れを退治してほしい"}
+  ],
+  "novaris": [
+   {"id": "novaris_1", "rank": 1, "type": "hunt", "name": "開拓地の野犬", "to": "rowen", "monster": "wild_dog", "count": 3, "text": "開拓地の畑を荒らす野犬を追い払ってほしい"},
+   {"id": "novaris_2", "rank": 1, "type": "deliver", "name": "開拓民への物資", "to": "rowen", "text": "港に届いた物資を、南の森の村へ届けてほしい"},
+   {"id": "novaris_3", "rank": 2, "type": "hunt", "name": "港を襲うサハギン", "to": "cocora", "monster": "sahuagin", "count": 4, "text": "港の近くまで来るようになったサハギンを退けてほしい"},
+   {"id": "novaris_4", "rank": 3, "type": "deliver", "name": "本国への報告", "to": "flumen", "text": "開拓の様子を、海の向こうの河港へ報告してほしい"}
+  ],
+  "rowen": [
+   {"id": "rowen_1", "rank": 1, "type": "hunt", "name": "狩人の手伝い", "to": "rubela", "monster": "forest_wolf", "count": 3, "text": "村の狩人と一緒に、森オオカミを狩ってほしい"},
+   {"id": "rowen_2", "rank": 1, "type": "deliver", "name": "毛皮と干し肉", "to": "novaris", "text": "狩りの獲物を、西の港へ届けてほしい"},
+   {"id": "rowen_3", "rank": 2, "type": "hunt", "name": "家畜を狙う大鷲", "to": "novaris", "monster": "great_eagle", "count": 4, "text": "背骨山脈から下りてくる大鷲を追い払ってほしい"},
+   {"id": "rowen_4", "rank": 3, "type": "hunt", "name": "背骨山脈の山賊", "to": "novaris", "monster": "mountain_bandit", "count": 5, "text": "山脈のふもとに隠れ住む山賊を討ってほしい"}
+  ],
+  "salina": [
+   {"id": "salina_1", "rank": 1, "type": "hunt", "name": "干潟のヒル", "to": "eques", "monster": "marsh_leech", "count": 3, "text": "貝を採る干潟にわく沼ヒルを駆除してほしい"},
+   {"id": "salina_2", "rank": 1, "type": "deliver", "name": "塩の積み出し", "to": "flumen", "text": "塩田で作った塩を、河港へ届けてほしい"},
+   {"id": "salina_3", "rank": 2, "type": "hunt", "name": "大ダコ漁", "to": "flumen", "monster": "giant_octopus", "count": 4, "text": "航路に現れる大ダコを捕らえてほしい"},
+   {"id": "salina_4", "rank": 3, "type": "hunt", "name": "干潟から来る泥人形", "to": "muralis", "monster": "mud_golem", "count": 6, "text": "干潟から這い出してくる泥人形を食い止めてほしい"}
+  ],
+  "eques": [
+   {"id": "eques_1", "rank": 1, "type": "hunt", "name": "馬を狙う野犬", "to": "salina", "monster": "wild_dog", "count": 3, "text": "放牧の馬を襲う野犬を追い払ってほしい"},
+   {"id": "eques_2", "rank": 1, "type": "deliver", "name": "馬の受け渡し", "to": "salina", "text": "育てた馬を、干潟の港の買い手へ届けてほしい"},
+   {"id": "eques_3", "rank": 2, "type": "hunt", "name": "競馬祭の警備", "to": "salina", "monster": "goblin", "count": 5, "text": "競馬祭の賞金を狙うゴブリンを討ってほしい"},
+   {"id": "eques_4", "rank": 3, "type": "deliver", "name": "砦への軍馬", "to": "muralis", "text": "南壁の砦へ、鍛えた軍馬を届けてほしい"}
+  ],
+  "muralis": [
+   {"id": "muralis_1", "rank": 1, "type": "hunt", "name": "砦のまわりの見回り", "to": "salina", "monster": "wild_dog", "count": 3, "text": "砦のまわりをうろつく野犬を追い払ってほしい"},
+   {"id": "muralis_2", "rank": 1, "type": "deliver", "name": "交代の兵", "to": "salina", "text": "交代の兵の名簿を、干潟の港へ届けてほしい"},
+   {"id": "muralis_3", "rank": 2, "type": "hunt", "name": "山越えの山賊", "to": "salina", "monster": "mountain_bandit", "count": 5, "text": "山脈の切れ目から入り込む山賊を討ってほしい"},
+   {"id": "muralis_4", "rank": 3, "type": "hunt", "name": "南壁の大鷲", "to": "salina", "monster": "great_eagle", "count": 5, "text": "砦の見張り台を襲う大鷲を追い払ってほしい"}
+  ],
+  "homura": [
+   {"id": "homura_1", "rank": 1, "type": "hunt", "name": "湯治客の迎え", "to": "fajil", "monster": "sahuagin", "count": 3, "text": "湯治客を乗せた船を、サハギンから守ってほしい"},
+   {"id": "homura_2", "rank": 1, "type": "deliver", "name": "温泉の湯の花", "to": "fajil", "text": "温泉でとれた湯の花を、暁の港へ届けてほしい"},
+   {"id": "homura_3", "rank": 2, "type": "hunt", "name": "海賊船の撃退", "to": "fajil", "monster": "pirate", "count": 5, "text": "湯治場の宝を狙う海賊を追い払ってほしい"},
+   {"id": "homura_4", "rank": 3, "type": "deliver", "name": "火山の鋼", "to": "durgan", "text": "竜の心臓の火で鍛えた鋼を、鋼山の鍛冶屋へ届けてほしい"},
+   {"id": "homura_5", "rank": 4, "type": "hunt", "name": "竜の心臓の鼓動", "to": "fajil", "monster": "giant_octopus", "count": 7, "text": "竜の心臓の熱で荒れた海から現れる大ダコを鎮めてほしい"}
+  ]
+ }
+}

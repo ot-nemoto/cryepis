@@ -102,12 +102,13 @@ class AdvanceTest(unittest.TestCase):
     def test_journal_is_capped(self):
         self.assertEqual(len(play(G.JOURNAL_DAYS + 5)["journal"]), G.JOURNAL_DAYS)
 
-    def test_expired_quest_fails(self):
+    def test_quests_have_no_deadline(self):
         state = play(1, actions=0)
-        state["quest"] = a_hunt() | {"deadline": START.isoformat()}
-        G.advance(WORLD, state, START + timedelta(days=1), 0)
-        self.assertIsNone(state["quest"])
-        self.assertEqual(state["season_stats"]["quests_failed"], 1)
+        state["quest"] = a_hunt()
+        self.assertIsNone(state["quest"]["deadline"])
+        for i in range(1, 30):
+            G.advance(WORLD, state, START + timedelta(days=i), 0)  # 何日たっても失敗しない
+        self.assertEqual(state["season_stats"]["quests_failed"], 0)
 
 
 class QuestTest(unittest.TestCase):
@@ -122,12 +123,50 @@ class QuestTest(unittest.TestCase):
                 for q in G.board(WORLD, town, START + timedelta(days=i), 1):
                     self.assertIn(q["place"], WORLD["towns"])
                     self.assertIn(q["report"], WORLD["towns"])
-                    self.assertGreater(q["deadline"], START.isoformat())
+                    self.assertIsNone(q["deadline"])
+                    self.assertGreater(q["cost"], 0)
                     self.assertTrue(G.quest_ok(WORLD, q))
                     if q["type"] == "hunt":  # 討伐は町から出る道で、その道に出る魔物
                         self.assertEqual(q["report"], town)
                         pool = [m for m, _ in WORLD["road_info"][(town, q["place"])]["monsters"]]
                         self.assertIn(q["monster"], pool)
+
+    def test_board_has_town_quests_once_a_day(self):
+        names = {q["name"] for t in WORLD["town_quests"].values() for q in t}
+        seen = 0
+        for town in WORLD["towns"]:
+            for i in range(10):
+                board = G.board(WORLD, town, START + timedelta(days=i), 1)
+                own = [q["template"] for q in board if q["template"] in {x["id"] for x in WORLD["town_quests"][town]}]
+                self.assertEqual(len(own), len(set(own)))  # 同じ町の依頼は 1 日に 1 度だけ
+                seen += len(own)
+                for q in board:
+                    self.assertTrue(q["name"] in names or q["template"] in {t["id"] for t in WORLD["quests"]})
+        self.assertGreater(seen, 0)
+
+    def test_quest_rank_sets_reward_and_items(self):
+        town = "homura"
+        q4 = next(q for q in WORLD["town_quests"][town] if q["rank"] == 4)
+        q1 = next(q for q in WORLD["town_quests"][town] if q["rank"] == 1 and q["type"] == q4["type"])
+        a, b = G.make_town_quest(WORLD, q1, town, START), G.make_town_quest(WORLD, q4, town, START)
+        per = lambda q: q["reward"]["exp"] / q["cost"]  # noqa: E731  1 行動あたりの報酬
+        self.assertEqual(per(b) / per(a), WORLD["quest_ranks"][3]["reward"] / WORLD["quest_ranks"][0]["reward"])
+        self.assertEqual(b["reward"]["item"], WORLD["quest_ranks"][3]["item"])
+        self.assertTrue(G.quest_text(WORLD, b).startswith("★★★★ " + q4["name"] + "（"))
+        self.assertEqual(b["text"], q4["text"])
+
+    def test_reward_is_by_cost_not_by_kind(self):
+        base, mult = WORLD["quest_reward"], [r["reward"] for r in WORLD["quest_ranks"]]
+        for town, qs in WORLD["town_quests"].items():
+            for q in qs:
+                x = G.make_town_quest(WORLD, q, town, START)
+                self.assertEqual(x["reward"]["exp"], round(base["exp"] * x["cost"] * mult[q["rank"] - 1]), q["id"])
+                self.assertEqual(x["reward"]["gold"], round(base["gold"] * x["cost"] * mult[q["rank"] - 1]), q["id"])
+
+    def test_rank_falls_back_to_what_the_town_has(self):
+        for i in range(60):  # ヴィーケには ★★★★ の依頼がない
+            for q in G.board(WORLD, "vike", START + timedelta(days=i), 1):
+                self.assertLessEqual(q["rank"], max(x["rank"] for x in WORLD["town_quests"]["vike"]))
 
     def test_hunt_report_gives_reward(self):
         state = play(1, actions=0)
@@ -164,6 +203,33 @@ class QuestTest(unittest.TestCase):
                 ids.append(state["quest"]["id"])
         self.assertEqual(len(ids), len(set(ids)))
         self.assertEqual(state["quest"]["type"], "patrol")  # 受けられる依頼が尽きたら見回り
+
+    def test_quests_taken_by_others_cannot_be_taken(self):
+        guild = {}
+        a, b = play(1, "a", actions=0), play(1, "b", actions=0)
+        town = a["place"]
+        b["place"] = town
+        quests = G.board(WORLD, town, START, 1)
+        self.assertEqual(len(quests), G.quests_per_day(WORLD, town))
+        ids = []
+        for state in [a, b] * len(quests):
+            if len(ids) == len(quests):
+                break
+            state["quest"] = None
+            G.Day(WORLD, state, START, random.Random(len(ids)), guild).take_quest(town)
+            ids.append(state["quest"]["id"])
+        self.assertEqual(sorted(ids), sorted(q["id"] for q in quests))  # 全部の依頼が 1 度ずつ受けられた
+        self.assertEqual(set(guild), set(ids))
+        a["quest"] = None
+        day = G.Day(WORLD, a, START, random.Random(0), guild)
+        day.take_quest(town)  # もう残っていない
+        self.assertEqual(a["quest"]["type"], "patrol")
+        self.assertIn("旅に出る", day.events[-1])
+
+    def test_quests_per_day_depends_on_the_town(self):
+        self.assertEqual(G.quests_per_day(WORLD, "aurea"), 6)
+        self.assertEqual(G.quests_per_day(WORLD, "morna"), 3)
+        self.assertEqual(G.quests_per_day(WORLD, "silwen"), WORLD["season"]["board_size"])
 
     def test_taken_quests_reset_the_next_day(self):
         state = play(1, actions=1)
@@ -320,20 +386,42 @@ class RoadTest(unittest.TestCase):
         self.assertTrue(day.act())
         self.assertEqual(state["season_stats"]["quests_done"], 1)
 
-    def test_hunt_goes_back_and_forth_on_its_road(self):
+    def test_hunt_takes_go_hunt_and_back(self):
         state = play(1, actions=0)
-        quest = a_hunt(state["place"]) | {"count": 99, "deadline": "2099-01-01"}
+        state["hero"].update(max_hp=999, hp=999)  # 負けないようにして、段取りどおりに進むか確かめる
+        quest = a_hunt(state["place"])
+        town, road = quest["report"], WORLD["roads"][(quest["report"], quest["place"])]
+        trip = min(G.HUNT_TRIP_MAX, -(-road // 2))
+        self.assertEqual(quest["steps"], [["go", trip], ["hunt", quest["count"]], ["back", trip]])
+        self.assertEqual(quest["cost"], 2 * trip + quest["count"])
         state["quest"] = quest
         day = day_of(state)
-        visited = set()
-        for _ in range(40):
-            if not day.act():
-                day.fall()
-            visited.add(state["place"])
-            if state["road"]:
-                self.assertIn(state["road"]["to"], (quest["report"], quest["place"]))
-        self.assertEqual(visited, {quest["report"], quest["place"]})
-        self.assertGreater(state["quest"]["progress"], 0)
+        target = WORLD["monsters"][quest["monster"]]["name"]
+        for i in range(quest["cost"]):
+            self.assertIsNotNone(state["quest"])
+            self.assertTrue(day.act())
+            self.assertEqual(state["place"], town)  # 町からは動かない（狩り場は町の近く）
+        self.assertIsNone(state["quest"])  # ちょうど必要な行動力で終わる
+        self.assertEqual(sum(f"{target}" in e and "を倒した" in e for e in day.events), quest["count"])
+        self.assertEqual(state["season_stats"]["quests_done"], 1)
+
+    def test_one_quest_a_day_then_stroll(self):
+        state = play(1, actions=0)
+        state["hero"].update(max_hp=999, hp=999)
+        town = state["place"]
+        q = next(x for x in WORLD["town_quests"].get(town, []) if x["type"] == "hunt" and x["count"] <= 3)
+        quest = G.make_town_quest(WORLD, q, town, START)
+        state.update(quest=quest, taken=[quest["id"]] if "id" in quest else ["x"])
+        day = day_of(state)
+        for _ in range(quest["cost"] + 3):
+            self.assertTrue(day.act())
+        self.assertIsNone(state["quest"])  # 終わったあと、その日はもう受けない
+        self.assertTrue(any("の周りを散策した" in e for e in day.events))
+
+    def test_deliver_cost_is_the_distance(self):
+        q = next(x for x in WORLD["town_quests"]["zafra"] if x["type"] == "deliver" and x["to"] == "aurea")
+        quest = G.make_town_quest(WORLD, q, "zafra", START)
+        self.assertEqual(quest["cost"], WORLD["dist"]["zafra"]["aurea"])
 
     def test_sea_route_has_sea_monsters_and_scenery(self):
         (a, b), _ = next((k, i) for k, i in WORLD["road_info"].items() if i["kind"] == "sea")
@@ -430,7 +518,7 @@ class StateFileTest(unittest.TestCase):
     def test_load_drops_quests_whose_place_changed_type(self):
         state = play(2)
         base = {"name": "x", "template": "t", "town": TOWN, "report": TOWN, "count": 1,
-                "progress": 0, "level": [1, 5], "deadline": "2099-01-01", "reward": None}
+                "progress": 0, "level": [1, 5], "deadline": None, "reward": None, "steps": [["hunt", 1]]}
         near = WORLD["neighbors"][TOWN][0]
         far = next(t for t in WORLD["towns"] if t != TOWN and (TOWN, t) not in WORLD["roads"])
         cases = [({"type": "hunt", "place": near, "monster": "wild_dog"}, True),
@@ -442,6 +530,8 @@ class StateFileTest(unittest.TestCase):
         no_report = {k: v for k, v in (base | {"type": "hunt", "place": near, "monster": "wild_dog"}).items()
                      if k != "report"}
         self.assertFalse(G.quest_ok(WORLD, no_report))  # 報告先のない討伐は捨てる（エラーにしない）
+        old = {k: v for k, v in (base | {"type": "hunt", "place": near, "monster": "wild_dog"}).items() if k != "steps"}
+        self.assertFalse(G.quest_ok(WORLD, old))  # 前の形式（段取りのない討伐）は捨てる
         for quest, ok in cases:
             self.assertEqual(G.quest_ok(WORLD, base | quest), ok, quest)
 

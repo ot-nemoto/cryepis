@@ -61,6 +61,12 @@ SPECIALTY = {
     "雨林の村": "jade_ring", "霧氷の修道院": "stargazer_amulet", "蔦の集落": "blowgun", "赤岩の鉱山町": "ruby_ring",
     "西の港": "settler_armor", "干潟の港": "shell_shield", "南壁の砦": "wall_shield", "焔の湯治場": "volcanic_blade",
 }
+# 1 日にギルドに出る依頼の数（町の大きさ。書いていない町は season.json の board_size）
+QUESTS_PER_DAY = {
+    "王都": 6,
+    "河港": 5, "暁の港": 5, "干潟の港": 5, "西の港": 5, "椰子の港": 5, "オアシスの町": 5, "天門の町": 5,
+    "霧沼の村": 3, "氷牙の砦": 3, "凍土の集落": 3, "雨林の村": 3, "霧氷の修道院": 3, "蔦の集落": 3, "南壁の砦": 3,
+}
 DUNGEON_INFO = {
     "始祖竜の頭骨": ("dragon_skull", "天の頂"), "翠国の王墓": ("jade_tomb", "灼熱の大砂漠"),
     "竜の心臓の火口": ("heart_crater", "炎の列島"), "沈んだ神殿": ("sunken_temple", "霧の大湿原"),
@@ -104,7 +110,8 @@ def main():
     for name, x, y in TOWNS:
         tid, emoji, region, shop = TOWN_INFO[name]
         places.append({"id": tid, "type": "town", "name": NAMES[name], "alias": name, "region": region,
-                       "emoji": emoji, "shop": shop + [SPECIALTY[name]], "pos": [x, y]} | ({"label": LABEL[name]} if name in LABEL else {}))
+                       "emoji": emoji, "shop": shop + [SPECIALTY[name]], "pos": [x, y]}
+                      | ({"quests_per_day": QUESTS_PER_DAY[name]} if name in QUESTS_PER_DAY else {}) | ({"label": LABEL[name]} if name in LABEL else {}))
     for name, x, y in DUNGEONS:
         did, region = DUNGEON_INFO[name]
         places.append({"id": did, "type": "dungeon", "name": name, "region": region, "pos": [x, y]}

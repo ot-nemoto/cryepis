@@ -41,6 +41,7 @@ import world as W  # noqa: E402
 HEROES_PATH = common.ROOT / ".state" / "heroes.json"
 HERO_DIR = common.ROOT / ".state" / "heroes"
 BOARD_PATH = common.ROOT / ".state" / "board.json"
+GUILD_PATH = common.ROOT / ".state" / "guild.json"  # 全員で共有する「受けられた依頼」（早い者勝ち）
 PAGE_DIR = common.ROOT / "heroes"  # 勇者ごとの詳細のページ（GitHub 上で読む）
 BOARD_FILENAME = "hero-ranking.txt"
 MAX_HEROES = 30  # 同時に冒険できる（引退していない）勇者の数
@@ -49,7 +50,8 @@ MEDALS = ("🥇", "🥈", "🥉")
 NAME_WIDTH_MAX = 16  # 勇者の名前の表示幅（全角 = 2）
 CATCH_UP_DAYS = 7  # 実行されなかった日をさかのぼって進める最大の日数
 # カードに優先して出す出来事（前ほど優先）
-HIGHLIGHTS = ("★", "シーズン", "依頼達成", "力尽きた", "依頼失敗", "レベルが上がった", "手に入れた", "買った",
+HIGHLIGHTS = ("★「",  # レアのアイテム（★「…」。依頼のレアリティの ★ とは区別する）
+              "シーズン", "依頼達成", "力尽きた", "依頼失敗", "レベルが上がった", "手に入れた", "買った",
               "目標を果たした", "依頼を受けた")
 TEASERS = ("新しい依頼を探している…", "次の町を目指している…", "腕が鳴る…")
 
@@ -135,7 +137,8 @@ def location(world: dict, state: dict) -> str:
     quest = state["quest"]
     if quest:
         if quest["type"] == "hunt":
-            goal = f"{world['monsters'][quest['monster']]['name']} {quest['progress']}/{quest['count']}"
+            phase = {"go": "（狩り場へ）", "hunt": "", "back": "（帰り道）"}[quest["steps"][0][0]] if quest["steps"] else ""
+            goal = f"{world['monsters'][quest['monster']]['name']} {quest['progress']}/{quest['count']}{phase}"
         elif quest["type"] == "deliver":
             goal = f"{world['places'][quest['place']]['name']}へ配達"
         else:
@@ -192,6 +195,15 @@ def build_text(world: dict, state: dict) -> str:
                  key=lambda kv: (-rank[world["items"][kv[0]]["rarity"]], -game.item_score(world["items"][kv[0]]), kv[0]))
     detail += ["", "── 持ち物（シーズンをまたいで持ち越す）──"]
     detail += [f"{item_label(world, iid)}" + (f" ×{n}" if n > 1 else "") for iid, n in inv] or ["なし"]
+    quest = state["quest"]
+    if quest and quest["type"] != "patrol":
+        detail += ["", "── 受けている依頼 ──", game.quest_text(world, quest)]
+        if quest.get("text"):
+            detail.append(f"「{quest['text']}」（{world['places'][quest['town']]['name']}のギルド）")
+        left = sum(n for _, n in quest["steps"]) if quest["type"] == "hunt" else None
+        detail.append(f"必要な行動力 {quest.get('cost', '-')}" + (f"（残り {left}）" if left is not None else "")
+                      + f"  進み具合 {quest['progress']}/{quest['count']}  "
+                      f"報酬 {quest['reward']['exp']}EXP {quest['reward']['gold']}G")
     detail += ["", "── 今シーズンの成績 ──",
                f"依頼達成 {ss['quests_done']}  依頼失敗 {ss['quests_failed']}  倒した敵 {ss['kills']}  "
                f"力尽きた回数 {ss['deaths']}",
@@ -491,23 +503,49 @@ def retire(key: str) -> int:
     raise SystemExit(f"引退させられる勇者「{key}」がいません（ID か名前で、現役の勇者を指定してください）")
 
 
-def run_hero(world: dict, hero: dict, today: date, actions: int | None, dry_run: bool) -> dict:
-    """勇者を進めて状態を保存し（dry_run なら保存しない）、状態を返す。"""
+def load_guild(today: date) -> dict:
+    """受けられた依頼（依頼の ID → 勇者の ID）。さかのぼって進める日より古いものは捨てる。"""
+    try:
+        taken = json.loads(GUILD_PATH.read_text(encoding="utf-8")).get("taken", {})
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"{GUILD_PATH} が JSON として読めません（マージ衝突などを確認してください）: {e}")
+    oldest = (today - timedelta(days=CATCH_UP_DAYS)).isoformat()
+    return {qid: hid for qid, hid in taken.items() if qid[:10] >= oldest}  # 依頼の ID は日付で始まる
+
+
+def save_guild(guild: dict) -> None:
+    GUILD_PATH.parent.mkdir(parents=True, exist_ok=True)
+    GUILD_PATH.write_text(json.dumps({"taken": dict(sorted(guild.items()))}, ensure_ascii=False, indent=1) + "\n",
+                          encoding="utf-8")
+
+
+def load_hero(world: dict, hero: dict) -> dict:
     path = hero_state_path(hero["id"])
     if not path.exists():  # 登録済みの勇者の状態が無いのは異常。黙って最初からにしない
         raise SystemExit(f"{path} がありません（削除やマージで消えた可能性があります）")
-    state = game.load_state(world, path, hero["id"], hero["name"])
-    days = pending_days(state, today)
-    if not days:
-        print(f"{hero['name']}: {today} の分は処理済みのため進めません（表示だけ更新します）")
-    elif actions is not None:
-        game.advance(world, state, today, actions)
-    else:
-        for day in days:  # 実行されなかった日があれば、古い日から 1 日ずつ進める
-            game.advance(world, state, day)
-    if days and not dry_run:
-        game.save_state(state, path)
-    return state
+    return game.load_state(world, path, hero["id"], hero["name"])
+
+
+def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, guild: dict) -> dict:
+    """勇者たちを 1 日ずつそろえて進める（loaded は勇者の ID → (heroes.json の行, 状態, 進める日)）。
+    ギルドの依頼は早い者勝ちなので、日ごとに勇者の順番を混ぜて、毎回同じ勇者が先にならないようにする。
+    進められなかった勇者は、その日以降は進めない。戻り値は失敗した勇者の ID → エラー。"""
+    errors: dict = {}
+    days = sorted({d for _, _, ds in loaded.values() for d in ds})
+    if actions is not None:  # 試すとき: 今日の分だけ、指定した回数で進める
+        days = [today] if days else []
+    for day in days:
+        order = [hid for hid, (_, _, ds) in loaded.items() if (day in ds or actions is not None) and hid not in errors]
+        random.Random(f"order-{day.isoformat()}").shuffle(order)
+        for hid in order:
+            hero, state, _ = loaded[hid]
+            try:
+                game.advance(world, state, day, actions, guild)
+            except (Exception, SystemExit) as e:  # noqa: BLE001  勇者ごとに失敗を隔離する
+                errors[hid] = e
+    return errors
 
 
 def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) -> int:
@@ -520,23 +558,45 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
     token = os.environ.get("GIST_PAT")
     if not token and not dry_run:
         raise SystemExit("GIST_PAT を環境変数で指定してください")
-    failed, entries, on_map = 0, [], []
+    failed, entries, on_map, loaded = 0, [], [], {}
+
+    def fail(hero: dict, e: BaseException) -> None:
+        nonlocal failed
+        failed += 1
+        common.warn(f"{hero['name']}（{hero['id']}）を進められませんでした: {e}")
+        try:  # 進められなかった勇者も、保存してある状態で地図に載せる
+            on_map.append((hero, load_hero(world, hero)))
+        except (Exception, SystemExit):  # noqa: BLE001
+            pass
     for hero in heroes:
         try:
-            state = run_hero(world, hero, today, actions, dry_run)
+            state = load_hero(world, hero)
+            loaded[hero["id"]] = (hero, state, pending_days(state, today))
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            fail(hero, e)
+    guild = load_guild(today)
+    errors = advance_heroes(world, loaded, today, actions, guild)
+    for hero in heroes:
+        if hero["id"] not in loaded:
+            continue
+        if hero["id"] in errors:
+            fail(hero, errors[hero["id"]])
+            continue
+        _, state, days = loaded[hero["id"]]
+        if not days:
+            print(f"{hero['name']}: {today} の分は処理済みのため進めません（表示だけ更新します）")
+        try:
+            if days and not dry_run:
+                game.save_state(state, hero_state_path(hero["id"]))
             entries.append((hero, state))
             on_map.append((hero, state))
             print(build_text(world, state))
             if not dry_run:
                 save_page(world, state)
-        except (Exception, SystemExit) as e:  # noqa: BLE001  勇者ごとに失敗を隔離する
-            failed += 1
-            common.warn(f"{hero['name']}（{hero['id']}）を進められませんでした: {e}")
-            try:  # 進められなかった勇者も、保存してある状態で地図に載せる
-                on_map.append((hero, game.load_state(world, hero_state_path(hero["id"]), hero["id"], hero["name"])))
-            except (Exception, SystemExit):  # noqa: BLE001
-                pass
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            fail(hero, e)
     if not dry_run:
+        save_guild(guild)
         try:  # 地図を書き出せなくても、ランキングの Gist は更新する
             save_map(world, on_map)
         except (Exception, SystemExit) as e:  # noqa: BLE001
