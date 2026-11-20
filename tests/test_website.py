@@ -57,6 +57,7 @@ class SiteTest(unittest.TestCase):
         "index.html",
         "map.html",
         "ranking.html",
+        "heroes.html",
         "guild.html",
         "items.html",
         "towns.html",
@@ -235,6 +236,15 @@ class SiteTest(unittest.TestCase):
     self.assertIn('南大陸 <span class="en">Austral Land</span>', html)
     self.assertIn('href="towns.html#salina"', html)
     self.assertLess(html.index("いまの冒険"), html.index('<h2 class="area">世界オルドラ'))  # 最初の見出しの前
+
+  def test_heroes_page(self):
+    entries, _, today = party(2, 2)
+    html = website.build_heroes(WORLD, entries, today)
+    self.assertIn('<a href="ranking.html">ランキング</a><a href="heroes.html" class="on">勇者</a>', html)
+    for h, _ in entries:  # 勇者の一覧（詳細のページへのリンク）
+      self.assertIn(f'<a href="heroes/{h["id"]}.html">{h["name"]}</a>', html)
+    self.assertNotIn("<h2>勇者たち</h2>", website.build_ranking(WORLD, entries, today))  # ランキングからは移した
+    self.assertIn("まだ勇者がいません", website.build_heroes(WORLD, [], today))
 
   def test_story_markdown(self):
     blocks = website.md_html(

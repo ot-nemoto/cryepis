@@ -4,7 +4,8 @@
 ページ:
   index.html          ストーリー（world/story.md の物語・世界・歴史と、いまの冒険の状況）
   map.html            世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
-  ranking.html        今シーズンのランキングと、勇者の一覧
+  ranking.html        今シーズンのランキングと、今日の出来事
+  heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
   guild.html          町ごとのギルドの掲示板（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
@@ -41,6 +42,7 @@ PAGES = (
   ("index.html", "ストーリー"),
   ("map.html", "地図"),
   ("ranking.html", "ランキング"),
+  ("heroes.html", "勇者"),
   ("towns.html", "町"),
   ("guild.html", "ギルド"),
   ("items.html", "アイテム"),
@@ -237,7 +239,7 @@ def build_story(world: dict, entries: list[tuple[dict, dict]], today: date, stor
   status = (
     '<div class="card"><h3>いまの冒険</h3><table class="info"><colgroup><col style="width:11em"><col></colgroup>'
     f"<tr><th>星の巡り</th><td>シーズン{season}（{first}〜{last}）・{day}</td></tr>"
-    f'<tr><th>旅をしている勇者</th><td>{len(entries)} 人（<a href="ranking.html">ランキング</a>）</td></tr>'
+    f'<tr><th>旅をしている勇者</th><td>{len(entries)} 人（<a href="heroes.html">勇者の一覧</a>）</td></tr>'
     f'<tr><th>旅のできる地方</th><td><ul class="plain">{"".join(areas)}</ul></td></tr>'
     "</table></div>"
   )
@@ -301,7 +303,15 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
       + "</div>"
     )
   body.append('<div class="grid">' + "".join(cards) + "</div>")
-  body.append("<h2>勇者たち</h2>")
+  return page("ランキング", "".join(body), "ranking.html")
+
+
+# ---- 勇者 ---------------------------------------------------------------------------------
+def build_heroes(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
+  """旅をしている勇者の一覧（居場所・能力・装備・今日の出来事。名前から詳細のページへ）。"""
+  season = game.season_of(world, today)
+  views = [(h, rpg.season_view(world, s, season)) for h, s in entries]
+  body = [f"<h2>勇者たち</h2>{updated(today)}"]
   heroes = []
   for h, s in views:
     hero, st = s["hero"], game.stats(world, s)
@@ -315,7 +325,7 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
       f'<div class="note">今日: {escape("、".join(events) or "—")}</div></div>'
     )
   body.append('<div class="grid">' + ("".join(heroes) or '<p class="note">まだ勇者がいません。</p>') + "</div>")
-  return page("ランキング", "".join(body), "ranking.html")
+  return page("勇者", "".join(body), "heroes.html")
 
 
 # ---- タブと絞り込み（町・ギルド・アイテムのページで使う）------------------------------------------
@@ -611,7 +621,7 @@ def build_hero(world: dict, hero: dict, state: dict) -> str:
   body = (
     f"<h2>{escape(hero['name'])}（{escape(hero['id'])}）</h2>"
     f"<pre>{escape(rpg.build_text(world, state, fold=False))}</pre>"
-    '<p><a href="../ranking.html">ランキングへ戻る</a></p>'
+    '<p><a href="../heroes.html">勇者の一覧へ戻る</a></p>'
   )
   return page(hero["name"], body, "", depth=1)
 
@@ -651,6 +661,7 @@ def write_site(world: dict, entries: list[tuple[dict, dict]], today: date, guild
     "index.html": build_story(world, entries, today),
     "map.html": build_map(world, entries, today),
     "ranking.html": build_ranking(world, entries, today),
+    "heroes.html": build_heroes(world, entries, today),
     "guild.html": build_guild(world, entries, today, guild),
     "items.html": build_items(world),
     "towns.html": build_towns(world),
