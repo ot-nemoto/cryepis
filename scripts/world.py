@@ -2,7 +2,7 @@
 
 world/
   season.json   シーズンの長さ・初期ステータス・レベルアップ・1 日の行動回数（固定）など
-  map.json      場所（町・ダンジョン）と道（陸路・航路・ダンジョンへの道）
+  map.json      場所（町・ダンジョン）と道（陸路・航路・ダンジョンへの道）、開放した町（open）
   map-base.svg  ベースの地図（地形の絵。map.json の layout.background）
   monsters.json 敵（出る地形と性質）と、性質の一覧
   items.json    アイテム（珍しさの一覧を含む）
@@ -118,6 +118,17 @@ def stat_at(season: dict, stat: str, level: int) -> int:
     return season["hero"][base] + season["level_up"][stat] * (level - 1)
 
 
+def open_towns(mp: dict) -> set:
+    """開放した町（勇者が行ける町）。map.json に open がなければ、全部の町。"""
+    towns = {p.get("id") for p in mp.get("places", []) if p.get("type") == "town"}
+    return set(mp["open"]) & towns if isinstance(mp.get("open"), list) else towns
+
+
+def road_open(r: dict, opened: set, places: dict) -> bool:
+    """道を使うか（両端の町が開放されている。ダンジョンへの道は、その町が開放されている）。"""
+    return all(r.get(e) in opened or places.get(r.get(e), {}).get("type") == "dungeon" for e in ("from", "to"))
+
+
 def validate(raw: dict) -> list[str]:
     """データの誤りの一覧（空なら問題なし）。"""
     errors: list[str] = []
@@ -185,6 +196,14 @@ def validate(raw: dict) -> list[str]:
             err(f"season.json: terrain_scenery の {key!r} は地形（{'/'.join(TERRAINS)}）と文字列の一覧にしてください")
 
     # map.json
+    opened = open_towns(mp)
+    if "open" in mp:
+        if not isinstance(mp["open"], list) or not mp["open"]:
+            err("map.json: open（開放した町）は町の ID の一覧（1 つ以上）にしてください")
+        else:
+            for tid in mp["open"]:
+                if places.get(tid, {}).get("type") != "town":
+                    err(f"map.json: open の {tid!r} は町の ID にしてください")
     starts = mp.get("starts")
     if not isinstance(starts, list) or not starts:
         err("map.json: starts（最初の町の候補）は町の ID の一覧（1 つ以上）にしてください")
@@ -192,6 +211,8 @@ def validate(raw: dict) -> list[str]:
     for sid in starts:
         if places.get(sid, {}).get("type") != "town":
             err(f"map.json: starts の {sid!r} は町の ID にしてください")
+        elif sid not in opened:
+            err(f"map.json: starts の {sid!r} は開放した町（open）にしてください")
     start = starts[0] if starts else None
     for pid, p in places.items():
         where = f"map.json の {pid}"
@@ -268,7 +289,8 @@ def validate(raw: dict) -> list[str]:
     if start in places:
         adj: dict = {pid: set() for pid in places}
         for r in mp.get("roads", []):
-            if r.get("kind", "land") != "trail" and r.get("from") in places and r.get("to") in places:
+            if (r.get("kind", "land") != "trail" and r.get("from") in places and r.get("to") in places
+                    and road_open(r, opened, places)):
                 adj[r["from"]].add(r["to"])
                 adj[r["to"]].add(r["from"])
         seen, todo = {start}, [start]
@@ -276,9 +298,8 @@ def validate(raw: dict) -> list[str]:
             for nxt in adj[todo.pop()] - seen:
                 seen.add(nxt)
                 todo.append(nxt)
-        for pid, p in places.items():
-            if p.get("type") == "town" and pid not in seen:
-                err(f"map.json: {pid} に最初の町から行けません（陸路・航路がつながっていません）")
+        for pid in sorted(opened - seen):
+            err(f"map.json: {pid} に最初の町から行けません（開放した町どうしの陸路・航路がつながっていません）")
 
     # monsters.json
     traits = raw.get("traits", {})
@@ -325,6 +346,8 @@ def validate(raw: dict) -> list[str]:
                 for tid in towns:
                     if not isinstance(tid, str) or places.get(tid, {}).get("type") != "town":
                         err(f"{where}: towns の {tid!r} は町の ID にしてください")
+                    elif tid not in opened:
+                        err(f"{where}: towns の {tid!r} は開放した町（open）にしてください（ほかの町の依頼は出ないため）")
         if "price" in it and (not isinstance(it["price"], int) or it["price"] <= 0):
             err(f"{where}: price は正の整数にしてください")
 
@@ -333,9 +356,8 @@ def validate(raw: dict) -> list[str]:
         lowest = rarities[rarities.index(COMMON) + 1]
         have = {t for it in items.values() if it.get("rarity") == lowest and isinstance(it.get("towns"), list)
                 for t in it["towns"] if isinstance(t, str)}
-        for pid, p in places.items():
-            if p.get("type") == "town" and pid not in have:
-                err(f"items.json: {pid} の依頼で出る {lowest} がありません（どの町にも 1 つ以上置いてください）")
+        for pid in sorted(opened - have):
+            err(f"items.json: {pid} の依頼で出る {lowest} がありません（開放したどの町にも 1 つ以上置いてください）")
 
     # quests.json
     ranks = raw.get("quest_ranks") or []
@@ -373,7 +395,7 @@ def validate(raw: dict) -> list[str]:
     # 町の依頼: 討伐は町から出る道（陸路・航路）と、その道に出る魔物。配達は別の町へ
     road_terrain = {}
     for r in mp.get("roads", []):
-        if r.get("kind", "land") != "trail" and _weights_ok(r.get("terrain")):
+        if r.get("kind", "land") != "trail" and _weights_ok(r.get("terrain")) and road_open(r, opened, places):
             terr = {t for t, _ in r["terrain"]}
             road_terrain[(r.get("from"), r.get("to"))] = road_terrain[(r.get("to"), r.get("from"))] = terr
     town_quests = raw.get("town_quests") or {}
@@ -384,6 +406,9 @@ def validate(raw: dict) -> list[str]:
     for tid, qs in town_quests.items():
         if places.get(tid, {}).get("type") != "town":
             err(f"quests.json の towns: {tid!r} は町の ID にしてください")
+            continue
+        if tid not in opened:
+            err(f"quests.json の towns: {tid!r} は開放した町（open）ではありません（依頼は開放した町だけに書いてください）")
             continue
         for q in qs if isinstance(qs, list) else []:
             where = f"quests.json の {tid} の {q.get('id')}"
@@ -396,14 +421,14 @@ def validate(raw: dict) -> list[str]:
             to = q.get("to")
             if q.get("type") == "hunt":
                 if (tid, to) not in road_terrain:
-                    err(f"{where}: to の {to!r} は、{tid} から陸路・航路で直接つながる町にしてください")
+                    err(f"{where}: to の {to!r} は、{tid} から陸路・航路で直接つながる開放した町にしてください")
                 elif monsters.get(q.get("monster"), {}).get("terrain") not in road_terrain[(tid, to)]:
                     err(f"{where}: monster の {q.get('monster')!r} は、その道に出る魔物にしてください")
                 if not isinstance(q.get("count"), int) or q["count"] < 1:
                     err(f"{where}: count は 1 以上の整数にしてください")
             elif q.get("type") == "deliver":
-                if to == tid or places.get(to, {}).get("type") != "town":
-                    err(f"{where}: to は別の町の ID にしてください")
+                if to == tid or to not in opened:
+                    err(f"{where}: to は開放した別の町の ID にしてください")
             else:
                 err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
 
@@ -441,10 +466,13 @@ def road_monsters(terrain: list, monsters: list[dict]) -> list[tuple[str, float]
 def build(raw: dict) -> dict:
     mp = raw["map"]
     places = {p["id"]: p for p in mp["places"]}
-    towns = [pid for pid, p in places.items() if p["type"] == "town"]
+    opened = open_towns(mp)
+    towns = [pid for pid, p in places.items() if p["type"] == "town" and pid in opened]  # 勇者が行ける町だけ
     order = {pid: i for i, pid in enumerate(places)}
     roads, info, trails = {}, {}, []
     for r in mp["roads"]:
+        if not road_open(r, opened, places):  # 開放していない町への道は使わず、地図にも描かない
+            continue
         kind = r.get("kind", "land")
         if kind == "trail":
             trails.append(r)

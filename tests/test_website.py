@@ -1,3 +1,4 @@
+import copy
 import sys
 import tempfile
 import unittest
@@ -136,16 +137,15 @@ class SiteTest(unittest.TestCase):
             self.assertIn("&lt;b&gt;&amp;悪", html)
 
     def test_hero_page_is_not_folded(self):
+        world = copy.deepcopy(WORLD)
+        for item in world["items"].values():  # 名前を長くして、装備の行を長くする
+            item["name"] *= 3
         hero = {"id": "h1", "name": "勇者"}
-        state = game.new_state(WORLD, "h1", "勇者")
-        best = {}
-        for iid, item in WORLD["items"].items():  # 部位ごとに名前の長いレアを持たせて、装備の行を長くする
-            if item["rarity"] != "common" and len(item["name"]) > len(WORLD["items"].get(best.get(item["slot"]), {"name": ""})["name"]):
-                best[item["slot"]] = iid
-        state["inventory"] = {iid: 1 for iid in best.values()}
-        gear = "装備: " + rpg.gear_text(WORLD, state)
-        self.assertNotIn(gear, rpg.build_text(WORLD, state))  # Gist では幅に収まるように詰める
-        self.assertIn(escape(gear), website.build_hero(WORLD, hero, state))
+        state = game.new_state(world, "h1", "勇者")
+        state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "chain_mail": 1, "iron_shield": 1, "lucky_charm": 1}
+        gear = "装備: " + rpg.gear_text(world, state)
+        self.assertNotIn(gear, rpg.build_text(world, state))  # Gist では幅に収まるように詰める
+        self.assertIn(escape(gear), website.build_hero(world, hero, state))
 
     def test_site_url_only_in_actions(self):
         with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "Owner/cryepis"}, clear=True):

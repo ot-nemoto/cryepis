@@ -3,6 +3,7 @@
 1. 町・ダンジョンごとに、地形のマス目でダイクストラ（通りにくさの合計が最小の道）
 2. 町どうしは「相対近傍グラフ」でつなぐ: i-j の間に、i と j のどちらからも近い町 k があればつながない
    （近い町を順にたどる、自然な街道網になる）
+   ただし KEEP の道は、あとから近くに町を置いても残す
 3. ダンジョンは、いちばん近い町とだけつなぐ
 使い方: python roads.py  → .cache/roads.json
 """
@@ -81,6 +82,10 @@ def simplify(pts, eps=2.5):
     return simplify(pts[:idx + 1], eps)[:-1] + simplify(pts[idx:], eps)
 
 
+# 近くに町が増えても残す道（依頼や設定で使っている、昔からの街道）
+KEEP = {("干潟の港", "南壁の砦")}
+
+
 def cell(x, y):
     return (x // STEP, y // STEP)
 
@@ -101,7 +106,7 @@ def main():
             d = D[(a, b)]
             if d is None:
                 continue  # 陸でつながっていない（別の大陸・島）
-            if any(D[(a, k)] is not None and D[(k, b)] is not None
+            if (a, b) not in KEEP and (b, a) not in KEEP and any(D[(a, k)] is not None and D[(k, b)] is not None
                    and max(D[(a, k)], D[(k, b)]) < d
                    for k in names if k not in (a, b)):
                 continue

@@ -1,11 +1,14 @@
 {
+ "open": [
+  "salina",
+  "eques",
+  "muralis",
+  "karun"
+ ],
  "starts": [
-  "silwen",
-  "vike",
-  "linde",
-  "fajil",
-  "rowen",
-  "eques"
+  "salina",
+  "eques",
+  "karun"
  ],
  "layout": {
   "size": [
@@ -275,6 +278,17 @@
    "label": "left"
   },
   {
+   "id": "karun",
+   "type": "town",
+   "name": "カルン",
+   "alias": "凍原の村",
+   "region": "南の凍原",
+   "emoji": "🦌",
+   "shop": ["wooden_sword","copper_sword","leather_cap","cloth_armor","leather_armor","wooden_shield","reindeer_coat"],
+   "pos": [935,875],
+   "quests_per_day": 3
+  },
+  {
    "id": "dragon_skull",
    "type": "dungeon",
    "name": "始祖竜の頭骨",
@@ -319,6 +333,13 @@
    "region": "古の大森林",
    "pos": [290,210],
    "label": "up"
+  },
+  {
+   "id": "wall_den",
+   "type": "dungeon",
+   "name": "南壁の巣穴",
+   "region": "南壁山脈",
+   "pos": [1015,870]
   }
  ],
  "roads": [
@@ -499,6 +520,22 @@
    "path": [[881,729],[881,749],[903,755],[935,755],[937,751],[1045,751],[1053,743],[1063,743],[1073,737],[1087,753],[1091,753],[1103,741]]
   },
   {
+   "from": "eques",
+   "to": "karun",
+   "distance": 2,
+   "kind": "land",
+   "terrain": [["plain",83],["snow",11]],
+   "path": [[821,831],[845,855],[915,857],[935,875]]
+  },
+  {
+   "from": "muralis",
+   "to": "karun",
+   "distance": 6,
+   "kind": "land",
+   "terrain": [["plain",57],["mountain",18],["forest",13],["snow",12]],
+   "path": [[1103,741],[1091,753],[1087,753],[1075,737],[1063,743],[1043,745],[989,799],[989,815],[935,869],[935,875]]
+  },
+  {
    "from": "dragon_skull",
    "to": "caelum",
    "distance": 5,
@@ -545,6 +582,14 @@
    "kind": "trail",
    "terrain": [["forest",88]],
    "path": [[291,211],[323,211],[343,231],[353,229],[359,235],[381,235]]
+  },
+  {
+   "from": "wall_den",
+   "to": "muralis",
+   "distance": 5,
+   "kind": "trail",
+   "terrain": [["mountain",32],["forest",27],["snow",22],["plain",18]],
+   "path": [[1015,871],[1035,871],[1069,819],[1067,809],[1071,797],[1081,787],[1093,785],[1109,769],[1119,769],[1123,765],[1123,761],[1103,741]]
   },
   {
    "from": "flumen",
