@@ -50,6 +50,7 @@ MAP の上で勇者たちが毎日それぞれ動き、町のギルドの依頼�
 - **ランキングの Gist**（Pin する。Gist はこの 1 つだけ）: 今のシーズンの進み具合と、レベル・討伐数・依頼達成のランキング。
   本文には勇者ごとの短い欄もある。最初の毎日の実行で自動的に作られる
 - **勇者ごとの詳細のページ**（`heroes/<id>.md`。リポジトリの中）: その勇者のステータス・装備・持ち物・日誌。毎日のコミットで更新する
+- **MAP のページ**（`heroes/MAP.md`）: 世界の MAP を Mermaid の図で表示する。地域ごとにまとめ、勇者が今いる場所に名前を出す。毎日のコミットで更新する
 
 ランキングのカード:
 
@@ -118,7 +119,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | ファイル | 中身 |
 |---|---|
 | `world/season.json` | シーズンの長さ・初期ステータス・レベルアップ・行動回数の確率・回復薬・宝箱のドロップ表など |
-| `world/map.json` | 場所（町・野外）と道。野外にはレベルの範囲・出る敵・出来事の起こりやすさを書く |
+| `world/map.json` | 場所（町・野外）と道。場所には地域（`region`）、野外にはレベルの範囲・出る敵・出来事の起こりやすさを書く。いまは地域 11・町 18・野外 51 |
 | `world/monsters.json` | 敵 |
 | `world/items.json` | アイテムと珍しさ（common / rare / epic / legendary）。店で売るものは `price` を書く |
 | `world/quests.json` | ギルドの依頼のひな形（種類・出やすさ・期限・報酬・アイテムのドロップ表） |
@@ -138,6 +139,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `.state/heroes.json` | 勇者管理シート（勇者の一覧） |
 | `.state/board.json` | ランキングの Gist の ID と URL |
 | `heroes/<id>.md` | 勇者ごとの詳細のページ（rpg.py が書き出す。手で編集しない） |
+| `heroes/MAP.md` | MAP のページ（Mermaid の図。rpg.py が書き出す。手で編集しない） |
 | `.state/heroes/<id>.json` | 勇者ごとの状態・持ち物・日誌・シーズンの記録（形式は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md)） |
 | `.github/workflows/hero-adventure.yml` | 毎日 JST 7:17 に rpg.py を動かし（ランキングの Gist を更新）、`.state/` と `heroes/` をコミットする |
 | `.github/workflows/new-game.yml` / `retire-hero.yml` | 勇者の追加・引退（手動実行） |
@@ -146,4 +148,5 @@ HP ██████████ 117/123  攻33 防16  1587G
 python scripts/rpg.py --dry-run --actions 4       # 記録せずに今日の分を試す（行動回数を指定。勇者が登録済みのとき）
 python scripts/rpg.py --new-game 名前              # 勇者を登録する（Actions の New game と同じ）
 python scripts/rpg.py --retire 名前またはID        # 勇者を引退させる
+python scripts/rpg.py --map                       # MAP のページだけを書き出す（world/map.json を編集したときの確認に）
 ```

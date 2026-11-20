@@ -204,7 +204,11 @@ def page_path(hero_id: str) -> Path:
 
 def page_url(hero_id: str) -> str:
     """勇者の詳細のページの URL（GitHub Actions の外では、リポジトリの中のパス）。"""
-    rel = f"heroes/{hero_id}.md"
+    return repo_url(f"heroes/{hero_id}.md")
+
+
+def repo_url(rel: str) -> str:
+    """リポジトリの中のファイルの GitHub 上の URL（GitHub Actions の外では、そのままのパス）。"""
     server, repo = os.environ.get("GITHUB_SERVER_URL"), os.environ.get("GITHUB_REPOSITORY")
     branch = os.environ.get("GITHUB_REF_NAME")
     return f"{server}/{repo}/blob/{branch}/{rel}" if server and repo and branch else rel
@@ -218,6 +222,88 @@ def build_page(world: dict, state: dict) -> str:
 def save_page(world: dict, state: dict) -> None:
     PAGE_DIR.mkdir(parents=True, exist_ok=True)
     page_path(state["id"]).write_text(build_page(world, state), encoding="utf-8")
+
+
+# ---- MAP（Mermaid の図）--------------------------------------------------------------
+MAP_NAME = "MAP.md"
+
+
+def mermaid_text(text: str) -> str:
+    """Mermaid のラベルに入れる文字列（引用符・山かっこを文字参照にする）。"""
+    return text.replace("&", "#amp;").replace('"', "#quot;").replace("<", "#lt;").replace(">", "#gt;")
+
+
+def build_map(world: dict, entries: list[tuple[dict, dict]]) -> str:
+    """MAP のページ（Markdown + Mermaid）。地域ごとにまとめ、勇者のいる場所に名前を出す。"""
+    places = world["places"]
+    here: dict[str, list[str]] = {}
+    for hero, state in entries:
+        mark = f"{hero['name']} Lv.{state['hero']['level']}"
+        if state["road"]:
+            mark += f"→{places[state['road']['to']]['name']}"
+        here.setdefault(state["place"], []).append(mark)
+
+    def node(pid: str) -> str:
+        p = places[pid]
+        label = f"{p.get('emoji', '')} {p['name']}".strip()
+        if p["type"] == "field":
+            label += f"<br/>Lv{p['level'][0]}〜{p['level'][1]}"
+        label = mermaid_text(label).replace("#lt;br/#gt;", "<br/>")
+        for mark in here.get(pid, []):
+            label += "<br/>🧙 " + mermaid_text(mark)
+        return f'{pid}(["{label}"])' if p["type"] == "town" else f'{pid}["{label}"]'
+
+    regions: dict[str, list[str]] = {}
+    for pid, p in places.items():
+        regions.setdefault(p.get("region", "その他"), []).append(pid)
+    lines = ["flowchart TB"]
+    for i, (region, pids) in enumerate(regions.items()):
+        levels = [places[p]["level"] for p in pids if places[p]["type"] == "field"]
+        band = f"（Lv{min(lv[0] for lv in levels)}〜{max(lv[1] for lv in levels)}）" if levels else ""
+        lines.append(f'  subgraph region{i}["{mermaid_text(region + band)}"]')
+        lines += [f"    {node(pid)}" for pid in pids]
+        lines.append("  end")
+    seen = set()
+    for (a, b), d in world["roads"].items():
+        if (b, a) in seen:
+            continue
+        seen.add((a, b))
+        lines.append(f"  {a} {'---' if d == 1 else '==='} {b}")
+    towns = ",".join(world["towns"])
+    lines += ["  classDef town fill:#fde68a,stroke:#b45309,color:#1f2937",
+              "  classDef hero fill:#bbf7d0,stroke:#15803d,stroke-width:3px,color:#1f2937",
+              f"  class {towns} town"]
+    if here:
+        lines.append(f"  class {','.join(here)} hero")
+    n_towns, n_fields = len(world["towns"]), len(world["fields"])
+    head = [
+        "# 世界の MAP",
+        "",
+        f"地域 {len(regions)}・町 {n_towns}・野外 {n_fields}。"
+        "丸い枠が町、四角が野外（推奨レベル付き）、緑の枠は勇者がいる場所です。"
+        "細い線は距離 1 の道、太い線は距離 2 の道（移動に 2 行動かかる）です。",
+        "",
+        "このページは毎日の実行で書き出します（手で編集しない。MAP を変えるときは world/map.json を編集する）。",
+        "",
+    ]
+    return "\n".join(head + ["```mermaid", *lines, "```"]) + "\n"
+
+
+def save_map(world: dict, entries: list[tuple[dict, dict]]) -> None:
+    PAGE_DIR.mkdir(parents=True, exist_ok=True)
+    (PAGE_DIR / MAP_NAME).write_text(build_map(world, entries), encoding="utf-8")
+
+
+def write_map(world: dict) -> int:
+    """現役の勇者の今の位置で、MAP のページだけを書き出す（冒険は進めない）。"""
+    entries = []
+    for hero in [h for h in load_heroes() if h["active"]]:
+        path = hero_state_path(hero["id"])
+        if path.exists():
+            entries.append((hero, game.load_state(world, path, hero["id"], hero["name"])))
+    save_map(world, entries)
+    print(f"{PAGE_DIR / MAP_NAME} を書き出しました")
+    return 0
 
 
 # ---- ランキング（Pin 用の Gist）------------------------------------------------------
@@ -283,7 +369,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
     lines.append("📰 " + (today_news[0] if today_news else "今日も勇者たちは冒険中…"))
     card = [fit(line) for line in lines]
 
-    detail = ["", f"── シーズン{season}（{first}〜{last}）──"]
+    detail = ["", f"── シーズン{season}（{first}〜{last}）──", f"MAP: {repo_url('heroes/' + MAP_NAME)}"]
     for title, _, key, value, unit in RANKINGS:
         detail += ["", f"── {title} ──"]
         detail += [f"{r:>2}. {h['name']}  " + (f"Lv.{value(s)}" if title == "レベル" else f"{value(s)}{unit}")
@@ -437,7 +523,7 @@ def run_hero(world: dict, hero: dict, today: date, actions: int | None, dry_run:
 
 
 def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) -> int:
-    """現役の勇者を全員進めて、それぞれの Gist とランキングの Gist を更新する。
+    """現役の勇者を全員進めて、詳細のページ・MAP のページ・ランキングの Gist を更新する。
     1 人が失敗しても残りは続け、1 つでも失敗したら終了コード 1。"""
     heroes = [h for h in load_heroes() if h["active"]]
     if not heroes:
@@ -457,6 +543,8 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
         except (Exception, SystemExit) as e:  # noqa: BLE001  勇者ごとに失敗を隔離する
             failed += 1
             common.warn(f"{hero['name']}（{hero['id']}）を進められませんでした: {e}")
+    if not dry_run:
+        save_map(world, entries)
     if entries:
         try:
             update_board(world, entries, today, dry_run, token)
@@ -472,15 +560,18 @@ def main() -> int:
     ap.add_argument("--date", help="進める日付（既定は今日の JST）")
     ap.add_argument("--actions", type=int, help="その日の行動回数を指定する（乱数で決めない）")
     mode = ap.add_mutually_exclusive_group()
-    mode.add_argument("--new-game", metavar="NAME", help="新しい勇者を登録し、Gist を作る（冒険は進めない）")
+    mode.add_argument("--new-game", metavar="NAME", help="新しい勇者を登録する（冒険は進めない）")
     mode.add_argument("--retire", metavar="NAME_OR_ID", help="勇者を引退させる")
+    mode.add_argument("--map", action="store_true", help="MAP のページ（heroes/MAP.md）だけを書き出す（冒険は進めない）")
     a = ap.parse_args()
-    if (a.new_game is not None or a.retire is not None) and (a.dry_run or a.date or a.actions is not None):
-        ap.error("--new-game / --retire は --dry-run / --date / --actions と一緒に指定できません")
+    if (a.new_game is not None or a.retire is not None or a.map) and (a.dry_run or a.date or a.actions is not None):
+        ap.error("--new-game / --retire / --map は --dry-run / --date / --actions と一緒に指定できません")
 
     if a.retire is not None:
         return retire(a.retire)
     world = load_world()
+    if a.map:
+        return write_map(world)
     today = date.fromisoformat(a.date) if a.date else datetime.now(timezone.utc).astimezone(common.JST).date()
     if a.new_game is not None:
         return new_game(world, a.new_game, today)

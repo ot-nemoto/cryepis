@@ -99,6 +99,11 @@ class ValidateTest(unittest.TestCase):
             r["season"]["rest"] = []
         self.assertError(no_texts, ["rest"])
 
+    def test_bad_region(self):
+        def change(r):
+            r["map"]["places"][0]["region"] = ""
+        self.assertError(change, ["region"])
+
     def test_bad_season(self):
         def change(r):
             r["season"]["months"] = 0

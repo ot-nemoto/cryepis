@@ -99,6 +99,24 @@ class DisplayTest(unittest.TestCase):
         text = rpg.build_board(WORLD, [({"id": "h1", "name": "アリス", "gist_url": "u"}, state)], DAY)
         self.assertIn("シーズン1: 最高レベル アリス Lv.22  討伐数 アリス 150体", text)
 
+    def test_map_has_every_place_road_and_hero(self):
+        state = play(5)
+        hero = {"id": "h1", "name": 'ア"リス<b>', "gist_url": "u"}
+        text = rpg.build_map(WORLD, [(hero, state)])
+        self.assertIn("```mermaid\nflowchart TB", text)
+        for pid in WORLD["places"]:
+            self.assertIn(f"    {pid}", text)
+        self.assertEqual(text.count(" --- ") + text.count(" === "), len(WORLD["roads"]) // 2)
+        self.assertIn("🧙 ア#quot;リス#lt;b#gt; Lv.", text)  # 名前の記号で図が壊れない
+        self.assertIn(f"class {state['place']} hero", text)
+        for region in {p["region"] for p in WORLD["places"].values()}:
+            self.assertIn(f'["{region}（Lv', text)
+
+    def test_map_without_heroes(self):
+        text = rpg.build_map(WORLD, [])
+        self.assertNotIn("🧙", text)
+        self.assertNotIn(" hero\n", text)
+
     def test_highlights_prefer_important_events_and_merge_level_ups(self):
         events = ["スライムを倒した", "レベルが上がった！ Lv.2", "レベルが上がった！ Lv.3", "依頼達成！x", "景色"]
         self.assertEqual(rpg.highlights(events), ["レベルが上がった！ Lv.3", "依頼達成！x"])
@@ -307,6 +325,19 @@ class HeroesTest(unittest.TestCase):
         self.assertEqual(self.daily(), 0)
         self.create_board.assert_not_called()
 
+    def test_daily_writes_the_map_with_positions(self):
+        self.new_game("アリス")
+        self.daily()
+        text = (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8")
+        self.assertIn("🧙 アリス Lv.", text)
+
+    def test_map_option_writes_only_the_map(self):
+        self.new_game("アリス")
+        self.assertEqual(self.run_main(["--map"]), 0)
+        self.assertIn("🧙 アリス Lv.1", (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8"))
+        self.assertEqual(load("h1")["day"], 0)  # 冒険は進めない
+        self.create_board.assert_not_called()
+
     def test_dry_run_writes_nothing(self):
         self.new_game("アリス")
         page = rpg.page_path("h1").read_text(encoding="utf-8")
@@ -316,6 +347,7 @@ class HeroesTest(unittest.TestCase):
         self.assertEqual(load("h1")["day"], 0)
         self.assertEqual(rpg.page_path("h1").read_text(encoding="utf-8"), page)
         self.assertIsNone(rpg.load_board())
+        self.assertFalse((rpg.PAGE_DIR / rpg.MAP_NAME).exists())
 
 
 if __name__ == "__main__":

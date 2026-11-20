@@ -150,6 +150,8 @@ def validate(raw: dict) -> list[str]:
             err(f"{where}: type は {'/'.join(PLACE_TYPES)} のどれかにしてください")
         if not p.get("name"):
             err(f"{where}: name がありません")
+        if "region" in p and (not isinstance(p["region"], str) or not p["region"]):
+            err(f"{where}: region（地域の名前）は空でない文字列にしてください")
         if p.get("type") == "town":
             for iid in p.get("shop", []):
                 if iid not in items:
