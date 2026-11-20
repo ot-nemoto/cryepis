@@ -208,6 +208,8 @@ def validate(raw: dict) -> list[str]:
                     or not isinstance(a.get("name"), str) or not a["name"] or a["id"] in area_ids):
                 err(f"map.json の areas[{i}]: id（重複しない文字列）と name（文字列）を書いてください")
                 continue
+            if a["id"].startswith("_") or a["id"] in places:  # サイトで、町・ダンジョンの ID と区別するため
+                err(f"map.json の areas[{i}]: id は _ で始めず、町・ダンジョンの ID と違うものにしてください")
             if "en" in a and (not isinstance(a["en"], str) or not a["en"]):
                 err(f"map.json の areas[{i}]: en（英語名）は空でない文字列にしてください")
             area_ids.add(a["id"])
