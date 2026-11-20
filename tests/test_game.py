@@ -356,7 +356,10 @@ class BattleAndItemTest(unittest.TestCase):
         self.assertEqual({day.draw([["legendary", 1]], "karun") for _ in range(20)}, {"frost_hood"})
         self.assertEqual({day.draw([["rare", 1]], None) for _ in range(20)}, {None})  # 宝箱（町なし）では出ない
         commons = {day.draw([["common", 1]]) for _ in range(300)}
-        self.assertTrue(commons <= {i for i, it in WORLD["items"].items() if it["rarity"] == "common"})
+        sold = {iid for t in WORLD["towns"] for iid in WORLD["places"][t]["shop"]}  # 開放した町の店の品だけ
+        self.assertEqual(commons, sold)
+        self.assertNotIn("battle_axe", sold)  # 開放していない町（ドゥルガン）の特産は出ない
+        self.assertIsNone(day.draw([["battle_axe", 1]], "salina"))  # ID を直接書いても出ない
         self.assertIsNone(day.draw([["none", 1]]))
         self.assertEqual(day.draw([["x_legend", 1]], "salina"), "x_legend")
         self.assertIsNone(day.draw([["x_legend", 1]], "karun"))  # ID を直接書いても、その町のものだけ

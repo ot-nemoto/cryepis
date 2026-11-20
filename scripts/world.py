@@ -519,6 +519,8 @@ def build(raw: dict) -> dict:
         "traits": raw.get("traits", {}),
         "rarities": raw["rarities"],
         "items": {i["id"]: i for i in raw["items"]},
+        # 開放した地域の common（開放した町の店で売っている品）。宝箱と依頼の報酬の common はここから出る
+        "region_items": sorted({iid for t in towns for iid in places[t].get("shop", [])}),
         "quests": raw["quests"],
         "quest_ranks": raw["quest_ranks"],
         "quest_reward": raw["quest_reward"],
