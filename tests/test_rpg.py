@@ -99,23 +99,17 @@ class DisplayTest(unittest.TestCase):
         text = rpg.build_board(WORLD, [({"id": "h1", "name": "アリス", "gist_url": "u"}, state)], DAY)
         self.assertIn("シーズン1: 最高レベル アリス Lv.22  討伐数 アリス 150体", text)
 
-    def test_map_has_every_place_road_and_hero(self):
+    def test_map_page_has_image_and_hero_positions(self):
         state = play(5)
-        hero = {"id": "h1", "name": 'ア"リス<b>', "gist_url": "u"}
-        text = rpg.build_map(WORLD, [(hero, state)])
-        self.assertIn("```mermaid\nflowchart TB", text)
-        for pid in WORLD["places"]:
-            self.assertIn(f"    {pid}", text)
-        self.assertEqual(text.count(" --- ") + text.count(" === "), len(WORLD["roads"]) // 2)
-        self.assertIn("🧙 ア#quot;リス#lt;b#gt; Lv.", text)  # 名前の記号で図が壊れない
-        self.assertIn(f"class {state['place']} hero", text)
-        for region in {p["region"] for p in WORLD["places"].values()}:
-            self.assertIn(f'["{region}（Lv', text)
+        text = rpg.build_map(WORLD, [({"id": "h1", "name": "アリス", "gist_url": "u"}, state)])
+        self.assertIn(f"![世界の MAP]({rpg.MAP_IMAGE})", text)
+        self.assertNotIn("mermaid", text)
+        self.assertIn(f"- 🧙 アリス Lv.{state['hero']['level']}  📍 {WORLD['places'][state['place']]['name']}", text)
 
-    def test_map_without_heroes(self):
-        text = rpg.build_map(WORLD, [])
-        self.assertNotIn("🧙", text)
-        self.assertNotIn(" hero\n", text)
+    def test_map_page_without_heroes_or_layout(self):
+        text = rpg.build_map({**WORLD, "layout": None}, [])
+        self.assertNotIn("![", text)
+        self.assertIn("- まだいない", text)
 
     def test_highlights_prefer_important_events_and_merge_level_ups(self):
         events = ["スライムを倒した", "レベルが上がった！ Lv.2", "レベルが上がった！ Lv.3", "依頼達成！x", "景色"]

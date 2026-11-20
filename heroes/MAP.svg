@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1210" viewBox="0 0 1200 1210" font-family="'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans CJK JP','Yu Gothic',Meiryo,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji'">
-<rect width="1200" height="1210" fill="#f6efdc"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1250" viewBox="0 0 1200 1250" font-family="'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans CJK JP','Yu Gothic',Meiryo,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji'">
+<rect width="1200" height="1250" fill="#f6efdc"/>
 <circle cx="600" cy="650" r="490" fill="#d9efc4" stroke="#fffdf5" stroke-width="3"/>
 <circle cx="600" cy="650" r="380" fill="#efeab0" stroke="#fffdf5" stroke-width="3"/>
 <circle cx="600" cy="650" r="285" fill="#f5d6a1" stroke="#fffdf5" stroke-width="3"/>
@@ -116,6 +116,99 @@
 <line x1="600" y1="595" x2="572" y2="678" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
 <line x1="572" y1="678" x2="578" y2="732" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
 <line x1="520" y1="650" x2="572" y2="678" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<g class="road-cost"><circle cx="540" cy="216" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="540" y="219" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="650" cy="249" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="650" y="252" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="946" cy="382" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="946" y="385" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="972" cy="494" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="972" y="497" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="1006" cy="816" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="1006" y="819" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="922" cy="894" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="922" y="898" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="660" cy="1084" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="660" y="1088" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="550" cy="1051" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="550" y="1054" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="254" cy="918" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="254" y="922" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="228" cy="806" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="228" y="810" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="194" cy="484" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="194" y="488" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="278" cy="406" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="278" y="409" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="553" cy="308" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="553" y="312" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="638" cy="342" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="638" y="346" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="872" cy="438" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="872" y="442" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="886" cy="530" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="886" y="533" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="920" cy="780" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="920" y="783" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="848" cy="837" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="848" y="840" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="647" cy="992" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="647" y="995" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="562" cy="958" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="562" y="961" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="328" cy="862" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="328" y="865" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="314" cy="770" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="314" y="774" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="280" cy="520" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="280" y="524" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="352" cy="463" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="352" y="466" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="552" cy="399" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="552" y="402" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="636" cy="432" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="636" y="435" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="794" cy="484" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="794" y="487" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="807" cy="572" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="807" y="575" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="842" cy="734" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="842" y="738" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="772" cy="790" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="772" y="794" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="648" cy="901" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="648" y="904" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="564" cy="868" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="564" y="872" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="406" cy="816" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="406" y="820" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="393" cy="728" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="393" y="732" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="358" cy="566" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="358" y="569" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="428" cy="510" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="428" y="514" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="595" cy="492" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="595" y="495" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="740" cy="725" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="740" y="728" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="465" cy="733" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="465" y="736" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="703" cy="266" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="703" y="269" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="984" cy="547" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="984" y="550" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="882" cy="932" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="882" y="935" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="497" cy="1034" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="497" y="1038" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="216" cy="753" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="216" y="756" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="318" cy="368" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="318" y="372" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="650" cy="296" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="650" y="300" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="932" cy="517" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="932" y="520" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="881" cy="870" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="881" y="874" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="550" cy="1004" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="550" y="1007" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="268" cy="783" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="268" y="786" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="319" cy="430" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="319" y="433" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="682" cy="344" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="682" y="348" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="906" cy="568" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="906" y="572" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="824" cy="874" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="824" y="877" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="518" cy="956" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="518" y="959" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="294" cy="732" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="294" y="736" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="376" cy="426" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="376" y="430" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="638" cy="386" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="638" y="390" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="848" cy="552" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="848" y="555" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="810" cy="815" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="810" y="818" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="562" cy="914" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="562" y="917" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="352" cy="748" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="352" y="752" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="390" cy="485" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="390" y="488" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="642" cy="414" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="642" y="418" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="826" cy="568" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="826" y="572" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="784" cy="804" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="784" y="808" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="558" cy="886" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="558" y="890" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="374" cy="732" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="374" y="736" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="416" cy="496" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="416" y="500" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="616" cy="468" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="616" y="472" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="772" cy="592" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="772" y="596" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="748" cy="754" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="748" y="758" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="564" cy="828" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="564" y="831" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="435" cy="726" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="435" y="730" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="464" cy="530" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="464" y="534" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="684" cy="536" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="684" y="539" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="727" cy="660" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="727" y="664" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="658" cy="780" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="658" y="784" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="528" cy="754" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="528" y="758" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="458" cy="634" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="458" y="638" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="545" cy="536" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="545" y="539" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">2</text></g>
+<g class="road-cost"><circle cx="649" cy="556" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="649" y="559" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="704" cy="590" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="704" y="594" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="688" cy="726" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="688" y="729" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="630" cy="756" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="630" y="759" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="488" cy="674" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="488" y="678" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="490" cy="610" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="490" y="614" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="634" cy="602" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="634" y="606" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="630" cy="648" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="630" y="652" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="560" cy="622" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="560" y="626" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="586" cy="636" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="586" y="640" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="575" cy="705" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="575" y="708" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<g class="road-cost"><circle cx="546" cy="664" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="546" y="668" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
 <g id="place-town_hajimari">
 <circle cx="600" cy="225" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
 <text x="600" y="230" text-anchor="middle" font-size="15">🏠</text>
@@ -535,14 +628,14 @@
 <text x="1030" y="146" font-size="12" fill="#3f2f22">内縁 Lv25〜32</text>
 <rect x="1010" y="153" width="14" height="14" rx="3" fill="#d2c0ec" stroke="#a08b70"/>
 <text x="1030" y="164" font-size="12" fill="#3f2f22">中心 Lv33〜45</text>
-<circle cx="34" cy="1182" r="9" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
-<text x="50" y="1186" font-size="12" fill="#3f2f22">町</text>
-<circle cx="104" cy="1182" r="8" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
-<text x="118" y="1186" font-size="12" fill="#3f2f22">野外</text>
-<line x1="170" y1="1182" x2="200" y2="1182" stroke="#8a7357" stroke-width="2.2"/>
-<text x="206" y="1186" font-size="12" fill="#3f2f22">道（距離 1）</text>
-<line x1="290" y1="1182" x2="320" y2="1182" stroke="#8a7357" stroke-width="2.2" stroke-dasharray="7 5"/>
-<text x="326" y="1186" font-size="12" fill="#3f2f22">道（距離 2）</text>
-<circle cx="420" cy="1182" r="9" fill="none" stroke="#dc2626" stroke-width="3"/>
-<text x="436" y="1186" font-size="12" fill="#3f2f22">勇者がいる場所</text>
+<circle cx="34" cy="1222" r="9" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="50" y="1226" font-size="12" fill="#3f2f22">町</text>
+<circle cx="104" cy="1222" r="8" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="118" y="1226" font-size="12" fill="#3f2f22">野外</text>
+<line x1="166" y1="1222" x2="206" y2="1222" stroke="#8a7357" stroke-width="2.2"/><g class="legend"><circle cx="186" cy="1222" r="7.5" fill="#fffdf5" stroke="#8a7357" stroke-width="1.2"/><text x="186" y="1226" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#5b4636">1</text></g>
+<text x="214" y="1226" font-size="12" fill="#3f2f22">道（数字は移動にかかる行動回数）</text>
+<line x1="420" y1="1222" x2="460" y2="1222" stroke="#8a7357" stroke-width="2.2" stroke-dasharray="7 5"/>
+<text x="468" y="1226" font-size="12" fill="#3f2f22">遠い道（2 行動以上）</text>
+<circle cx="620" cy="1222" r="9" fill="none" stroke="#dc2626" stroke-width="3"/>
+<text x="636" y="1226" font-size="12" fill="#3f2f22">勇者がいる場所</text>
 </svg>

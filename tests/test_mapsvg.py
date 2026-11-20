@@ -28,6 +28,13 @@ class RenderTest(unittest.TestCase):
         for ring in WORLD["layout"]["rings"]:
             self.assertIn(ring["label"], texts)
 
+    def test_every_road_shows_its_cost(self):
+        root = ET.fromstring(mapsvg.render(WORLD, []))
+        costs = [g for g in root.iter(f"{NS}g") if g.get("class") == "road-cost"]
+        self.assertEqual(len(costs), len(WORLD["roads"]) // 2)
+        shown = sorted(int(g.find(f"{NS}text").text) for g in costs)
+        self.assertEqual(shown, sorted(d for (a, b), d in WORLD["roads"].items() if a < b))
+
     def test_heroes_are_marked_and_names_escaped(self):
         place = WORLD["starts"][0]
         svg = mapsvg.render(WORLD, [hero(1, "ア<&>リス", place)])

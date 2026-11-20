@@ -10,7 +10,7 @@ from xml.sax.saxutils import escape
 
 import common
 
-PAD_X, PAD_TOP, PAD_BOTTOM = 100, 150, 60  # 地図の周りの余白（方角の名前・見出し・凡例を置く）
+PAD_X, PAD_TOP, PAD_BOTTOM = 100, 150, 100  # 地図の周りの余白（方角の名前・見出し・凡例を置く）
 FONT = ("'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans CJK JP','Yu Gothic',Meiryo,sans-serif,"
         "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji'")
 HALO = "paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round"
@@ -20,6 +20,13 @@ MAX_NAMES = 4  # 1 か所に出す勇者の名前の数（超えた分は「ほ�
 def text_width(text: str, size: float) -> float:
     """文字列のおおよその表示幅（px）。全角は size、半角は size の 0.6 倍として数える。"""
     return sum(size if common.width(c) == 2 else size * 0.6 for c in text)
+
+
+def badge(x: float, y: float, actions: int, cls: str = "road-cost") -> str:
+    """道の上に置く、移動にかかる行動回数の札（凡例の見本は cls を変える）。"""
+    return (f'<g class="{cls}"><circle cx="{x:.0f}" cy="{y:.0f}" r="7.5" fill="#fffdf5" stroke="#8a7357" '
+            f'stroke-width="1.2"/><text x="{x:.0f}" y="{y + 3.5:.0f}" text-anchor="middle" font-size="9.5" '
+            f'font-weight="bold" fill="#5b4636">{actions}</text></g>')
 
 
 def render(world: dict, entries: list[tuple[dict, dict]]) -> str | None:
@@ -61,8 +68,8 @@ def render(world: dict, entries: list[tuple[dict, dict]]) -> str | None:
         out.append(f'<text x="{lx:.0f}" y="{ly + 14:.0f}" text-anchor="middle" font-size="11" fill="#7c6a55">'
                    f'{escape(sector.get("theme", ""))}</text>')
 
-    # 道
-    drawn = set()
+    # 道（真ん中に、移動にかかる行動回数の札を出す）
+    drawn, badges = set(), []
     for (a, b), dist in world["roads"].items():
         if (b, a) in drawn or "pos" not in places[a] or "pos" not in places[b]:
             continue
@@ -71,6 +78,8 @@ def render(world: dict, entries: list[tuple[dict, dict]]) -> str | None:
         dash = ' stroke-dasharray="7 5"' if dist >= 2 else ""
         out.append(f'<line x1="{x1:.0f}" y1="{y1:.0f}" x2="{x2:.0f}" y2="{y2:.0f}" stroke="#8a7357" '
                    f'stroke-width="2.2" stroke-linecap="round"{dash}/>')
+        badges.append(badge((x1 + x2) / 2, (y1 + y2) / 2, dist))
+    out += badges
 
     # 場所
     for pid, p in places.items():
@@ -128,11 +137,11 @@ def render(world: dict, entries: list[tuple[dict, dict]]) -> str | None:
     legend = [
         (f'<circle cx="34" cy="{ly - 4}" r="9" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>', 50, "町"),
         (f'<circle cx="104" cy="{ly - 4}" r="8" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>', 118, "野外"),
-        (f'<line x1="170" y1="{ly - 4}" x2="200" y2="{ly - 4}" stroke="#8a7357" stroke-width="2.2"/>', 206,
-         "道（距離 1）"),
-        (f'<line x1="290" y1="{ly - 4}" x2="320" y2="{ly - 4}" stroke="#8a7357" stroke-width="2.2" '
-         'stroke-dasharray="7 5"/>', 326, "道（距離 2）"),
-        (f'<circle cx="420" cy="{ly - 4}" r="9" fill="none" stroke="#dc2626" stroke-width="3"/>', 436, "勇者がいる場所"),
+        (f'<line x1="166" y1="{ly - 4}" x2="206" y2="{ly - 4}" stroke="#8a7357" stroke-width="2.2"/>'
+         + badge(186, ly - 4, 1, "legend"), 214, "道（数字は移動にかかる行動回数）"),
+        (f'<line x1="420" y1="{ly - 4}" x2="460" y2="{ly - 4}" stroke="#8a7357" stroke-width="2.2" '
+         'stroke-dasharray="7 5"/>', 468, "遠い道（2 行動以上）"),
+        (f'<circle cx="620" cy="{ly - 4}" r="9" fill="none" stroke="#dc2626" stroke-width="3"/>', 636, "勇者がいる場所"),
     ]
     for shape, tx, label in legend:
         out.append(shape)

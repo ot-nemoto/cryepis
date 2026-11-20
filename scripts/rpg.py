@@ -225,75 +225,34 @@ def save_page(world: dict, state: dict) -> None:
     page_path(state["id"]).write_text(build_page(world, state), encoding="utf-8")
 
 
-# ---- MAP（Mermaid の図）--------------------------------------------------------------
+# ---- MAP（地図の画像のページ）--------------------------------------------------------
 MAP_NAME = "MAP.md"
 MAP_IMAGE = "MAP.svg"
 
 
-def mermaid_text(text: str) -> str:
-    """Mermaid のラベルに入れる文字列（引用符・山かっこを文字参照にする）。"""
-    return text.replace("&", "#amp;").replace('"', "#quot;").replace("<", "#lt;").replace(">", "#gt;")
-
-
 def build_map(world: dict, entries: list[tuple[dict, dict]]) -> str:
-    """MAP のページ（Markdown + Mermaid）。地域ごとにまとめ、勇者のいる場所に名前を出す。"""
+    """MAP のページ（Markdown）。地図の画像と、勇者の居場所の一覧。"""
     places = world["places"]
-    here: dict[str, list[str]] = {}
+    lines = ["# 世界の MAP", ""]
+    if world.get("layout"):
+        lines += [f"![世界の MAP]({MAP_IMAGE})", "",
+                  "外側ほど易しく、中心ほど難しい。道の上の数字は、移動にかかる行動回数です。", ""]
+    else:
+        lines += ["地図の画像はありません（world/map.json に layout と、場所ごとの pos を書くと描かれます）。", ""]
+    lines += ["## 勇者の居場所", ""]
     for hero, state in entries:
-        mark = f"{hero['name']} Lv.{state['hero']['level']}"
+        where = places[state["place"]]["name"]
         if state["road"]:
-            mark += f"→{places[state['road']['to']]['name']}"
-        here.setdefault(state["place"], []).append(mark)
-
-    def node(pid: str) -> str:
-        p = places[pid]
-        label = f"{p.get('emoji', '')} {p['name']}".strip()
-        if p["type"] == "field":
-            label += f"<br/>Lv{p['level'][0]}〜{p['level'][1]}"
-        label = mermaid_text(label).replace("#lt;br/#gt;", "<br/>")
-        for mark in here.get(pid, []):
-            label += "<br/>🧙 " + mermaid_text(mark)
-        return f'{pid}(["{label}"])' if p["type"] == "town" else f'{pid}["{label}"]'
-
-    regions: dict[str, list[str]] = {}
-    for pid, p in places.items():
-        regions.setdefault(p.get("region", "その他"), []).append(pid)
-    lines = ["flowchart TB"]
-    for i, (region, pids) in enumerate(regions.items()):
-        levels = [places[p]["level"] for p in pids if places[p]["type"] == "field"]
-        band = f"（Lv{min(lv[0] for lv in levels)}〜{max(lv[1] for lv in levels)}）" if levels else ""
-        lines.append(f'  subgraph region{i}["{mermaid_text(region + band)}"]')
-        lines += [f"    {node(pid)}" for pid in pids]
-        lines.append("  end")
-    seen = set()
-    for (a, b), d in world["roads"].items():
-        if (b, a) in seen:
-            continue
-        seen.add((a, b))
-        lines.append(f"  {a} {'---' if d == 1 else '==='} {b}")
-    towns = ",".join(world["towns"])
-    lines += ["  classDef town fill:#fde68a,stroke:#b45309,color:#1f2937",
-              "  classDef hero fill:#bbf7d0,stroke:#15803d,stroke-width:3px,color:#1f2937",
-              f"  class {towns} town"]
-    if here:
-        lines.append(f"  class {','.join(here)} hero")
-    n_towns, n_fields = len(world["towns"]), len(world["fields"])
-    head = [
-        "# 世界の MAP",
-        "",
-        *([f"![世界の MAP]({MAP_IMAGE})", "", "## 場所のつながり", ""] if world.get("layout") else []),
-        f"地域 {len(regions)}・町 {n_towns}・野外 {n_fields}。"
-        "丸い枠が町、四角が野外（推奨レベル付き）、緑の枠は勇者がいる場所です。"
-        "細い線は距離 1 の道、太い線は距離 2 の道（移動に 2 行動かかる）です。",
-        "",
-        "このページは毎日の実行で書き出します（手で編集しない。MAP を変えるときは world/map.json を編集する）。",
-        "",
-    ]
-    return "\n".join(head + ["```mermaid", *lines, "```"]) + "\n"
+            where += f" → {places[state['road']['to']]['name']}"
+        lines.append(f"- 🧙 {hero['name']} Lv.{state['hero']['level']}  📍 {where}")
+    if not entries:
+        lines.append("- まだいない")
+    lines += ["", "このページは毎日の実行で書き出します（手で編集しない。MAP を変えるときは world/map.json を編集する）。"]
+    return "\n".join(lines) + "\n"
 
 
 def save_map(world: dict, entries: list[tuple[dict, dict]]) -> None:
-    """MAP のページ（Mermaid の図）と、地図の画像（SVG。map.json に layout があるとき）を書き出す。"""
+    """MAP のページと、地図の画像（SVG。map.json に layout があるとき）を書き出す。"""
     PAGE_DIR.mkdir(parents=True, exist_ok=True)
     (PAGE_DIR / MAP_NAME).write_text(build_map(world, entries), encoding="utf-8")
     svg = mapsvg.render(world, entries)
