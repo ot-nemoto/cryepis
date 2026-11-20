@@ -23,9 +23,9 @@ TERRAIN = {
 }
 
 # 呼び名 → (ID, 絵文字, 地域, 店)
-BASIC = ["wooden_sword", "copper_sword", "cloth_armor", "leather_armor"]
-MID = ["iron_sword", "chain_mail", "lucky_charm"]
-SMITH = ["steel_sword", "steel_armor"]
+BASIC = ["wooden_sword", "copper_sword", "leather_cap", "cloth_armor", "leather_armor", "wooden_shield"]
+MID = ["iron_sword", "iron_helm", "chain_mail", "iron_shield", "lucky_charm", "travel_bangle"]
+SMITH = ["steel_sword", "steel_helm", "steel_armor", "steel_shield"]
 TOWN_INFO = {
     "王都": ("aurea", "🏰", "黄金平原", BASIC + MID + SMITH),
     "河港": ("flumen", "⚓", "大河の三角州", BASIC + MID),
@@ -44,9 +44,9 @@ TOWN_INFO = {
     "雨林の村": ("yashum", "🌿", "東の雨林", BASIC + MID),
     "霧氷の修道院": ("astol", "🔭", "霧氷の半島", MID),
     "蔦の集落": ("urka", "🍃", "西の密林", BASIC + MID),
-    "赤岩の鉱山町": ("rubela", "💎", "赤い荒野", MID + SMITH),
+    "赤岩の鉱山町": ("rubela", "💎", "赤い荒野", MID + SMITH + ["ruby_ring"]),  # 宝石の町の特産
     "西の港": ("novaris", "⛵", "西大陸の東の海岸", BASIC + MID),
-    "南の森の村": ("rowen", "🏹", "南の森", BASIC),
+    "南の森の村": ("rowen", "🏹", "南の森", BASIC + ["hunter_bow"]),  # 狩人の村の特産
     "干潟の港": ("salina", "🐚", "南の干潟", BASIC + MID),
     "大草原の町": ("eques", "🐎", "南の大草原", BASIC),
     "南壁の砦": ("muralis", "🛡️", "南壁山脈", MID + SMITH),

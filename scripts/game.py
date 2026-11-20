@@ -314,8 +314,8 @@ class Day:
             self.log(f"レベルが上がった！ Lv.{hero['level']}")
 
     # アイテム -------------------------------------------------------------------------
-    def draw(self, table: list | None, level: int) -> str | None:
-        """ドロップ表から抽選する。珍しさが当たったら、その珍しさで level 以下で出るアイテムから選ぶ。"""
+    def draw(self, table: list | None) -> str | None:
+        """ドロップ表から抽選する。珍しさが当たったら、その珍しさのアイテムから均等に選ぶ（レベルの制限はない）。"""
         if not table:
             return None
         keys, weights = zip(*table)
@@ -324,8 +324,7 @@ class Day:
             return None
         if key in self.world["items"]:
             return key
-        pool = sorted(i for i, it in self.world["items"].items()
-                      if it["rarity"] == key and it.get("drop_level", 1) <= level)
+        pool = sorted(i for i, it in self.world["items"].items() if it["rarity"] == key)
         return self.rng.choice(pool) if pool else None
 
     def obtain(self, iid: str, source: str) -> None:
@@ -359,7 +358,7 @@ class Day:
         self.state["season_stats"]["quests_done"] += 1
         self.state["quest"] = None
         self.log(f"依頼達成！{quest_text(self.world, quest)}（+{reward['exp']}EXP +{reward['gold']}G）")
-        iid = self.draw(reward.get("item"), max(quest["level"][0], self.hero["level"]))
+        iid = self.draw(reward.get("item"))
         if iid:
             self.obtain(iid, "報酬で")
         self.gain_exp(reward["exp"])
@@ -429,7 +428,7 @@ class Day:
                 if quest["progress"] >= quest["count"]:
                     self.log(f"討伐の目標を果たした（{quest['count']}体）")
         elif kind == "treasure":
-            iid = self.draw(self.cfg["treasure"], self.hero["level"])
+            iid = self.draw(self.cfg["treasure"])
             if iid:
                 self.obtain(iid, "宝箱から")
             elif self.rng.random() < 0.3:

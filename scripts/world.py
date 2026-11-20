@@ -21,8 +21,8 @@ from pathlib import Path
 import common
 
 WORLD_DIR = common.ROOT / "world"
-SLOTS = ("weapon", "armor", "accessory")
-SLOT_NAMES = {"weapon": "武器", "armor": "防具", "accessory": "装飾品"}
+SLOTS = ("weapon", "helmet", "armor", "shield", "accessory")
+SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "armor": "鎧", "shield": "盾", "accessory": "装飾品"}
 PLACE_TYPES = ("town", "dungeon")
 # 道の種類: 陸路・航路は町どうしを結び、勇者が通る。ダンジョンへの道は地図に描くだけ（第 2 段階で使う）
 ROAD_KINDS = ("land", "sea", "trail")
@@ -298,9 +298,11 @@ def validate(raw: dict) -> list[str]:
             err(f"{where}: slot は {'/'.join(SLOTS)} のどれかにしてください")
         if it.get("rarity") not in rarities:
             err(f"{where}: rarity は {'/'.join(rarities)} のどれかにしてください")
-        for key in (*STATS, "drop_level"):
+        for key in STATS:
             if key in it and (not isinstance(it[key], int) or it[key] < 0):
                 err(f"{where}: {key} は 0 以上の整数にしてください")
+        if "drop_level" in it:
+            err(f"{where}: drop_level はもう使いません（出やすさはドロップ表の重みで決める）")
         if "price" in it and (not isinstance(it["price"], int) or it["price"] <= 0):
             err(f"{where}: price は正の整数にしてください")
 

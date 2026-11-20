@@ -12,8 +12,8 @@
   "hunt_battle_boost": 2,
   "road_events": {"battle": 40, "treasure": 8, "nothing": 52},
   "balance_level": 20,
-  "item_power_rate": 0.3,
-  "treasure": [["none", 80], ["common", 15], ["rare", 5]],
+  "item_power_rate": 0.4,
+  "treasure": [["none", 80], ["common", 14], ["rare", 5], ["epic", 1]],
   "rest": ["焚き火のそばで体を休めた", "宿で一日のんびり過ごした", "夢の中で冒険の続きを見た"],
   "scenery": ["風が吹き抜けていく", "道端に小さな花が咲いている", "遠くで鳥が鳴いている"],
   "terrain_scenery": {

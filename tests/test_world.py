@@ -101,6 +101,14 @@ class ValidateTest(unittest.TestCase):
             r["quests"][0]["reward"]["item"] = [["mythic", 1]]
         self.assertError(change, ["mythic"])
 
+    def test_drop_level_is_no_longer_used(self):
+        self.assertError(lambda r: r["items"][5].update(drop_level=5), ["drop_level"])
+
+    def test_every_slot_has_items_in_a_shop(self):
+        sold = {sid for p in RAW["map"]["places"] for sid in p.get("shop", [])}
+        items = {i["id"]: i for i in RAW["items"]}
+        self.assertEqual({items[i]["slot"] for i in sold}, set(W.SLOTS))
+
     def test_too_strong_item(self):
         def change(r):
             r["items"].append({"id": "god_sword", "name": "神の剣", "slot": "weapon", "rarity": "legendary", "atk": 99})

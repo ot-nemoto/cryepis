@@ -149,7 +149,7 @@ def build_text(world: dict, state: dict) -> str:
     hero, s = state["hero"], game.stats(world, state)
     hp_bar = common.bar(hero["hp"], s["max_hp"], 10).replace(" ", "░")
     worn = game.equipment(world, state)
-    gear = " / ".join(world["items"][i]["name"] for i in worn.values() if i) or "なし"
+    gear = "/".join(world["items"][i]["name"] for i in worn.values() if i) or "なし"  # 5 か所あるので詰めて書く
     season = f"S{state['season']}" if state["season"] else "旅立ち前"
     if state["last"] is None:
         today = "新たな勇者が旅立とうとしている…"

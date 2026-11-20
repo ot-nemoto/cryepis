@@ -257,12 +257,23 @@ class BattleAndItemTest(unittest.TestCase):
         self.assertIn("★「蒼炎の剣」", day.events[0])
         self.assertIn("装備した", day.events[0])
 
-    def test_draw_respects_drop_level(self):
-        day = day_of(G.new_state(WORLD))
-        for _ in range(50):
-            iid = day.draw([["rare", 1]], 1)
-            self.assertTrue(iid is None or WORLD["items"][iid].get("drop_level", 1) <= 1)
-        self.assertIsNone(day.draw([["none", 1]], 99))
+    def test_draw_picks_any_item_of_the_rarity(self):
+        day = day_of(G.new_state(WORLD))  # Lv.1 でも、どのレアも出る（レベルの制限はない）
+        drawn = {day.draw([["legendary", 1]]) for _ in range(200)}
+        legendary = {i for i, it in WORLD["items"].items() if it["rarity"] == "legendary"}
+        self.assertEqual(drawn, legendary)
+        self.assertIsNone(day.draw([["none", 1]]))
+        self.assertEqual(day.draw([["star_sword", 1]]), "star_sword")
+
+    def test_five_slots_are_equipped(self):
+        state = G.new_state(WORLD)
+        state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "chain_mail": 1, "iron_shield": 1, "lucky_charm": 1,
+                              "wooden_shield": 1}
+        worn = G.equipment(WORLD, state)
+        self.assertEqual(list(worn.values()), ["iron_sword", "iron_helm", "chain_mail", "iron_shield", "lucky_charm"])
+        s = G.stats(WORLD, state)
+        self.assertEqual(s["def"], state["hero"]["base_def"] + 1 + 2 + 1)
+        self.assertEqual(s["max_hp"], state["hero"]["max_hp"] + 5 + 5 + 5)
 
 
 class RoadTest(unittest.TestCase):
