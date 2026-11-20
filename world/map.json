@@ -65,7 +65,8 @@
    "emoji": "🌳",
    "text": "千年を超える大木の上に家が並ぶ、森の民の町。木工と薬草が名物。森の奥には近づくなと言い伝えられている",
    "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","bark_shield"],
-   "pos": [381,234]
+   "pos": [381,234],
+   "quests_per_day": 4
   },
   {
    "id": "vike",
@@ -76,7 +77,8 @@
    "emoji": "🐟",
    "text": "冷たい海の魚と塩漬けで暮らす小さな村。霧氷の半島の修道院への巡礼の道が通る",
    "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","fur_hat"],
-   "pos": [650,238]
+   "pos": [650,238],
+   "quests_per_day": 4
   },
   {
    "id": "morna",
@@ -99,7 +101,8 @@
    "emoji": "⚒️",
    "text": "竜の骨から鉄と鋼を掘る鉱山町。腕のいい鍛冶屋が多く、強い武器が手に入る",
    "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_shield","battle_axe"],
-   "pos": [640,482]
+   "pos": [640,482],
+   "quests_per_day": 4
   },
   {
    "id": "cocora",
@@ -122,7 +125,8 @@
    "emoji": "🏕️",
    "text": "竜骨山脈を越える風が吹き下ろす草原の宿場。遊牧の民が集まり、馬と羊毛の市が立つ",
    "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","nomad_bow"],
-   "pos": [1070,330]
+   "pos": [1070,330],
+   "quests_per_day": 4
   },
   {
    "id": "linde",
@@ -133,7 +137,8 @@
    "emoji": "🛶",
    "text": "氷牙山地の雪どけ水がつくる湖のほとり。水車と養魚の村で、のどかな景色が好まれる",
    "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","waterweed_bangle"],
-   "pos": [1235,280]
+   "pos": [1235,280],
+   "quests_per_day": 4
   },
   {
    "id": "isval",
@@ -229,7 +234,8 @@
    "emoji": "💎",
    "text": "赤い岩山から宝石を掘る町。一攫千金を狙う人々で荒っぽい雰囲気",
    "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_shield","ruby_ring"],
-   "pos": [150,668]
+   "pos": [150,668],
+   "quests_per_day": 4
   },
   {
    "id": "novaris",
@@ -252,7 +258,8 @@
    "emoji": "🏹",
    "text": "開拓民が森を切り開いた村。狩人が多く、新米の勇者に弓を教える",
    "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","hunter_bow"],
-   "pos": [175,835]
+   "pos": [175,835],
+   "quests_per_day": 4
   },
   {
    "id": "salina",
@@ -275,7 +282,8 @@
    "emoji": "🐎",
    "text": "地平線まで続く草原の、馬と牧畜の町。年に一度の草原の競馬祭で知られる",
    "shop": ["wooden_sword","copper_sword","leather_cap","wooden_shield","cavalry_lance"],
-   "pos": [820,830]
+   "pos": [820,830],
+   "quests_per_day": 4
   },
   {
    "id": "muralis",
@@ -299,6 +307,7 @@
    "text": "竜の心臓の熱でわく温泉の町。傷を癒しに勇者が集まる。火山の火で鍛えた武具が名物",
    "shop": ["iron_sword","iron_helm","iron_shield","lucky_charm","travel_bangle","steel_sword","steel_helm","steel_shield","volcanic_blade"],
    "pos": [1384,780],
+   "quests_per_day": 4,
    "label": "left"
   },
   {

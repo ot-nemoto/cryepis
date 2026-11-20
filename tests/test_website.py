@@ -143,13 +143,19 @@ class SiteTest(unittest.TestCase):
 
     def test_towns_page(self):
         html = website.build_towns(WORLD)
-        for town in WORLD["towns"]:
+        towns = [t for t, p in WORLD["places"].items() if p["type"] == "town"]
+        self.assertEqual(len(towns), 25)
+        for town in towns:  # 全部の町を出す
             p = WORLD["places"][town]
             self.assertIn(f'id="{town}"', html)
             self.assertIn(p["text"], html)
-            self.assertIn(f"依頼の枠 {game.quests_per_day(WORLD, town)} 件", html)
-            self.assertIn(f'href="guild.html#{town}"', html)
-        self.assertNotIn("アウレア", html)  # 開放していない町は出さない
+            self.assertIn(f"依頼の枠 {p['quests_per_day']} 件", html)  # ギルドの規模はどの町にもある
+            self.assertEqual(f'href="guild.html#{town}"' in html, town in WORLD["towns"])
+        aurea = html[html.index('id="aurea"'):html.index('id="flumen"')]  # 開放していない町
+        self.assertIn("未開放", aurea)
+        self.assertIn("依頼の枠 6 件", aurea)
+        self.assertIn("<tr><th>特産品</th><td>-</td></tr>", aurea)
+        self.assertNotIn("王国の盾", aurea)
         muralis = html[html.index('id="muralis"'):html.index('id="karun"')]
         self.assertIn("城壁の大盾", muralis.split("依頼の報酬で出るレア")[0])  # 特産品
         self.assertIn("騎士の剣", muralis.split("店の品ぞろえ")[0])  # レア

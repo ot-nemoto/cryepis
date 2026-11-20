@@ -231,6 +231,8 @@ def validate(raw: dict) -> list[str]:
         if "label" in p and p["label"] not in LABEL_SIDES:
             err(f"{where}: label（名前を置く向き）は {'/'.join(LABEL_SIDES)} のどれかにしてください")
         if p.get("type") == "town":
+            if "quests_per_day" not in p:
+                err(f"{where}: quests_per_day（ギルドの規模。掲示板の依頼の枠の数）を書いてください")
             for iid in p.get("shop", []):
                 if iid not in items:
                     err(f"{where}: 店の {iid!r} が items.json にありません")

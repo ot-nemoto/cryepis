@@ -71,7 +71,8 @@ class ValidateTest(unittest.TestCase):
 
     def test_disconnected_place(self):
         def change(r):
-            r["map"]["places"].append({"id": "island", "type": "town", "name": "離れ小島", "pos": [1, 1]})
+            r["map"]["places"].append({"id": "island", "type": "town", "name": "離れ小島", "pos": [1, 1],
+                                       "quests_per_day": 3})
             r["map"]["open"].append("island")
         self.assertError(change, ["island", "行けません"])
 
@@ -94,6 +95,9 @@ class ValidateTest(unittest.TestCase):
             r["map"]["starts"] = ["jade_tomb"]
         self.assertError(change, ["starts", "jade_tomb"])
         self.assertError(lambda r: r["map"].update(starts=["aurea"]), ["starts", "aurea", "開放"])
+
+    def test_every_town_has_a_guild_size(self):
+        self.assertError(lambda r: r["map"]["places"][0].pop("quests_per_day"), ["quests_per_day", "ギルドの規模"])
 
     def test_open_must_be_towns(self):
         self.assertError(lambda r: r["map"].update(open=["jade_tomb"]), ["open", "jade_tomb"])
