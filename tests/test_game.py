@@ -261,12 +261,21 @@ class BattleAndItemTest(unittest.TestCase):
         day = day_of(G.new_state(WORLD))  # Lv.1 でも出る（レベルの制限はない）
         self.assertEqual({day.draw([["legendary", 1]], "homura") for _ in range(50)}, {"dragon_heart_stone"})
         self.assertEqual({day.draw([["epic", 1]], "homura") for _ in range(50)}, {"flame_shield"})
-        self.assertEqual({day.draw([["legendary", 1]], "vike") for _ in range(20)}, {None})  # この町では出ない
+        # ヴィーケには epic・legendary がないので、1 つ下に落として rare（霧氷の頭巾）が出る
+        self.assertEqual({day.draw([["legendary", 1]], "vike") for _ in range(20)}, {"frost_hood"})
         self.assertEqual({day.draw([["rare", 1]], None) for _ in range(20)}, {None})  # 宝箱（町なし）では出ない
         commons = {day.draw([["common", 1]]) for _ in range(300)}
         self.assertTrue(commons <= {i for i, it in WORLD["items"].items() if it["rarity"] == "common"})
         self.assertIsNone(day.draw([["none", 1]]))
-        self.assertEqual(day.draw([["star_sword", 1]]), "star_sword")
+        self.assertEqual(day.draw([["star_sword", 1]], "astol"), "star_sword")
+        self.assertIsNone(day.draw([["star_sword", 1]], "vike"))  # ID を直接書いても、その町のものだけ
+        self.assertEqual(day.draw([["wooden_sword", 1]], "vike"), "wooden_sword")
+
+    def test_every_town_gives_something_for_every_rarity(self):
+        day = day_of(G.new_state(WORLD))
+        for town in WORLD["towns"]:
+            for rarity in WORLD["rarities"]:
+                self.assertIsNotNone(day.draw([[rarity, 1]], town), (town, rarity))
 
     def test_quest_reward_uses_the_quest_town(self):
         state = play(1, actions=0)

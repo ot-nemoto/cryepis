@@ -39,6 +39,11 @@ class DisplayTest(unittest.TestCase):
             self.assertTrue(lines[3].startswith("装備: "))
             self.assertTrue(lines[4].startswith("今日: "))
 
+    def test_gear_shows_rares_first(self):
+        state = game.new_state(WORLD)
+        state["inventory"] = {"wooden_sword": 1, "leather_cap": 1, "dragon_scale": 1, "turtle_shield": 1}
+        self.assertEqual(rpg.gear_text(WORLD, state), "★★竜鱗の鎧/★亀甲の盾/木の剣/革の帽子")
+
     def test_card_before_the_journey(self):
         lines = rpg.build_text(WORLD, game.new_state(WORLD, "h1", "アリス")).splitlines()
         self.assertEqual(lines[0], "⚔️ アリス Lv.1  旅立ち前 Day 0")

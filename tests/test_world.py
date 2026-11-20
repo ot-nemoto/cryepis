@@ -108,6 +108,15 @@ class ValidateTest(unittest.TestCase):
         self.assertError(lambda r: r["items"][-1].pop("towns"), ["dragon_heart_stone", "towns"])
         self.assertError(lambda r: r["items"][-1].update(towns=["jade_tomb"]), ["towns", "jade_tomb"])
         self.assertError(lambda r: r["items"][0].update(towns=["aurea"]), ["wooden_sword", "common"])
+        for bad in (5, "aurea", [["aurea"]]):  # 型が違っても落ちずにエラーを返す
+            self.assertError(lambda r, bad=bad: r["items"][-1].update(towns=bad), ["dragon_heart_stone", "towns"])
+
+    def test_every_town_needs_a_rare(self):
+        def change(r):
+            for it in r["items"]:
+                if it["rarity"] == "rare" and "vike" in it["towns"]:
+                    it["towns"].remove("vike")
+        self.assertError(change, ["vike", "rare"])
 
     def test_treasure_cannot_hold_rares(self):
         self.assertError(lambda r: r["season"]["treasure"].append(["rare", 1]), ["treasure", "rare"])
@@ -120,7 +129,7 @@ class ValidateTest(unittest.TestCase):
             self.assertTrue(only_here, town)
 
     def test_every_town_quest_has_some_rare(self):
-        towns = {tid for i in RAW["items"] for tid in i.get("towns", [])}
+        towns = {tid for i in RAW["items"] if i["rarity"] == "rare" for tid in i["towns"]}
         self.assertEqual(towns, {p["id"] for p in RAW["map"]["places"] if p["type"] == "town"})
 
     def test_every_slot_has_items_in_a_shop(self):

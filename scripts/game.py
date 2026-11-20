@@ -316,18 +316,27 @@ class Day:
     # アイテム -------------------------------------------------------------------------
     def draw(self, table: list | None, town: str | None = None) -> str | None:
         """ドロップ表から抽選する。珍しさが当たったら、その珍しさのアイテムから均等に選ぶ。
-        レア（common 以外）は、その町（town。依頼を出した町）の依頼で出るもの（items.json の towns）だけ。"""
+        レア（common 以外）は、その町（town。依頼を出した町）の依頼で出るもの（items.json の towns）だけ。
+        その町にない珍しさが当たったら、1 つ下の珍しさに落として選び直す（どの町にも rare は必ずある）。"""
         if not table:
             return None
         keys, weights = zip(*table)
         key = self.rng.choices(keys, weights)[0]
         if key == W.NONE:
             return None
-        if key in self.world["items"]:
-            return key
-        pool = sorted(i for i, it in self.world["items"].items()
-                      if it["rarity"] == key and (key == "common" or town in it.get("towns", [])))
-        return self.rng.choice(pool) if pool else None
+        items = self.world["items"]
+        if key in items:  # アイテムの ID を直接書いたとき（レアなら、その町のものだけ）
+            item = items[key]
+            return key if item["rarity"] == W.COMMON or town in item.get("towns", []) else None
+        rarities = self.world["rarities"]
+        for rarity in reversed(rarities[rarities.index(W.COMMON):rarities.index(key) + 1]):
+            pool = sorted(i for i, it in items.items()
+                          if it["rarity"] == rarity and (rarity == W.COMMON or town in it.get("towns", [])))
+            if pool:
+                return self.rng.choice(pool)
+            if rarity == rarities[rarities.index(W.COMMON) + 1]:
+                return None  # rare もない（宝箱など、町のない抽選）なら何も出ない
+        return None
 
     def obtain(self, iid: str, source: str) -> None:
         item, inv = self.world["items"][iid], self.state["inventory"]

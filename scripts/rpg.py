@@ -145,11 +145,19 @@ def location(world: dict, state: dict) -> str:
     return text
 
 
+def gear_text(world: dict, state: dict) -> str:
+    """装備の名前を「/」でつなぐ（5 か所あるので、行が切れても見えるようにレアを先に、同じ珍しさなら部位の順）。"""
+    rank = {r: i for i, r in enumerate(world["rarities"])}
+    worn = [iid for iid in game.equipment(world, state).values() if iid]
+    worn.sort(key=lambda i: -rank[world["items"][i]["rarity"]])  # 安定ソートなので部位の順は保つ
+    return "/".join(item_label(world, i) for i in worn) or "なし"
+
+
 def build_text(world: dict, state: dict) -> str:
     hero, s = state["hero"], game.stats(world, state)
     hp_bar = common.bar(hero["hp"], s["max_hp"], 10).replace(" ", "░")
     worn = game.equipment(world, state)
-    gear = "/".join(world["items"][i]["name"] for i in worn.values() if i) or "なし"  # 5 か所あるので詰めて書く
+    gear = gear_text(world, state)
     season = f"S{state['season']}" if state["season"] else "旅立ち前"
     if state["last"] is None:
         today = "新たな勇者が旅立とうとしている…"
@@ -374,7 +382,6 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
 def hero_summary(world: dict, entry: dict, state: dict, today: date) -> list[str]:
     """ランキングの本文に載せる、勇者ごとの短い欄（entry は heroes.json の行）。"""
     hero, s = state["hero"], game.stats(world, state)
-    worn = [world["items"][i]["name"] for i in game.equipment(world, state).values() if i]
     rares = sorted({i for i in state["inventory"] if world["items"][i]["rarity"] != "common"},
                    key=lambda i: (-world["rarities"].index(world["items"][i]["rarity"]), i))
     last = state["last"]
@@ -382,7 +389,7 @@ def hero_summary(world: dict, entry: dict, state: dict, today: date) -> list[str
     return [
         f"■ {entry['name']}  Lv.{hero['level']}  {location(world, state)}",
         f"  HP {hero['hp']}/{s['max_hp']}  攻{s['atk']} 防{s['def']}  {hero['gold']}G  回復薬 {hero['potions']}",
-        f"  装備: {' / '.join(worn) or 'なし'}",
+        f"  装備: {gear_text(world, state)}",
         f"  レア: {'、'.join(item_label(world, i) for i in rares) or 'まだない'}",
         f"  今日: {'、'.join(events) or '—'}",
         f"  詳細: {page_url(entry['id'])}",
