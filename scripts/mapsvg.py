@@ -55,6 +55,7 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
         return None
     width, height = layout["size"]
     cx, cy = layout["center"]
+    sx = layout.get("stretch_x", 1)  # 横長の地図では、輪を横に引き伸ばした楕円にする
     ox, oy = PAD_X, PAD_TOP
     canvas_w, canvas_h = width + 2 * PAD_X, height + PAD_TOP + PAD_BOTTOM
     places = world["places"]
@@ -75,8 +76,8 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
         out.append(f'<rect x="{ox}" y="{oy}" width="{width}" height="{height}" fill="none" stroke="#a08b70"/>')
     rings = sorted(layout.get("rings", []), key=lambda r: -r["radius"])
     for ring in [] if background else rings:
-        out.append(f'<circle cx="{cx + ox}" cy="{cy + oy}" r="{ring["radius"]}" fill="{escape(ring["color"])}" '
-                   'stroke="#fffdf5" stroke-width="3"/>')
+        out.append(f'<ellipse cx="{cx + ox}" cy="{cy + oy}" rx="{ring["radius"] * sx:g}" ry="{ring["radius"]}" '
+                   f'fill="{escape(ring["color"])}" stroke="#fffdf5" stroke-width="3"/>')
     outer = rings[0]["radius"] if rings else min(width, height) / 2
     inner = rings[-1]["radius"] if rings else 0
     for sector in layout.get("sectors", []):
@@ -84,11 +85,13 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
         if background:  # ベースの地図があるときは、方角の名前だけ外側に出す
             edge = None
         if edge is not None:
-            x1, y1 = cx + ox + inner * math.cos(math.radians(edge)), cy + oy + inner * math.sin(math.radians(edge))
-            x2, y2 = cx + ox + outer * math.cos(math.radians(edge)), cy + oy + outer * math.sin(math.radians(edge))
+            x1 = cx + ox + inner * sx * math.cos(math.radians(edge))
+            y1 = cy + oy + inner * math.sin(math.radians(edge))
+            x2 = cx + ox + outer * sx * math.cos(math.radians(edge))
+            y2 = cy + oy + outer * math.sin(math.radians(edge))
             out.append(f'<line x1="{x1:.0f}" y1="{y1:.0f}" x2="{x2:.0f}" y2="{y2:.0f}" stroke="#fffdf5" '
                        'stroke-width="2" stroke-dasharray="4 6"/>')
-        lx = cx + ox + (outer + 38) * math.cos(math.radians(sector["angle"]))
+        lx = cx + ox + (outer + 38) * sx * math.cos(math.radians(sector["angle"]))
         ly = cy + oy + (outer + 38) * math.sin(math.radians(sector["angle"]))
         out.append(f'<text x="{lx:.0f}" y="{ly - 4:.0f}" text-anchor="middle" font-size="17" font-weight="bold" '
                    f'fill="#5b4636">{escape(sector["name"])}</text>')

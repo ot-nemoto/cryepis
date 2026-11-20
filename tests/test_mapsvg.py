@@ -52,6 +52,14 @@ class RenderTest(unittest.TestCase):
         texts = [t.text for t in ET.fromstring(mapsvg.render(WORLD, entries)).iter(f"{NS}text")]
         self.assertIn("🧙 ほか 2 人", texts)
 
+    def test_rings_are_stretched_for_a_landscape_map(self):
+        root = ET.fromstring(mapsvg.render(WORLD, []))
+        ellipses = list(root.iter(f"{NS}ellipse"))
+        self.assertEqual(len(ellipses), len(WORLD["layout"]["rings"]))
+        for e in ellipses:
+            self.assertAlmostEqual(float(e.get("rx")), float(e.get("ry")) * WORLD["layout"]["stretch_x"])
+        self.assertEqual(root.get("width"), str(WORLD["layout"]["size"][0] + 2 * mapsvg.PAD_X))
+
     def test_no_layout_means_no_image(self):
         self.assertIsNone(mapsvg.render({**WORLD, "layout": None}, []))
 
@@ -88,8 +96,7 @@ class BackgroundTest(unittest.TestCase):
         images = list(root.iter(f"{NS}image"))
         self.assertEqual(len(images), 1)
         self.assertEqual(images[0].get("href"), world["background"])
-        radii = {float(c.get("r")) for c in root.iter(f"{NS}circle")}
-        self.assertNotIn(float(WORLD["layout"]["rings"][0]["radius"]), radii)  # 輪は描かない
+        self.assertEqual(list(root.iter(f"{NS}ellipse")), [])  # 輪は描かない
 
     def test_background_errors(self):
         self.assertTrue(any("ありません" in e for e in self.use("none.svg", None)))

@@ -205,6 +205,9 @@ def validate(raw: dict) -> list[str]:
                 if not (isinstance(ring, dict) and ring.get("name") and isinstance(ring.get("color"), str)
                         and isinstance(ring.get("radius"), (int, float)) and ring["radius"] > 0):
                     err(f"map.json: layout.rings[{i}] には name・color・radius（正の数）を書いてください")
+            stretch = layout.get("stretch_x", 1)
+            if not isinstance(stretch, (int, float)) or isinstance(stretch, bool) or stretch <= 0:
+                err("map.json: layout.stretch_x（輪を横に引き伸ばす倍率）は正の数にしてください")
             name = layout.get("background")
             if name is not None:
                 bg = raw.get("background")
