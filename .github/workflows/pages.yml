@@ -1,12 +1,17 @@
 name: Publish site (GitHub Pages)
 
-# 今の状態（.state/）と世界（world/）から、地図・ランキング・ギルドのサイトを書き出して GitHub Pages に公開する
-# （scripts/website.py。冒険は進めない。書き出したファイルはコミットしない）。
-# 毎日の実行・勇者の登録・引退のあと（それらのコミットは GITHUB_TOKEN なので push では動かないため workflow_run で受ける）と、
-# master に push されたとき（世界やプログラムを変えたとき）に動く。
+# CI（リンター・フォーマット・テスト）と、サイトの公開をまとめたワークフロー。
+# - PR を作った・更新したとき: CI だけ（公開はしない）
+# - master に push されたとき（世界やプログラムを変えたとき）: CI が通ったら公開する
+# - 毎日の実行・勇者の登録・引退のあと（それらのコミットは GITHUB_TOKEN なので push では動かないため workflow_run で受ける）:
+#   CI が通ったら公開する
+# 公開: 今の状態（.state/）と世界（world/）から、地図・ランキング・町・ギルド・アイテムのサイトを書き出して
+# GitHub Pages に公開する（scripts/website.py。冒険は進めない。書き出したファイルはコミットしない）。
 # リポジトリの Settings → Pages の Source を「GitHub Actions」にしておくこと。
+# リンターとフォーマッターは Ruff（設定は pyproject.toml。インデントはスペース 2）。
 
 on:
+  pull_request:
   push:
     branches: [master]
   workflow_run:
@@ -14,28 +19,49 @@ on:
     types: [completed]
   workflow_dispatch:
 
-# 公開の途中で止めると公開が壊れることがあるので、実行中のものは止めない（待っている古い実行は新しいものに置き換わる）
+# PR は同じ PR の古い実行を取り消す。公開は途中で止めると壊れることがあるので、実行中のものは止めない
+# （待っている古い実行は新しいものに置き換わる）
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('ci-{0}', github.ref) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+
+env:
+  RUFF_VERSION: "0.17.4"
+  # PR のときは PR の中身、それ以外（push・workflow_run・手動）はコミットされた master の最新を取る
+  CHECKOUT_REF: ${{ github.event_name != 'pull_request' && github.event.repository.default_branch || '' }}
 
 jobs:
-  publish:
+  lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+    timeout-minutes: 5
     steps:
-      # workflow_run のときも、コミットされた最新の状態を取る
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ env.CHECKOUT_REF }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Ruff
+        run: pip install "ruff==${RUFF_VERSION}"
+
+      - name: Lint
+        run: ruff check --output-format=github .
+
+      - name: Format
+        run: ruff format --check --diff .
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
 
       - uses: actions/setup-python@v6
         with:
@@ -43,6 +69,27 @@ jobs:
 
       - name: Test
         run: python -m unittest discover -s tests
+
+  publish:
+    needs: [lint, test]
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
 
       - name: Build site
         run: python scripts/website.py _site
