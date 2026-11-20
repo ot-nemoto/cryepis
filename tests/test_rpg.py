@@ -69,7 +69,7 @@ class DisplayTest(unittest.TestCase):
         self.assertTrue(lines[4].startswith("📰 "))
         text = "\n".join(lines)
         self.assertIn("ゴールドヒルデガルト", text)  # 本文は名前を切り詰めない
-        self.assertIn("詳細: heroes/h0.md", text)  # 勇者ごとの欄と、詳細のページへのリンク
+        self.assertIn(f"詳細: {rpg.page_url('h0')}", text)  # 勇者ごとの欄と、詳細のページへのリンク（Actions では URL になる）
         self.assertIn("■ アリス  Lv.", text)
 
     def test_board_before_the_season_and_for_heroes_not_started(self):
