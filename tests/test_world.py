@@ -222,6 +222,10 @@ class ValidateTest(unittest.TestCase):
             del r["map"]["places"][0]["pos"]
         self.assertError(no_pos, ["aurea", "pos"])
 
+        def bad_quests_per_day(r):
+            r["map"]["places"][0]["quests_per_day"] = 0
+        self.assertError(bad_quests_per_day, ["aurea", "quests_per_day"])
+
         def bad_path(r):
             r["map"]["roads"][0]["path"] = [[1, 2]]
         self.assertError(bad_path, ["path"])

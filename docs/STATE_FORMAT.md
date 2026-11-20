@@ -7,6 +7,7 @@
 |---|---|---|
 | [`heroes.json`](#heroesjson) | `scripts/rpg.py`（New game / Retire hero） | 勇者管理シート（勇者の一覧と Gist の ID） |
 | [`board.json`](#boardjson) | `scripts/rpg.py`（最初の毎日の実行） | ランキングの Gist の ID と URL |
+| [`guild.json`](#guildjson) | `scripts/rpg.py`（毎日の実行） | ギルドの依頼のうち、受けられたもの（早い者勝ち） |
 | [`heroes/<id>.json`](#heroesidjson) | `scripts/rpg.py` | 勇者ごとの状態・持ち物・日誌・シーズンの記録 |
 | [`last-run`](#last-run) | hero-adventure.yml の Commit state ステップ | 最終実行日 |
 
@@ -48,6 +49,18 @@
 
 ```json
 {"gist_id": "0123abcd…", "gist_url": "https://gist.github.com/…", "created": "2026-12-01"}
+```
+
+---
+
+## guild.json
+
+ギルドの依頼は早い者勝ちで、ほかの勇者が受けた依頼は受けられません。その記録です（依頼の ID → 受けた勇者の ID）。
+依頼の ID は「日付-町の ID-枠の番号」です。毎日の実行で書き換え、さかのぼって進める日数（7 日）より古いものは捨てます。
+消しても壊れません（その日に受けられた依頼が、もう一度受けられるようになるだけです）。
+
+```json
+{"taken": {"2026-12-01-aurea-0": "h2", "2026-12-01-aurea-3": "h1"}}
 ```
 
 ---

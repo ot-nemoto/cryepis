@@ -165,7 +165,7 @@ def board(world: dict, town: str, d: date, season: int) -> list[dict]:
     rng = random.Random(f"board-{d.isoformat()}-{season}-{town}")
     own = list(world["town_quests"].get(town, []))
     quests = []
-    for i in range(cfg["board_size"]):
+    for i in range(quests_per_day(world, town)):
         rank = rng.choices(range(1, len(ranks) + 1), [r["weight"] for r in ranks])[0]
         while True:
             mine = [q for q in own if q["rank"] == rank]
@@ -183,6 +183,11 @@ def board(world: dict, town: str, d: date, season: int) -> list[dict]:
             quest["id"] = f"{d.isoformat()}-{town}-{i}"
             quests.append(quest)
     return quests
+
+
+def quests_per_day(world: dict, town: str) -> int:
+    """町のギルドに 1 日に出る依頼の数（map.json の quests_per_day。なければ season.json の board_size）。"""
+    return world["places"][town].get("quests_per_day", world["season"]["board_size"])
 
 
 def finish_quest(world: dict, quest: dict, town: str, d: date, days: int, unit: int) -> dict:
@@ -277,12 +282,13 @@ def route(world: dict, a: str, b: str) -> list[str]:
 class Day:
     """1 日分の出来事を記録しながら進める。"""
 
-    def __init__(self, world: dict, state: dict, today: date, rng: random.Random):
+    def __init__(self, world: dict, state: dict, today: date, rng: random.Random, guild: dict | None = None):
         self.world, self.state, self.today, self.rng = world, state, today, rng
         self.cfg = world["season"]
         self.hero = state["hero"]
         self.events: list[str] = []
         self.fallen = False
+        self.guild = guild  # 全員で共有する「受けられた依頼」（依頼の ID → 受けた勇者の ID）。None なら共有しない
 
     def log(self, text: str) -> None:
         self.events.append(text)
@@ -439,14 +445,19 @@ class Day:
 
     def take_quest(self, town: str) -> None:
         level = self.hero["level"]
+        taken = set(self.state["taken"]) | set(self.guild or {})  # 自分か、ほかの勇者が受けた依頼は受けられない
         quests = [q for q in board(self.world, town, self.today, self.state["season"])
-                  if suitable(q, level) and q["id"] not in self.state["taken"]]  # その日に受けた依頼はもう受けない
+                  if suitable(q, level) and q["id"] not in taken]
         if quests:
             quest = self.rng.choice(quests)
             self.state["taken"].append(quest["id"])
+            if self.guild is not None:
+                self.guild[quest["id"]] = self.state["id"]
             self.log(f"{self.world['places'][town]['name']}のギルドで依頼を受けた: {quest_text(self.world, quest)}")
-        else:
+        else:  # 受けられる依頼がない（ほかの勇者に取られた）ので、となりの町へ旅に出る
             quest = patrol(self.world, self.state, self.rng)
+            self.log(f"{self.world['places'][town]['name']}のギルドには受けられる依頼がない。"
+                     f"{self.world['places'][quest['place']]['name']}へ旅に出る")
         self.state["quest"] = quest
 
     def fail_quest(self, why: str) -> None:
@@ -587,7 +598,7 @@ def start_season(world: dict, state: dict, season: int) -> None:
                  home_town=town, road=None, quest=None, season_stats=new_season_stats())
 
 
-def advance(world: dict, state: dict, today: date, actions: int | None = None) -> bool:
+def advance(world: dict, state: dict, today: date, actions: int | None = None, guild: dict | None = None) -> bool:
     """today の分を進める（actions を省くと season.json の actions_per_day。毎日同じ回数で、出来事が乱数で決まる）。処理済み（last_date 以前の日付）なら何もせず False。"""
     if state["last_date"] and today.isoformat() <= state["last_date"]:
         return False
@@ -600,7 +611,7 @@ def advance(world: dict, state: dict, today: date, actions: int | None = None) -
     state["season_day"] += 1
     state["last_date"] = today.isoformat()
     state["taken"] = []
-    day = Day(world, state, today, rng)
+    day = Day(world, state, today, rng, guild)
     if new_season:
         day.log(f"シーズン{season}が始まった（レベルは 1 に戻り、持ち物はそのまま）")
     if actions is None:

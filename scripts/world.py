@@ -204,6 +204,9 @@ def validate(raw: dict) -> list[str]:
                 err(f"{where}: {key} は空でない文字列にしてください")
         if "pos" in p and not _point_ok(p["pos"]):
             err(f"{where}: pos（地図の座標）は [x, y] の数にしてください")
+        if "quests_per_day" in p and (not isinstance(p["quests_per_day"], int) or isinstance(p["quests_per_day"], bool)
+                                      or not 1 <= p["quests_per_day"] <= 50):
+            err(f"{where}: quests_per_day（1 日にギルドに出る依頼の数）は 1〜50 の整数にしてください")
         if "label" in p and p["label"] not in LABEL_SIDES:
             err(f"{where}: label（名前を置く向き）は {'/'.join(LABEL_SIDES)} のどれかにしてください")
         if p.get("type") == "town":

@@ -194,6 +194,33 @@ class QuestTest(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
         self.assertEqual(state["quest"]["type"], "patrol")  # 受けられる依頼が尽きたら見回り
 
+    def test_quests_taken_by_others_cannot_be_taken(self):
+        guild = {}
+        a, b = play(1, "a", actions=0), play(1, "b", actions=0)
+        town = a["place"]
+        b["place"] = town
+        quests = G.board(WORLD, town, START, 1)
+        self.assertEqual(len(quests), G.quests_per_day(WORLD, town))
+        ids = []
+        for state in [a, b] * len(quests):
+            if len(ids) == len(quests):
+                break
+            state["quest"] = None
+            G.Day(WORLD, state, START, random.Random(len(ids)), guild).take_quest(town)
+            ids.append(state["quest"]["id"])
+        self.assertEqual(sorted(ids), sorted(q["id"] for q in quests))  # 全部の依頼が 1 度ずつ受けられた
+        self.assertEqual(set(guild), set(ids))
+        a["quest"] = None
+        day = G.Day(WORLD, a, START, random.Random(0), guild)
+        day.take_quest(town)  # もう残っていない
+        self.assertEqual(a["quest"]["type"], "patrol")
+        self.assertIn("旅に出る", day.events[-1])
+
+    def test_quests_per_day_depends_on_the_town(self):
+        self.assertEqual(G.quests_per_day(WORLD, "aurea"), 6)
+        self.assertEqual(G.quests_per_day(WORLD, "morna"), 3)
+        self.assertEqual(G.quests_per_day(WORLD, "silwen"), WORLD["season"]["board_size"])
+
     def test_taken_quests_reset_the_next_day(self):
         state = play(1, actions=1)
         self.assertTrue(state["taken"])

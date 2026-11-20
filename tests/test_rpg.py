@@ -1,3 +1,4 @@
+import json
 import sys
 import tempfile
 import unittest
@@ -158,7 +159,8 @@ class HeroesTest(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.dir = Path(tmp.name)
         for target, value in (("HEROES_PATH", self.dir / "heroes.json"), ("HERO_DIR", self.dir / "heroes"),
-                              ("BOARD_PATH", self.dir / "board.json"), ("PAGE_DIR", self.dir / "pages")):
+                              ("BOARD_PATH", self.dir / "board.json"), ("PAGE_DIR", self.dir / "pages"),
+                              ("GUILD_PATH", self.dir / "guild.json")):
             patcher = mock.patch.object(rpg, target, value)
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -278,13 +280,13 @@ class HeroesTest(unittest.TestCase):
         self.new_game("アリス")
         self.new_game("ボブ")
         self.daily("2026-12-01")
-        original = rpg.run_hero
+        original = game.advance
 
-        def fail_alice(world, hero, *args):
-            if hero["id"] == "h1":
+        def fail_alice(world, state, *args):
+            if state["id"] == "h1":
                 raise RuntimeError("壊れた")
-            return original(world, hero, *args)
-        with mock.patch.object(rpg, "run_hero", side_effect=fail_alice), mock.patch.object(common, "warn"):
+            return original(world, state, *args)
+        with mock.patch.object(game, "advance", side_effect=fail_alice), mock.patch.object(common, "warn"):
             self.assertEqual(self.daily("2026-12-02"), 1)
         text = (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8")
         self.assertIn("🧙 アリス Lv.", text)  # 保存してある状態で載せる
@@ -298,6 +300,26 @@ class HeroesTest(unittest.TestCase):
         warn.assert_called_once()
         self.create_board.assert_called_once()  # ランキングは更新する
         self.assertEqual(load("h1")["day"], 1)
+
+    def test_quests_are_first_come_first_served(self):
+        for name in ("アリス", "ボブ", "キャロル", "デイブ", "イブ", "フランク"):
+            self.new_game(name)
+        for i in range(1, 6):
+            self.daily(f"2026-12-0{i}")
+        guild = json.loads((self.dir / "guild.json").read_text(encoding="utf-8"))["taken"]
+        self.assertTrue(guild)
+        taken = {}
+        for hid in [f"h{i}" for i in range(1, 7)]:
+            for qid in load(hid)["taken"]:
+                self.assertNotIn(qid, taken)  # 同じ依頼を 2 人が受けていない
+                taken[qid] = hid
+        for qid, hid in taken.items():
+            self.assertEqual(guild[qid], hid)
+
+    def test_old_guild_records_are_dropped(self):
+        rpg.GUILD_PATH.write_text(json.dumps({"taken": {"2020-01-01-aurea-0": "h1", "2026-12-01-aurea-0": "h2"}}),
+                                  encoding="utf-8")
+        self.assertEqual(rpg.load_guild(date(2026, 12, 3)), {"2026-12-01-aurea-0": "h2"})
 
     def test_board_is_updated_after_it_is_created(self):
         self.new_game("アリス")
