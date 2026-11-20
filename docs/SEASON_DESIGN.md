@@ -144,7 +144,7 @@ world/
 
 ```json
 {
-  "start": "town_hajimari",
+  "starts": ["town_hajimari", "town_fusha"],
   "places": [
     {"id": "town_hajimari", "type": "town", "name": "はじまりの村", "emoji": "🏠"},
     {"id": "field_north", "type": "field", "name": "北の草原", "emoji": "🌱", "level": [1, 5],
@@ -273,6 +273,10 @@ HP ███████░░░ 84/120  攻41 防28  340G
 ## 実装の状況
 
 **第 1 段階を実装済み**（`world/`・`scripts/world.py`・`scripts/game.py`・`scripts/rpg.py`）。設計から変えた点・補った点:
+
+**MAP（同心円）**: 外側ほど易しく、中心ほど難しい。外縁（Lv1〜8）→ 第二圏（Lv7〜16）→ 第三圏（Lv15〜25）→ 内縁（Lv25〜32）→ 中心（Lv33〜45）。
+外周は 6 つの方角に分かれ、方角ごとにテーマがある。最初の町は外縁の 6 つの町からランダム（勇者とシーズンごと）。
+MAP は heroes/MAP.md に Mermaid の図で書き出す（方角ごとの列。上が外側、下が中心）。
 
 - データファイルは `season.json`・`map.json`・`monsters.json`・`items.json`・`quests.json`（`dungeons/` は第 2 段階で足す）
 - 町の店では回復薬に加えて、今より良い装備（`price` のあるアイテム）も買う。回復薬の分のお金は残して買う

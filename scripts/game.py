@@ -52,9 +52,15 @@ def new_season_stats() -> dict:
     return {"quests_done": 0, "quests_failed": 0, "kills": 0, "deaths": 0, "rares": []}
 
 
+def start_town(world: dict, hero_id: str, season: int | None) -> str:
+    """最初の町（勇者とシーズンごとに、map.json の starts からランダムに決める）。"""
+    return random.Random(f"start-{season or 0}-{hero_id}").choice(world["starts"])
+
+
 def new_state(world: dict, hero_id: str = "h1", name: str = "勇者") -> dict:
+    town = start_town(world, hero_id, None)
     return {"id": hero_id, "name": name, "season": None, "season_day": 0, "day": 0, "last_date": None,
-            "hero": new_hero(world), "inventory": {}, "place": world["start"], "home_town": world["start"],
+            "hero": new_hero(world), "inventory": {}, "place": town, "home_town": town,
             "road": None, "quest": None, "taken": [], "season_stats": new_season_stats(), "last": None,
             "journal": [], "seasons": []}
 
@@ -74,12 +80,13 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
     state["hero"] = {**new_hero(world), **state["hero"]}
     state["season_stats"] = {**new_season_stats(), **state["season_stats"]}
     places = world["places"]
+    fallback = start_town(world, state["id"], state["season"])
     state["inventory"] = {k: v for k, v in state["inventory"].items() if k in world["items"]}
     state["season_stats"]["rares"] = [i for i in state["season_stats"]["rares"] if i in world["items"]]
     if state["place"] not in places:
-        state.update(place=world["start"], road=None)
+        state.update(place=fallback, road=None)
     if places.get(state["home_town"], {}).get("type") != "town":
-        state["home_town"] = world["start"]
+        state["home_town"] = fallback
     road = state["road"]
     if road and (road.get("to") not in places or (state["place"], road["to"]) not in world["roads"]):
         state["road"] = None
@@ -494,8 +501,10 @@ def start_season(world: dict, state: dict, season: int) -> None:
         stats_ = state["season_stats"]
         state["seasons"].append({"season": state["season"], "days": state["season_day"],
                                  "level": state["hero"]["level"], **stats_, "ended_on": state["last_date"]})
-    state.update(season=season, season_day=0, hero=new_hero(world), place=world["start"],
-                 home_town=world["start"], road=None, quest=None, season_stats=new_season_stats())
+    # 最初のシーズンは、登録したときに決めた町から。シーズンが変わったら最初の町を決め直す
+    town = state["place"] if state["season"] is None else start_town(world, state["id"], season)
+    state.update(season=season, season_day=0, hero=new_hero(world), place=town,
+                 home_town=town, road=None, quest=None, season_stats=new_season_stats())
 
 
 def advance(world: dict, state: dict, today: date, actions: int | None = None) -> bool:
@@ -518,8 +527,9 @@ def advance(world: dict, state: dict, today: date, actions: int | None = None) -
         actions = roll_actions(world, rng)
     if state["quest"] and state["quest"]["deadline"] and today.isoformat() > state["quest"]["deadline"]:
         day.fail_quest("期限切れ")
-    if state["season_day"] == 1 and state["place"] == world["start"]:  # 旅立ちの日は最初の町で支度する
-        day.visit_town(world["start"])
+    town = state["place"]
+    if state["season_day"] == 1 and world["places"][town]["type"] == "town" and not state["road"]:
+        day.visit_town(town)  # 旅立ちの日は最初の町で支度する
     if actions == 0:
         hero = state["hero"]
         hero["hp"] = min(day.stats["max_hp"], hero["hp"] + int(day.stats["max_hp"] * world["season"]["rest_heal_rate"]))

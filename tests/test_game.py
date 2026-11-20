@@ -13,6 +13,7 @@ import world as W  # noqa: E402
 
 WORLD = W.load_world()
 START = date.fromisoformat(WORLD["season"]["start"])
+TOWN = WORLD["starts"][0]
 
 
 def play(days, hero_id="h1", actions=None, first=START):
@@ -55,7 +56,7 @@ class SeasonTest(unittest.TestCase):
         G.advance(WORLD, state, nxt, 0)
         self.assertEqual(state["season"], 2)
         self.assertEqual(state["season_day"], 1)
-        self.assertEqual((state["hero"]["level"], state["place"], state["quest"]), (1, WORLD["start"], None))
+        self.assertEqual((state["hero"]["level"], state["place"], state["quest"]), (1, G.start_town(WORLD, state["id"], 2), None))
         self.assertIn("blue_flame_sword", state["inventory"])
         (record,) = state["seasons"]
         self.assertEqual((record["season"], record["level"], record["days"]), (1, 15, 3))
@@ -90,8 +91,8 @@ class AdvanceTest(unittest.TestCase):
 
     def test_expired_quest_fails(self):
         state = play(1, actions=0)
-        state["quest"] = G.patrol(WORLD, state) | {"type": "hunt", "monster": "slime", "report": WORLD["start"],
-                                                  "town": WORLD["start"], "deadline": START.isoformat(),
+        state["quest"] = G.patrol(WORLD, state) | {"type": "hunt", "monster": "slime", "report": TOWN,
+                                                  "town": TOWN, "deadline": START.isoformat(),
                                                   "reward": {"exp": 1, "gold": 1, "item": None}}
         G.advance(WORLD, state, START + timedelta(days=1), 0)
         self.assertIsNone(state["quest"])
@@ -100,7 +101,7 @@ class AdvanceTest(unittest.TestCase):
 
 class QuestTest(unittest.TestCase):
     def test_board_is_shared_and_deterministic(self):
-        town = WORLD["start"]
+        town = TOWN
         self.assertEqual(G.board(WORLD, town, START, 1), G.board(WORLD, town, START, 1))
         self.assertTrue(G.board(WORLD, town, START, 1))
 
@@ -116,12 +117,12 @@ class QuestTest(unittest.TestCase):
 
     def test_hunt_report_gives_reward(self):
         state = play(1, actions=0)
-        quest = next(q for i in range(30) for q in G.board(WORLD, WORLD["start"], START + timedelta(days=i), 1)
+        quest = next(q for i in range(30) for q in G.board(WORLD, TOWN, START + timedelta(days=i), 1)
                      if q["type"] == "hunt")
         quest["progress"] = quest["count"]
         state["quest"] = quest
         gold = state["hero"]["gold"]
-        day_of(state).visit_town(WORLD["start"])
+        day_of(state).visit_town(TOWN)
         self.assertIsNone(state["quest"])
         self.assertEqual(state["season_stats"]["quests_done"], 1)
         self.assertGreaterEqual(state["hero"]["gold"], gold + quest["reward"]["gold"] - 200)  # 買い物をしても報酬は入る
@@ -129,7 +130,7 @@ class QuestTest(unittest.TestCase):
     def test_deliver_completes_on_arrival(self):
         state = play(1, actions=0)
         to = WORLD["towns"][1]
-        state["quest"] = {"type": "deliver", "name": "配達", "template": "deliver", "town": WORLD["start"],
+        state["quest"] = {"type": "deliver", "name": "配達", "template": "deliver", "town": TOWN,
                           "place": to, "report": to, "monster": None, "count": 1, "progress": 0, "level": [1, 5],
                           "deadline": "2099-01-01", "reward": {"exp": 5, "gold": 5, "item": None}}
         day_of(state).visit_town(to)
@@ -139,13 +140,13 @@ class QuestTest(unittest.TestCase):
     def test_same_quest_is_not_taken_twice_a_day(self):
         state = play(1, actions=0)
         state["hero"]["level"] = 99  # どの依頼も合わない…ことがないよう、掲示板の依頼をすべて受けられるようにする
-        quests = G.board(WORLD, WORLD["start"], START, 1)
+        quests = G.board(WORLD, TOWN, START, 1)
         state["hero"]["level"] = max(q["level"][0] for q in quests)
         day = day_of(state)
         ids = []
         for _ in range(len(quests) + 1):
             state["quest"] = None
-            day.take_quest(WORLD["start"])
+            day.take_quest(TOWN)
             if state["quest"]["type"] != "patrol":
                 ids.append(state["quest"]["id"])
         self.assertEqual(len(ids), len(set(ids)))
@@ -174,7 +175,7 @@ class QuestTest(unittest.TestCase):
 class BattleAndItemTest(unittest.TestCase):
     def test_fall_fails_quest_and_returns_to_town(self):
         state = play(1, actions=0)
-        state["quest"] = G.patrol(WORLD, state) | {"type": "hunt", "monster": "slime", "report": WORLD["start"]}
+        state["quest"] = G.patrol(WORLD, state) | {"type": "hunt", "monster": "slime", "report": TOWN}
         state["place"] = "north_plain"
         day = day_of(state)
         day.fall()
@@ -190,22 +191,30 @@ class BattleAndItemTest(unittest.TestCase):
         return state
 
     def test_turns_back_on_the_road_when_hp_is_low(self):
-        # 鉱山の町 →（距離 2）→ 雪原 の 1 歩目。引き返せば 1 で町、進めば 1 + 雪の町まで 1
-        state = self.low_hp_on_road("town_kouzan", "snowfield", 1)
+        # 雲の峰 →（距離 2）→ 氷河 の 1 歩目。引き返せば 1 + 天空の都まで 1、進めば 1 + 町まで 2
+        state = self.low_hp_on_road("cloud_peak", "glacier", 1)
         day = day_of(state)
         day.turn_back()
-        self.assertEqual((state["place"], state["road"]), ("snowfield", {"to": "town_kouzan", "left": 1}))
+        self.assertEqual((state["place"], state["road"]), ("glacier", {"to": "cloud_peak", "left": 1}))
         self.assertIn("引き返した", day.events[0])
-        self.assertTrue(day.act())  # 次の行動で町に着く
-        self.assertEqual((state["place"], state["road"]), ("town_kouzan", None))
 
     def test_keeps_going_when_turning_back_is_not_closer(self):
-        # 東の丘 →（距離 2）→ 白い浜辺。どちらに行っても町まで 2 なら、そのまま進む
-        state = self.low_hp_on_road("east_hill", "beach", 1)
+        # 花畑 →（距離 2）→ 東の丘。どちらに行っても町まで 2 なら、そのまま進む
+        state = self.low_hp_on_road("flower_field", "east_hill", 1)
         day = day_of(state)
         day.turn_back()
-        self.assertEqual((state["place"], state["road"]["to"]), ("east_hill", "beach"))
+        self.assertEqual((state["place"], state["road"]["to"]), ("flower_field", "east_hill"))
         self.assertEqual(day.events, [])
+
+    def test_start_town_is_random_per_hero_and_season(self):
+        towns = {G.start_town(WORLD, f"h{i}", None) for i in range(30)}
+        self.assertGreater(len(towns), 3)
+        self.assertTrue(towns <= set(WORLD["starts"]))
+        self.assertEqual(G.start_town(WORLD, "h1", 1), G.start_town(WORLD, "h1", 1))
+        state = G.new_state(WORLD, "h7")
+        self.assertEqual(state["place"], G.start_town(WORLD, "h7", None))
+        G.advance(WORLD, state, START, 0)
+        self.assertEqual(state["place"], G.start_town(WORLD, "h7", None))  # 最初のシーズンは登録した町から
 
     def test_strong_monster_beats_a_new_hero(self):
         state = G.new_state(WORLD)
@@ -255,7 +264,7 @@ class StateFileTest(unittest.TestCase):
             G.save_state(state, path)
             loaded = G.load_state(WORLD, path)
         self.assertEqual((loaded["place"], loaded["home_town"], loaded["road"], loaded["quest"]),
-                         (WORLD["start"], WORLD["start"], None, None))
+                         (G.start_town(WORLD, "h1", 1),) * 2 + (None, None))
         self.assertNotIn("gone_item", loaded["inventory"])
 
     def test_load_drops_removed_items_from_rare_records(self):
@@ -269,7 +278,7 @@ class StateFileTest(unittest.TestCase):
 
     def test_load_drops_quests_whose_place_changed_type(self):
         state = play(2)
-        base = {"name": "x", "template": "t", "town": WORLD["start"], "report": WORLD["start"], "count": 1,
+        base = {"name": "x", "template": "t", "town": TOWN, "report": TOWN, "count": 1,
                 "progress": 0, "level": [1, 5], "deadline": "2099-01-01", "reward": None}
         cases = [({"type": "hunt", "place": WORLD["towns"][1], "monster": "slime"}, False),  # 町で討伐はできない
                  ({"type": "deliver", "place": "north_plain", "monster": None}, False),    # 野外へは配達しない

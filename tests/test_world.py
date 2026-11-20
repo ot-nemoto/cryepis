@@ -24,7 +24,7 @@ class DataTest(unittest.TestCase):
 
     def test_load_world_builds_routes(self):
         world = W.load_world()
-        start = world["start"]
+        start = world["starts"][0]
         for pid in world["places"]:
             self.assertIn(pid, world["dist"][start])
         self.assertEqual(world["dist"][start][start], 0)
@@ -59,8 +59,8 @@ class ValidateTest(unittest.TestCase):
 
     def test_start_must_be_a_town(self):
         def change(r):
-            r["map"]["start"] = "north_plain"
-        self.assertError(change, ["start"])
+            r["map"]["starts"] = ["north_plain"]
+        self.assertError(change, ["starts", "north_plain"])
 
     def test_shop_item_needs_price(self):
         def change(r):

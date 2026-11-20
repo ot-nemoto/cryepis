@@ -1,185 +1,189 @@
 # 世界の MAP
 
-地域 11・町 18・野外 51。丸い枠が町、四角が野外（推奨レベル付き）、緑の枠は勇者がいる場所です。細い線は距離 1 の道、太い線は距離 2 の道（移動に 2 行動かかる）です。
+地域 7・町 22・野外 47。丸い枠が町、四角が野外（推奨レベル付き）、緑の枠は勇者がいる場所です。細い線は距離 1 の道、太い線は距離 2 の道（移動に 2 行動かかる）です。
 
 このページは毎日の実行で書き出します（手で編集しない。MAP を変えるときは world/map.json を編集する）。
 
 ```mermaid
 flowchart TB
-  subgraph region0["はじまりの平原（Lv1〜7）"]
-    town_hajimari(["🏠 はじまりの村<br/>🧙 GOLD HILDR Lv.1<br/>🧙 CASSIA Lv.1<br/>🧙 BERENICE Lv.1"])
-    town_fusha(["🌾 風車の村"])
-    flower_field["🌼 花畑<br/>Lv1〜3"]
-    north_plain["🌱 北の草原<br/>Lv1〜4"]
-    brook["💧 小川のほとり<br/>Lv1〜5"]
-    east_hill["⛰️ 東の丘<br/>Lv2〜6"]
-    old_farm["🐄 牧場跡<br/>Lv3〜7"]
-  end
-  subgraph region1["緑の森林地帯（Lv4〜15）"]
-    town_mori(["🏡 森の町"])
-    town_kikori(["🪓 木こりの集落"])
-    old_road["🛤️ 古い街道<br/>Lv4〜9"]
-    fairy_spring["🧚 妖精の泉<br/>Lv6〜11"]
-    lost_forest["🌲 迷いの森<br/>Lv7〜12"]
-    mossy_ruins["🏛️ 苔むした遺跡<br/>Lv8〜13"]
-    great_tree["🌳 大樹の根元<br/>Lv9〜14"]
-    spider_wood["🕸️ 蜘蛛の森<br/>Lv10〜15"]
-  end
-  subgraph region2["南の海岸（Lv8〜18）"]
-    town_minato(["⚓ 港町"])
-    town_ryoshi(["🎣 漁村"])
-    town_todai(["🗼 灯台の町"])
-    beach["🏖️ 白い浜辺<br/>Lv8〜13"]
-    tide_pool["🦀 潮だまり<br/>Lv9〜14"]
-    wreck_shore["🚢 難破船の浜<br/>Lv11〜16"]
-    cape["🌊 岬の崖<br/>Lv12〜17"]
-    coral_cove["🪸 珊瑚の入り江<br/>Lv13〜18"]
-  end
-  subgraph region3["霧の湿地（Lv10〜19）"]
-    town_numa(["🛖 沼の村"])
-    misty_marsh["🌫️ 霧の湿原<br/>Lv10〜15"]
-    rotten_pier["🪵 朽ちた桟橋<br/>Lv11〜16"]
-    poison_swamp["☠️ 毒沼<br/>Lv12〜17"]
-    sunken_shrine["⛩️ 沈んだ祠<br/>Lv14〜19"]
-  end
-  subgraph region4["鉄の山脈（Lv14〜25）"]
+  subgraph region0["北（草原→山岳→天空）（Lv1〜31）"]
+    town_hajimari(["🏠 はじまりの村<br/>🧙 BERENICE Lv.1"])
+    flower_field["🌼 花畑<br/>Lv1〜4"]
+    north_plain["🌱 北の草原<br/>Lv3〜7"]
+    town_joka(["🏘️ 城下町"])
+    king_road["🛣️ 王の街道<br/>Lv7〜11"]
+    old_battlefield["⚔️ 古戦場<br/>Lv10〜15"]
     town_kouzan(["⛏️ 鉱山の町"])
-    town_ishikiri(["🧱 石切り場の村"])
-    rocky["🪨 岩山<br/>Lv14〜19"]
-    cliff_path["🧗 断崖の道<br/>Lv15〜20"]
-    old_mine["🕳️ 廃坑の入口<br/>Lv16〜21"]
-    iron_valley["⚙️ 鉄の谷<br/>Lv18〜23"]
-    underground_lake["💠 地底湖<br/>Lv20〜25"]
+    rocky["🗻 岩山<br/>Lv15〜19"]
+    iron_valley["⚙️ 鉄の谷<br/>Lv19〜24"]
+    town_kogen(["🏯 天空の都"])
+    cloud_peak["☁️ 雲の峰<br/>Lv25〜31"]
   end
-  subgraph region5["火山地帯（Lv18〜30）"]
-    town_onsen(["♨️ 温泉の町"])
-    volcano["🌋 火山のふもと<br/>Lv18〜24"]
-    sulfur_waste["💨 硫黄の荒野<br/>Lv19〜25"]
-    lava_river["🔥 溶岩の川<br/>Lv21〜27"]
-    crater_rim["☄️ 火口の縁<br/>Lv24〜30"]
-  end
-  subgraph region6["黄金の砂漠（Lv16〜27）"]
-    town_oasis(["🌴 オアシスの町"])
-    town_caravan(["🐪 隊商の宿場"])
-    dunes["🏜️ 砂丘<br/>Lv16〜21"]
-    dry_gorge["🦂 枯れ谷<br/>Lv18〜23"]
-    mirage["🌅 蜃気楼の荒野<br/>Lv19〜24"]
-    buried_temple["🏺 砂に埋もれた神殿<br/>Lv21〜26"]
-    quicksand["⏳ 流砂の谷<br/>Lv22〜27"]
-  end
-  subgraph region7["北の雪原（Lv20〜34）"]
+  subgraph region1["北東（丘陵→雪山）（Lv1〜32）"]
+    town_fusha(["🌾 風車の村<br/>🧙 CASSIA Lv.1"])
+    east_hill["⛰️ 東の丘<br/>Lv1〜4"]
+    old_farm["🐄 牧場跡<br/>Lv3〜7"]
+    town_toge(["⛺ 峠の町"])
+    hill_ruins["🏛️ 丘の遺跡<br/>Lv7〜11"]
+    misty_pass["🌁 霧の峠<br/>Lv10〜15"]
     town_yuki(["⛄ 雪の町"])
-    town_toride(["🏰 氷の砦"])
-    snowfield["❄️ 雪原<br/>Lv20〜26"]
-    blizzard_pass["🌨️ 吹雪の峠<br/>Lv22〜28"]
-    frozen_lake["⛸️ 凍った湖<br/>Lv24〜30"]
-    ice_valley["🧊 氷の谷<br/>Lv25〜32"]
-    glacier["🏔️ 氷河<br/>Lv28〜34"]
+    snowfield["❄️ 雪原<br/>Lv16〜20"]
+    blizzard_pass["🌨️ 吹雪の峠<br/>Lv20〜25"]
+    glacier["🏔️ 氷河<br/>Lv26〜32"]
   end
-  subgraph region8["東方の島々（Lv12〜23）"]
-    town_shima(["🏝️ 島の港"])
-    palm_beach["🥥 椰子の浜<br/>Lv12〜17"]
-    jungle["🌿 密林<br/>Lv15〜20"]
-    pirate_hideout["🗡️ 海賊の隠れ家<br/>Lv17〜22"]
-    volcano_isle["🗻 火山島<br/>Lv18〜23"]
+  subgraph region2["南東（海岸→深海）（Lv1〜31）"]
+    town_ryoshi(["🎣 漁村<br/>🧙 GOLD HILDR Lv.1"])
+    beach["🏖️ 白い浜辺<br/>Lv1〜4"]
+    tide_pool["🦀 潮だまり<br/>Lv4〜8"]
+    town_minato(["⚓ 港町"])
+    cape["🌊 岬の崖<br/>Lv8〜12"]
+    wreck_shore["🚢 難破船の浜<br/>Lv11〜16"]
+    town_todai(["🗼 灯台の町"])
+    coral_cove["🪸 珊瑚の入り江<br/>Lv15〜19"]
+    pirate_hideout["🗡️ 海賊の隠れ家<br/>Lv19〜24"]
+    town_uzushio(["🌀 渦潮の砦"])
+    whirlpool_sea["🐙 渦潮の海<br/>Lv25〜31"]
   end
-  subgraph region9["天空の高原（Lv26〜38）"]
-    town_kogen(["🏯 高原の都"])
-    wind_plateau["🍃 風の高原<br/>Lv26〜32"]
-    cloud_peak["☁️ 雲の峰<br/>Lv28〜34"]
-    star_hill["✨ 星見の丘<br/>Lv30〜36"]
-    dragon_nest["🐉 竜の巣の跡<br/>Lv32〜38"]
+  subgraph region3["南（湿地→瘴気）（Lv1〜32）"]
+    town_ashi(["🛖 葦の村"])
+    brook["💧 小川のほとり<br/>Lv1〜4"]
+    misty_marsh["🌫️ 霧の湿原<br/>Lv3〜7"]
+    town_numa(["🐸 沼の村"])
+    poison_swamp["☠️ 毒沼<br/>Lv8〜12"]
+    sunken_shrine["⛩️ 沈んだ祠<br/>Lv11〜16"]
+    town_noroi(["🕯️ 呪いの村"])
+    rotten_wood["🍂 腐った森<br/>Lv15〜19"]
+    miasma_swamp["💀 瘴気の沼<br/>Lv19〜24"]
+    wailing_marsh["🥀 嘆きの湿原<br/>Lv26〜32"]
   end
-  subgraph region10["闇の大地（Lv34〜45）"]
-    town_saihate(["🏚️ 最果ての砦"])
-    black_forest["🌑 黒い森<br/>Lv34〜40"]
-    miasma_valley["💀 瘴気の谷<br/>Lv36〜42"]
-    wailing_waste["🥀 嘆きの荒野<br/>Lv38〜44"]
+  subgraph region4["南西（荒野→砂漠→火山）（Lv1〜31）"]
+    town_shukuba(["🐎 宿場の村"])
+    dry_field["🌵 乾いた野原<br/>Lv1〜4"]
+    rocky_waste["🪨 岩の荒れ地<br/>Lv4〜8"]
+    town_oasis(["🌴 オアシスの町"])
+    dunes["🏜️ 砂丘<br/>Lv7〜11"]
+    dry_gorge["🦂 枯れ谷<br/>Lv10〜15"]
+    town_onsen(["♨️ 温泉の町"])
+    volcano["🌋 火山のふもと<br/>Lv16〜20"]
+    buried_temple["🏺 砂に埋もれた神殿<br/>Lv20〜25"]
+    town_hai(["🏚️ 灰の町"])
+    lava_river["🔥 溶岩の川<br/>Lv25〜31"]
+  end
+  subgraph region5["北西（森→樹海→竜の巣）（Lv1〜32）"]
+    town_kikori(["🪓 木こりの集落"])
+    forest_edge["🌳 森の入口<br/>Lv1〜4"]
+    old_road["🛤️ 古い街道<br/>Lv3〜7"]
+    town_mori(["🏡 森の町"])
+    lost_forest["🌲 迷いの森<br/>Lv7〜11"]
+    spider_wood["🕸️ 蜘蛛の森<br/>Lv10〜15"]
+    town_kinoko(["🍄 キノコの里"])
+    jungle["🌿 密林<br/>Lv15〜19"]
+    great_tree["🌳 大樹の根元<br/>Lv19〜24"]
+    dragon_nest["🐉 竜の巣の跡<br/>Lv26〜32"]
+  end
+  subgraph region6["中心（Lv33〜45）"]
+    town_saihate(["🏰 最果ての砦"])
+    black_forest["🌑 黒い森<br/>Lv33〜38"]
+    star_hill["✨ 星見の丘<br/>Lv34〜39"]
+    dark_valley["🕳️ 闇の谷<br/>Lv36〜42"]
+    shadow_corridor["👁️ 影の回廊<br/>Lv38〜44"]
     castle_ruins["🗝️ 魔王城跡<br/>Lv40〜45"]
   end
-  town_hajimari --- north_plain
-  town_hajimari --- east_hill
   town_hajimari --- flower_field
-  flower_field --- brook
-  north_plain --- brook
-  brook --- town_fusha
+  town_hajimari --- north_plain
+  town_fusha --- east_hill
   town_fusha --- old_farm
-  north_plain --- old_road
-  old_farm === old_road
-  old_road --- town_mori
-  town_mori --- lost_forest
-  town_mori --- fairy_spring
-  fairy_spring --- mossy_ruins
-  lost_forest --- great_tree
-  mossy_ruins === great_tree
-  great_tree --- town_kikori
-  town_kikori --- spider_wood
-  east_hill === beach
-  town_mori === beach
-  beach --- town_minato
-  town_minato --- tide_pool
-  tide_pool --- town_ryoshi
-  town_ryoshi --- wreck_shore
+  town_ryoshi --- beach
+  town_ryoshi --- tide_pool
+  town_ashi --- brook
+  town_ashi --- misty_marsh
+  town_shukuba --- dry_field
+  town_shukuba --- rocky_waste
+  town_kikori --- forest_edge
+  town_kikori --- old_road
+  town_joka --- king_road
+  town_joka --- old_battlefield
+  town_toge --- hill_ruins
+  town_toge --- misty_pass
   town_minato --- cape
-  cape --- town_todai
-  town_todai --- coral_cove
-  wreck_shore === coral_cove
-  spider_wood --- misty_marsh
-  misty_marsh --- town_numa
+  town_minato --- wreck_shore
   town_numa --- poison_swamp
-  town_numa --- rotten_pier
-  rotten_pier === wreck_shore
-  poison_swamp --- sunken_shrine
-  lost_forest === rocky
-  cape === rocky
-  rocky --- town_kouzan
-  town_kouzan --- cliff_path
-  cliff_path --- town_ishikiri
-  town_ishikiri --- iron_valley
-  town_kouzan --- old_mine
-  old_mine --- underground_lake
-  sunken_shrine === cliff_path
-  town_kouzan --- volcano
-  volcano --- town_onsen
-  town_onsen --- sulfur_waste
-  town_onsen --- lava_river
-  lava_river --- crater_rim
-  iron_valley === sulfur_waste
-  town_todai === dunes
-  dunes --- town_oasis
+  town_numa --- sunken_shrine
+  town_oasis --- dunes
   town_oasis --- dry_gorge
-  dry_gorge --- town_caravan
-  town_oasis --- mirage
-  mirage --- buried_temple
-  town_caravan --- quicksand
-  quicksand === sulfur_waste
-  town_kouzan === snowfield
-  snowfield --- town_yuki
-  town_yuki --- ice_valley
+  town_mori --- lost_forest
+  town_mori --- spider_wood
+  town_kouzan --- rocky
+  town_kouzan --- iron_valley
+  town_yuki --- snowfield
   town_yuki --- blizzard_pass
-  blizzard_pass --- town_toride
-  town_toride --- frozen_lake
-  town_toride --- glacier
-  underground_lake === blizzard_pass
-  coral_cove === town_shima
-  town_shima --- palm_beach
-  palm_beach --- jungle
-  town_shima --- pirate_hideout
-  jungle --- volcano_isle
-  glacier === wind_plateau
-  crater_rim === wind_plateau
-  wind_plateau --- town_kogen
+  town_todai --- coral_cove
+  town_todai --- pirate_hideout
+  town_noroi --- rotten_wood
+  town_noroi --- miasma_swamp
+  town_onsen --- volcano
+  town_onsen --- buried_temple
+  town_kinoko --- jungle
+  town_kinoko --- great_tree
   town_kogen --- cloud_peak
-  town_kogen --- star_hill
-  cloud_peak --- dragon_nest
-  dragon_nest === black_forest
-  star_hill === town_saihate
+  town_uzushio --- whirlpool_sea
+  town_hai --- lava_river
+  flower_field === east_hill
+  east_hill === beach
+  beach === brook
+  brook === dry_field
+  dry_field === forest_edge
+  forest_edge === flower_field
+  north_plain --- town_joka
+  old_farm --- town_toge
+  tide_pool --- town_minato
+  misty_marsh --- town_numa
+  rocky_waste --- town_oasis
+  old_road --- town_mori
+  king_road === hill_ruins
+  hill_ruins === cape
+  cape === poison_swamp
+  poison_swamp === dunes
+  dunes === lost_forest
+  lost_forest === king_road
+  old_battlefield --- town_kouzan
+  misty_pass --- town_yuki
+  wreck_shore --- town_todai
+  sunken_shrine --- town_noroi
+  dry_gorge --- town_onsen
+  spider_wood --- town_kinoko
+  rocky === snowfield
+  snowfield === coral_cove
+  coral_cove === rotten_wood
+  rotten_wood === volcano
+  volcano === jungle
+  jungle === rocky
+  iron_valley --- town_kogen
+  blizzard_pass --- glacier
+  pirate_hideout --- town_uzushio
+  miasma_swamp --- wailing_marsh
+  buried_temple --- town_hai
+  great_tree --- dragon_nest
+  cloud_peak === glacier
+  glacier === whirlpool_sea
+  whirlpool_sea === wailing_marsh
+  wailing_marsh === lava_river
+  lava_river === dragon_nest
+  dragon_nest === cloud_peak
+  cloud_peak --- black_forest
+  glacier --- black_forest
+  whirlpool_sea --- star_hill
+  wailing_marsh --- star_hill
+  lava_river --- dark_valley
+  dragon_nest --- dark_valley
   town_saihate --- black_forest
-  town_saihate --- miasma_valley
-  miasma_valley --- wailing_waste
-  wailing_waste --- castle_ruins
+  town_saihate --- star_hill
+  town_saihate --- dark_valley
+  town_saihate --- shadow_corridor
+  shadow_corridor --- castle_ruins
+  dark_valley --- shadow_corridor
   classDef town fill:#fde68a,stroke:#b45309,color:#1f2937
   classDef hero fill:#bbf7d0,stroke:#15803d,stroke-width:3px,color:#1f2937
-  class town_hajimari,town_fusha,town_mori,town_kikori,town_minato,town_ryoshi,town_todai,town_numa,town_kouzan,town_ishikiri,town_onsen,town_oasis,town_caravan,town_yuki,town_toride,town_shima,town_kogen,town_saihate town
-  class town_hajimari hero
+  class town_hajimari,town_joka,town_kouzan,town_kogen,town_fusha,town_toge,town_yuki,town_ryoshi,town_minato,town_todai,town_uzushio,town_ashi,town_numa,town_noroi,town_shukuba,town_oasis,town_onsen,town_hai,town_kikori,town_mori,town_kinoko,town_saihate town
+  class town_ryoshi,town_fusha,town_hajimari hero
 ```

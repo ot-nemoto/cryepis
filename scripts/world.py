@@ -141,9 +141,14 @@ def validate(raw: dict) -> list[str]:
     table_ok("season.json の treasure", season.get("treasure"))
 
     # map.json
-    start = mp.get("start")
-    if places.get(start, {}).get("type") != "town":
-        err(f"map.json: start（{start!r}）は町の ID にしてください")
+    starts = mp.get("starts")
+    if not isinstance(starts, list) or not starts:
+        err("map.json: starts（最初の町の候補）は町の ID の一覧（1 つ以上）にしてください")
+        starts = []
+    for sid in starts:
+        if places.get(sid, {}).get("type") != "town":
+            err(f"map.json: starts の {sid!r} は町の ID にしてください")
+    start = starts[0] if starts else None
     for pid, p in places.items():
         where = f"map.json の {pid}"
         if p.get("type") not in PLACE_TYPES:
@@ -194,7 +199,7 @@ def validate(raw: dict) -> list[str]:
                 todo.append(nxt)
         for pid in places:
             if pid not in seen:
-                err(f"map.json: {pid} に start から行けません（道がつながっていません）")
+                err(f"map.json: {pid} に最初の町から行けません（道がつながっていません）")
     if not any(p.get("type") == "field" for p in places.values()):
         err("map.json: 野外（field）が 1 つもありません")
 
@@ -282,7 +287,7 @@ def build(raw: dict) -> dict:
         dist[src], nxt[src] = d, first
     return {
         "season": raw["season"],
-        "start": mp["start"],
+        "starts": list(mp["starts"]),
         "places": places,
         "towns": [pid for pid, p in places.items() if p["type"] == "town"],
         "fields": [pid for pid, p in places.items() if p["type"] == "field"],
