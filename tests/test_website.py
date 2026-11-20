@@ -107,6 +107,7 @@ class SiteTest(unittest.TestCase):
             self.assertIn(f'data-town="{town}"', html)
             self.assertIn(f'<button type="button" class="chip" data-town="{town}" aria-pressed="false">', html)
         self.assertEqual(html.count('class="chip" data-rank='), len(WORLD["quest_ranks"]))
+        self.assertLess(html.index('f-label">町<'), html.index('f-label">レアリティ<'))  # 町が上
         days = WORLD["season"]["quest_open_days"]
         last = today + timedelta(days=days - 1)
         self.assertIn(f"あと {days - 1} 日（{last.month}/{last.day} まで）", html)  # 今日貼られた依頼
@@ -131,6 +132,7 @@ class SiteTest(unittest.TestCase):
         self.assertNotIn("戦斧", html)  # 開放していない地域の特産は出さない
         self.assertNotIn("鎧</h3>", html)  # 鎧の部位はない
         self.assertEqual(html.count('class="chip" data-slot='), 4)
+        self.assertLess(html.index('f-label">アイテム<'), html.index('f-label">レアリティ<'))
         self.assertIn("依頼の報酬: ムラリス", html)  # ★騎士の剣
         self.assertIn('騎兵の槍<span class="tag">特産</span>', html)
         self.assertNotIn('鋼の剣<span class="tag">特産</span>', html)  # 開放していない町でも売っている
