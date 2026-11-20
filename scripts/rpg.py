@@ -35,6 +35,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(__file__))
 import common  # noqa: E402
 import game  # noqa: E402
+import mapsvg  # noqa: E402
 import world as W  # noqa: E402
 
 HEROES_PATH = common.ROOT / ".state" / "heroes.json"
@@ -226,6 +227,7 @@ def save_page(world: dict, state: dict) -> None:
 
 # ---- MAP（Mermaid の図）--------------------------------------------------------------
 MAP_NAME = "MAP.md"
+MAP_IMAGE = "MAP.svg"
 
 
 def mermaid_text(text: str) -> str:
@@ -279,6 +281,7 @@ def build_map(world: dict, entries: list[tuple[dict, dict]]) -> str:
     head = [
         "# 世界の MAP",
         "",
+        *([f"![世界の MAP]({MAP_IMAGE})", "", "## 場所のつながり", ""] if world.get("layout") else []),
         f"地域 {len(regions)}・町 {n_towns}・野外 {n_fields}。"
         "丸い枠が町、四角が野外（推奨レベル付き）、緑の枠は勇者がいる場所です。"
         "細い線は距離 1 の道、太い線は距離 2 の道（移動に 2 行動かかる）です。",
@@ -290,8 +293,12 @@ def build_map(world: dict, entries: list[tuple[dict, dict]]) -> str:
 
 
 def save_map(world: dict, entries: list[tuple[dict, dict]]) -> None:
+    """MAP のページ（Mermaid の図）と、地図の画像（SVG。map.json に layout があるとき）を書き出す。"""
     PAGE_DIR.mkdir(parents=True, exist_ok=True)
     (PAGE_DIR / MAP_NAME).write_text(build_map(world, entries), encoding="utf-8")
+    svg = mapsvg.render(world, entries)
+    if svg:
+        (PAGE_DIR / MAP_IMAGE).write_text(svg, encoding="utf-8")
 
 
 def write_map(world: dict) -> int:

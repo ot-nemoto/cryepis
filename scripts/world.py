@@ -77,6 +77,11 @@ def _range_ok(value) -> bool:
             and 1 <= value[0] <= value[1])
 
 
+def _point_ok(value) -> bool:
+    return (isinstance(value, list) and len(value) == 2
+            and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in value))
+
+
 def _weights_ok(pairs) -> bool:
     return (isinstance(pairs, list) and pairs
             and all(isinstance(p, list) and len(p) == 2 and isinstance(p[1], (int, float)) and p[1] > 0 for p in pairs))
@@ -157,6 +162,8 @@ def validate(raw: dict) -> list[str]:
             err(f"{where}: name がありません")
         if "region" in p and (not isinstance(p["region"], str) or not p["region"]):
             err(f"{where}: region（地域の名前）は空でない文字列にしてください")
+        if "pos" in p and not _point_ok(p["pos"]):
+            err(f"{where}: pos（地図の座標）は [x, y] の数にしてください")
         if p.get("type") == "town":
             for iid in p.get("shop", []):
                 if iid not in items:
@@ -177,6 +184,19 @@ def validate(raw: dict) -> list[str]:
                 err(f"{where}: events は {'/'.join(FIELD_EVENTS)} の重み（0 以上、合計が正）にしてください")
             if "treasure" in p:
                 table_ok(f"{where} の treasure", p["treasure"])
+    layout = mp.get("layout")
+    if layout is not None:
+        if not isinstance(layout, dict) or not _point_ok(layout.get("size")) or not _point_ok(layout.get("center")):
+            err("map.json: layout には size と center（[x, y]）を書いてください")
+        else:
+            for i, ring in enumerate(layout.get("rings", [])):
+                if not (isinstance(ring, dict) and ring.get("name") and isinstance(ring.get("color"), str)
+                        and isinstance(ring.get("radius"), (int, float)) and ring["radius"] > 0):
+                    err(f"map.json: layout.rings[{i}] には name・color・radius（正の数）を書いてください")
+            for i, sector in enumerate(layout.get("sectors", [])):
+                if not (isinstance(sector, dict) and sector.get("name")
+                        and isinstance(sector.get("angle"), (int, float))):
+                    err(f"map.json: layout.sectors[{i}] には name と angle（度）を書いてください")
     for i, r in enumerate(mp.get("roads", [])):
         where = f"map.json の roads[{i}]"
         for end in ("from", "to"):
@@ -288,6 +308,7 @@ def build(raw: dict) -> dict:
     return {
         "season": raw["season"],
         "starts": list(mp["starts"]),
+        "layout": mp.get("layout"),
         "places": places,
         "towns": [pid for pid, p in places.items() if p["type"] == "town"],
         "fields": [pid for pid, p in places.items() if p["type"] == "field"],

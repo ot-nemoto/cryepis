@@ -330,6 +330,8 @@ class HeroesTest(unittest.TestCase):
         self.daily()
         text = (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8")
         self.assertIn("🧙 アリス Lv.", text)
+        self.assertIn(f"![世界の MAP]({rpg.MAP_IMAGE})", text)  # 地図の画像を貼る
+        self.assertIn("🧙 アリス Lv.", (rpg.PAGE_DIR / rpg.MAP_IMAGE).read_text(encoding="utf-8"))
 
     def test_map_option_writes_only_the_map(self):
         self.new_game("アリス")

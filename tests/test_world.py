@@ -104,6 +104,15 @@ class ValidateTest(unittest.TestCase):
             r["map"]["places"][0]["region"] = ""
         self.assertError(change, ["region"])
 
+    def test_bad_pos_and_layout(self):
+        def bad_pos(r):
+            r["map"]["places"][0]["pos"] = [1]
+        self.assertError(bad_pos, ["pos"])
+
+        def bad_layout(r):
+            r["map"]["layout"]["rings"][0]["radius"] = -1
+        self.assertError(bad_layout, ["layout.rings[0]"])
+
     def test_bad_season(self):
         def change(r):
             r["season"]["months"] = 0

@@ -1,0 +1,548 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1210" viewBox="0 0 1200 1210" font-family="'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans CJK JP','Yu Gothic',Meiryo,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji'">
+<rect width="1200" height="1210" fill="#f6efdc"/>
+<circle cx="600" cy="650" r="490" fill="#d9efc4" stroke="#fffdf5" stroke-width="3"/>
+<circle cx="600" cy="650" r="380" fill="#efeab0" stroke="#fffdf5" stroke-width="3"/>
+<circle cx="600" cy="650" r="285" fill="#f5d6a1" stroke="#fffdf5" stroke-width="3"/>
+<circle cx="600" cy="650" r="200" fill="#f0b9a6" stroke="#fffdf5" stroke-width="3"/>
+<circle cx="600" cy="650" r="115" fill="#d2c0ec" stroke="#fffdf5" stroke-width="3"/>
+<line x1="658" y1="550" x2="845" y2="226" stroke="#fffdf5" stroke-width="2" stroke-dasharray="4 6"/>
+<text x="600" y="118" text-anchor="middle" font-size="17" font-weight="bold" fill="#5b4636">北</text>
+<text x="600" y="136" text-anchor="middle" font-size="11" fill="#7c6a55">草原→山岳→天空</text>
+<line x1="715" y1="650" x2="1090" y2="650" stroke="#fffdf5" stroke-width="2" stroke-dasharray="4 6"/>
+<text x="1057" y="382" text-anchor="middle" font-size="17" font-weight="bold" fill="#5b4636">北東</text>
+<text x="1057" y="400" text-anchor="middle" font-size="11" fill="#7c6a55">丘陵→雪山</text>
+<line x1="658" y1="750" x2="845" y2="1074" stroke="#fffdf5" stroke-width="2" stroke-dasharray="4 6"/>
+<text x="1057" y="910" text-anchor="middle" font-size="17" font-weight="bold" fill="#5b4636">南東</text>
+<text x="1057" y="928" text-anchor="middle" font-size="11" fill="#7c6a55">海岸→深海</text>
+<line x1="542" y1="750" x2="355" y2="1074" stroke="#fffdf5" stroke-width="2" stroke-dasharray="4 6"/>
+<text x="600" y="1174" text-anchor="middle" font-size="17" font-weight="bold" fill="#5b4636">南</text>
+<text x="600" y="1192" text-anchor="middle" font-size="11" fill="#7c6a55">湿地→瘴気</text>
+<line x1="485" y1="650" x2="110" y2="650" stroke="#fffdf5" stroke-width="2" stroke-dasharray="4 6"/>
+<text x="143" y="910" text-anchor="middle" font-size="17" font-weight="bold" fill="#5b4636">南西</text>
+<text x="143" y="928" text-anchor="middle" font-size="11" fill="#7c6a55">荒野→砂漠→火山</text>
+<line x1="542" y1="550" x2="355" y2="226" stroke="#fffdf5" stroke-width="2" stroke-dasharray="4 6"/>
+<text x="143" y="382" text-anchor="middle" font-size="17" font-weight="bold" fill="#5b4636">北西</text>
+<text x="143" y="400" text-anchor="middle" font-size="11" fill="#7c6a55">森→樹海→竜の巣</text>
+<line x1="600" y1="225" x2="481" y2="206" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="225" x2="701" y2="273" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="968" y1="438" x2="925" y2="325" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="968" y1="438" x2="977" y2="549" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="968" y1="862" x2="1044" y2="769" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="968" y1="862" x2="876" y2="926" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="1075" x2="719" y2="1094" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="1075" x2="499" y2="1027" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="232" y1="862" x2="275" y2="975" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="232" y1="862" x2="223" y2="751" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="232" y1="437" x2="156" y2="531" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="232" y1="437" x2="324" y2="374" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="320" x2="506" y2="297" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="320" x2="676" y2="365" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="886" y1="485" x2="858" y2="392" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="886" y1="485" x2="885" y2="574" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="886" y1="815" x2="953" y2="744" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="886" y1="815" x2="809" y2="859" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="980" x2="694" y2="1003" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="980" x2="524" y2="935" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="314" y1="815" x2="342" y2="908" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="314" y1="815" x2="315" y2="726" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="314" y1="485" x2="247" y2="556" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="314" y1="485" x2="391" y2="441" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="408" x2="505" y2="390" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="408" x2="671" y2="455" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="810" y1="529" x2="778" y2="438" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="810" y1="529" x2="804" y2="614" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="810" y1="771" x2="873" y2="698" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="810" y1="771" x2="733" y2="809" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="892" x2="695" y2="910" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="892" x2="529" y2="845" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="390" y1="771" x2="422" y2="862" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="390" y1="771" x2="396" y2="686" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="390" y1="529" x2="327" y2="602" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="390" y1="529" x2="467" y2="491" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="561" y1="482" x2="629" y2="501" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="764" y1="700" x2="715" y2="750" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="474" y1="767" x2="456" y2="699" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="481" y1="206" x2="925" y2="325" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="925" y1="325" x2="1044" y2="769" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="1044" y1="769" x2="719" y2="1094" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="719" y1="1094" x2="275" y2="975" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="275" y1="975" x2="156" y2="531" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="156" y1="531" x2="481" y2="206" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="701" y1="273" x2="600" y2="320" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="977" y1="549" x2="886" y2="485" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="876" y1="926" x2="886" y2="815" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="499" y1="1027" x2="600" y2="980" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="223" y1="751" x2="314" y2="815" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="324" y1="374" x2="314" y2="485" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="506" y1="297" x2="858" y2="392" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="858" y1="392" x2="953" y2="744" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="953" y1="744" x2="694" y2="1003" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="694" y1="1003" x2="342" y2="908" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="342" y1="908" x2="247" y2="556" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="247" y1="556" x2="506" y2="297" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="676" y1="365" x2="600" y2="408" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="885" y1="574" x2="810" y2="529" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="809" y1="859" x2="810" y2="771" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="524" y1="935" x2="600" y2="892" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="315" y1="726" x2="390" y2="771" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="391" y1="441" x2="390" y2="529" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="505" y1="390" x2="778" y2="438" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="778" y1="438" x2="873" y2="698" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="873" y1="698" x2="695" y2="910" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="695" y1="910" x2="422" y2="862" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="422" y1="862" x2="327" y2="602" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="327" y1="602" x2="505" y2="390" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="671" y1="455" x2="561" y2="482" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="804" y1="614" x2="739" y2="570" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="733" y1="809" x2="764" y2="700" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="529" y1="845" x2="600" y2="810" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="396" y1="686" x2="474" y2="767" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="467" y1="491" x2="461" y2="570" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="629" y1="501" x2="739" y2="570" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="739" y1="570" x2="715" y2="750" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="715" y1="750" x2="600" y2="810" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="600" y1="810" x2="456" y2="699" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="456" y1="699" x2="461" y2="570" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="461" y1="570" x2="629" y2="501" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="7 5"/>
+<line x1="629" y1="501" x2="669" y2="610" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="739" y1="570" x2="669" y2="610" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="715" y1="750" x2="661" y2="701" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="810" x2="661" y2="701" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="456" y1="699" x2="520" y2="650" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="461" y1="570" x2="520" y2="650" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="595" x2="669" y2="610" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="595" x2="661" y2="701" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="595" x2="520" y2="650" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="600" y1="595" x2="572" y2="678" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="572" y1="678" x2="578" y2="732" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="520" y1="650" x2="572" y2="678" stroke="#8a7357" stroke-width="2.2" stroke-linecap="round"/>
+<g id="place-town_hajimari">
+<circle cx="600" cy="225" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="600" y="230" text-anchor="middle" font-size="15">🏠</text>
+<text x="600" y="253" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">はじまりの村</text>
+</g>
+<g id="place-flower_field">
+<circle cx="481" cy="206" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="481" y="211" text-anchor="middle" font-size="12">🌼</text>
+<text x="481" y="231" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">花畑</text>
+<text x="481" y="242" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv1〜4</text>
+</g>
+<g id="place-north_plain">
+<circle cx="701" cy="273" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="701" y="278" text-anchor="middle" font-size="12">🌱</text>
+<text x="701" y="298" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">北の草原</text>
+<text x="701" y="309" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv3〜7</text>
+</g>
+<g id="place-town_joka">
+<circle cx="600" cy="320" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="600" y="325" text-anchor="middle" font-size="15">🏘️</text>
+<text x="600" y="348" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">城下町</text>
+</g>
+<g id="place-king_road">
+<circle cx="506" cy="297" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="506" y="302" text-anchor="middle" font-size="12">🛣️</text>
+<text x="506" y="322" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">王の街道</text>
+<text x="506" y="333" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv7〜11</text>
+</g>
+<g id="place-old_battlefield">
+<circle cx="676" cy="365" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="676" y="370" text-anchor="middle" font-size="12">⚔️</text>
+<text x="676" y="390" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">古戦場</text>
+<text x="676" y="401" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv10〜15</text>
+</g>
+<g id="place-town_kouzan">
+<circle cx="600" cy="408" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="600" y="413" text-anchor="middle" font-size="15">⛏️</text>
+<text x="600" y="436" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">鉱山の町</text>
+</g>
+<g id="place-rocky">
+<circle cx="505" cy="390" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="505" y="395" text-anchor="middle" font-size="12">🗻</text>
+<text x="505" y="415" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">岩山</text>
+<text x="505" y="426" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv15〜19</text>
+</g>
+<g id="place-iron_valley">
+<circle cx="671" cy="455" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="671" y="460" text-anchor="middle" font-size="12">⚙️</text>
+<text x="671" y="480" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">鉄の谷</text>
+<text x="671" y="491" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv19〜24</text>
+</g>
+<g id="place-town_kogen">
+<circle cx="561" cy="482" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="561" y="487" text-anchor="middle" font-size="15">🏯</text>
+<text x="561" y="510" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">天空の都</text>
+</g>
+<g id="place-cloud_peak">
+<circle cx="629" cy="501" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="629" y="506" text-anchor="middle" font-size="12">☁️</text>
+<text x="629" y="526" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">雲の峰</text>
+<text x="629" y="537" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv25〜31</text>
+</g>
+<g id="place-town_fusha">
+<circle cx="968" cy="438" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="968" y="443" text-anchor="middle" font-size="15">🌾</text>
+<text x="968" y="466" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">風車の村</text>
+</g>
+<g id="place-east_hill">
+<circle cx="925" cy="325" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="925" y="330" text-anchor="middle" font-size="12">⛰️</text>
+<text x="925" y="350" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">東の丘</text>
+<text x="925" y="361" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv1〜4</text>
+</g>
+<g id="place-old_farm">
+<circle cx="977" cy="549" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="977" y="554" text-anchor="middle" font-size="12">🐄</text>
+<text x="977" y="574" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">牧場跡</text>
+<text x="977" y="585" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv3〜7</text>
+</g>
+<g id="place-town_toge">
+<circle cx="886" cy="485" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="886" y="490" text-anchor="middle" font-size="15">⛺</text>
+<text x="886" y="513" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">峠の町</text>
+</g>
+<g id="place-hill_ruins">
+<circle cx="858" cy="392" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="858" y="397" text-anchor="middle" font-size="12">🏛️</text>
+<text x="858" y="417" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">丘の遺跡</text>
+<text x="858" y="428" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv7〜11</text>
+</g>
+<g id="place-misty_pass">
+<circle cx="885" cy="574" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="885" y="579" text-anchor="middle" font-size="12">🌁</text>
+<text x="885" y="599" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">霧の峠</text>
+<text x="885" y="610" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv10〜15</text>
+</g>
+<g id="place-town_yuki">
+<circle cx="810" cy="529" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="810" y="534" text-anchor="middle" font-size="15">⛄</text>
+<text x="810" y="557" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">雪の町</text>
+</g>
+<g id="place-snowfield">
+<circle cx="778" cy="438" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="778" y="443" text-anchor="middle" font-size="12">❄️</text>
+<text x="778" y="463" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">雪原</text>
+<text x="778" y="474" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv16〜20</text>
+</g>
+<g id="place-blizzard_pass">
+<circle cx="804" cy="614" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="804" y="619" text-anchor="middle" font-size="12">🌨️</text>
+<text x="804" y="639" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">吹雪の峠</text>
+<text x="804" y="650" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv20〜25</text>
+</g>
+<g id="place-glacier">
+<circle cx="739" cy="570" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="739" y="575" text-anchor="middle" font-size="12">🏔️</text>
+<text x="739" y="595" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">氷河</text>
+<text x="739" y="606" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv26〜32</text>
+</g>
+<g id="place-town_ryoshi">
+<circle cx="968" cy="862" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="968" y="867" text-anchor="middle" font-size="15">🎣</text>
+<text x="968" y="890" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">漁村</text>
+</g>
+<g id="place-beach">
+<circle cx="1044" cy="769" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="1044" y="774" text-anchor="middle" font-size="12">🏖️</text>
+<text x="1044" y="794" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">白い浜辺</text>
+<text x="1044" y="805" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv1〜4</text>
+</g>
+<g id="place-tide_pool">
+<circle cx="876" cy="926" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="876" y="931" text-anchor="middle" font-size="12">🦀</text>
+<text x="876" y="951" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">潮だまり</text>
+<text x="876" y="962" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv4〜8</text>
+</g>
+<g id="place-town_minato">
+<circle cx="886" cy="815" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="886" y="820" text-anchor="middle" font-size="15">⚓</text>
+<text x="886" y="843" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">港町</text>
+</g>
+<g id="place-cape">
+<circle cx="953" cy="744" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="953" y="749" text-anchor="middle" font-size="12">🌊</text>
+<text x="953" y="769" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">岬の崖</text>
+<text x="953" y="780" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv8〜12</text>
+</g>
+<g id="place-wreck_shore">
+<circle cx="809" cy="859" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="809" y="864" text-anchor="middle" font-size="12">🚢</text>
+<text x="809" y="884" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">難破船の浜</text>
+<text x="809" y="895" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv11〜16</text>
+</g>
+<g id="place-town_todai">
+<circle cx="810" cy="771" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="810" y="776" text-anchor="middle" font-size="15">🗼</text>
+<text x="810" y="799" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">灯台の町</text>
+</g>
+<g id="place-coral_cove">
+<circle cx="873" cy="698" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="873" y="703" text-anchor="middle" font-size="12">🪸</text>
+<text x="873" y="723" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">珊瑚の入り江</text>
+<text x="873" y="734" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv15〜19</text>
+</g>
+<g id="place-pirate_hideout">
+<circle cx="733" cy="809" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="733" y="814" text-anchor="middle" font-size="12">🗡️</text>
+<text x="733" y="834" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">海賊の隠れ家</text>
+<text x="733" y="845" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv19〜24</text>
+</g>
+<g id="place-town_uzushio">
+<circle cx="764" cy="700" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="764" y="705" text-anchor="middle" font-size="15">🌀</text>
+<text x="764" y="728" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">渦潮の砦</text>
+</g>
+<g id="place-whirlpool_sea">
+<circle cx="715" cy="750" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="715" y="755" text-anchor="middle" font-size="12">🐙</text>
+<text x="715" y="775" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">渦潮の海</text>
+<text x="715" y="786" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv25〜31</text>
+</g>
+<g id="place-town_ashi">
+<circle cx="600" cy="1075" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="600" y="1080" text-anchor="middle" font-size="15">🛖</text>
+<text x="600" y="1103" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">葦の村</text>
+</g>
+<g id="place-brook">
+<circle cx="719" cy="1094" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="719" y="1099" text-anchor="middle" font-size="12">💧</text>
+<text x="719" y="1119" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">小川のほとり</text>
+<text x="719" y="1130" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv1〜4</text>
+</g>
+<g id="place-misty_marsh">
+<circle cx="499" cy="1027" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="499" y="1032" text-anchor="middle" font-size="12">🌫️</text>
+<text x="499" y="1052" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">霧の湿原</text>
+<text x="499" y="1063" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv3〜7</text>
+</g>
+<g id="place-town_numa">
+<circle cx="600" cy="980" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="600" y="985" text-anchor="middle" font-size="15">🐸</text>
+<text x="600" y="1008" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">沼の村</text>
+</g>
+<g id="place-poison_swamp">
+<circle cx="694" cy="1003" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="694" y="1008" text-anchor="middle" font-size="12">☠️</text>
+<text x="694" y="1028" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">毒沼</text>
+<text x="694" y="1039" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv8〜12</text>
+</g>
+<g id="place-sunken_shrine">
+<circle cx="524" cy="935" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="524" y="940" text-anchor="middle" font-size="12">⛩️</text>
+<text x="524" y="960" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">沈んだ祠</text>
+<text x="524" y="971" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv11〜16</text>
+</g>
+<g id="place-town_noroi">
+<circle cx="600" cy="892" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="600" y="897" text-anchor="middle" font-size="15">🕯️</text>
+<text x="600" y="920" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">呪いの村</text>
+</g>
+<g id="place-rotten_wood">
+<circle cx="695" cy="910" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="695" y="915" text-anchor="middle" font-size="12">🍂</text>
+<text x="695" y="935" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">腐った森</text>
+<text x="695" y="946" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv15〜19</text>
+</g>
+<g id="place-miasma_swamp">
+<circle cx="529" cy="845" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="529" y="850" text-anchor="middle" font-size="12">💀</text>
+<text x="529" y="870" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">瘴気の沼</text>
+<text x="529" y="881" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv19〜24</text>
+</g>
+<g id="place-wailing_marsh">
+<circle cx="600" cy="810" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="600" y="815" text-anchor="middle" font-size="12">🥀</text>
+<text x="600" y="835" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">嘆きの湿原</text>
+<text x="600" y="846" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv26〜32</text>
+</g>
+<g id="place-town_shukuba">
+<circle cx="232" cy="862" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="232" y="867" text-anchor="middle" font-size="15">🐎</text>
+<text x="232" y="890" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">宿場の村</text>
+</g>
+<g id="place-dry_field">
+<circle cx="275" cy="975" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="275" y="980" text-anchor="middle" font-size="12">🌵</text>
+<text x="275" y="1000" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">乾いた野原</text>
+<text x="275" y="1011" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv1〜4</text>
+</g>
+<g id="place-rocky_waste">
+<circle cx="223" cy="751" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="223" y="756" text-anchor="middle" font-size="12">🪨</text>
+<text x="223" y="776" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">岩の荒れ地</text>
+<text x="223" y="787" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv4〜8</text>
+</g>
+<g id="place-town_oasis">
+<circle cx="314" cy="815" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="314" y="820" text-anchor="middle" font-size="15">🌴</text>
+<text x="314" y="843" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">オアシスの町</text>
+</g>
+<g id="place-dunes">
+<circle cx="342" cy="908" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="342" y="913" text-anchor="middle" font-size="12">🏜️</text>
+<text x="342" y="933" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">砂丘</text>
+<text x="342" y="944" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv7〜11</text>
+</g>
+<g id="place-dry_gorge">
+<circle cx="315" cy="726" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="315" y="731" text-anchor="middle" font-size="12">🦂</text>
+<text x="315" y="751" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">枯れ谷</text>
+<text x="315" y="762" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv10〜15</text>
+</g>
+<g id="place-town_onsen">
+<circle cx="390" cy="771" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="390" y="776" text-anchor="middle" font-size="15">♨️</text>
+<text x="390" y="799" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">温泉の町</text>
+</g>
+<g id="place-volcano">
+<circle cx="422" cy="862" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="422" y="867" text-anchor="middle" font-size="12">🌋</text>
+<text x="422" y="887" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">火山のふもと</text>
+<text x="422" y="898" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv16〜20</text>
+</g>
+<g id="place-buried_temple">
+<circle cx="396" cy="686" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="396" y="691" text-anchor="middle" font-size="12">🏺</text>
+<text x="396" y="711" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">砂に埋もれた神殿</text>
+<text x="396" y="722" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv20〜25</text>
+</g>
+<g id="place-town_hai">
+<circle cx="474" cy="767" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="474" y="772" text-anchor="middle" font-size="15">🏚️</text>
+<text x="474" y="795" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">灰の町</text>
+</g>
+<g id="place-lava_river">
+<circle cx="456" cy="699" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="456" y="704" text-anchor="middle" font-size="12">🔥</text>
+<text x="456" y="724" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">溶岩の川</text>
+<text x="456" y="735" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv25〜31</text>
+</g>
+<g id="place-town_kikori">
+<circle cx="232" cy="437" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="232" y="442" text-anchor="middle" font-size="15">🪓</text>
+<text x="232" y="465" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">木こりの集落</text>
+</g>
+<g id="place-forest_edge">
+<circle cx="156" cy="531" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="156" y="536" text-anchor="middle" font-size="12">🌳</text>
+<text x="156" y="556" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">森の入口</text>
+<text x="156" y="567" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv1〜4</text>
+</g>
+<g id="place-old_road">
+<circle cx="324" cy="374" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="324" y="379" text-anchor="middle" font-size="12">🛤️</text>
+<text x="324" y="399" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">古い街道</text>
+<text x="324" y="410" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv3〜7</text>
+</g>
+<g id="place-town_mori">
+<circle cx="314" cy="485" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="314" y="490" text-anchor="middle" font-size="15">🏡</text>
+<text x="314" y="513" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">森の町</text>
+</g>
+<g id="place-lost_forest">
+<circle cx="247" cy="556" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="247" y="561" text-anchor="middle" font-size="12">🌲</text>
+<text x="247" y="581" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">迷いの森</text>
+<text x="247" y="592" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv7〜11</text>
+</g>
+<g id="place-spider_wood">
+<circle cx="391" cy="441" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="391" y="446" text-anchor="middle" font-size="12">🕸️</text>
+<text x="391" y="466" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">蜘蛛の森</text>
+<text x="391" y="477" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv10〜15</text>
+</g>
+<g id="place-town_kinoko">
+<circle cx="390" cy="529" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="390" y="534" text-anchor="middle" font-size="15">🍄</text>
+<text x="390" y="557" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">キノコの里</text>
+</g>
+<g id="place-jungle">
+<circle cx="327" cy="602" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="327" y="607" text-anchor="middle" font-size="12">🌿</text>
+<text x="327" y="627" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">密林</text>
+<text x="327" y="638" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv15〜19</text>
+</g>
+<g id="place-great_tree">
+<circle cx="467" cy="491" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="467" y="496" text-anchor="middle" font-size="12">🌳</text>
+<text x="467" y="516" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">大樹の根元</text>
+<text x="467" y="527" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv19〜24</text>
+</g>
+<g id="place-dragon_nest">
+<circle cx="461" cy="570" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="461" y="575" text-anchor="middle" font-size="12">🐉</text>
+<text x="461" y="595" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">竜の巣の跡</text>
+<text x="461" y="606" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv26〜32</text>
+</g>
+<g id="place-town_saihate">
+<circle cx="600" cy="595" r="15" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="600" y="600" text-anchor="middle" font-size="15">🏰</text>
+<text x="600" y="623" text-anchor="middle" font-size="11" font-weight="bold" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">最果ての砦</text>
+</g>
+<g id="place-black_forest">
+<circle cx="669" cy="610" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="669" y="615" text-anchor="middle" font-size="12">🌑</text>
+<text x="669" y="635" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">黒い森</text>
+<text x="669" y="646" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv33〜38</text>
+</g>
+<g id="place-star_hill">
+<circle cx="661" cy="701" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="661" y="706" text-anchor="middle" font-size="12">✨</text>
+<text x="661" y="726" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">星見の丘</text>
+<text x="661" y="737" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv34〜39</text>
+</g>
+<g id="place-dark_valley">
+<circle cx="520" cy="650" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="520" y="655" text-anchor="middle" font-size="12">🕳️</text>
+<text x="520" y="675" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">闇の谷</text>
+<text x="520" y="686" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv36〜42</text>
+</g>
+<g id="place-shadow_corridor">
+<circle cx="572" cy="678" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="572" y="683" text-anchor="middle" font-size="12">👁️</text>
+<text x="572" y="703" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">影の回廊</text>
+<text x="572" y="714" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv38〜44</text>
+</g>
+<g id="place-castle_ruins">
+<circle cx="578" cy="732" r="12" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="578" y="737" text-anchor="middle" font-size="12">🗝️</text>
+<text x="578" y="757" text-anchor="middle" font-size="11" fill="#2f2419" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">魔王城跡</text>
+<text x="578" y="768" text-anchor="middle" font-size="9.5" fill="#6b5a48" style="paint-order:stroke;stroke:#fffdf5;stroke-width:3px;stroke-linejoin:round">Lv40〜45</text>
+</g>
+<g class="hero">
+<circle cx="968" cy="862" r="19" fill="none" stroke="#dc2626" stroke-width="3"/>
+<rect x="988" y="835" width="129" height="21" rx="5" fill="#ffffff" stroke="#dc2626" stroke-width="1.5" opacity="0.95"/>
+<text x="994" y="851" font-size="11" fill="#7f1d1d">🧙 GOLD HILDR Lv.1</text>
+</g>
+<g class="hero">
+<circle cx="968" cy="438" r="19" fill="none" stroke="#dc2626" stroke-width="3"/>
+<rect x="988" y="411" width="102" height="21" rx="5" fill="#ffffff" stroke="#dc2626" stroke-width="1.5" opacity="0.95"/>
+<text x="994" y="427" font-size="11" fill="#7f1d1d">🧙 CASSIA Lv.1</text>
+</g>
+<g class="hero">
+<circle cx="600" cy="225" r="19" fill="none" stroke="#dc2626" stroke-width="3"/>
+<rect x="620" y="198" width="115" height="21" rx="5" fill="#ffffff" stroke="#dc2626" stroke-width="1.5" opacity="0.95"/>
+<text x="626" y="214" font-size="11" fill="#7f1d1d">🧙 BERENICE Lv.1</text>
+</g>
+<text x="24" y="40" font-size="24" font-weight="bold" fill="#3f2f22">世界の MAP</text>
+<text x="24" y="62" font-size="12" fill="#6b5a48">外側ほど易しく、中心ほど難しい</text>
+<rect x="1010" y="81" width="14" height="14" rx="3" fill="#d9efc4" stroke="#a08b70"/>
+<text x="1030" y="92" font-size="12" fill="#3f2f22">外縁 Lv1〜8</text>
+<rect x="1010" y="99" width="14" height="14" rx="3" fill="#efeab0" stroke="#a08b70"/>
+<text x="1030" y="110" font-size="12" fill="#3f2f22">第二圏 Lv7〜16</text>
+<rect x="1010" y="117" width="14" height="14" rx="3" fill="#f5d6a1" stroke="#a08b70"/>
+<text x="1030" y="128" font-size="12" fill="#3f2f22">第三圏 Lv15〜25</text>
+<rect x="1010" y="135" width="14" height="14" rx="3" fill="#f0b9a6" stroke="#a08b70"/>
+<text x="1030" y="146" font-size="12" fill="#3f2f22">内縁 Lv25〜32</text>
+<rect x="1010" y="153" width="14" height="14" rx="3" fill="#d2c0ec" stroke="#a08b70"/>
+<text x="1030" y="164" font-size="12" fill="#3f2f22">中心 Lv33〜45</text>
+<circle cx="34" cy="1182" r="9" fill="#fff3c4" stroke="#a16207" stroke-width="2"/>
+<text x="50" y="1186" font-size="12" fill="#3f2f22">町</text>
+<circle cx="104" cy="1182" r="8" fill="#ffffff" stroke="#7c6a55" stroke-width="2"/>
+<text x="118" y="1186" font-size="12" fill="#3f2f22">野外</text>
+<line x1="170" y1="1182" x2="200" y2="1182" stroke="#8a7357" stroke-width="2.2"/>
+<text x="206" y="1186" font-size="12" fill="#3f2f22">道（距離 1）</text>
+<line x1="290" y1="1182" x2="320" y2="1182" stroke="#8a7357" stroke-width="2.2" stroke-dasharray="7 5"/>
+<text x="326" y="1186" font-size="12" fill="#3f2f22">道（距離 2）</text>
+<circle cx="420" cy="1182" r="9" fill="none" stroke="#dc2626" stroke-width="3"/>
+<text x="436" y="1186" font-size="12" fill="#3f2f22">勇者がいる場所</text>
+</svg>

@@ -50,7 +50,7 @@ MAP の上で勇者たちが毎日それぞれ動き、町のギルドの依頼�
 - **ランキングの Gist**（Pin する。Gist はこの 1 つだけ）: 今のシーズンの進み具合と、レベル・討伐数・依頼達成のランキング。
   本文には勇者ごとの短い欄もある。最初の毎日の実行で自動的に作られる
 - **勇者ごとの詳細のページ**（`heroes/<id>.md`。リポジトリの中）: その勇者のステータス・装備・持ち物・日誌。毎日のコミットで更新する
-- **MAP のページ**（`heroes/MAP.md`）: 世界の MAP を Mermaid の図で表示する。地域ごとにまとめ、勇者が今いる場所に名前を出す。毎日のコミットで更新する
+- **MAP のページ**（`heroes/MAP.md`）: 世界の地図の画像（`heroes/MAP.svg`。同心円の輪と 6 つの方角、勇者が今いる場所に名前の札）と、場所のつながりを表す Mermaid の図。毎日のコミットで更新する
 
 ランキングのカード:
 
@@ -121,7 +121,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | ファイル | 中身 |
 |---|---|
 | `world/season.json` | シーズンの長さ・初期ステータス・レベルアップ・行動回数の確率・回復薬・宝箱のドロップ表など |
-| `world/map.json` | 場所（町・野外）と道、最初の町の候補（`starts`）。場所には地域（`region`。MAP の図の枠になる）、野外にはレベルの範囲・出る敵・出来事の起こりやすさを書く。いまは町 22・野外 47 |
+| `world/map.json` | 場所（町・野外）と道、最初の町の候補（`starts`）、地図の描き方（`layout`: 輪の半径・色・名前、方角の角度・名前）。場所には地域（`region`。Mermaid の図の枠になる）と地図の座標（`pos`。1000×1000、北が上）、野外にはレベルの範囲・出る敵・出来事の起こりやすさを書く。いまは町 22・野外 47 |
 | `world/monsters.json` | 敵 |
 | `world/items.json` | アイテムと珍しさ（common / rare / epic / legendary）。店で売るものは `price` を書く |
 | `world/quests.json` | ギルドの依頼のひな形（種類・出やすさ・期限・報酬・アイテムのドロップ表） |
@@ -137,11 +137,12 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `world/` | 世界のデータ（上の表） |
 | `scripts/world.py` | `world/` の読み込みと検証、最短経路の計算 |
 | `scripts/game.py` | 1 日分の進行（依頼・戦闘・アイテム・シーズンの切り替え）と、勇者の状態の読み書き |
+| `scripts/mapsvg.py` | 地図の画像（SVG）を描く |
 | `scripts/rpg.py` | 勇者を登録・引退させ、現役の勇者を 1 日分ずつ進めて、詳細のページとランキングの Gist（`hero-ranking.txt`）を更新する |
 | `.state/heroes.json` | 勇者管理シート（勇者の一覧） |
 | `.state/board.json` | ランキングの Gist の ID と URL |
 | `heroes/<id>.md` | 勇者ごとの詳細のページ（rpg.py が書き出す。手で編集しない） |
-| `heroes/MAP.md` | MAP のページ（Mermaid の図。rpg.py が書き出す。手で編集しない） |
+| `heroes/MAP.md` / `MAP.svg` | MAP のページと地図の画像（rpg.py が書き出す。手で編集しない） |
 | `.state/heroes/<id>.json` | 勇者ごとの状態・持ち物・日誌・シーズンの記録（形式は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md)） |
 | `.github/workflows/hero-adventure.yml` | 毎日 JST 7:17 に rpg.py を動かし（ランキングの Gist を更新）、`.state/` と `heroes/` をコミットする |
 | `.github/workflows/new-game.yml` / `retire-hero.yml` | 勇者の追加・引退（手動実行） |
