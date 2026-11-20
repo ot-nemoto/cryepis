@@ -156,7 +156,8 @@ def gear_text(world: dict, state: dict) -> str:
     return "/".join(item_label(world, i) for i in worn) or "なし"
 
 
-def build_text(world: dict, state: dict) -> str:
+def build_text(world: dict, state: dict, fold: bool = True) -> str:
+    """勇者の詳細の文章。最初の 5 行はカード（fold なら、Gist の幅に収まるように末尾を「…」で詰める）。"""
     hero, s = state["hero"], game.stats(world, state)
     hp_bar = common.bar(hero["hp"], s["max_hp"], 10).replace(" ", "░")
     worn = game.equipment(world, state)
@@ -175,7 +176,7 @@ def build_text(world: dict, state: dict) -> str:
         f"装備: {gear}",
         f"今日: {today}",
     ]
-    card = [fit(line) for line in lines]
+    card = [fit(line) for line in lines] if fold else lines
     ss = state["season_stats"]
     detail = [
         "",
@@ -233,6 +234,15 @@ def repo_url(rel: str) -> str:
     server, repo = os.environ.get("GITHUB_SERVER_URL"), os.environ.get("GITHUB_REPOSITORY")
     branch = os.environ.get("GITHUB_REF_NAME")
     return f"{server}/{repo}/blob/{branch}/{rel}" if server and repo and branch else rel
+
+
+def site_url() -> str | None:
+    """GitHub Pages のサイトの URL（GitHub Actions の中だけ分かる。scripts/website.py が書き出して pages.yml が公開する）。"""
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if "/" not in repo:
+        return None
+    owner, name = repo.split("/", 1)
+    return f"https://{owner.lower()}.github.io/{name}/"
 
 
 def build_page(world: dict, state: dict) -> str:
@@ -371,6 +381,8 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
     card = [fit(line) for line in lines]
 
     detail = ["", f"── シーズン{season}（{first}〜{last}）──", f"MAP: {repo_url('heroes/' + MAP_NAME)}"]
+    if site_url():
+        detail.append(f"サイト（地図・ランキング・ギルド）: {site_url()}")
     for title, _, key, value, unit in RANKINGS:
         detail += ["", f"── {title} ──"]
         detail += [f"{r:>2}. {h['name']}  " + (f"Lv.{value(s)}" if title == "レベル" else f"{value(s)}{unit}")

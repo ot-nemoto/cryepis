@@ -1,0 +1,55 @@
+name: Publish site (GitHub Pages)
+
+# 今の状態（.state/）と世界（world/）から、地図・ランキング・ギルドのサイトを書き出して GitHub Pages に公開する
+# （scripts/website.py。冒険は進めない。書き出したファイルはコミットしない）。
+# 毎日の実行・勇者の登録・引退のあと（それらのコミットは GITHUB_TOKEN なので push では動かないため workflow_run で受ける）と、
+# master に push されたとき（世界やプログラムを変えたとき）に動く。
+# リポジトリの Settings → Pages の Source を「GitHub Actions」にしておくこと。
+
+on:
+  push:
+    branches: [master]
+  workflow_run:
+    workflows: ["Advance hero adventure (text RPG)", "New game (add a hero)", "Retire hero"]
+    types: [completed]
+  workflow_dispatch:
+
+# 公開の途中で止めると公開が壊れることがあるので、実行中のものは止めない（待っている古い実行は新しいものに置き換わる）
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      # workflow_run のときも、コミットされた最新の状態を取る
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Test
+        run: python -m unittest discover -s tests
+
+      - name: Build site
+        run: python scripts/website.py _site
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v5

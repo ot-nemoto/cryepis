@@ -45,12 +45,15 @@ python -m unittest discover -s tests
 
 MAP の上で勇者たちが毎日それぞれ動き、町のギルドの依頼をこなしながら育っていく RPG を Gist に表示します。
 ゴールはなく、成長を眺める RPG です（設計は [docs/SEASON_DESIGN.md](docs/SEASON_DESIGN.md)。いまは第 1 段階のプロトタイプ）。
-勇者は最大 30 人まで同時に冒険できます。見る場所は 2 つあります。
+勇者は最大 30 人まで同時に冒険できます。見る場所は次のとおりです。
 
 - **ランキングの Gist**（Pin する。Gist はこの 1 つだけ）: 今のシーズンの進み具合と、レベル・討伐数・依頼達成のランキング。
   本文には勇者ごとの短い欄もある。最初の毎日の実行で自動的に作られる
 - **勇者ごとの詳細のページ**（`heroes/<id>.md`。リポジトリの中）: その勇者のステータス・装備・持ち物・日誌。毎日のコミットで更新する
 - **MAP のページ**（`heroes/MAP.md`）: 世界の地図の画像（`heroes/MAP.svg`。世界オルドラの地形の上に町・ダンジョン・陸路・航路、道の上に移動にかかる行動回数、勇者が今いる場所（道の途中なら道の上）に名前の札）と、勇者の居場所の一覧。毎日のコミットで更新する
+- **サイト**（GitHub Pages。https://ot-nemoto.github.io/cryepis/ ）: 地図（拡大・移動ができ、町や勇者にマウスを乗せると説明が出る。勇者の札から詳細へ飛べる）、
+  ランキングと勇者の一覧、町ごとのギルドの今日の依頼と受けた勇者、勇者ごとの詳細。
+  `scripts/website.py` が `.state/` と `world/` から書き出し、`pages.yml` が毎日の実行・勇者の登録・引退のあとと、master への push のあとに公開する（書き出したファイルはコミットしない）
 
 ランキングのカード:
 
@@ -148,6 +151,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `scripts/world.py` | `world/` の読み込みと検証、最短経路の計算 |
 | `scripts/game.py` | 1 日分の進行（依頼・戦闘・アイテム・シーズンの切り替え）と、勇者の状態の読み書き |
 | `scripts/mapsvg.py` | 地図の画像（SVG）を描く。ベースの地図（`layout.background`）があれば一番下に敷く。作り方は [docs/BASE_MAP.md](docs/BASE_MAP.md) |
+| `scripts/website.py` | GitHub Pages のサイト（地図・ランキング・ギルド・勇者の詳細の HTML）を書き出す（冒険は進めない） |
 | `scripts/rpg.py` | 勇者を登録・引退させ、現役の勇者を 1 日分ずつ進めて、詳細のページとランキングの Gist（`hero-ranking.txt`）を更新する |
 | `.state/heroes.json` | 勇者管理シート（勇者の一覧） |
 | `.state/board.json` | ランキングの Gist の ID と URL |
@@ -157,6 +161,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `.state/heroes/<id>.json` | 勇者ごとの状態・持ち物・日誌・シーズンの記録（形式は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md)） |
 | `.github/workflows/hero-adventure.yml` | 毎日 JST 7:17 に rpg.py を動かし（ランキングの Gist を更新）、`.state/` と `heroes/` をコミットする |
 | `.github/workflows/new-game.yml` / `retire-hero.yml` | 勇者の追加・引退（手動実行） |
+| `.github/workflows/pages.yml` | website.py でサイトを書き出し、GitHub Pages に公開する（Settings → Pages の Source は「GitHub Actions」） |
 
 ```sh
 python scripts/rpg.py --dry-run --actions 4       # 記録せずに今日の分を試す（行動回数を指定。勇者が登録済みのとき）
@@ -164,4 +169,5 @@ python scripts/rpg.py --new-game 名前              # 勇者を登録する（A
 python scripts/rpg.py --retire 名前またはID        # 勇者を引退させる
 python scripts/rpg.py --map                       # MAP のページだけを書き出す（world/map.json を編集したときの確認に）
 python scripts/rpg.py --map-grid /tmp/grid.svg    # 座標の目盛りつきの確認用の地図（場所の pos を決めるときに）
+python scripts/website.py /tmp/site               # サイトを書き出す（ブラウザで /tmp/site/index.html を開いて確かめる）
 ```
