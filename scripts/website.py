@@ -5,8 +5,8 @@
   index.html          世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、勇者の一覧
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
-  items.html          開放した地域で手に入るアイテム（アイテムの部位とレアリティで絞り込める）
-  guild.html          町ごとのギルドの掲示板（受付中・あと何日 / 受けられた依頼は ACCEPTED。町とレアリティで絞り込める）
+  items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
+  guild.html          町ごとのギルドの掲示板（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
 
 データは .state/（勇者の状態・ギルドの受けられた依頼）と world/ から読む。
@@ -229,27 +229,93 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
   return page("ランキング", "".join(body), "ranking.html")
 
 
-# ---- ギルド -------------------------------------------------------------------------------
-# ギルドの絞り込み（町・レアリティ。どちらも複数選べて、何も選ばなければすべて）。
-# 町は URL の #町の ID（複数なら , でつなぐ）でも選べる
-GUILD_JS = """
-(()=>{const chips=k=>[...document.querySelectorAll('.chip[data-'+k+']')],towns=chips('town'),ranks=chips('rank'),
-none=document.getElementById('f-none'),clear=document.getElementById('f-clear');
-const on=list=>new Set(list.filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>c.dataset.town||c.dataset.rank));
-const apply=()=>{const t=on(towns),r=on(ranks);let shown=0;
-document.querySelectorAll('.board').forEach(card=>{let n=0;
-card.querySelectorAll('tr[data-rank]').forEach(tr=>{const ok=!r.size||r.has(tr.dataset.rank);tr.hidden=!ok;if(ok)n++;});
-card.hidden=(t.size&&!t.has(card.dataset.town))||n===0;if(!card.hidden)shown++;});
-none.hidden=shown>0;clear.hidden=!t.size&&!r.size;
-history.replaceState(null,'',location.pathname+location.search+(t.size?'#'+[...t].join(','):''));};
-const toggle=c=>c.addEventListener('click',()=>{c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();});
-towns.forEach(toggle);ranks.forEach(toggle);
-clear.addEventListener('click',()=>{towns.concat(ranks).forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
-let raw=location.hash.slice(1);try{raw=decodeURIComponent(raw);}catch(e){}const ids=raw.split(',');towns.forEach(c=>{if(ids.includes(c.dataset.town))c.setAttribute('aria-pressed','true');});
-apply();})();
+# ---- タブと絞り込み（町・ギルド・アイテムのページで使う）------------------------------------------
+# タブ（1 つずつ切り替える。URL の #タブの ID か、中の要素の ID（町など）で、開くタブを選べる。
+# JavaScript がなければタブは出さず、全部の中身を順に見せる）。切り替えると tabchange を送る
+TABS_JS = """
+(()=>{const bar=document.querySelector('.tabs'),tabs=[...document.querySelectorAll('.tab[data-tab]')],
+panels=[...document.querySelectorAll('.tab-panel')];if(!bar||!tabs.length)return;bar.hidden=false;
+const show=(id,push)=>{tabs.forEach(t=>{const on=t.dataset.tab===id;t.setAttribute('aria-selected',on?'true':'false');
+t.tabIndex=on?0:-1;});panels.forEach(g=>{g.hidden=g.dataset.tab!==id;});
+if(push)history.replaceState(null,'',location.pathname+location.search+'#'+id);
+document.dispatchEvent(new Event('tabchange'));};
+tabs.forEach((t,i)=>{t.addEventListener('click',()=>show(t.dataset.tab,true));
+t.addEventListener('keydown',e=>{const d={ArrowRight:1,ArrowLeft:-1}[e.key];if(!d)return;e.preventDefault();
+const n=tabs[(i+d+tabs.length)%tabs.length];show(n.dataset.tab,true);n.focus();});});
+const fromHash=()=>{let raw=location.hash.slice(1);try{raw=decodeURIComponent(raw);}catch(e){}
+const el=raw&&document.getElementById(raw),panel=el&&el.closest('.tab-panel');
+show(tabs.some(t=>t.dataset.tab===raw)?raw:panel?panel.dataset.tab:tabs[0].dataset.tab,false);
+if(panel&&el!==panel)el.scrollIntoView();};
+window.addEventListener('hashchange',fromHash);fromHash();})();
 """
 
+# レアリティの絞り込み（複数選べて、何も選ばなければすべて）。表の行（tr[data-f]）を隠し、行のなくなったカードも隠す
+FILTER_JS = """
+(()=>{const chips=[...document.querySelectorAll('.chip[data-f]')],none=document.getElementById('f-none'),
+clear=document.getElementById('f-clear');if(!chips.length)return;
+const apply=()=>{const on=new Set(chips.filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>c.dataset.f));let shown=0;
+document.querySelectorAll('.board').forEach(card=>{let n=0;
+card.querySelectorAll('tr[data-f]').forEach(tr=>{const ok=!on.size||on.has(tr.dataset.f);tr.hidden=!ok;if(ok)n++;});
+card.hidden=n===0;const panel=card.closest('.tab-panel');if(!card.hidden&&!(panel&&panel.hidden))shown++;});
+none.hidden=shown>0;clear.hidden=!on.size;};
+chips.forEach(c=>c.addEventListener('click',()=>{
+c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();}));
+clear.addEventListener('click',()=>{chips.forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
+document.addEventListener('tabchange',apply);apply();})();
+"""
+OTHER_AREA = "_other"  # 地方が決まっていない町のまとまり（地方の ID は _ で始められないので、ぶつからない）
 
+
+def tab_bar(tabs: list[tuple[str, str]]) -> str:
+  """タブの並び（[(ID, 名前)]。最初のタブを選ぶ）。JavaScript が出す（なければ全部の中身を順に見せる）。"""
+  buttons = "".join(
+    f'<button type="button" class="tab" role="tab" id="tab-{escape(tid)}" aria-controls="panel-{escape(tid)}" '
+    f'data-tab="{escape(tid)}" aria-selected="{"true" if i == 0 else "false"}" tabindex="{0 if i == 0 else -1}">'
+    f"{escape(name)}</button>"
+    for i, (tid, name) in enumerate(tabs)
+  )
+  return f'<div class="tabs" role="tablist" hidden>{buttons}</div>'
+
+
+def tab_panel(tid: str, heading: str, inner: str) -> str:
+  """タブの中身（heading は見出しの HTML）。"""
+  return (
+    f'<section class="tab-panel" role="tabpanel" id="panel-{escape(tid)}" aria-labelledby="tab-{escape(tid)}" '
+    f'data-tab="{escape(tid)}"><h2 class="area">{heading}</h2>{inner}</section>'
+  )
+
+
+def rarity_filter(chips: list[tuple[str, str]], empty: str) -> str:
+  """レアリティの絞り込みのボタン（[(値, ★ の印)]）と、合うものがないときの文。"""
+  buttons = "".join(
+    f'<button type="button" class="chip" data-f="{escape(v)}" aria-pressed="false">'
+    f'<span class="chip-mark">{escape(mark)}</span></button>'
+    for v, mark in chips
+  )
+  return (
+    f'<div class="filters card"><div class="f-row"><span class="f-label">レアリティ</span>{buttons}</div>'
+    '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
+    '<button type="button" id="f-clear" class="link" hidden>選択を解除</button></div></div>'
+    f'<p id="f-none" class="note" hidden>{escape(empty)}</p>'
+  )
+
+
+def area_groups(world: dict, towns: list[str]) -> list[tuple[str, dict, list[str]]]:
+  """町を地方ごとにまとめる: [(地方の ID, 地方, 町)]。開放した町のある地方を先に（同じなら areas の順）。"""
+  places, opened = world["places"], set(world["towns"])
+  groups = [(aid, a, [t for t in towns if places[t].get("area") == aid]) for aid, a in world["areas"].items()]
+  groups.append((OTHER_AREA, {"name": "その他"}, [t for t in towns if places[t].get("area") not in world["areas"]]))
+  groups = [g for g in groups if g[2]]
+  groups.sort(key=lambda g: not any(t in opened for t in g[2]))  # 安定ソート
+  return groups
+
+
+def name_html(name: str, en: str | None) -> str:
+  """名前に英語名を添える。"""
+  return escape(name) + (f' <span class="en">{escape(en)}</span>' if en else "")
+
+
+# ---- ギルド -------------------------------------------------------------------------------
 def guild_status(world: dict, e: dict, today: date) -> str:
   """掲示板の依頼の状態。誰かが受けた依頼は、名前を出さずに「ACCEPTED」のスタンプを押す。
   受付中なら、受けられる残りの日数。"""
@@ -265,7 +331,7 @@ def guild_status(world: dict, e: dict, today: date) -> str:
 
 
 def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guild: dict) -> str:
-  """町ごとのギルドの掲示板（日をまたいで残る。早い者勝ち）。町とレアリティで絞り込める。"""
+  """町ごとのギルドの掲示板（日をまたいで残る。早い者勝ち）。地方ごとのタブで、レアリティで絞り込める。"""
   season = game.season_of(world, today)
   if (
     not guild.get("towns")
@@ -275,29 +341,9 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
     # まだ誰も進めていない・その日の掲示板になっていない: その日の朝の掲示板を見せる（保存はしない）
     guild = copy.deepcopy(guild) if guild.get("season") == season else game.new_guild()
     game.refresh_guild(world, guild, today, season)
-  places, days = world["places"], world["season"]["quest_open_days"]
-  towns = "".join(
-    f'<button type="button" class="chip" data-town="{escape(t)}" aria-pressed="false">'
-    f"{escape(places[t].get('emoji', ''))} {escape(places[t]['name'])}</button>"
-    for t in world["towns"]
-  )
-  ranks = "".join(
-    f'<button type="button" class="chip" data-rank="{i}" aria-pressed="false">'
-    f'<span class="chip-mark">{escape(r["mark"])}</span></button>'
-    for i, r in enumerate(world["quest_ranks"], 1)
-  )
-  body = [
-    f"<h2>町のギルドの掲示板（{today.isoformat()}）</h2>",
-    '<p class="note">町ごとに決まった数の依頼が貼られていて、早い者勝ちです（受けられた依頼は、ほかの勇者は受けられません）。'
-    f"誰も受けないまま {days} 日たった依頼は入れ替わります。達成された依頼は翌日に新しい依頼に入れ替わり、"
-    "失敗した依頼は翌日にまた受け付けます。勇者は 1 日に 1 つ依頼を受け、必要な行動力を使ってこなします（期限はありません）。</p>",
-    f'<div class="filters card"><div class="f-row"><span class="f-label">町</span>{towns}</div>'
-    f'<div class="f-row"><span class="f-label">レアリティ</span>{ranks}</div>'
-    '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
-    '<button type="button" id="f-clear" class="link" hidden>選択を解除</button></div></div>',
-    '<p id="f-none" class="note" hidden>条件に合う依頼はありません。</p>',
-  ]
-  for town in world["towns"]:
+  places = world["places"]
+
+  def card(town: str) -> str:
     p = places[town]
     rows = []
     for e in guild.get("towns", {}).get(town, []):
@@ -306,45 +352,32 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
         ["前の勇者が失敗した依頼"] if e.get("returned") else []
       )
       rows.append(
-        f'<tr data-rank="{e["rank"]}"><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
+        f'<tr data-f="{e["rank"]}"><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
         + "".join(f'<div class="note">{n}</div>' for n in notes)
         + f'</td><td class="num">{e["cost"]}</td>'
         f'<td class="num">{e["reward"]["exp"]}EXP<br>{e["reward"]["gold"]}G</td>'
         f"<td>{guild_status(world, e, today)}</td></tr>"
       )
-    body.append(
-      f'<div class="card board" id="{escape(town)}" data-town="{escape(town)}"><h3>{escape(p.get("emoji", ""))} '
-      f'{escape(p["name"])}<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span></h3>'
+    return (
+      f'<div class="card board" id="{escape(town)}"><h3>{escape(p.get("emoji", ""))} {name_html(p["name"], p.get("en"))}'
+      f'<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span></h3>'
       '<div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em"><col><col style="width:4.5em">'
       '<col style="width:6.5em"><col style="width:13em"></colgroup><tr><th></th><th>依頼</th><th class="num">行動力</th>'
       '<th class="num">報酬</th><th>状態</th></tr>' + "".join(rows) + "</table></div></div>"
     )
-  return page("ギルド", "".join(body), "guild.html", script=GUILD_JS)
+
+  groups = area_groups(world, world["towns"])
+  body = [
+    f"<h2>町のギルドの掲示板（{today.isoformat()}）</h2>",
+    tab_bar([(aid, a["name"]) for aid, a, _ in groups]),
+    rarity_filter([(str(i), r["mark"]) for i, r in enumerate(world["quest_ranks"], 1)], "条件に合う依頼はありません。"),
+  ]
+  for aid, area, members in groups:
+    body.append(tab_panel(aid, name_html(area["name"], area.get("en")), "".join(card(t) for t in members)))
+  return page("ギルド", "".join(body), "guild.html", script=FILTER_JS + TABS_JS)
 
 
 # ---- 町 ---------------------------------------------------------------------------------
-# 町の地方のタブ（1 つずつ切り替える。URL の #地方の ID か #町の ID で、開くタブを選べる。
-# JavaScript がなければタブは出さず、全部の地方を順に見せる）
-TOWNS_JS = """
-(()=>{const bar=document.querySelector('.tabs'),tabs=[...document.querySelectorAll('.tab[data-area]')],
-groups=[...document.querySelectorAll('.area-group')];if(!bar||!tabs.length)return;bar.hidden=false;
-const show=(id,push)=>{tabs.forEach(t=>{const on=t.dataset.area===id;t.setAttribute('aria-selected',on?'true':'false');
-t.tabIndex=on?0:-1;});groups.forEach(g=>{g.hidden=g.dataset.area!==id;});
-if(push)history.replaceState(null,'',location.pathname+location.search+'#'+id);};
-tabs.forEach((t,i)=>{t.addEventListener('click',()=>show(t.dataset.area,true));
-t.addEventListener('keydown',e=>{const d={ArrowRight:1,ArrowLeft:-1}[e.key];if(!d)return;e.preventDefault();
-const n=tabs[(i+d+tabs.length)%tabs.length];show(n.dataset.area,true);n.focus();});});
-const fromHash=()=>{let raw=location.hash.slice(1);try{raw=decodeURIComponent(raw);}catch(e){}
-const town=raw&&document.getElementById(raw),group=town&&town.closest('.area-group');
-show(tabs.some(t=>t.dataset.area===raw)?raw:group?group.dataset.area:tabs[0].dataset.area,false);
-if(group)town.scrollIntoView();};
-window.addEventListener('hashchange',fromHash);fromHash();})();
-"""
-
-
-OTHER_AREA = "_other"  # 地方が決まっていない町のまとまり（地方の ID は _ で始められないので、ぶつからない）
-
-
 def build_towns(world: dict) -> str:
   """町の情報（説明・ギルドの規模・特産品・店の品ぞろえ・依頼で出るレア・道）。全部の町を地方ごとに出し
   （開放した町のある地方が先）、開放していない町は、特産品などを「-」にする。"""
@@ -398,10 +431,9 @@ def build_towns(world: dict) -> str:
 
   def card(town: str) -> str:
     p, is_open = places[town], town in opened
-    en = f' <span class="en">{escape(p["en"])}</span>' if p.get("en") else ""
     return (
       f'<div class="card{"" if is_open else " closed"}" id="{escape(town)}"><h3>{escape(p.get("emoji", ""))} '
-      f'{escape(p["name"])}{en}<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span>'
+      f'{name_html(p["name"], p.get("en"))}<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span>'
       + ("" if is_open else '<span class="tag">未開放</span>')
       + "</h3>"
       + (f"<p>{escape(p['text'])}</p>" if p.get("text") else "")
@@ -410,47 +442,15 @@ def build_towns(world: dict) -> str:
       + "</table></div></div>"
     )
 
-  body = ["<h2>町の情報</h2>"]
-  groups = [(aid, a, [t for t in towns if places[t].get("area") == aid]) for aid, a in world["areas"].items()]
-  groups.append((OTHER_AREA, {"name": "その他"}, [t for t in towns if places[t].get("area") not in world["areas"]]))
-  groups = [g for g in groups if g[2]]
-  groups.sort(key=lambda g: not any(t in opened for t in g[2]))  # 開放した町のある地方を先に（安定ソート）
-  tabs = "".join(
-    f'<button type="button" class="tab" role="tab" id="tab-{escape(aid)}" aria-controls="panel-{escape(aid)}" '
-    f'data-area="{escape(aid)}" aria-selected="{"true" if i == 0 else "false"}" '
-    f'tabindex="{0 if i == 0 else -1}">{escape(a["name"])}</button>'
-    for i, (aid, a, _) in enumerate(groups)
-  )
-  body.append(f'<div class="tabs" role="tablist" hidden>{tabs}</div>')  # タブは JavaScript が出す
+  groups = area_groups(world, towns)
+  body = ["<h2>町の情報</h2>", tab_bar([(aid, a["name"]) for aid, a, _ in groups])]
   for aid, area, members in groups:
-    en = f' <span class="en">{escape(area["en"])}</span>' if area.get("en") else ""
-    body.append(
-      f'<section class="area-group" role="tabpanel" id="panel-{escape(aid)}" aria-labelledby="tab-{escape(aid)}" '
-      f'data-area="{escape(aid)}"><h2 class="area">{escape(area["name"])}{en}</h2>'
-      + "".join(card(t) for t in members)
-      + "</section>"
-    )
-  return page("町", "".join(body), "towns.html", script=TOWNS_JS)
+    body.append(tab_panel(aid, name_html(area["name"], area.get("en")), "".join(card(t) for t in members)))
+  return page("町", "".join(body), "towns.html", script=TABS_JS)
 
 
 # ---- アイテム ---------------------------------------------------------------------------
 # アイテムの絞り込み（アイテムの部位・レアリティ。どちらも複数選べて、何も選ばなければすべて）
-ITEMS_JS = """
-(()=>{const chips=k=>[...document.querySelectorAll('.chip[data-'+k+']')],slots=chips('slot'),rars=chips('rarity'),
-none=document.getElementById('f-none'),clear=document.getElementById('f-clear');
-const on=list=>new Set(list.filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>c.dataset.slot||c.dataset.rarity));
-const apply=()=>{const s=on(slots),r=on(rars);let shown=0;
-document.querySelectorAll('.board').forEach(card=>{let n=0;
-card.querySelectorAll('tr[data-rarity]').forEach(tr=>{const ok=!r.size||r.has(tr.dataset.rarity);tr.hidden=!ok;if(ok)n++;});
-card.hidden=(s.size&&!s.has(card.dataset.slot))||n===0;if(!card.hidden)shown++;});
-none.hidden=shown>0;clear.hidden=!s.size&&!r.size;};
-slots.concat(rars).forEach(c=>c.addEventListener('click',()=>{
-c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();}));
-clear.addEventListener('click',()=>{slots.concat(rars).forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
-apply();})();
-"""
-
-
 def item_rows(world: dict) -> dict[str, list[dict]]:
   """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）: {部位: [{id, item, shops, towns}]}。"""
   places, items = world["places"], world["items"]
@@ -473,31 +473,14 @@ def item_rows(world: dict) -> dict[str, list[dict]]:
 
 
 def build_items(world: dict) -> str:
-  """開放した地域で手に入るアイテムの一覧。アイテムの部位とレアリティで絞り込める。"""
+  """開放した地域で手に入るアイテムの一覧。装備の種類ごとのタブで、レアリティで絞り込める。"""
   rows = item_rows(world)
   used = [r for r in world["rarities"] if any(x["item"]["rarity"] == r for rs in rows.values() for x in rs)]
-  slot_chips = "".join(
-    f'<button type="button" class="chip" data-slot="{s}" aria-pressed="false">{W.SLOT_NAMES[s]}</button>'
-    for s in W.SLOTS
-  )
-  rarity_chips = "".join(
-    f'<button type="button" class="chip" data-rarity="{r}" aria-pressed="false">'
-    f'<span class="chip-mark">{escape(game.rarity_mark(world, r))}</span></button>'
-    for r in used
-  )
   potion = world["season"]["potion"]
   body = [
     "<h2>アイテム一覧</h2>",
-    '<p class="note">開放した地域（'
-    + "・".join(escape(world["places"][t]["name"]) for t in world["towns"])
-    + "）で手に入る装備です。部位は武器・兜・盾・装飾品の 4 つで、部位ごとにいちばん強いものを自動で装備します。"
-    "★ の装備は町の店で買え、宝箱や依頼の報酬でも出ます（開放した地域の店の品だけ）。"
-    "★★ 以上のレアは、その町のギルドの依頼の報酬でしか出ません。</p>",
-    f'<div class="filters card"><div class="f-row"><span class="f-label">アイテム</span>{slot_chips}</div>'
-    f'<div class="f-row"><span class="f-label">レアリティ</span>{rarity_chips}</div>'
-    '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
-    '<button type="button" id="f-clear" class="link" hidden>選択を解除</button></div></div>',
-    '<p id="f-none" class="note" hidden>条件に合うアイテムはありません。</p>',
+    tab_bar([(slot, W.SLOT_NAMES[slot]) for slot in W.SLOTS]),
+    rarity_filter([(r, game.rarity_mark(world, r)) for r in used], "条件に合うアイテムはありません。"),
   ]
   for slot in W.SLOTS:
     trs = []
@@ -511,25 +494,25 @@ def build_items(world: dict) -> str:
           + ("・".join(escape(t) for t in r["shops"]) or "なし")
           + '<div class="note">宝箱・依頼の報酬でも出る</div>'
         )
-      special = r["specialty"]
       trs.append(
-        f'<tr data-rarity="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
-        f"<td>{escape(it['name'])}" + ('<span class="tag">特産</span>' if special else "") + "</td>"
+        f'<tr data-f="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
+        f"<td>{escape(it['name'])}" + ('<span class="tag">特産</span>' if r["specialty"] else "") + "</td>"
         f"<td>{escape(rpg.item_power(it))}</td>"
         f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>'
       )
-    body.append(
-      f'<div class="card board" data-slot="{slot}"><h3>{W.SLOT_NAMES[slot]}</h3>'
-      '<div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em"><col style="width:13em">'
-      '<col style="width:9em"><col style="width:5.5em"><col></colgroup>'
-      '<tr><th></th><th>名前</th><th>性能</th><th class="num">値段</th>'
-      "<th>手に入れ方</th></tr>" + "".join(trs) + "</table></div></div>"
+    table = (
+      '<div class="card board"><div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em">'
+      '<col style="width:13em"><col style="width:9em"><col style="width:5.5em"><col></colgroup>'
+      '<tr><th></th><th>名前</th><th>性能</th><th class="num">値段</th><th>手に入れ方</th></tr>'
+      + "".join(trs)
+      + "</table></div></div>"
     )
+    body.append(tab_panel(slot, escape(W.SLOT_NAMES[slot]), table))
   body.append(
     f'<div class="card"><h3>回復薬</h3><div>どの町の店でも {potion["price"]}G。戦いで倒れそうになったときに使い、'
     f"最大 HP の {potion['heal_rate']:.0%} まで回復します（町で {potion['keep']} 個まで買い足します）。</div></div>"
   )
-  return page("アイテム", "".join(body), "items.html", script=ITEMS_JS)
+  return page("アイテム", "".join(body), "items.html", script=FILTER_JS + TABS_JS)
 
 
 # ---- 勇者の詳細 ---------------------------------------------------------------------------
