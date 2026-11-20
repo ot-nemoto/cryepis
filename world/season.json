@@ -8,6 +8,7 @@
   "retreat_hp_rate": 0.3,
   "actions_per_day": 3,
   "board_size": 4,
+  "quest_open_days": 3,
   "deliver_range": 6,
   "road_events": {"battle": 40, "treasure": 8, "nothing": 52},
   "balance_level": 20,

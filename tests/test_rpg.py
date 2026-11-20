@@ -292,6 +292,28 @@ class HeroesTest(unittest.TestCase):
         self.assertIn("🧙 アリス Lv.", text)  # 保存してある状態で載せる
         self.assertIn("🧙 ボブ Lv.", text)
 
+    def test_failed_heros_changes_to_the_guild_are_undone(self):
+        guild = game.new_guild()
+        state = game.new_state(rpg.load_world(), "h1", "アリス")
+        state["hero"]["level"] = 99
+
+        def take_then_fail(world, st, day, actions, g):
+            game.refresh_guild(world, g, day, 1)
+            next(e for es in g["towns"].values() for e in es).update(status="held", holder="h1")
+            raise RuntimeError("壊れた")
+        with mock.patch.object(game, "advance", side_effect=take_then_fail):
+            errors = rpg.advance_heroes(rpg.load_world(), {"h1": ({"id": "h1"}, state, [date(2026, 12, 1)])},
+                                        date(2026, 12, 1), None, guild)
+        self.assertIn("h1", errors)
+        self.assertEqual(guild, game.new_guild())  # 掲示板は進める前のまま
+
+    def test_broken_guild_file(self):
+        rpg.GUILD_PATH.write_text("[]", encoding="utf-8")
+        self.assertEqual(rpg.load_guild(), game.new_guild())
+        rpg.GUILD_PATH.write_text("{", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            rpg.load_guild()
+
     def test_map_failure_does_not_stop_the_board(self):
         self.new_game("アリス")
         with mock.patch.object(rpg, "save_map", side_effect=KeyError("pos")), \
@@ -306,20 +328,35 @@ class HeroesTest(unittest.TestCase):
             self.new_game(name)
         for i in range(1, 6):
             self.daily(f"2026-12-0{i}")
-        guild = json.loads((self.dir / "guild.json").read_text(encoding="utf-8"))["taken"]
-        self.assertTrue(guild)
-        taken = {}
-        for hid in [f"h{i}" for i in range(1, 7)]:
-            for qid in load(hid)["taken"]:
-                self.assertNotIn(qid, taken)  # 同じ依頼を 2 人が受けていない
-                taken[qid] = hid
-        for qid, hid in taken.items():
-            self.assertEqual(guild[qid], hid)
+        guild = json.loads((self.dir / "guild.json").read_text(encoding="utf-8"))
+        held = [e for es in guild["towns"].values() for e in es if e["status"] == "held"]
+        self.assertTrue(guild["towns"])
+        for e in held:  # 受注中の依頼は、受けた勇者がちょうどその依頼を持っている
+            self.assertEqual(load(e["holder"])["quest"]["id"], e["id"])
+        ids = [e["id"] for e in held]
+        self.assertEqual(len(ids), len(set(ids)))
+        holding = [load(f"h{i}")["quest"] for i in range(1, 7)]
+        for q in holding:  # 勇者が持っている依頼（旅を除く）は、掲示板で受注中になっている
+            if q and q["type"] != "patrol":
+                self.assertIn(q["id"], ids)
 
-    def test_old_guild_records_are_dropped(self):
-        rpg.GUILD_PATH.write_text(json.dumps({"taken": {"2020-01-01-aurea-0": "h1", "2026-12-01-aurea-0": "h2"}}),
-                                  encoding="utf-8")
-        self.assertEqual(rpg.load_guild(date(2026, 12, 3)), {"2026-12-01-aurea-0": "h2"})
+    def test_old_guild_format_is_reposted(self):
+        rpg.GUILD_PATH.write_text(json.dumps({"taken": {"2026-12-01-aurea-0": "h2"}}), encoding="utf-8")
+        self.assertEqual(rpg.load_guild(), game.new_guild())
+
+    def test_quest_of_a_retired_hero_goes_back_to_the_board(self):
+        self.new_game("アリス")
+        self.daily("2026-12-01")
+        guild = json.loads(rpg.GUILD_PATH.read_text(encoding="utf-8"))
+        entry = next(e for es in guild["towns"].values() for e in es if e["status"] == "open")
+        entry.update(status="held", holder="h9")  # 引退した勇者（現役の一覧にいない）が持っていた依頼
+        rpg.GUILD_PATH.write_text(json.dumps(guild), encoding="utf-8")
+        self.daily("2026-12-02")
+        find = lambda: next(e for es in json.loads(rpg.GUILD_PATH.read_text(encoding="utf-8"))["towns"].values()  # noqa: E731
+                            for e in es if e["id"] == entry["id"])
+        self.assertEqual(find()["status"], "failed")
+        self.daily("2026-12-03")
+        self.assertTrue(find()["returned"])  # 翌日、受付中に戻る（誰かがすぐ受けることもある）
 
     def test_board_is_updated_after_it_is_created(self):
         self.new_game("アリス")

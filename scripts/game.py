@@ -159,14 +159,20 @@ def monster_level(world: dict) -> int:
 
 # ---- ギルドの依頼 ---------------------------------------------------------------------
 def board(world: dict, town: str, d: date, season: int) -> list[dict]:
-    """町 town の、日付 d の依頼の掲示板（全員共通）。
+    """町 town に、日付 d に新しく出る依頼（枠をすべて埋めるとき）。"""
+    return draw_quests(world, town, d, season, quests_per_day(world, town))
+
+
+def draw_quests(world: dict, town: str, d: date, season: int, n: int, exclude: set | None = None) -> list[dict]:
+    """町 town に、日付 d に新しく出す依頼を n 件まで作る（全員共通。日付と町で決まる）。
     枠ごとにレアリティ（★〜）を重みで選び、その町の依頼から選ぶ。その町に当たったレアリティの依頼がなければ
-    1 つ下に落とす。町の依頼は同じ日に 1 度だけ出て、足りない枠には共通の依頼（templates）が入る。"""
+    1 つ下に落とす。町の依頼は掲示板に 1 度に 1 つだけ出て（exclude は掲示板に残っている町の依頼の ID）、
+    足りない枠には共通の依頼（templates）が入る。"""
     cfg, ranks = world["season"], world["quest_ranks"]
     rng = random.Random(f"board-{d.isoformat()}-{season}-{town}")
-    own = list(world["town_quests"].get(town, []))
+    own = [q for q in world["town_quests"].get(town, []) if q["id"] not in (exclude or set())]
     quests = []
-    for i in range(quests_per_day(world, town)):
+    for i in range(n):
         rank = rng.choices(range(1, len(ranks) + 1), [r["weight"] for r in ranks])[0]
         while True:
             mine = [q for q in own if q["rank"] == rank]
@@ -189,6 +195,75 @@ def board(world: dict, town: str, d: date, season: int) -> list[dict]:
 def quests_per_day(world: dict, town: str) -> int:
     """町のギルドに 1 日に出る依頼の数（map.json の quests_per_day。なければ season.json の board_size）。"""
     return world["places"][town].get("quests_per_day", world["season"]["board_size"])
+
+
+# ---- ギルドの掲示板（全員で共有。.state/guild.json に保存して、日をまたいで持ち越す）----------------------
+# 掲示板の依頼は、町ごとの枠（quests_per_day）に貼られ、次のどれかの状態になる:
+#   open（受付中）: 誰でも受けられる。誰も受けないまま quest_open_days 日たつと、新しい依頼に入れ替わる
+#   held（受注中）: 勇者が受けて、こなしている（ほかの勇者は受けられない。期限はない）
+#   done（達成）/ failed（失敗）: 翌日の朝、達成なら新しい依頼に入れ替わり、失敗なら同じ依頼が受付中に戻る
+GUILD_FIELDS = ("posted", "status", "holder", "returned")
+
+
+def new_guild() -> dict:
+    return {"season": None, "towns": {}, "refreshed": {}}
+
+
+def last_open_day(world: dict, entry: dict) -> date:
+    """受付中の依頼を受けられる最後の日（貼られた日から quest_open_days 日）。"""
+    return date.fromisoformat(entry["posted"]) + timedelta(days=world["season"]["quest_open_days"] - 1)
+
+
+def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[str] | None = None) -> None:
+    """日付 d の朝の掲示板にする（towns を省くと全部の町。町ごとに、その日の最初の 1 回だけ）。
+    達成された依頼と、受付が終わった依頼をはがし、失敗した依頼は受付中に戻して、空いた枠に新しい依頼を貼る。
+    シーズンが変わったら全部貼り直す。掲示板より前の日（遅れている勇者がさかのぼって進めるとき）は貼り替えない
+    （同じ依頼の ID が二重にできたり、今の掲示板が消えたりしないように）。"""
+    if guild.get("season") is not None and season < guild["season"]:
+        return
+    if guild.get("season") != season:
+        guild.update(season=season, towns={}, refreshed={})
+    boards, refreshed = guild.setdefault("towns", {}), guild.setdefault("refreshed", {})
+    for town in [t for t in boards if t not in world["towns"]]:
+        del boards[town]
+        refreshed.pop(town, None)
+    for town in towns or world["towns"]:
+        if refreshed.get(town, "") >= d.isoformat():
+            continue
+        kept = []
+        for e in boards.get(town, []):
+            if e.get("status") == "failed":
+                e.update(status="open", holder=None, posted=d.isoformat(), returned=True)
+            if e.get("status") not in ("open", "held") or not quest_ok(world, e):
+                continue  # 達成された依頼（と、world/ から消えた依頼）ははがす
+            if e["status"] == "open" and last_open_day(world, e) < d:
+                continue  # 誰も受けないまま受付が終わった
+            kept.append(e)
+        exclude = {e["template"] for e in kept}
+        new = draw_quests(world, town, d, season, max(0, quests_per_day(world, town) - len(kept)), exclude)
+        for i, q in enumerate(new):
+            q.update(id=f"{d.isoformat()}-{town}-{i}", posted=d.isoformat(), status="open", holder=None, returned=False)
+        boards[town] = kept + new
+        refreshed[town] = d.isoformat()
+
+
+def guild_entry(guild: dict, quest: dict) -> dict | None:
+    """勇者が持っている依頼の、掲示板の上の依頼。"""
+    return next((e for e in guild.get("towns", {}).get(quest.get("town"), []) if e["id"] == quest.get("id")), None)
+
+
+def release_orphans(guild: dict, states: dict[str, dict], keep: set | frozenset = frozenset()) -> int:
+    """受注中なのに、受けた勇者がもうその依頼を持っていない（引退した・状態が戻ったなど）依頼を失敗にする
+    （翌日、受付中に戻る）。states は勇者の ID → 状態。keep の勇者（状態を読めなかったなど）の依頼はそのまま。
+    戻した件数を返す。"""
+    n = 0
+    for entries in guild.get("towns", {}).values():
+        for e in entries:
+            state = states.get(e.get("holder"))
+            if e["status"] == "held" and e.get("holder") not in keep and (state is None or (state.get("quest") or {}).get("id") != e["id"]):
+                e["status"] = "failed"
+                n += 1
+    return n
 
 
 HUNT_TRIP_MAX = 2  # 討伐の狩り場までの行動力の上限（狩り場は町の近く。道の長さの半分、最大 2）
@@ -300,7 +375,7 @@ class Day:
         self.events: list[str] = []
         self.fallen = False
         self.strolled = False
-        self.guild = guild  # 全員で共有する「受けられた依頼」（依頼の ID → 受けた勇者の ID）。None なら共有しない
+        self.guild = guild if guild is not None else new_guild()  # 全員で共有する掲示板（None なら、この勇者だけの掲示板）
 
     def log(self, text: str) -> None:
         self.events.append(text)
@@ -424,7 +499,14 @@ class Day:
         hero["hp"] = self.stats["max_hp"]
         self.shop(town)
 
+    def settle(self, quest: dict, status: str) -> None:
+        """掲示板の依頼を、達成（done）か失敗（failed）にする（翌日の朝に入れ替わる・受付中に戻る）。"""
+        entry = guild_entry(self.guild, quest)
+        if entry and entry["status"] == "held" and entry["holder"] == self.state["id"]:
+            entry["status"] = status
+
     def report(self, quest: dict) -> None:
+        self.settle(quest, "done")
         reward = quest["reward"]
         self.hero["gold"] += reward["gold"]
         self.state["season_stats"]["quests_done"] += 1
@@ -457,14 +539,14 @@ class Day:
 
     def take_quest(self, town: str) -> None:
         level = self.hero["level"]
-        taken = set(self.state["taken"]) | set(self.guild or {})  # 自分か、ほかの勇者が受けた依頼は受けられない
-        quests = [q for q in board(self.world, town, self.today, self.state["season"])
-                  if suitable(q, level) and q["id"] not in taken]
-        if quests:
-            quest = self.rng.choice(quests)
+        refresh_guild(self.world, self.guild, self.today, season_of(self.world, self.today), [town])
+        entries = [e for e in self.guild["towns"].get(town, [])  # 受付中の依頼だけ（受注中のものは受けられない）
+                   if e["status"] == "open" and suitable(e, level) and e["id"] not in self.state["taken"]]
+        if entries:
+            entry = self.rng.choice(entries)
+            entry.update(status="held", holder=self.state["id"])
+            quest = {k: v for k, v in entry.items() if k not in GUILD_FIELDS}
             self.state["taken"].append(quest["id"])
-            if self.guild is not None:
-                self.guild[quest["id"]] = self.state["id"]
             self.log(f"{self.world['places'][town]['name']}のギルドで依頼を受けた: {quest_text(self.world, quest)}"
                      f"（行動力 {quest['cost']}）")
         else:  # 受けられる依頼がない（ほかの勇者に取られた）ので、となりの町へ旅に出る
@@ -478,6 +560,7 @@ class Day:
         quest = self.state["quest"]
         self.state["quest"] = None
         if quest and quest["type"] != "patrol":
+            self.settle(quest, "failed")
             self.state["season_stats"]["quests_failed"] += 1
             self.log(f"依頼失敗（{why}）: {quest_text(self.world, quest)}")
 
@@ -637,6 +720,8 @@ def advance(world: dict, state: dict, today: date, actions: int | None = None, g
     state["season_day"] += 1
     state["last_date"] = today.isoformat()
     state["taken"] = []
+    if guild is not None:  # 朝の掲示板にする（前の日の達成・失敗は、ここで入れ替わる・受付中に戻る）
+        refresh_guild(world, guild, today, season)
     day = Day(world, state, today, rng, guild)
     if new_season:
         day.log(f"シーズン{season}が始まった（レベルは 1 に戻り、持ち物はそのまま）")

@@ -4,7 +4,7 @@
 ページ:
   index.html          世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、勇者の一覧
-  guild.html          町ごとのギルドの、今日の依頼と、受けた勇者
+  guild.html          町ごとのギルドの掲示板（受付中・あと何日 / 受けられた依頼は ACCEPTED。町とレアリティで絞り込める）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
 
 データは .state/（勇者の状態・ギルドの受けられた依頼）と world/ から読む。
@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import os
 import shutil
 import sys
@@ -59,12 +60,25 @@ a{color:var(--accent)}
 table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--sub);font-weight:normal;font-size:13px;white-space:nowrap}
-.wide-table{min-width:560px}
+.wide-table{min-width:640px;table-layout:fixed}
 .num{text-align:right;white-space:nowrap}
 .scroll{overflow-x:auto}
 .mark{color:#b7791f;white-space:nowrap;width:5em}
 .taken{color:var(--hero);white-space:nowrap}
 .free{color:var(--sub);white-space:nowrap}
+.open{color:#15803d;white-space:nowrap}
+.stamp{display:inline-block;padding:1px 8px;border:2.5px solid #c0262d;border-radius:4px;color:#c0262d;font-weight:bold;
+font-size:13px;letter-spacing:.12em;transform:rotate(-8deg);opacity:.85;margin:2px 0 4px;font-family:Georgia,'Times New Roman',serif}
+.filters{display:flex;flex-direction:column;gap:10px}
+.f-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.f-label{font-size:13px;color:var(--sub);width:5.5em}
+.chip-mark{color:#b7791f;white-space:nowrap}
+.chip{font:inherit;font-size:14px;font-weight:bold;color:var(--ink);background:var(--card);border:1.5px solid #f0a868;
+border-radius:999px;padding:4px 14px;cursor:pointer;box-shadow:0 0 0 2px rgba(240,168,104,.15)}
+.chip:hover{border-color:#e8833a}
+.chip[aria-pressed="true"]{background:#e8833a;border-color:#e8833a;color:#fff}
+.chip[aria-pressed="true"] .chip-mark{color:#fff}
+.link{font:inherit;background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;margin-left:10px}
 pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;
 font:13.5px/1.6 ui-monospace,'SFMono-Regular',Menlo,Consolas,'Noto Sans Mono CJK JP',monospace;white-space:pre-wrap}
 #map{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6efdc;
@@ -178,39 +192,79 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
 
 
 # ---- ギルド -------------------------------------------------------------------------------
+# ギルドの絞り込み（町・レアリティ。どちらも複数選べて、何も選ばなければすべて）。
+# 町は URL の #町の ID（複数なら , でつなぐ）でも選べる
+GUILD_JS = """
+(()=>{const chips=k=>[...document.querySelectorAll('.chip[data-'+k+']')],towns=chips('town'),ranks=chips('rank'),
+none=document.getElementById('f-none'),clear=document.getElementById('f-clear');
+const on=list=>new Set(list.filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>c.dataset.town||c.dataset.rank));
+const apply=()=>{const t=on(towns),r=on(ranks);let shown=0;
+document.querySelectorAll('.board').forEach(card=>{let n=0;
+card.querySelectorAll('tr[data-rank]').forEach(tr=>{const ok=!r.size||r.has(tr.dataset.rank);tr.hidden=!ok;if(ok)n++;});
+card.hidden=(t.size&&!t.has(card.dataset.town))||n===0;if(!card.hidden)shown++;});
+none.hidden=shown>0;clear.hidden=!t.size&&!r.size;
+history.replaceState(null,'',location.pathname+location.search+(t.size?'#'+[...t].join(','):''));};
+const toggle=c=>c.addEventListener('click',()=>{c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();});
+towns.forEach(toggle);ranks.forEach(toggle);
+clear.addEventListener('click',()=>{towns.concat(ranks).forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
+let raw=location.hash.slice(1);try{raw=decodeURIComponent(raw);}catch(e){}const ids=raw.split(',');towns.forEach(c=>{if(ids.includes(c.dataset.town))c.setAttribute('aria-pressed','true');});
+apply();})();
+"""
+
+
+def guild_status(world: dict, e: dict, today: date) -> str:
+    """掲示板の依頼の状態。誰かが受けた依頼は、名前を出さずに「ACCEPTED」のスタンプを押す。
+    受付中なら、受けられる残りの日数。"""
+    if e["status"] in ("held", "done", "failed"):
+        note = {"done": "明日入れ替え", "failed": "明日また受付"}.get(e["status"])
+        return '<span class="stamp">ACCEPTED</span>' + (f'<div class="note">{note}</div>' if note else "")
+    last = game.last_open_day(world, e)
+    left = (last - today).days
+    if left < 0:
+        return '<span class="free">受付終了</span>'
+    when = f"あと {left} 日（{last.month}/{last.day} まで）" if left > 0 else "今日まで（明日入れ替え）"
+    return f'<span class="open">受付中</span><div class="note">{when}</div>'
+
+
 def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guild: dict) -> str:
-    """町ごとの、今日の依頼の掲示板と、受けた勇者（早い者勝ち）。"""
+    """町ごとのギルドの掲示板（日をまたいで残る。早い者勝ち）。町とレアリティで絞り込める。"""
     season = game.season_of(world, today)
-    names = {h["id"]: h["name"] for h, _ in entries}
-    places = world["places"]
-    body = [f"<h2>町のギルドの依頼（{today.isoformat()}）</h2>",
-            '<p class="note">依頼は町ごとに毎日決まった数だけ出て、早い者勝ちです（ほかの勇者が受けた依頼は受けられません）。'
-            "勇者は 1 日に 1 つ依頼を受け、必要な行動力を使ってこなします。</p>"]
+    if not guild.get("towns") or guild.get("season") != season or any(
+            guild.get("refreshed", {}).get(t, "") < today.isoformat() for t in world["towns"]):
+        # まだ誰も進めていない・その日の掲示板になっていない: その日の朝の掲示板を見せる（保存はしない）
+        guild = copy.deepcopy(guild) if guild.get("season") == season else game.new_guild()
+        game.refresh_guild(world, guild, today, season)
+    places, days = world["places"], world["season"]["quest_open_days"]
+    towns = "".join(f'<button type="button" class="chip" data-town="{escape(t)}" aria-pressed="false">'
+                    f'{escape(places[t].get("emoji", ""))} {escape(places[t]["name"])}</button>' for t in world["towns"])
+    ranks = "".join(f'<button type="button" class="chip" data-rank="{i}" aria-pressed="false">'
+                    f'<span class="chip-mark">{escape(r["mark"])}</span></button>' for i, r in enumerate(world["quest_ranks"], 1))
+    body = [f"<h2>町のギルドの掲示板（{today.isoformat()}）</h2>",
+            '<p class="note">町ごとに決まった数の依頼が貼られていて、早い者勝ちです（受けられた依頼は、ほかの勇者は受けられません）。'
+            f"誰も受けないまま {days} 日たった依頼は入れ替わります。達成された依頼は翌日に新しい依頼に入れ替わり、"
+            "失敗した依頼は翌日にまた受け付けます。勇者は 1 日に 1 つ依頼を受け、必要な行動力を使ってこなします（期限はありません）。</p>",
+            f'<div class="filters card"><div class="f-row"><span class="f-label">レアリティ</span>{ranks}</div>'
+            f'<div class="f-row"><span class="f-label">町</span>{towns}</div>'
+            '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
+            '<button type="button" id="f-clear" class="link" hidden>選択を解除</button></div></div>',
+            '<p id="f-none" class="note" hidden>条件に合う依頼はありません。</p>']
     for town in world["towns"]:
         p = places[town]
         rows = []
-        for q in game.board(world, town, today, season):
-            who = guild.get(q["id"])
-            status = (f'<a class="taken" href="{hero_href(who)}">{escape(names[who])}</a>' if who in names
-                      else '<span class="taken">受注済み</span>' if who else '<span class="free">空き</span>')
-            mark, _, rest = game.quest_text(world, q).partition(" ")
-            rows.append(f'<tr><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
-                        + (f'<div class="note">「{escape(q["text"])}」</div>' if q.get("text") else "")
-                        + f'</td><td class="num">{q["cost"]}</td>'
-                        f'<td class="num">{q["reward"]["exp"]}EXP<br>{q["reward"]["gold"]}G</td><td>{status}</td></tr>')
-        doing = "".join(f'<li><a href="{hero_href(h["id"])}">{escape(h["name"])}</a>: {escape(game.quest_text(world, s["quest"]))}'
-                        f'（{s["quest"]["progress"]}/{s["quest"]["count"]}）</li>'
-                        for h, s in entries if s["quest"] and s["quest"].get("town") == town)
-        here = [h for h, s in entries if s["place"] == town and not s["road"]]
-        who_here = "、".join(f'<a href="{hero_href(h["id"])}">{escape(h["name"])}</a>' for h in here)
-        body.append(f'<div class="card" id="{escape(town)}"><h3>{escape(p.get("emoji", ""))} {escape(p["name"])}'
-                    f'<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span></h3>'
-                    + (f'<div class="note">滞在中: {who_here}</div>' if who_here else "")
-                    + '<div class="scroll"><table class="wide-table"><tr><th></th><th>今日の依頼</th><th class="num">行動力</th>'
-                    '<th class="num">報酬</th><th>受けた勇者</th></tr>' + "".join(rows) + "</table></div>"
-                    + (f'<div class="note">このギルドの依頼をこなしている勇者:</div><ul>{doing}</ul>' if doing else "")
-                    + "</div>")
-    return page("ギルド", "".join(body), "guild.html")
+        for e in guild.get("towns", {}).get(town, []):
+            mark, _, rest = game.quest_text(world, e).partition(" ")
+            notes = ([f"「{escape(e['text'])}」"] if e.get("text") else []) + (["前の勇者が失敗した依頼"] if e.get("returned") else [])
+            rows.append(f'<tr data-rank="{e["rank"]}"><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
+                        + "".join(f'<div class="note">{n}</div>' for n in notes)
+                        + f'</td><td class="num">{e["cost"]}</td>'
+                        f'<td class="num">{e["reward"]["exp"]}EXP<br>{e["reward"]["gold"]}G</td>'
+                        f"<td>{guild_status(world, e, today)}</td></tr>")
+        body.append(f'<div class="card board" id="{escape(town)}" data-town="{escape(town)}"><h3>{escape(p.get("emoji", ""))} '
+                    f'{escape(p["name"])}<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span></h3>'
+                    '<div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em"><col><col style="width:4.5em">'
+                    '<col style="width:6.5em"><col style="width:13em"></colgroup><tr><th></th><th>依頼</th><th class="num">行動力</th>'
+                    '<th class="num">報酬</th><th>状態</th></tr>' + "".join(rows) + "</table></div></div>")
+    return page("ギルド", "".join(body), "guild.html", script=GUILD_JS)
 
 
 # ---- 勇者の詳細 ---------------------------------------------------------------------------
@@ -269,7 +323,7 @@ def main() -> int:
     world = rpg.load_world()
     entries = rpg.current_entries(world)
     today = date.fromisoformat(a.date) if a.date else shown_day(entries)
-    written = write_site(world, entries, today, rpg.load_guild(today), Path(a.out))
+    written = write_site(world, entries, today, rpg.load_guild(), Path(a.out))
     print(f"{a.out} に {len(written)} ファイルを書き出しました")
     return 0
 

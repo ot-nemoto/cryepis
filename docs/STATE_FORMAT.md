@@ -7,7 +7,7 @@
 |---|---|---|
 | [`heroes.json`](#heroesjson) | `scripts/rpg.py`（New game / Retire hero） | 勇者管理シート（勇者の一覧と Gist の ID） |
 | [`board.json`](#boardjson) | `scripts/rpg.py`（最初の毎日の実行） | ランキングの Gist の ID と URL |
-| [`guild.json`](#guildjson) | `scripts/rpg.py`（毎日の実行） | ギルドの依頼のうち、受けられたもの（早い者勝ち） |
+| [`guild.json`](#guildjson) | `scripts/rpg.py`（毎日の実行） | 町ごとのギルドの掲示板（日をまたいで残る。早い者勝ち） |
 | [`heroes/<id>.json`](#heroesidjson) | `scripts/rpg.py` | 勇者ごとの状態・持ち物・日誌・シーズンの記録 |
 | [`last-run`](#last-run) | hero-adventure.yml の Commit state ステップ | 最終実行日 |
 
@@ -55,12 +55,35 @@
 
 ## guild.json
 
-ギルドの依頼は早い者勝ちで、ほかの勇者が受けた依頼は受けられません。その記録です（依頼の ID → 受けた勇者の ID）。
-依頼の ID は「日付-町の ID-枠の番号」です。毎日の実行で書き換え、さかのぼって進める日数（7 日）より古いものは捨てます。
-消しても壊れません（その日に受けられた依頼が、もう一度受けられるようになるだけです）。
+町ごとのギルドの掲示板です。全員で共有し、日をまたいで残ります（早い者勝ち）。毎日の実行で書き換えます（依頼 1 件を 1 行で書きます）。
+
+| 項目 | 内容 |
+|---|---|
+| `season` | 掲示板のシーズン。シーズンが変わったら全部貼り直す |
+| `refreshed` | 町の ID → その町の掲示板を朝の状態に貼り替えた日（町ごとに 1 日 1 回） |
+| `towns` | 町の ID → 貼られている依頼の一覧。依頼の項目は勇者の `quest` と同じで、下の 4 つが増える |
+
+| 依頼に増える項目 | 内容 |
+|---|---|
+| `posted` | 貼られた日（失敗して戻ったときは戻った日）。この日から `quest_open_days` 日、受け付ける |
+| `status` | `open`（受付中）/ `held`（受注中）/ `done`（達成。翌朝はがして新しい依頼を貼る）/ `failed`（失敗。翌朝、受付中に戻す） |
+| `holder` | 受けた勇者の ID（受付中は null） |
+| `returned` | 前の勇者が失敗して、受付中に戻った依頼なら true |
+
+依頼の ID は「貼られた日付-町の ID-番号」です。受けた勇者がその依頼を持っていない（引退したなど）受注中の依頼は、毎日の実行の最後に失敗にします（翌朝、受付中に戻ります）。
+前の形式（`{"taken": {...}}`）や、消した場合は、新しく貼り直します（受注中の勇者は依頼を続けられますが、掲示板には出なくなります）。
 
 ```json
-{"taken": {"2026-12-01-aurea-0": "h2", "2026-12-01-aurea-3": "h1"}}
+{
+ "season": 1,
+ "refreshed": {"aurea":"2026-12-03"},
+ "towns": {
+ "aurea": [
+  {"type":"deliver","place":"astol","report":"astol",…,"id":"2026-12-01-aurea-1","posted":"2026-12-01","status":"held","holder":"h2","returned":false},
+  {"type":"hunt","place":"flumen","report":"aurea",…,"id":"2026-12-03-aurea-0","posted":"2026-12-03","status":"open","holder":null,"returned":false}
+ ]
+ }
+}
 ```
 
 ---
