@@ -14,10 +14,10 @@ on:
     types: [completed]
   workflow_dispatch:
 
-# 公開は最後の 1 回だけでよいので、待っている古い実行は取り消す
+# 公開の途中で止めると公開が壊れることがあるので、実行中のものは止めない（待っている古い実行は新しいものに置き換わる）
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read

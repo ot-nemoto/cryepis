@@ -68,7 +68,8 @@ th{color:var(--sub);font-weight:normal;font-size:13px;white-space:nowrap}
 pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;
 font:13.5px/1.6 ui-monospace,'SFMono-Regular',Menlo,Consolas,'Noto Sans Mono CJK JP',monospace;white-space:pre-wrap}
 #map{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#f6efdc;
-touch-action:none;cursor:grab}
+touch-action:pan-y;cursor:grab}
+#map.zoomed{touch-action:none}
 #map svg{display:block;width:100%;height:auto;user-select:none}
 #map.drag{cursor:grabbing}
 .zoom{position:absolute;right:8px;top:8px;display:flex;gap:4px}
@@ -77,16 +78,17 @@ font-size:18px;cursor:pointer}
 .zoom button.wide{width:auto;padding:0 10px;font-size:13px}
 """
 
-# 地図の拡大・移動（ホイール・ドラッグ・ボタン）。viewBox を変えるだけ
+# 地図の拡大・移動（ホイール・ドラッグ・ボタン）。viewBox を変えるだけ。
+# 縮小しきった地図の上では、ホイールやスマホの縦のスワイプでページをスクロールできる
 MAP_JS = """
 (()=>{const box=document.getElementById('map'),svg=box.querySelector('svg');if(!svg)return;
 const full=svg.viewBox.baseVal,home=[full.x,full.y,full.width,full.height];let v=home.slice();
-const set=()=>svg.setAttribute('viewBox',v.join(' '));
+const set=()=>{svg.setAttribute('viewBox',v.join(' '));box.classList.toggle('zoomed',v[2]<home[2]);};
 const clamp=()=>{v[2]=Math.min(home[2],Math.max(home[2]/8,v[2]));v[3]=v[2]*home[3]/home[2];
 v[0]=Math.min(home[0]+home[2]-v[2],Math.max(home[0],v[0]));v[1]=Math.min(home[1]+home[3]-v[3],Math.max(home[1],v[1]));};
 const zoom=(k,fx=.5,fy=.5)=>{const w=v[2]*k,h=v[3]*k;v[0]+=(v[2]-w)*fx;v[1]+=(v[3]-h)*fy;v[2]=w;v[3]=h;clamp();set();};
-box.addEventListener('wheel',e=>{e.preventDefault();const r=svg.getBoundingClientRect();
-zoom(e.deltaY<0?0.8:1.25,(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);},{passive:false});
+box.addEventListener('wheel',e=>{if(e.deltaY>0&&v[2]>=home[2])return;e.preventDefault();
+const r=svg.getBoundingClientRect();zoom(e.deltaY<0?0.8:1.25,(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);},{passive:false});
 let drag=null;
 box.addEventListener('pointerdown',e=>{if(e.target.closest('a,button'))return;drag=[e.clientX,e.clientY];
 box.setPointerCapture(e.pointerId);box.classList.add('drag');});
@@ -116,7 +118,7 @@ def hero_href(hero_id: str, depth: int = 0) -> str:
 
 
 def updated(today: date) -> str:
-    return f'<p class="note">{today.isoformat()} の状態（毎朝 7 時すぎに更新）</p>'
+    return f'<p class="note">{today.isoformat()} の冒険を終えた状態（毎朝 7 時すぎに更新）</p>'
 
 
 # ---- 地図 -------------------------------------------------------------------------------
@@ -220,8 +222,21 @@ def build_hero(world: dict, hero: dict, state: dict) -> str:
 
 
 # ---- 書き出し -----------------------------------------------------------------------------
+def check_out(out: Path) -> None:
+    """書き出す先を消してよいか確かめる（中身を作り直すので、リポジトリやほかのディレクトリを消さないように）。
+    消してよいのは、まだないか、空か、前に書き出したサイト（index.html と guild.html がある）だけ。"""
+    target, root = out.resolve(), common.ROOT.resolve()
+    if target == root or target in root.parents or (root in target.parents and target.relative_to(root).parts[0]
+                                                    in ("heroes", ".state", "world", "scripts", "tests", "docs", ".github", "tools")):
+        raise SystemExit(f"{out} には書き出せません（リポジトリのファイルを消してしまうため。_site などを指定してください）")
+    if out.exists() and (not out.is_dir() or (any(out.iterdir())
+                                              and not ((out / "index.html").is_file() and (out / "guild.html").is_file()))):
+        raise SystemExit(f"{out} は前に書き出したサイトではないので、消して作り直せません（空のディレクトリか、新しい名前を指定してください）")
+
+
 def write_site(world: dict, entries: list[tuple[dict, dict]], today: date, guild: dict, out: Path) -> list[Path]:
     """サイトを out に書き出す（out の中身は作り直す）。書き出したファイルの一覧を返す。"""
+    check_out(out)
     if out.exists():
         shutil.rmtree(out)
     (out / "heroes").mkdir(parents=True)
@@ -240,14 +255,21 @@ def write_site(world: dict, entries: list[tuple[dict, dict]], today: date, guild
     return written
 
 
+def shown_day(entries: list[tuple[dict, dict]]) -> date:
+    """サイトに出す日付: 勇者を最後に進めた日（毎日の実行の前に公開されても、日付が先に進んで中身が空にならないように）。"""
+    days = [s["last_date"] for _, s in entries if s.get("last_date")]
+    return date.fromisoformat(max(days)) if days else datetime.now(timezone.utc).astimezone(common.JST).date()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="GitHub Pages に載せるサイトを書き出す")
     ap.add_argument("out", help="書き出す先のディレクトリ（中身は作り直す）")
-    ap.add_argument("--date", help="表示する日付（既定は今日の JST）")
+    ap.add_argument("--date", help="表示する日付（既定は勇者を最後に進めた日。まだ誰も進めていなければ今日の JST）")
     a = ap.parse_args()
-    today = date.fromisoformat(a.date) if a.date else datetime.now(timezone.utc).astimezone(common.JST).date()
     world = rpg.load_world()
-    written = write_site(world, rpg.current_entries(world), today, rpg.load_guild(today), Path(a.out))
+    entries = rpg.current_entries(world)
+    today = date.fromisoformat(a.date) if a.date else shown_day(entries)
+    written = write_site(world, entries, today, rpg.load_guild(today), Path(a.out))
     print(f"{a.out} に {len(written)} ファイルを書き出しました")
     return 0
 

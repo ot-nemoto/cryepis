@@ -59,11 +59,30 @@ class SiteTest(unittest.TestCase):
                 self.assertTrue(target.is_file(), f"{path.name} → {href}")
 
     def test_out_dir_is_rebuilt(self):
-        self.out.mkdir(parents=True)
+        website.write_site(WORLD, [], DAY, {}, self.out)
         (self.out / "old.html").write_text("x")
         website.write_site(WORLD, [], DAY, {}, self.out)
         self.assertFalse((self.out / "old.html").exists())
         self.assertIn("まだ勇者がいません", (self.out / "index.html").read_text(encoding="utf-8"))
+
+    def test_does_not_delete_other_directories(self):
+        other = self.out.parent / "other"
+        other.mkdir()
+        (other / "keep.txt").write_text("x")
+        for out in (other, rpg.common.ROOT, rpg.common.ROOT / "heroes", rpg.common.ROOT / ".state", rpg.common.ROOT.parent):
+            with self.assertRaises(SystemExit):
+                website.write_site(WORLD, [], DAY, {}, out)
+        self.assertTrue((other / "keep.txt").exists())
+        self.assertTrue((rpg.common.ROOT / "world" / "map.json").exists())
+        (other / "keep.txt").unlink()  # 空のディレクトリには書き出せる
+        website.write_site(WORLD, [], DAY, {}, other)
+        self.assertTrue((other / "index.html").exists())
+
+    def test_shown_day_is_the_last_advanced_day(self):
+        entries, _, last = party(2, 3)
+        self.assertEqual(website.shown_day(entries), last)
+        entries[0][1]["last_date"] = None  # まだ進めていない勇者がいても、最後に進めた日
+        self.assertEqual(website.shown_day(entries), last)
 
     def test_map_is_inline_svg_with_hero_links(self):
         entries, guild, today = party(1, 1)
