@@ -1,4 +1,5 @@
 """ネタ（Pin に載せる内容）のスクリプトで共通に使う部品（GitHub API・Gist の更新・表示幅）。"""
+
 from __future__ import annotations
 
 import json
@@ -16,85 +17,87 @@ LINE_MAX = 49
 
 
 class GistAPIError(SystemExit):
-    """Gist API のエラー（status は HTTP のステータスコード）。SystemExit なので、捕まえなければ終了する。"""
+  """Gist API のエラー（status は HTTP のステータスコード）。SystemExit なので、捕まえなければ終了する。"""
 
-    def __init__(self, status: int, message: str):
-        super().__init__(message)
-        self.status = status
+  def __init__(self, status: int, message: str):
+    super().__init__(message)
+    self.status = status
 
 
 def warn(msg: str) -> None:
-    """GitHub Actions のサマリーに警告として表示する（ローカルではただの出力）。"""
-    print(f"::warning::{msg}", file=sys.stderr)
+  """GitHub Actions のサマリーに警告として表示する（ローカルではただの出力）。"""
+  print(f"::warning::{msg}", file=sys.stderr)
 
 
 def api(method: str, url: str, token: str | None, body: dict | None = None) -> dict:
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "cryepis",
-    }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    req = urllib.request.Request(
-        url, method=method, headers=headers,
-        data=json.dumps(body).encode() if body is not None else None,
-    )
-    with urllib.request.urlopen(req, timeout=20) as res:
-        return json.load(res)
+  headers = {
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "cryepis",
+  }
+  if token:
+    headers["Authorization"] = f"Bearer {token}"
+  req = urllib.request.Request(
+    url,
+    method=method,
+    headers=headers,
+    data=json.dumps(body).encode() if body is not None else None,
+  )
+  with urllib.request.urlopen(req, timeout=20) as res:
+    return json.load(res)
 
 
 WIDE = "★"  # 幅が決まっていない（East Asian Width が A）が、全角で出ることが多い文字
 
 
 def width(s: str) -> int:
-    """全角文字を 2 として数えた表示幅。★ は日本語のフォントでは全角で出ることが多いので、2 として数える。"""
-    return sum(2 if unicodedata.east_asian_width(c) in "WF" or c in WIDE else 1 for c in s)
+  """全角文字を 2 として数えた表示幅。★ は日本語のフォントでは全角で出ることが多いので、2 として数える。"""
+  return sum(2 if unicodedata.east_asian_width(c) in "WF" or c in WIDE else 1 for c in s)
 
 
 def bar(value: int, top: int, bar_w: int) -> str:
-    """top を bar_w とした横棒。フォント差でずれにくいよう █ だけを使い、value が 1 以上なら最低 1 つは出す。"""
-    n = max(1, round(bar_w * value / top)) if top and value > 0 else 0
-    return "█" * n + " " * (bar_w - n)
+  """top を bar_w とした横棒。フォント差でずれにくいよう █ だけを使い、value が 1 以上なら最低 1 つは出す。"""
+  n = max(1, round(bar_w * value / top)) if top and value > 0 else 0
+  return "█" * n + " " * (bar_w - n)
 
 
 def create_gist(token: str, filename: str, content: str, description: str) -> dict:
-    """public Gist を 1 ファイルで作り、API のレスポンス（id・html_url など）を返す。"""
-    body = {"public": True, "description": description, "files": {filename: {"content": content}}}
-    try:
-        return api("POST", "https://api.github.com/gists", token, body)
-    except urllib.error.HTTPError as e:
-        hint = "（Classic PAT の gist スコープと期限を確認してください）" if e.code in (401, 403, 404) else ""
-        raise GistAPIError(e.code, f"Gist API エラー {e.code}{hint}: {e.read().decode(errors='replace')}")
-    except urllib.error.URLError as e:  # POST は冪等でないので再試行しない
-        raise SystemExit(f"Gist API に接続できません: {e.reason}")
+  """public Gist を 1 ファイルで作り、API のレスポンス（id・html_url など）を返す。"""
+  body = {"public": True, "description": description, "files": {filename: {"content": content}}}
+  try:
+    return api("POST", "https://api.github.com/gists", token, body)
+  except urllib.error.HTTPError as e:
+    hint = "（Classic PAT の gist スコープと期限を確認してください）" if e.code in (401, 403, 404) else ""
+    raise GistAPIError(e.code, f"Gist API エラー {e.code}{hint}: {e.read().decode(errors='replace')}") from e
+  except urllib.error.URLError as e:  # POST は冪等でないので再試行しない
+    raise SystemExit(f"Gist API に接続できません: {e.reason}") from e
 
 
 def update_gist(gist_id: str, token: str, filename: str, content: str, description: str | None = None) -> None:
-    """filename の中身を更新する。description を渡すと、Gist の説明も（違っていれば）そろえる。"""
-    try:
-        gist = api("GET", f"https://api.github.com/gists/{gist_id}", token)
-        files = gist.get("files", {})
-        new_description = description if description is not None and description != gist.get("description") else None
-        if len(files) > 1 and min(files) != filename:
-            # Pinned カードには名前順で先頭のファイルが出る
-            warn(f"Gist {gist_id} には複数のファイルがあり、Pin には {min(files)} が表示されます")
-        body: dict = {}
-        if files.get(filename, {}).get("content") != content:
-            if filename not in files and len(files) == 1:
-                # 作成時の仮ファイル名を置き換える（Pinned には名前順で先頭のファイルが出るため）
-                (old,) = files
-                body["files"] = {old: {"filename": filename, "content": content}}
-            else:
-                body["files"] = {filename: {"content": content}}
-        if new_description is not None:
-            body["description"] = new_description
-        if not body:
-            print(f"変更なし: {filename} の更新をスキップ")
-            return
-        api("PATCH", f"https://api.github.com/gists/{gist_id}", token, body)
-    except urllib.error.HTTPError as e:
-        hint = "（Classic PAT の gist スコープ・期限と Gist ID を確認してください）" if e.code in (401, 403, 404) else ""
-        raise GistAPIError(e.code, f"Gist API エラー {e.code}{hint}: {e.read().decode(errors='replace')}")
-    changed = [x for x, key in ((filename, "files"), ("説明", "description")) if key in body]
-    print(f"Gist を更新しました: {'・'.join(changed)}")
+  """filename の中身を更新する。description を渡すと、Gist の説明も（違っていれば）そろえる。"""
+  try:
+    gist = api("GET", f"https://api.github.com/gists/{gist_id}", token)
+    files = gist.get("files", {})
+    new_description = description if description is not None and description != gist.get("description") else None
+    if len(files) > 1 and min(files) != filename:
+      # Pinned カードには名前順で先頭のファイルが出る
+      warn(f"Gist {gist_id} には複数のファイルがあり、Pin には {min(files)} が表示されます")
+    body: dict = {}
+    if files.get(filename, {}).get("content") != content:
+      if filename not in files and len(files) == 1:
+        # 作成時の仮ファイル名を置き換える（Pinned には名前順で先頭のファイルが出るため）
+        (old,) = files
+        body["files"] = {old: {"filename": filename, "content": content}}
+      else:
+        body["files"] = {filename: {"content": content}}
+    if new_description is not None:
+      body["description"] = new_description
+    if not body:
+      print(f"変更なし: {filename} の更新をスキップ")
+      return
+    api("PATCH", f"https://api.github.com/gists/{gist_id}", token, body)
+  except urllib.error.HTTPError as e:
+    hint = "（Classic PAT の gist スコープ・期限と Gist ID を確認してください）" if e.code in (401, 403, 404) else ""
+    raise GistAPIError(e.code, f"Gist API エラー {e.code}{hint}: {e.read().decode(errors='replace')}") from e
+  changed = [x for x, key in ((filename, "files"), ("説明", "description")) if key in body]
+  print(f"Gist を更新しました: {'・'.join(changed)}")

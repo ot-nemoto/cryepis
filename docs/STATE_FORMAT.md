@@ -162,10 +162,10 @@
 import json
 
 with open(".state/heroes/h1.json", encoding="utf-8") as f:
-    state = json.load(f)
+  state = json.load(f)
 hero = state["hero"]
 print(f"シーズン{state['season']} {state['season_day']}日目 Lv.{hero['level']} 所持金 {hero['gold']}G")
 print("持ち物:", ", ".join(f"{k} ×{n}" for k, n in state["inventory"].items()))
 for r in state["seasons"]:
-    print(f"シーズン{r['season']}: Lv.{r['level']} 依頼達成 {r['quests_done']}")
+  print(f"シーズン{r['season']}: Lv.{r['level']} 依頼達成 {r['quests_done']}")
 ```
