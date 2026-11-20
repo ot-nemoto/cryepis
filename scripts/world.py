@@ -220,7 +220,7 @@ def validate(raw: dict) -> list[str]:
             err(f"{where}: type は {'/'.join(PLACE_TYPES)} のどれかにしてください")
         if not p.get("name"):
             err(f"{where}: name がありません")
-        for key in ("alias", "region"):
+        for key in ("alias", "region", "text"):
             if key in p and (not isinstance(p[key], str) or not p[key]):
                 err(f"{where}: {key} は空でない文字列にしてください")
         if "pos" in p and not _point_ok(p["pos"]):

@@ -7,6 +7,7 @@ import math
 import paths
 import shutil
 
+from lore import TEXT
 from names import NAMES
 from places import DUNGEONS, LABEL, TOWNS
 
@@ -117,7 +118,7 @@ def main():
     for name, x, y in TOWNS:
         tid, emoji, region, shop = TOWN_INFO[name]
         places.append({"id": tid, "type": "town", "name": NAMES[name], "alias": name, "region": region,
-                       "emoji": emoji, "shop": shop + [SPECIALTY[name]], "pos": [x, y]}
+                       "emoji": emoji, "text": TEXT[name], "shop": shop + [SPECIALTY[name]], "pos": [x, y]}
                       | ({"quests_per_day": QUESTS_PER_DAY[name]} if name in QUESTS_PER_DAY else {}) | ({"label": LABEL[name]} if name in LABEL else {}))
     for name, x, y in DUNGEONS:
         did, region = DUNGEON_INFO[name]

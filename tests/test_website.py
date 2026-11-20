@@ -50,7 +50,7 @@ class SiteTest(unittest.TestCase):
         entries, guild, today = party()
         written = website.write_site(WORLD, entries, today, guild, self.out)
         rels = {p.relative_to(self.out).as_posix() for p in written}
-        self.assertEqual(rels, {"index.html", "ranking.html", "guild.html", "items.html", "heroes/h1.html",
+        self.assertEqual(rels, {"index.html", "ranking.html", "guild.html", "items.html", "towns.html", "heroes/h1.html",
                                 "heroes/h2.html", "heroes/h3.html"})
         for path in written:  # サイトの中のリンクは、すべて書き出したファイルを指す
             parser = Links()
@@ -140,6 +140,21 @@ class SiteTest(unittest.TestCase):
         for slot in ("weapon", "helmet", "shield", "accessory"):  # ★ の多い順
             marks = [len(game.rarity_mark(WORLD, r["item"]["rarity"])) for r in website.item_rows(WORLD)[slot]]
             self.assertEqual(marks, sorted(marks, reverse=True))
+
+    def test_towns_page(self):
+        html = website.build_towns(WORLD)
+        for town in WORLD["towns"]:
+            p = WORLD["places"][town]
+            self.assertIn(f'id="{town}"', html)
+            self.assertIn(p["text"], html)
+            self.assertIn(f"依頼の枠 {game.quests_per_day(WORLD, town)} 件", html)
+            self.assertIn(f'href="guild.html#{town}"', html)
+        self.assertNotIn("アウレア", html)  # 開放していない町は出さない
+        muralis = html[html.index('id="muralis"'):html.index('id="karun"')]
+        self.assertIn("城壁の大盾", muralis.split("依頼の報酬で出るレア")[0])  # 特産品
+        self.assertIn("騎士の剣", muralis.split("店の品ぞろえ")[0])  # レア
+        self.assertIn("南壁の巣穴（ダンジョン・まだ入れない）", muralis)
+        self.assertIn("カルン（陸路 6）", muralis)
 
     def test_guild_before_anyone_played(self):
         html = website.build_guild(WORLD, [], DAY, game.new_guild())
