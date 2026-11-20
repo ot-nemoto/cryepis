@@ -200,17 +200,20 @@ def hunt_steps(world: dict, town: str, to: str, count: int) -> list[list]:
     return [["go", trip], ["hunt", count], ["back", trip]]
 
 
-def finish_quest(world: dict, quest: dict, town: str, unit: int) -> dict:
-    """報酬（種類ごとの基本 × 魔物のレベル × 数か距離 × レアリティの倍率）と、必要な行動力をつける（期限はない）。"""
+def finish_quest(world: dict, quest: dict, town: str) -> dict:
+    """必要な行動力と、報酬（1 行動あたりの報酬 × 必要な行動力 × レアリティの倍率）をつける（期限はない）。
+    討伐も配達も、行動力が同じなら報酬も同じ（討伐は別に、1 体ごとの戦闘の経験値とお金が入る）。"""
     lvl, rank = monster_level(world), quest["rank"]
-    base, cfg = world["quest_reward"][quest["type"]], world["quest_ranks"][rank - 1]
+    base, cfg = world["quest_reward"], world["quest_ranks"][rank - 1]
     if quest["type"] == "hunt":
         quest["steps"] = hunt_steps(world, town, quest["place"], quest["count"])
         quest["away"] = 0  # 町から何行動ぶん離れているか（地図に描く位置）
-    quest.update(town=town, progress=0, level=[lvl, lvl], deadline=None,
-                 reward={"exp": round(base["exp"] * lvl * unit * cfg["reward"]),
-                         "gold": round(base["gold"] * lvl * unit * cfg["reward"]), "item": cfg["item"]})
-    quest["cost"] = sum(n for _, n in quest["steps"]) if quest["type"] == "hunt" else world["dist"][town][quest["place"]]
+        cost = sum(n for _, n in quest["steps"])
+    else:
+        cost = world["dist"][town][quest["place"]]
+    quest.update(town=town, progress=0, level=[lvl, lvl], deadline=None, cost=cost,
+                 reward={"exp": round(base["exp"] * cost * cfg["reward"]),
+                         "gold": round(base["gold"] * cost * cfg["reward"]), "item": cfg["item"]})
     return quest
 
 
@@ -218,12 +221,10 @@ def make_town_quest(world: dict, q: dict, town: str, d: date) -> dict:
     """町の依頼（quests.json の towns）から、掲示板に出す依頼を作る。"""
     if q["type"] == "hunt":
         quest = {"type": "hunt", "place": q["to"], "report": town, "monster": q["monster"], "count": q["count"]}
-        unit = q["count"]
     else:
         quest = {"type": "deliver", "place": q["to"], "report": q["to"], "monster": None, "count": 1}
-        unit = world["dist"][town][q["to"]]
     quest.update(template=q["id"], name=q["name"], rank=q["rank"], text=q.get("text", ""))
-    return finish_quest(world, quest, town, unit)
+    return finish_quest(world, quest, town)
 
 
 def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> dict | None:
@@ -235,16 +236,14 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> 
         count = rng.randint(*t["count"])
         quest = {"type": "hunt", "place": other, "report": town, "monster": rng.choices(mids, weights)[0],
                  "count": count}
-        unit = count
     else:  # deliver
         towns = [p for p in world["towns"] if p != town and dist.get(p, cfg["deliver_range"] + 1) <= cfg["deliver_range"]]
         if not towns:
             return None
         to = rng.choice(towns)
         quest = {"type": "deliver", "place": to, "report": to, "monster": None, "count": 1}
-        unit = dist[to]
     quest.update(template=t["id"], name=t.get("name", t["type"]), rank=t["rank"], text="")
-    return finish_quest(world, quest, town, unit)
+    return finish_quest(world, quest, town)
 
 
 def suitable(quest: dict, level: int) -> bool:

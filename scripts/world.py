@@ -351,11 +351,10 @@ def validate(raw: dict) -> list[str]:
             if not isinstance(r.get(key), (int, float)) or isinstance(r.get(key), bool) or r[key] <= 0:
                 err(f"{where}: {key} は正の数にしてください")
         table_ok(f"{where} の item", r.get("item"))
-    for typ in QUEST_TYPES:
-        base = (raw.get("quest_reward") or {}).get(typ)
-        if not isinstance(base, dict) or any(not isinstance(base.get(k), (int, float)) or base[k] < 0
-                                             for k in ("exp", "gold")):
-            err(f"quests.json: reward.{typ} には exp と gold（0 以上の数）を書いてください")
+    base = raw.get("quest_reward")  # 1 行動あたりの報酬（× 必要な行動力 × レアリティの倍率）
+    if not isinstance(base, dict) or any(not isinstance(base.get(k), (int, float)) or isinstance(base.get(k), bool)
+                                         or base[k] < 0 for k in ("exp", "gold")):
+        err("quests.json: reward には、1 行動あたりの exp と gold（0 以上の数）を書いてください")
 
     def rank_ok(where: str, rank) -> None:
         if not isinstance(rank, int) or isinstance(rank, bool) or not 1 <= rank <= max(len(ranks), 1):

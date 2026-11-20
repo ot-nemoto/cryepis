@@ -150,6 +150,9 @@ class ValidateTest(unittest.TestCase):
         self.assertError(town_quest(id="hunt"), ["重複"])  # 共通の依頼と同じ ID
         self.assertError(lambda r: r["town_quests"].update(jade_tomb=[]), ["jade_tomb", "町の ID"])
 
+    def test_quest_reward_is_checked(self):
+        self.assertError(lambda r: r["quest_reward"].pop("gold"), ["reward", "gold"])
+
     def test_quest_ranks_are_checked(self):
         self.assertError(lambda r: r["quest_ranks"][0].update(weight=0), ["ranks[1]", "weight"])
         self.assertError(lambda r: r["quest_ranks"].clear(), ["ranks"])

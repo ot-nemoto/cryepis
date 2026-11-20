@@ -149,11 +149,19 @@ class QuestTest(unittest.TestCase):
         q4 = next(q for q in WORLD["town_quests"][town] if q["rank"] == 4)
         q1 = next(q for q in WORLD["town_quests"][town] if q["rank"] == 1 and q["type"] == q4["type"])
         a, b = G.make_town_quest(WORLD, q1, town, START), G.make_town_quest(WORLD, q4, town, START)
-        per = lambda q: q["reward"]["exp"] / q["count"]  # noqa: E731
+        per = lambda q: q["reward"]["exp"] / q["cost"]  # noqa: E731  1 行動あたりの報酬
         self.assertEqual(per(b) / per(a), WORLD["quest_ranks"][3]["reward"] / WORLD["quest_ranks"][0]["reward"])
         self.assertEqual(b["reward"]["item"], WORLD["quest_ranks"][3]["item"])
         self.assertTrue(G.quest_text(WORLD, b).startswith("★★★★ " + q4["name"] + "（"))
         self.assertEqual(b["text"], q4["text"])
+
+    def test_reward_is_by_cost_not_by_kind(self):
+        base, mult = WORLD["quest_reward"], [r["reward"] for r in WORLD["quest_ranks"]]
+        for town, qs in WORLD["town_quests"].items():
+            for q in qs:
+                x = G.make_town_quest(WORLD, q, town, START)
+                self.assertEqual(x["reward"]["exp"], round(base["exp"] * x["cost"] * mult[q["rank"] - 1]), q["id"])
+                self.assertEqual(x["reward"]["gold"], round(base["gold"] * x["cost"] * mult[q["rank"] - 1]), q["id"])
 
     def test_rank_falls_back_to_what_the_town_has(self):
         for i in range(60):  # ヴィーケには ★★★★ の依頼がない
