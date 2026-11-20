@@ -133,8 +133,17 @@ def hero_spot(world: dict, state: dict) -> tuple[float, float] | None:
     return point_along(pts, (total - road["left"]) / total)
 
 
-def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) -> str | None:
-    """SVG の文字列。map.json に layout がなければ None。entries は (heroes.json の行, 状態)。"""
+def place_title(p: dict) -> str:
+    """マウスを乗せたときに出す、場所の説明（ブラウザで開いたとき）。"""
+    if p["type"] == "town":
+        return f"{p['name']}（{p.get('alias', '')}）{p.get('region', '')}"
+    return f"{p['name']}（ダンジョン・まだ入れない）{p.get('region', '')}"
+
+
+def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False,
+           links: dict[str, str] | None = None) -> str | None:
+    """SVG の文字列。map.json に layout がなければ None。entries は (heroes.json の行, 状態)。
+    links（勇者の ID → URL）を渡すと、勇者の札の名前がそのページへのリンクになる（サイトに載せるとき）。"""
     layout = world.get("layout")
     if not layout:
         return None
@@ -177,7 +186,7 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
         if "pos" not in p:
             continue
         x, y = at(*p["pos"])
-        out.append(f'<g id="place-{escape(pid)}">')
+        out.append(f'<g id="place-{escape(pid)}"><title>{escape(place_title(p))}</title>')
         town = p["type"] == "town"
         if town:
             out.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="13" fill="#fff3c4" stroke="#6b4a1f" stroke-width="2.5"/>')
@@ -194,17 +203,17 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
         out.append("</g>")
 
     # 勇者（同じ位置ごとにまとめて札を出す）
-    here: dict[tuple[float, float], list[str]] = {}
+    here: dict[tuple[float, float], list[tuple[str | None, str]]] = {}
     for hero, state in entries:
         spot = hero_spot(world, state)
         if spot:
             here.setdefault((round(spot[0]), round(spot[1])), []).append(
-                f"{hero['name']} Lv.{state['hero']['level']}")
+                (hero["id"], f"{hero['name']} Lv.{state['hero']['level']}"))
     placed: list[tuple[float, float, float, float]] = []
     for (sx, sy), names in here.items():
         x, y = at(sx, sy)
-        shown = names[:MAX_NAMES] + ([f"ほか {len(names) - MAX_NAMES} 人"] if len(names) > MAX_NAMES else [])
-        lines_ = [f"🧙 {n}" for n in shown]
+        shown = names[:MAX_NAMES] + ([(None, f"ほか {len(names) - MAX_NAMES} 人")] if len(names) > MAX_NAMES else [])
+        lines_ = [f"🧙 {n}" for _, n in shown]
         box_w = max(text_width(line, 12) for line in lines_) + 12
         box_h = 16 * len(lines_) + 6
         bx = x + 20 if x + 20 + box_w < canvas_w - 4 else x - 20 - box_w
@@ -215,13 +224,15 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
                 break
             by = max(4, by - box_h - 4)
         placed.append((bx, by, box_w, box_h))
-        out.append('<g class="hero">')
+        out.append(f'<g class="hero"><title>{escape("、".join(n for _, n in names))}</title>')
         out.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="18" fill="none" stroke="#dc2626" stroke-width="3"/>')
         out.append(f'<rect x="{bx:.0f}" y="{by:.0f}" width="{box_w:.0f}" height="{box_h}" rx="5" fill="#ffffff" '
                    'stroke="#dc2626" stroke-width="1.5" opacity="0.95"/>')
-        for i, line in enumerate(lines_):
-            out.append(f'<text x="{bx + 6:.0f}" y="{by + 17 + 16 * i:.0f}" font-size="12" fill="#7f1d1d">'
-                       f'{escape(line)}</text>')
+        for i, ((hid, _), line) in enumerate(zip(shown, lines_)):
+            text = (f'<text x="{bx + 6:.0f}" y="{by + 17 + 16 * i:.0f}" font-size="12" fill="#7f1d1d">'
+                    f'{escape(line)}</text>')
+            href = (links or {}).get(hid)
+            out.append(f'<a href="{escape(href)}">{text}</a>' if href else text)
         out.append("</g>")
 
     if grid:
