@@ -344,7 +344,10 @@ class BattleAndItemTest(unittest.TestCase):
         day = day_of(state)
         day.obtain("power_ring", "宝箱から")
         self.assertEqual(state["season_stats"]["rares"], ["power_ring"])
-        self.assertIn("★「力の指輪」", day.events[0])
+        self.assertIn("★★「力の指輪」", day.events[0])
+        day.obtain("wooden_sword", "宝箱から")
+        self.assertIn("宝箱から★「木の剣」を手に入れた", day.events[1])  # ふつうの装備も ★
+        self.assertFalse(day.events[1].endswith("！"))  # ！はレアだけ
         self.assertIn("装備した", day.events[0])
 
     def test_rares_drop_only_from_their_towns(self):

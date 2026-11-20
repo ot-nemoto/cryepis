@@ -286,7 +286,6 @@ c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'t
 clear.addEventListener('click',()=>{slots.concat(rars).forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
 apply();})();
 """
-RARITY_LABELS = {"common": "ふつう"}
 
 
 def item_rows(world: dict) -> dict[str, list[dict]]:
@@ -316,14 +315,14 @@ def build_items(world: dict) -> str:
     slot_chips = "".join(f'<button type="button" class="chip" data-slot="{s}" aria-pressed="false">{W.SLOT_NAMES[s]}</button>'
                          for s in W.SLOTS)
     rarity_chips = "".join(f'<button type="button" class="chip" data-rarity="{r}" aria-pressed="false">'
-                           f'<span class="chip-mark">{escape(game.RARITY_MARKS.get(r) or RARITY_LABELS.get(r, r))}</span></button>'
+                           f'<span class="chip-mark">{escape(game.RARITY_MARKS.get(r, r))}</span></button>'
                            for r in used)
     potion = world["season"]["potion"]
     body = ["<h2>アイテム一覧</h2>",
             '<p class="note">開放した地域（' + "・".join(escape(world["places"][t]["name"]) for t in world["towns"]) +
             "）で手に入る装備です。部位は武器・兜・盾・装飾品の 4 つで、部位ごとにいちばん強いものを自動で装備します。"
-            "ふつうの装備は町の店で買え、宝箱や依頼の報酬でも出ます（開放した地域の店の品だけ）。"
-            "★ のレアは、その町のギルドの依頼の報酬でしか出ません。</p>",
+            "★ の装備は町の店で買え、宝箱や依頼の報酬でも出ます（開放した地域の店の品だけ）。"
+            "★★ 以上のレアは、その町のギルドの依頼の報酬でしか出ません。</p>",
             f'<div class="filters card"><div class="f-row"><span class="f-label">アイテム</span>{slot_chips}</div>'
             f'<div class="f-row"><span class="f-label">レアリティ</span>{rarity_chips}</div>'
             '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
