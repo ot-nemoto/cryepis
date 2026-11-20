@@ -124,6 +124,10 @@ class SiteTest(unittest.TestCase):
     for town in WORLD["towns"]:  # 町の名前に英語名を添える
       p = WORLD["places"][town]
       self.assertIn(f'{p["name"]} <span class="en">{p["en"]}</span>', html)
+      # 町のページの「掲示板を見る」（guild.html#町の ID）が、その地方のタブの中の掲示板を指す
+      panel = html[html.index(f'id="panel-{p["area"]}"') :]
+      panel = panel[: panel.index("</section>")]
+      self.assertIn(f'<div class="card board" id="{town}">', panel)
     days = WORLD["season"]["quest_open_days"]
     last = today + timedelta(days=days - 1)
     self.assertIn(f"あと {days - 1} 日（{last.month}/{last.day} まで）", html)  # 今日貼られた依頼
@@ -137,6 +141,19 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(guild["refreshed"][WORLD["towns"][0]], today.isoformat())  # 元の掲示板は変えない
     e = {"posted": (today - timedelta(days=10)).isoformat(), "status": "open"}
     self.assertIn("受付終了", website.guild_status(WORLD, e, today))
+
+  def test_items_page_skips_empty_kinds(self):
+    world = copy.deepcopy(WORLD)
+    for town in world["towns"]:  # 開放した地域で兜を売らず、依頼でも出ないようにする
+      p = world["places"][town]
+      p["shop"] = [i for i in p["shop"] if world["items"][i]["slot"] != "helmet"]
+    world["region_items"] = [i for i in world["region_items"] if world["items"][i]["slot"] != "helmet"]
+    for it in world["items"].values():
+      if it["slot"] == "helmet":
+        it["towns"] = []
+    html = website.build_items(world)
+    self.assertNotIn('id="tab-helmet"', html)
+    self.assertIn('id="tab-weapon"', html)
 
   def test_items_page_lists_the_open_region(self):
     html = website.build_items(WORLD)

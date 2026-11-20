@@ -249,15 +249,16 @@ if(panel&&el!==panel)el.scrollIntoView();};
 window.addEventListener('hashchange',fromHash);fromHash();})();
 """
 
-# レアリティの絞り込み（複数選べて、何も選ばなければすべて）。表の行（tr[data-f]）を隠し、行のなくなったカードも隠す
+# レアリティの絞り込み（複数選べて、何も選ばなければすべて）。表の行（tr[data-f]）を隠し、
+# 絞り込んで行のなくなったカードも隠す（絞り込んでいなければ、空のカードも出す）
 FILTER_JS = """
 (()=>{const chips=[...document.querySelectorAll('.chip[data-f]')],none=document.getElementById('f-none'),
 clear=document.getElementById('f-clear');if(!chips.length)return;
 const apply=()=>{const on=new Set(chips.filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>c.dataset.f));let shown=0;
 document.querySelectorAll('.board').forEach(card=>{let n=0;
 card.querySelectorAll('tr[data-f]').forEach(tr=>{const ok=!on.size||on.has(tr.dataset.f);tr.hidden=!ok;if(ok)n++;});
-card.hidden=n===0;const panel=card.closest('.tab-panel');if(!card.hidden&&!(panel&&panel.hidden))shown++;});
-none.hidden=shown>0;clear.hidden=!on.size;};
+card.hidden=on.size>0&&n===0;const panel=card.closest('.tab-panel');if(!card.hidden&&!(panel&&panel.hidden))shown++;});
+none.hidden=!on.size||shown>0;clear.hidden=!on.size;};
 chips.forEach(c=>c.addEventListener('click',()=>{
 c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();}));
 clear.addEventListener('click',()=>{chips.forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
@@ -450,7 +451,6 @@ def build_towns(world: dict) -> str:
 
 
 # ---- アイテム ---------------------------------------------------------------------------
-# アイテムの絞り込み（アイテムの部位・レアリティ。どちらも複数選べて、何も選ばなければすべて）
 def item_rows(world: dict) -> dict[str, list[dict]]:
   """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）: {部位: [{id, item, shops, towns}]}。"""
   places, items = world["places"], world["items"]
@@ -476,13 +476,14 @@ def build_items(world: dict) -> str:
   """開放した地域で手に入るアイテムの一覧。装備の種類ごとのタブで、レアリティで絞り込める。"""
   rows = item_rows(world)
   used = [r for r in world["rarities"] if any(x["item"]["rarity"] == r for rs in rows.values() for x in rs)]
+  slots = [slot for slot in W.SLOTS if rows[slot]]  # 開放した地域で手に入る装備のない種類は、タブを出さない
   potion = world["season"]["potion"]
   body = [
     "<h2>アイテム一覧</h2>",
-    tab_bar([(slot, W.SLOT_NAMES[slot]) for slot in W.SLOTS]),
+    tab_bar([(slot, W.SLOT_NAMES[slot]) for slot in slots]),
     rarity_filter([(r, game.rarity_mark(world, r)) for r in used], "条件に合うアイテムはありません。"),
   ]
-  for slot in W.SLOTS:
+  for slot in slots:
     trs = []
     for r in rows[slot]:
       it = r["item"]
