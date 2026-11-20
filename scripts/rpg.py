@@ -260,15 +260,30 @@ def save_map(world: dict, entries: list[tuple[dict, dict]]) -> None:
         (PAGE_DIR / MAP_IMAGE).write_text(svg, encoding="utf-8")
 
 
-def write_map(world: dict) -> int:
-    """現役の勇者の今の位置で、MAP のページだけを書き出す（冒険は進めない）。"""
+def current_entries(world: dict) -> list[tuple[dict, dict]]:
+    """現役の勇者の今の状態（冒険は進めない）。"""
     entries = []
     for hero in [h for h in load_heroes() if h["active"]]:
         path = hero_state_path(hero["id"])
         if path.exists():
             entries.append((hero, game.load_state(world, path, hero["id"], hero["name"])))
-    save_map(world, entries)
+    return entries
+
+
+def write_map(world: dict) -> int:
+    """現役の勇者の今の位置で、MAP のページだけを書き出す（冒険は進めない）。"""
+    save_map(world, current_entries(world))
     print(f"{PAGE_DIR / MAP_NAME} を書き出しました")
+    return 0
+
+
+def write_map_grid(world: dict, out: str) -> int:
+    """座標の目盛りと場所の ID を重ねた確認用の地図を out に書き出す（pos を決めるときに使う。コミットしない）。"""
+    svg = mapsvg.render(world, current_entries(world), grid=True)
+    if svg is None:
+        raise SystemExit("world/map.json に layout がないので、地図を描けません")
+    Path(out).write_text(svg, encoding="utf-8")
+    print(f"{out} を書き出しました（ブラウザで開いて、場所の pos を決めるのに使ってください）")
     return 0
 
 
@@ -529,15 +544,19 @@ def main() -> int:
     mode.add_argument("--new-game", metavar="NAME", help="新しい勇者を登録する（冒険は進めない）")
     mode.add_argument("--retire", metavar="NAME_OR_ID", help="勇者を引退させる")
     mode.add_argument("--map", action="store_true", help="MAP のページ（heroes/MAP.md）だけを書き出す（冒険は進めない）")
+    mode.add_argument("--map-grid", metavar="OUT.svg", help="座標の目盛りを重ねた確認用の地図を書き出す（pos を決めるときに使う）")
     a = ap.parse_args()
-    if (a.new_game is not None or a.retire is not None or a.map) and (a.dry_run or a.date or a.actions is not None):
-        ap.error("--new-game / --retire / --map は --dry-run / --date / --actions と一緒に指定できません")
+    if ((a.new_game is not None or a.retire is not None or a.map or a.map_grid)
+            and (a.dry_run or a.date or a.actions is not None)):
+        ap.error("--new-game / --retire / --map / --map-grid は --dry-run / --date / --actions と一緒に指定できません")
 
     if a.retire is not None:
         return retire(a.retire)
     world = load_world()
     if a.map:
         return write_map(world)
+    if a.map_grid:
+        return write_map_grid(world, a.map_grid)
     today = date.fromisoformat(a.date) if a.date else datetime.now(timezone.utc).astimezone(common.JST).date()
     if a.new_game is not None:
         return new_game(world, a.new_game, today)

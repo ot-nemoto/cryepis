@@ -11,6 +11,7 @@ world/
 """
 from __future__ import annotations
 
+import base64
 import heapq
 import json
 from datetime import date
@@ -26,6 +27,10 @@ QUEST_TYPES = ("hunt", "deliver")
 FIELD_EVENTS = ("battle", "treasure", "nothing")
 STATS = ("atk", "def", "hp")
 NONE = "none"  # ドロップ表の「何も出ない」
+# ベースの地図（layout.background）に使える形式と、大きさの上限
+BACKGROUND_TYPES = {".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                    ".webp": "image/webp"}
+BACKGROUND_MAX_BYTES = 1024 * 1024
 BIG = 10 ** 9
 # season.json の必須項目: 名前 → (型, 最小, 最大)
 SEASON_KEYS = {
@@ -53,9 +58,16 @@ def read_json(path: Path) -> dict:
 def load_raw(directory: Path | None = None) -> dict:
     d = directory or WORLD_DIR
     items = read_json(d / "items.json")
+    mp = read_json(d / "map.json")
+    background = None
+    name = (mp.get("layout") or {}).get("background") if isinstance(mp.get("layout"), dict) else None
+    if isinstance(name, str) and name and "/" not in name and "\\" not in name:
+        path = d / name
+        background = {"name": name, "bytes": path.read_bytes() if path.is_file() else None}
     return {
         "season": read_json(d / "season.json"),
-        "map": read_json(d / "map.json"),
+        "map": mp,
+        "background": background,
         "monsters": read_json(d / "monsters.json")["monsters"],
         "rarities": items["rarities"],
         "items": items["items"],
@@ -193,6 +205,19 @@ def validate(raw: dict) -> list[str]:
                 if not (isinstance(ring, dict) and ring.get("name") and isinstance(ring.get("color"), str)
                         and isinstance(ring.get("radius"), (int, float)) and ring["radius"] > 0):
                     err(f"map.json: layout.rings[{i}] には name・color・radius（正の数）を書いてください")
+            name = layout.get("background")
+            if name is not None:
+                bg = raw.get("background")
+                ext = Path(name).suffix.lower() if isinstance(name, str) else ""
+                if not isinstance(name, str) or not name or "/" in name or "\\" in name:
+                    err("map.json: layout.background は world/ の中のファイル名だけを書いてください（例: map-base.svg）")
+                elif ext not in BACKGROUND_TYPES:
+                    err(f"map.json: layout.background の形式は {'/'.join(BACKGROUND_TYPES)} のどれかにしてください")
+                elif not bg or bg["bytes"] is None:
+                    err(f"map.json: layout.background の world/{name} がありません")
+                elif len(bg["bytes"]) > BACKGROUND_MAX_BYTES:
+                    err(f"map.json: world/{name} が {len(bg['bytes']) // 1024}KB あります"
+                        f"（{BACKGROUND_MAX_BYTES // 1024}KB 以下にしてください。目安は 300KB 以下）")
             for i, sector in enumerate(layout.get("sectors", [])):
                 if not (isinstance(sector, dict) and sector.get("name")
                         and isinstance(sector.get("angle"), (int, float))):
@@ -282,6 +307,14 @@ def validate(raw: dict) -> list[str]:
 
 
 # ---- 組み立て -------------------------------------------------------------------------
+def background_uri(bg: dict | None) -> str | None:
+    """ベースの地図を、SVG に埋め込める data URI にする（GitHub は SVG の中から別のファイルを読めないため）。"""
+    if not bg or bg["bytes"] is None:
+        return None
+    mime = BACKGROUND_TYPES[Path(bg["name"]).suffix.lower()]
+    return f"data:{mime};base64,{base64.b64encode(bg['bytes']).decode()}"
+
+
 def build(raw: dict) -> dict:
     mp = raw["map"]
     places = {p["id"]: p for p in mp["places"]}
@@ -309,6 +342,7 @@ def build(raw: dict) -> dict:
         "season": raw["season"],
         "starts": list(mp["starts"]),
         "layout": mp.get("layout"),
+        "background": background_uri(raw.get("background")),
         "places": places,
         "towns": [pid for pid, p in places.items() if p["type"] == "town"],
         "fields": [pid for pid, p in places.items() if p["type"] == "field"],

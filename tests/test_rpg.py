@@ -334,6 +334,14 @@ class HeroesTest(unittest.TestCase):
         self.assertEqual(load("h1")["day"], 0)  # 冒険は進めない
         self.create_board.assert_not_called()
 
+    def test_map_grid_writes_a_file_without_advancing(self):
+        self.new_game("アリス")
+        out = self.dir / "grid.svg"
+        self.assertEqual(self.run_main(["--map-grid", str(out)]), 0)
+        self.assertIn("town_", out.read_text(encoding="utf-8"))
+        self.assertEqual(load("h1")["day"], 0)
+        self.assertFalse((rpg.PAGE_DIR / rpg.MAP_IMAGE).exists())  # 毎日の地図は書き換えない
+
     def test_dry_run_writes_nothing(self):
         self.new_game("アリス")
         page = rpg.page_path("h1").read_text(encoding="utf-8")

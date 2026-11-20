@@ -137,7 +137,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `world/` | 世界のデータ（上の表） |
 | `scripts/world.py` | `world/` の読み込みと検証、最短経路の計算 |
 | `scripts/game.py` | 1 日分の進行（依頼・戦闘・アイテム・シーズンの切り替え）と、勇者の状態の読み書き |
-| `scripts/mapsvg.py` | 地図の画像（SVG）を描く |
+| `scripts/mapsvg.py` | 地図の画像（SVG）を描く。ベースの地図（`layout.background`）があれば一番下に敷く。作り方は [docs/BASE_MAP.md](docs/BASE_MAP.md) |
 | `scripts/rpg.py` | 勇者を登録・引退させ、現役の勇者を 1 日分ずつ進めて、詳細のページとランキングの Gist（`hero-ranking.txt`）を更新する |
 | `.state/heroes.json` | 勇者管理シート（勇者の一覧） |
 | `.state/board.json` | ランキングの Gist の ID と URL |
@@ -152,4 +152,5 @@ python scripts/rpg.py --dry-run --actions 4       # 記録せずに今日の分�
 python scripts/rpg.py --new-game 名前              # 勇者を登録する（Actions の New game と同じ）
 python scripts/rpg.py --retire 名前またはID        # 勇者を引退させる
 python scripts/rpg.py --map                       # MAP のページだけを書き出す（world/map.json を編集したときの確認に）
+python scripts/rpg.py --map-grid /tmp/grid.svg    # 座標の目盛りつきの確認用の地図（場所の pos を決めるときに）
 ```

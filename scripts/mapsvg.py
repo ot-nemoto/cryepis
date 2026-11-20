@@ -1,7 +1,9 @@
 """世界の MAP を SVG の地図画像にする（標準ライブラリだけで描く）。
 
 world/map.json の layout（輪・方角の描き方）と、場所ごとの pos（座標）を使う。
+layout.background にベースの地図（world/ の中の画像）があれば一番下に敷き、輪と方角の区切りは描かない。
 pos のない場所は描かない。勇者がいる場所には、名前とレベルの札を出す。
+grid=True にすると、座標の目盛りと場所の ID を重ねた確認用の画像になる（pos を決めるときに使う）。
 """
 from __future__ import annotations
 
@@ -29,7 +31,24 @@ def badge(x: float, y: float, actions: int, cls: str = "road-cost") -> str:
             f'font-weight="bold" fill="#5b4636">{actions}</text></g>')
 
 
-def render(world: dict, entries: list[tuple[dict, dict]]) -> str | None:
+def grid_lines(ox: float, oy: float, width: int, height: int) -> list[str]:
+    """確認用の座標の目盛り（50 ごとに線、100 ごとに数字）。"""
+    out = []
+    for v in range(0, max(width, height) + 1, 50):
+        strong = v % 100 == 0
+        style = f'stroke="#1d4ed8" stroke-opacity="{0.45 if strong else 0.2}" stroke-width="{1 if strong else 0.6}"'
+        if v <= width:
+            out.append(f'<line x1="{ox + v}" y1="{oy}" x2="{ox + v}" y2="{oy + height}" {style}/>')
+            if strong:
+                out.append(f'<text x="{ox + v}" y="{oy - 6}" text-anchor="middle" font-size="10" fill="#1d4ed8">{v}</text>')
+        if v <= height:
+            out.append(f'<line x1="{ox}" y1="{oy + v}" x2="{ox + width}" y2="{oy + v}" {style}/>')
+            if strong:
+                out.append(f'<text x="{ox - 6}" y="{oy + v + 3}" text-anchor="end" font-size="10" fill="#1d4ed8">{v}</text>')
+    return out
+
+
+def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) -> str | None:
     """SVG の文字列。map.json に layout がなければ None。entries は (heroes.json の行, 状態)。"""
     layout = world.get("layout")
     if not layout:
@@ -44,23 +63,31 @@ def render(world: dict, entries: list[tuple[dict, dict]]) -> str | None:
         x, y = places[pid]["pos"]
         return x + ox, y + oy
 
-    out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{canvas_w}" height="{canvas_h}" '
-           f'viewBox="0 0 {canvas_w} {canvas_h}" font-family="{FONT}">',
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+           f'width="{canvas_w}" height="{canvas_h}" viewBox="0 0 {canvas_w} {canvas_h}" font-family="{FONT}">',
            f'<rect width="{canvas_w}" height="{canvas_h}" fill="#f6efdc"/>']
 
-    # 輪（外側から順に塗る）と方角の区切り
+    # ベースの地図（あれば）。なければ輪（外側から順に塗る）と方角の区切りを描く
+    background = world.get("background")
+    if background:
+        out.append(f'<image x="{ox}" y="{oy}" width="{width}" height="{height}" preserveAspectRatio="none" '
+                   f'href="{background}" xlink:href="{background}"/>')
+        out.append(f'<rect x="{ox}" y="{oy}" width="{width}" height="{height}" fill="none" stroke="#a08b70"/>')
     rings = sorted(layout.get("rings", []), key=lambda r: -r["radius"])
-    for ring in rings:
+    for ring in [] if background else rings:
         out.append(f'<circle cx="{cx + ox}" cy="{cy + oy}" r="{ring["radius"]}" fill="{escape(ring["color"])}" '
                    'stroke="#fffdf5" stroke-width="3"/>')
     outer = rings[0]["radius"] if rings else min(width, height) / 2
     inner = rings[-1]["radius"] if rings else 0
     for sector in layout.get("sectors", []):
         edge = sector["angle"] + 30
-        x1, y1 = cx + ox + inner * math.cos(math.radians(edge)), cy + oy + inner * math.sin(math.radians(edge))
-        x2, y2 = cx + ox + outer * math.cos(math.radians(edge)), cy + oy + outer * math.sin(math.radians(edge))
-        out.append(f'<line x1="{x1:.0f}" y1="{y1:.0f}" x2="{x2:.0f}" y2="{y2:.0f}" stroke="#fffdf5" '
-                   'stroke-width="2" stroke-dasharray="4 6"/>')
+        if background:  # ベースの地図があるときは、方角の名前だけ外側に出す
+            edge = None
+        if edge is not None:
+            x1, y1 = cx + ox + inner * math.cos(math.radians(edge)), cy + oy + inner * math.sin(math.radians(edge))
+            x2, y2 = cx + ox + outer * math.cos(math.radians(edge)), cy + oy + outer * math.sin(math.radians(edge))
+            out.append(f'<line x1="{x1:.0f}" y1="{y1:.0f}" x2="{x2:.0f}" y2="{y2:.0f}" stroke="#fffdf5" '
+                       'stroke-width="2" stroke-dasharray="4 6"/>')
         lx = cx + ox + (outer + 38) * math.cos(math.radians(sector["angle"]))
         ly = cy + oy + (outer + 38) * math.sin(math.radians(sector["angle"]))
         out.append(f'<text x="{lx:.0f}" y="{ly - 4:.0f}" text-anchor="middle" font-size="17" font-weight="bold" '
@@ -100,6 +127,10 @@ def render(world: dict, entries: list[tuple[dict, dict]]) -> str | None:
             lo, hi = p["level"]
             out.append(f'<text x="{x:.0f}" y="{y + r + 24:.0f}" text-anchor="middle" font-size="9.5" '
                        f'fill="#6b5a48" style="{HALO}">Lv{lo}〜{hi}</text>')
+        if grid:  # 確認用: 場所の ID と座標
+            px, py = p["pos"]
+            out.append(f'<text x="{x:.0f}" y="{y + r + (35 if not town else 24):.0f}" text-anchor="middle" '
+                       f'font-size="9" fill="#1d4ed8" style="{HALO}">{escape(pid)} ({px:g}, {py:g})</text>')
         out.append("</g>")
 
     # 勇者（場所ごとにまとめて札を出す）
@@ -124,13 +155,17 @@ def render(world: dict, entries: list[tuple[dict, dict]]) -> str | None:
                        f'{escape(line)}</text>')
         out.append("</g>")
 
+    if grid:
+        out += grid_lines(ox, oy, width, height)
+
     # 見出しと凡例
     out.append('<text x="24" y="40" font-size="24" font-weight="bold" fill="#3f2f22">世界の MAP</text>')
     out.append('<text x="24" y="62" font-size="12" fill="#6b5a48">外側ほど易しく、中心ほど難しい</text>')
-    for i, ring in enumerate(sorted(rings, key=lambda r: -r["radius"])):
+    for i, ring in enumerate([] if grid else sorted(rings, key=lambda r: -r["radius"])):  # 確認用では目盛りと重なるので出さない
         ly = 92 + 18 * i
-        out.append(f'<rect x="{canvas_w - 190}" y="{ly - 11}" width="14" height="14" rx="3" '
-                   f'fill="{escape(ring["color"])}" stroke="#a08b70"/>')
+        if not background:  # 輪を描いたときだけ色の見本を出す
+            out.append(f'<rect x="{canvas_w - 190}" y="{ly - 11}" width="14" height="14" rx="3" '
+                       f'fill="{escape(ring["color"])}" stroke="#a08b70"/>')
         out.append(f'<text x="{canvas_w - 170}" y="{ly}" font-size="12" fill="#3f2f22">'
                    f'{escape(ring.get("label", ring["name"]))}</text>')
     ly = canvas_h - 24
