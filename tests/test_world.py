@@ -67,6 +67,15 @@ class MonsterRewardTest(unittest.TestCase):
     self.assertGreater(boss["exp"], 400)
     self.assertEqual(boss["gold"], round(boss["exp"] * cfg["gold_rate"]))
 
+  def test_reward_rounds_half_up_and_never_grows_from_a_negative_score(self):
+    self.assertEqual((W.half_up(4.5), W.half_up(10.5), W.half_up(10.49)), (5, 11, 10))
+    cfg = {"weights": {"hp": 1}, "exp_divisor": 1, "gold_rate": 0.75}
+    m = {"hp": 6, "atk": 0, "def": 0, "spd": 1, "dex": 0}
+    self.assertEqual(W.monster_reward(m, {}, cfg), (36, 27))  # 36 × 0.75 = 27
+    self.assertEqual(W.monster_reward(m | {"hp": 3}, {}, cfg | {"gold_rate": 0.5}), (9, 5))  # 4.5 → 5
+    traits = {"thief": {"score": {"hp": -200}}}
+    self.assertEqual(W.monster_reward(m | {"trait": "thief"}, traits, cfg), (0, 0))  # マイナスは 0 にする
+
   def test_trait_effect_is_shared_with_the_battle(self):
     m = {"hp": 20, "atk": 10, "def": 4}
     self.assertEqual(W.trait_effect(m), {"hp": 20, "atk": 10, "guard": 4, "hits": 1})

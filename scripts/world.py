@@ -16,6 +16,7 @@ from __future__ import annotations
 import base64
 import heapq
 import json
+import math
 from datetime import date
 from pathlib import Path
 
@@ -694,11 +695,17 @@ def monster_score(monster: dict, traits: dict, cfg: dict) -> float:
   return sum(w * (stats[k] + bonus.get(k, 0)) for k, w in cfg["weights"].items())
 
 
+def half_up(x: float) -> int:
+  """四捨五入（0.5 は切り上げ。Python の round は 0.5 を偶数に寄せるので使わない）。"""
+  return math.floor(x + 0.5)
+
+
 def monster_reward(monster: dict, traits: dict, cfg: dict) -> tuple[int, int]:
-  """倒したときの経験値とお金: 経験値 = 強さ点² ÷ exp_divisor、お金 = 経験値 × gold_rate（どちらも四捨五入）。"""
-  score = monster_score(monster, traits, cfg)
-  exp = round(score * score / cfg["exp_divisor"])
-  return exp, round(exp * cfg["gold_rate"])
+  """倒したときの経験値とお金: 経験値 = 強さ点² ÷ exp_divisor、お金 = 経験値 × gold_rate（どちらも四捨五入）。
+  強さ点は 0 より小さくしない（性質の score をマイナスにしても、2 乗で報酬が増えないように）。"""
+  score = max(0.0, monster_score(monster, traits, cfg))
+  exp = half_up(score * score / cfg["exp_divisor"])
+  return exp, half_up(exp * cfg["gold_rate"])
 
 
 def build(raw: dict) -> dict:
