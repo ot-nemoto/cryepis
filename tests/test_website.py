@@ -61,6 +61,7 @@ class SiteTest(unittest.TestCase):
         "guild.html",
         "items.html",
         "monsters.html",
+        "guide.html",
         "towns.html",
         "heroes/h1.html",
         "heroes/h2.html",
@@ -178,10 +179,8 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<h2 class="area">💍 装飾品</h2>', html)
     self.assertEqual(html.count('class="chip" data-f='), 2)  # ★ と ★★
     knight = html.split("騎士の剣")[1].split("</tr>")[0]  # ★★騎士の剣
-    self.assertIn('<span class="how">依頼の報酬</span><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a>', knight)
-    self.assertIn(
-      '<td class="icon" title="雷属性"><span role="img" aria-label="雷属性">⚡</span></td>', knight
-    )  # 属性の列
+    self.assertIn('<td><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a></td>', knight)  # 依頼を出す町
+    self.assertIn('<td class="icon"><span class="tag">雷属性</span></td>', knight)  # 属性の列（枠の札）
     head = '<th class="num">HP</th><th class="num">攻</th><th class="num">防</th><th class="num">速</th><th class="num">器</th>'
     self.assertIn(head + '<th class="num">値段</th><th>入手方法</th>', html)  # 能力ごとの列
     header = html.split("<th>名前</th>")[1].split("</tr>")[0]  # 表の見出しの行
@@ -190,18 +189,23 @@ class SiteTest(unittest.TestCase):
     steel = html.split("鋼の剣")[1].split("</tr>")[0]  # 攻+7・速-1、鋼の剣を売る開放した町はムラリスだけ
     self.assertIn('<td class="num zero">0</td><td class="num">+7</td><td class="num zero">0</td>', steel)
     self.assertIn('<td class="num minus">-1</td>', steel)  # マイナスは赤字
-    self.assertIn('<a class="pill" href="towns.html#muralis">🛡️ ムラリス</a><div class="note">', steel)  # 買える店
-    self.assertIn('<th class="icon">特産</th><th class="icon">属性</th><th class="num">HP</th>', html)
+    self.assertIn('<td><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a></td>', steel)  # 買える店
+    self.assertNotIn("依頼の報酬", html)  # 入手方法の補足の文は出さない
+    self.assertNotIn("宝箱", html)
+    self.assertIn(
+      '<th>名前</th><th></th><th class="icon">属性</th><th class="num">HP</th>', html
+    )  # 特産の列は見出しなし
     lance = html.split("騎兵の槍</td>")[1].split("</tr>")[0]  # エクエスの特産・風属性
     self.assertTrue(
       lance.startswith(
-        '<td class="icon"><a href="towns.html#eques" title="エクエスの特産" aria-label="エクエスの特産">🏷️</a></td>'
-        '<td class="icon" title="風属性"><span role="img" aria-label="風属性">🌪️</span></td>'
+        '<td class="icon"><span class="tag" title="エクエスの特産">特産</span></td>'
+        '<td class="icon"><span class="tag">風属性</span></td>'
       ),
       lance,
     )
     self.assertIn('鋼の剣</td><td class="icon"></td><td class="icon"></td>', html)  # 開放していない町でも売っている
-    self.assertNotIn('<span class="tag">', html)  # 特産・属性は名前の横の札にしない
+    self.assertNotIn("🏷️", html)  # 特産・属性は絵文字にしない
+    self.assertNotIn("🌪️", html)
     self.assertIn('<td class="mark">★★</td><td>騎士の剣</td>', html)  # ★ は先頭の列
     for slot in ("weapon", "helmet", "shield", "accessory"):  # ★ の多い順
       marks = [len(game.rarity_mark(WORLD, r["item"]["rarity"])) for r in website.item_rows(WORLD)[slot]]
@@ -290,20 +294,67 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f"<td>{WORLD['monsters'][mid]['name']}</td>", south)
     self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の魔物は出さない
     self.assertIn("サリナ〜エクエス（", south)  # 出る道と割合
-    self.assertIn("<td>群れ<div", south)  # 性質
-    self.assertIn("<th>属性</th>", html)
-    self.assertIn("<td>💧 水</td>", south)  # 沼ヒル（属性は絵文字と名前）
-    self.assertIn("属性の相性（左が右に強い）: 🔥 炎→❄️ 氷→🌪️ 風→🪨 土→⚡ 雷→💧 水→🔥 炎", html)
+    self.assertIn('<td class="icon"><span class="tag">群れ</span></td>', south)  # 性質は名前だけの枠の札
+    self.assertNotIn("数が多く", south)  # 性質の説明は出さない
+    self.assertIn('<th class="icon">属性</th><th class="num">HP</th>', html)  # Lv の列は出さない
+    self.assertIn('<th class="num">速</th><th class="num">器</th><th class="num">EXP</th>', html)  # 器用さ
+    self.assertNotIn(">Lv<", html)
+    self.assertIn('<th>名前</th><th class="icon">性質</th>', html)  # 地形の列は出さない
+    self.assertNotIn("<th>地形</th>", html)
+    self.assertIn('<td class="icon"><span class="tag">水属性</span></td>', south)  # 沼ヒル（アイテムと同じ枠の札）
+    roads, boss = south.split('<h3 class="sub">ボス</h3>')  # ボスは道の魔物とは別の表
+    self.assertNotIn("巣穴の主", roads)
+    self.assertIn("<td>巣穴の主</td>", boss)
+    self.assertIn('<span class="tag">土属性</span>', boss)
+    self.assertIn("<td>南壁の巣穴（ダンジョン・まだ挑めない）</td>", boss)
+    self.assertIn("<th>いる場所</th>", boss)
+    self.assertNotIn("属性の相性", html)  # 説明は手引きのページに
+    self.assertIn('<a href="guide.html">手引き</a>', html)
     self.assertNotIn("性質の効果がかかる前", website.build_towns(WORLD))  # 魔物の注記は町のページに出さない
     self.assertIn("性質の効果がかかる前", html)
     crown = html[html.index('id="panel-crownlands"') :]
     self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
+    self.assertEqual(html.count('<h3 class="sub">ボス</h3>'), 1)  # ボスのいない地方・開放していない地方には出さない
 
-  def test_monsters_page_without_elements(self):
+  def test_guide_page(self):
+    html = website.build_guide(WORLD)
+    self.assertIn('<a href="guide.html" class="on">手引き</a>', html)
+    self.assertIn('<a href="monsters.html">魔物</a><a href="guide.html" class="on">手引き</a>', html)  # 魔物の次
+    for t in WORLD["season"]["hero_traits"].values():  # 勇者の特性
+      self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
+    for t in WORLD["traits"].values():  # 魔物の性質（説明はここだけに出す）
+      self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
+    self.assertIn("相性（左が右に強い）: 炎→氷→風→土→雷→水→炎", html)
+    self.assertIn('<td><span class="tag">風属性</span></td><td>土</td><td>氷</td>', html)  # 強い相手・苦手な相手
+    self.assertIn("器用さ ÷ 150 の確率で、ダメージが 3 倍", html)
+    self.assertIn("最大 HP の 50% まで回復", html)
+    self.assertIn("Lv20 で 182。特性で変わる", html)
+    self.assertIn("攻は Lv1 で 6、Lv20 で 30・防は Lv1 で 6", html)  # 能力ごとの値
+
+  def test_guide_page_follows_the_data(self):
+    world = copy.deepcopy(WORLD)
+    world["season"]["growth"]["def"][-1] = 40  # 防御だけ Lv20 の値を変える
+    world["elements"]["water"]["strong"] = "ice"  # 氷に強い属性が 2 つ、炎に強い属性はなし
+    html = website.build_guide(world)
+    self.assertIn("防は Lv1 で 6、Lv20 で 40", html)
+    self.assertIn("攻は Lv1 で 6、Lv20 で 30", html)
+    self.assertIn('<td><span class="tag">氷属性</span></td><td>風</td><td>炎・水</td>', html)
+    self.assertIn('<td><span class="tag">炎属性</span></td><td>氷</td><td>-</td>', html)
+
+  def test_boss_without_an_area_is_in_the_other_group(self):
+    world = copy.deepcopy(WORLD)
+    world["places"]["wall_den"].pop("area")
+    for t in world["towns"]:  # 開放した町も地方なし（その他のまとまり）
+      world["places"][t].pop("area")
+    html = website.build_monsters(world)
+    other = html[html.index(f'id="panel-{website.OTHER_AREA}"') :]
+    self.assertIn("<td>巣穴の主</td>", other[: other.index("</section>")])
+
+  def test_guide_page_without_elements(self):
     world = copy.deepcopy(WORLD)
     world["elements"] = {}
-    html = website.build_monsters(world)  # 属性がなくても落ちない
-    self.assertNotIn("属性の相性", html)
+    html = website.build_guide(world)  # 属性がなくても落ちない
+    self.assertNotIn("属性と相性", html)
 
   def test_monsters_page_edge_cases(self):
     world = copy.deepcopy(WORLD)
