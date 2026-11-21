@@ -3,7 +3,7 @@
 勇者は毎日、決まった回数だけ行動する。場所は町だけで、町と町は陸路・航路でつながっている。
 町のギルドで依頼を受け、討伐なら依頼の道を行き来して魔物を倒し、配達なら届け先の町へ向かう。
 道を 1 行動進むごとに、道の地形に合った魔物に出会ったり、宝箱を見つけたりする（乱数）。
-魔物の強さはどこでも同じで、地形ごとに性質（先手・毒・群れなど）が違う。
+魔物は種類ごとにレベル（強さ）があり、地形ごとに出る魔物と性質（先手・毒・群れなど）が違う。
 依頼がなければ、となりの町へ旅をする。力尽きたら依頼は失敗になり、最後に寄った町で目を覚ます。
 シーズンが変わると、アイテム（持ち物）以外は最初の状態に戻る。
 乱数は「日付＋シーズン＋勇者の ID」を種にするので、同じ日に何度実行しても結果は同じ。
@@ -273,9 +273,15 @@ def exp_need(world: dict, level: int) -> int:
 
 
 def monster_level(world: dict) -> int:
-  """道の魔物のふつうのレベル（どこでも同じ強さなので、いちばん多いレベル）。依頼の報酬の目安に使う。"""
+  """魔物のいちばん多いレベル。魔物を決めない依頼（配達・旅）のレベルと、宝箱のお金の目安に使う。"""
   levels = [m["level"] for m in world["monsters"].values()]
   return max(set(levels), key=levels.count)
+
+
+def quest_level(world: dict, quest: dict) -> int:
+  """依頼のレベル。討伐は狙う魔物のレベル、それ以外は monster_level。"""
+  target = world["monsters"].get(quest.get("monster")) if quest.get("type") == "hunt" else None
+  return target["level"] if target else monster_level(world)
 
 
 # ---- ギルドの依頼 ---------------------------------------------------------------------
@@ -362,6 +368,9 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
         continue  # 達成された依頼（と、world/ から消えた依頼）ははがす
       if e["status"] == "open" and last_open_day(world, e) < d:
         continue  # 誰も受けないまま受付が終わった
+      if e["status"] == "open":  # 魔物のレベルが変わったら、依頼のレベルも合わせる
+        lv = quest_level(world, e)
+        e["level"] = [lv, lv]
       kept.append(e)
     exclude = {e["template"] for e in kept}
     new = draw_quests(world, town, d, season, max(0, quests_per_day(world, town) - len(kept)), exclude)
@@ -406,13 +415,13 @@ def hunt_steps(world: dict, town: str, to: str, count: int) -> list[list]:
 def finish_quest(world: dict, quest: dict, town: str) -> dict:
   """必要な行動力と、報酬（1 行動あたりの報酬 × 必要な行動力 × レアリティの倍率）をつける（期限はない）。
   討伐も配達も、行動力が同じなら報酬も同じ（討伐は別に、1 体ごとの戦闘の経験値とお金が入る）。"""
-  lvl, rank = monster_level(world), quest["rank"]
+  lvl, rank = quest_level(world, quest), quest["rank"]
   base, cfg = world["quest_reward"], world["quest_ranks"][rank - 1]
   if quest["type"] == "hunt":
     quest["steps"] = hunt_steps(world, town, quest["place"], quest["count"])
     target = world["monsters"].get(quest["monster"], {})
-    if target.get("elite"):  # 強敵は、魔物のレベル以上の勇者だけが受ける（依頼のレベルも魔物のレベル）
-      quest["min_level"] = lvl = target["level"]
+    if target.get("elite"):  # 強敵は、魔物のレベル以上の勇者だけが受ける
+      quest["min_level"] = lvl
     quest["away"] = 0  # 町から何行動ぶん離れているか（地図に描く位置）
     cost = sum(n for _, n in quest["steps"])
   else:
@@ -461,7 +470,7 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> 
 
 
 def suitable(quest: dict, level: int) -> bool:
-  """受けられる依頼か（魔物の強さはどこでも同じなので、強すぎる依頼だけを避ける。弱すぎる依頼も受ける）。
+  """受けられる依頼か（依頼のレベルが自分のレベル＋3 を超える、強すぎる依頼だけを避ける。弱すぎる依頼も受ける）。
   強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level）。"""
   return quest["level"][0] <= level + 3 and level >= quest.get("min_level", 0)
 
@@ -605,9 +614,7 @@ class Day:
             return False
       if hp <= 0:
         break
-    # 自分よりずっと弱い敵からは経験値が少ない
-    gap = hero["level"] - monster["level"]
-    exp = round(monster["exp"] * (1 if gap <= 3 else max(0.2, 1 - 0.15 * (gap - 3))))
+    exp = monster["exp"]
     hero["gold"] += monster["gold"]
     self.state["season_stats"]["kills"] += 1
     note = ""
