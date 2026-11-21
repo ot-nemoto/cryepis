@@ -135,9 +135,21 @@ def item_label(world: dict, iid: str) -> str:
   return game.rarity_mark(world, item["rarity"]) + item["name"]
 
 
-def item_power(item: dict) -> str:
+def trait_text(world: dict, state: dict) -> str:
+  """特性（勇者を作るときにランダムで決まる）。"""
+  t = game.hero_trait(world, state)
+  return f"特性: {t.get('name', '-')}（{t.get('text', '')}）"
+
+
+def item_power(item: dict, world: dict | None = None) -> str:
+  """装備の性能（攻+5 防+1 HP+8 速-1 炎 など）。world を渡すと、属性を名前で出す。"""
   names = {"atk": "攻", "def": "防", "hp": "HP"}
-  return " ".join(f"{names[k]}+{item[k]}" for k in W.STATS if item.get(k))
+  parts = [f"{names[k]}+{item[k]}" for k in W.STATS if item.get(k)]
+  if item.get("spd"):
+    parts.append(f"速{item['spd']:+d}")
+  if item.get("element"):
+    parts.append((world or {}).get("elements", {}).get(item["element"], {}).get("name", item["element"]) + "属性")
+  return " ".join(parts)
 
 
 def location(world: dict, state: dict) -> str:
@@ -193,15 +205,23 @@ def build_text(world: dict, state: dict, fold: bool = True) -> str:
     "",
     "── ステータス ──",
     f"シーズン{state['season'] or '-'} {state['season_day']}日目 / 通算 {state['day']}日",
-    f"Lv.{hero['level']}  EXP {hero['exp']}/{game.exp_need(world, hero['level'])}  回復薬: {hero['potions']}",
+    f"Lv.{hero['level']}  "
+    + (
+      "EXP MAX"
+      if hero["level"] >= world["season"]["max_level"]
+      else f"EXP {hero['exp']}/{game.exp_need(world, hero['level'])}"
+    )
+    + f"  回復薬: {hero['potions']}",
     f"攻撃 {s['atk']}（基本 {hero['base_atk']}）  防御 {s['def']}（基本 {hero['base_def']}）  "
-    f"最大HP {s['max_hp']}（基本 {hero['max_hp']}）",
+    f"最大HP {s['max_hp']}（基本 {hero['max_hp']}）  素早さ {s['spd']}",
+    trait_text(world, state),
     "",
     "── 装備 ──",
   ]
   for slot, iid in worn.items():
     detail.append(
-      f"{W.SLOT_NAMES[slot]}: " + (f"{item_label(world, iid)}（{item_power(world['items'][iid])}）" if iid else "なし")
+      f"{W.SLOT_NAMES[slot]}: "
+      + (f"{item_label(world, iid)}（{item_power(world['items'][iid], world)}）" if iid else "なし")
     )
   rank = {r: i for i, r in enumerate(world["rarities"])}
   inv = sorted(

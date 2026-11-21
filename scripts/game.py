@@ -60,6 +60,7 @@ def new_hero(world: dict) -> dict:
     "hp": h["max_hp"],
     "base_atk": h["atk"],
     "base_def": h["def"],
+    "base_spd": h["spd"],
     "gold": h["gold"],
     "potions": h["potions"],
   }
@@ -74,11 +75,17 @@ def start_town(world: dict, hero_id: str, season: int | None) -> str:
   return random.Random(f"start-{season or 0}-{hero_id}").choice(world["starts"])
 
 
+def pick_trait(world: dict, hero_id: str) -> str:
+  """勇者を作るときにランダムで付ける特性。勇者の ID で決まる（シーズンが変わっても同じ）。"""
+  return random.Random(f"trait-{hero_id}").choice(sorted(world["season"]["hero_traits"]))
+
+
 def new_state(world: dict, hero_id: str = "h1", name: str = "勇者") -> dict:
   town = start_town(world, hero_id, None)
   return {
     "id": hero_id,
     "name": name,
+    "trait": pick_trait(world, hero_id),
     "season": None,
     "season_day": 0,
     "day": 0,
@@ -110,6 +117,8 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
     return new_state(world, loaded.get("id", hero_id), loaded.get("name", name))
   state = {**new_state(world, hero_id, name), **loaded}
   state["hero"] = {**new_hero(world), **state["hero"]}
+  if state.get("trait") not in world["season"]["hero_traits"]:  # 前の形式・world/ から消えた特性は、付け直す
+    state["trait"] = pick_trait(world, state["id"])
   state["season_stats"] = {**new_season_stats(), **state["season_stats"]}
   places = world["places"]
   fallback = start_town(world, state["id"], state["season"])
@@ -172,14 +181,42 @@ def equipment(world: dict, state: dict) -> dict[str, str | None]:
   return best
 
 
+def hero_trait(world: dict, state: dict) -> dict:
+  return world["season"]["hero_traits"].get(state.get("trait"), {})
+
+
+def growth(world: dict, state: dict, stat: str) -> float:
+  """レベルアップでの伸び（特性の grow があればそれ、なければ season.json の level_up）。"""
+  return hero_trait(world, state).get("grow", {}).get(stat, world["season"]["level_up"].get(stat, 0))
+
+
+def level_gain(rate: float, level: int) -> int:
+  """level に上がったときに増える量（伸びに端数があっても、合計の端数を切り捨てて増やす。+2.5 なら +2・+3 と交互）。"""
+  return int(rate * (level - 1) + 1e-9) - int(rate * (level - 2) + 1e-9)
+
+
 def stats(world: dict, state: dict) -> dict[str, int]:
+  """装備を足した能力値（素早さは 1 より下にはならない）。特性は、レベルアップでの伸びで効く（growth）。"""
   hero = state["hero"]
   worn = [world["items"][i] for i in equipment(world, state).values() if i]
   return {
     "atk": hero["base_atk"] + sum(i.get("atk", 0) for i in worn),
     "def": hero["base_def"] + sum(i.get("def", 0) for i in worn),
     "max_hp": hero["max_hp"] + sum(i.get("hp", 0) for i in worn),
+    "spd": max(1, hero.get("base_spd", world["season"]["hero"]["spd"]) + sum(i.get("spd", 0) for i in worn)),
   }
+
+
+def element_rate(world: dict, attack: str | None, guard: str | None) -> float:
+  """属性の相性の倍率。攻める属性が守る属性に強ければ strong、守る属性が攻める属性に強ければ weak、ほかは 1。"""
+  elements, rates = world["elements"], world["season"]["element_rates"]
+  if not attack or not guard or attack == guard or attack not in elements or guard not in elements:
+    return 1.0  # 属性なし・同じ属性どうしは 1 倍
+  if elements[attack]["strong"] == guard:
+    return rates["strong"]
+  if elements[guard]["strong"] == attack:
+    return rates["weak"]
+  return 1.0
 
 
 def exp_need(world: dict, level: int) -> int:
@@ -450,8 +487,30 @@ class Day:
   def damage(self, attack: int, guard: int) -> int:
     return max(1, attack - guard // 2 + self.rng.randint(-2, 2))
 
+  def pick_weapon(self, monster: dict, guard: int) -> tuple[str | None, float, int]:
+    """この魔物に、1 回の攻撃の番でいちばんダメージの大きい武器（持ち物から持ち替える）と、属性の倍率と、
+    その武器を持ったときの素早さ。ダメージは、魔物の守り（性質で変わったあと）・属性・2 回攻撃まで考える。"""
+    items, s = self.world["items"], self.stats
+    worn = equipment(self.world, self.state)["weapon"]
+    base_atk = s["atk"] - (items[worn].get("atk", 0) if worn else 0)
+    base_spd = s["spd"] - (items[worn].get("spd", 0) if worn else 0)
+    mspd = monster.get("spd", s["spd"])
+    best = None
+    for iid in sorted(i for i in self.state["inventory"] if items[i]["slot"] == "weapon") or [None]:
+      w = items[iid] if iid else {}
+      rate = element_rate(self.world, w.get("element"), monster.get("element"))
+      spd = max(1, base_spd + w.get("spd", 0))
+      hits = 2 if spd >= 2 * mspd else 1
+      key = (max(1, base_atk + w.get("atk", 0) - guard // 2) * rate * hits, iid == worn)  # 同じなら、いつもの武器
+      if best is None or key > best[0]:
+        best = (key, iid, rate, spd)
+    return best[1], best[2], best[3]
+
   def battle(self, monster: dict) -> bool:
-    """勝てば True。回復薬が尽きて HP が 0 になったら False。魔物の性質（trait）で戦い方が変わる。"""
+    """勝てば True。回復薬が尽きて HP が 0 になったら False。
+    魔物の性質（trait）・属性の相性（武器の属性と魔物の属性）・素早さで戦い方が変わる。
+    素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する（性質「先手」は、素早さに関係なく魔物が先）。
+    勇者は戦いのたびに、持ち物の中からいちばん効く武器に持ち替える（攻撃と素早さは、持ち替えた武器のもの）。"""
     hero, s, trait = self.hero, self.stats, monster.get("trait")
     hp, atk, guard, hits = monster["hp"], monster["atk"], monster["def"], 1
     if trait == "fierce":  # 凶暴: 攻撃が強いが、守りが弱い
@@ -460,29 +519,44 @@ class Day:
       atk, guard = max(1, round(atk * 0.9)), guard * 2 + 1
     elif trait == "swarm":  # 群れ: 数が多い（倒すのに手間がかかり、攻撃の回数が多い）
       hp, atk, hits = round(hp * 1.5), max(1, round(atk * 0.6)), 2
-    monster_first = trait == "first_strike"  # 先手: 先に攻撃してくる
+    weapon, rate, spd = self.pick_weapon(monster, guard)
+    items, worn = self.world["items"], equipment(self.world, self.state)["weapon"]
+    hero_atk = s["atk"] - (items[worn].get("atk", 0) if worn else 0) + (items[weapon].get("atk", 0) if weapon else 0)
+    mspd = monster.get("spd", spd)
+    hero_hits = 2 if spd >= 2 * mspd else 1
+    hits *= 2 if mspd >= 2 * spd else 1
+    hero_first = trait != "first_strike" and spd >= mspd
     while True:
-      if not monster_first:
-        hp -= self.damage(s["atk"], guard)
-        if hp <= 0:
-          break
-      monster_first = False
-      for _ in range(hits):
-        hero["hp"] -= self.damage(atk, s["def"])
-        if hero["hp"] <= 0:
-          if hero["potions"]:  # 倒れる前に回復薬を使う
-            hero["potions"] -= 1
-            hero["hp"] = max(1, int(s["max_hp"] * self.cfg["potion"]["heal_rate"]))
-            continue
-          hero["hp"] = 0
-          self.log(f"{self.monster_name(monster)}に敗れた")
-          return False
+      for side in ("hero", "monster") if hero_first else ("monster", "hero"):
+        if side == "hero":
+          for _ in range(hero_hits):
+            hp -= max(1, round(self.damage(hero_atk, guard) * rate))
+            if hp <= 0:
+              break
+          if hp <= 0:
+            break
+          continue
+        for _ in range(hits):
+          hero["hp"] -= self.damage(atk, s["def"])
+          if hero["hp"] <= 0:
+            if hero["potions"]:  # 倒れる前に回復薬を使う
+              hero["potions"] -= 1
+              hero["hp"] = max(1, int(s["max_hp"] * self.cfg["potion"]["heal_rate"]))
+              continue
+            hero["hp"] = 0
+            self.log(f"{self.monster_name(monster)}に敗れた")
+            return False
+      if hp <= 0:
+        break
     # 自分よりずっと弱い敵からは経験値が少ない
     gap = hero["level"] - monster["level"]
     exp = round(monster["exp"] * (1 if gap <= 3 else max(0.2, 1 - 0.15 * (gap - 3))))
     hero["gold"] += monster["gold"]
     self.state["season_stats"]["kills"] += 1
-    self.log(f"{self.monster_name(monster)}を倒した (+{exp}EXP)")
+    note = ""
+    if rate > 1:
+      note = f"（{items[weapon]['name']}で弱点を突いた）" if weapon != worn else "（弱点を突いた）"
+    self.log(f"{self.monster_name(monster)}を倒した{note} (+{exp}EXP)")
     if trait == "poison":  # 毒: 倒したあとも HP が減る（0 にはならない）
       lost = min(hero["hp"] - 1, max(1, s["max_hp"] // 10))
       if lost > 0:
@@ -500,19 +574,33 @@ class Day:
     return f"{monster['name']}〔{trait['name']}〕" if trait else monster["name"]
 
   def gain_exp(self, exp: int) -> None:
-    hero, up = self.hero, self.cfg["level_up"]
+    hero = self.hero
+    if hero["level"] >= self.cfg["max_level"]:
+      hero["exp"] = 0  # 最大レベルでは経験値をためない
+      return
     hero["exp"] += exp
-    while hero["exp"] >= exp_need(self.world, hero["level"]):
+    while hero["level"] < self.cfg["max_level"] and hero["exp"] >= exp_need(self.world, hero["level"]):
       hero["exp"] -= exp_need(self.world, hero["level"])
       hero["level"] += 1
-      hero["max_hp"] += up["hp"]
-      hero["base_atk"] += up["atk"]
-      hero["base_def"] += up["def"]
+      grow = {k: level_gain(growth(self.world, self.state, k), hero["level"]) for k in ("hp", "atk", "def", "spd")}
+      hero["max_hp"] += grow["hp"]
+      hero["base_atk"] += grow["atk"]
+      hero["base_def"] += grow["def"]
+      hero["base_spd"] = hero.get("base_spd", self.cfg["hero"]["spd"]) + grow["spd"]
       hero["hp"] = self.stats["max_hp"]
       self.log(f"レベルが上がった！ Lv.{hero['level']}")
+    if hero["level"] >= self.cfg["max_level"]:
+      hero["exp"] = 0
 
   # アイテム -------------------------------------------------------------------------
   def draw(self, table: list | None, town: str | None = None) -> str | None:
+    """ドロップ表から抽選する（特性「強運」なら、何も出なかったときに 1 度だけ引き直す）。"""
+    got = self.draw_once(table, town)
+    if got is None and table and hero_trait(self.world, self.state).get("luck"):
+      got = self.draw_once(table, town)
+    return got
+
+  def draw_once(self, table: list | None, town: str | None = None) -> str | None:
     """ドロップ表から抽選する。珍しさが当たったら、その珍しさのアイテムから均等に選ぶ。
     common は、開放した地域のもの（開放した町の店で売っている品）だけ。
     レア（common 以外）は、その町（town。依頼を出した町）の依頼で出るもの（items.json の towns）だけ。
@@ -591,6 +679,9 @@ class Day:
     for iid in self.world["places"][town].get("shop", []):
       item, cur = items[iid], worn[items[iid]["slot"]]
       better = cur is None or item_score(item) > item_score(items[cur])
+      # まだ持っていない属性の武器も買う（属性の弱点を突くために、戦いのたびに持ち替える）
+      owned = {items[i].get("element") for i in self.state["inventory"] if items[i]["slot"] == "weapon"}
+      better = better or (item["slot"] == "weapon" and item.get("element") and item["element"] not in owned)
       if better and iid not in self.state["inventory"] and hero["gold"] >= item["price"] + reserve:
         hero["gold"] -= item["price"]
         self.state["inventory"][iid] = 1

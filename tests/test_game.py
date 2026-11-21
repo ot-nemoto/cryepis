@@ -808,5 +808,170 @@ class GuildBoardTest(unittest.TestCase):
     self.assertEqual(self.guild["season"], 2)
 
 
+class BattleDepthTest(unittest.TestCase):
+  """属性・素早さ・特性。"""
+
+  def hero_state(self, **hero):
+    state = G.new_state(WORLD)
+    state["hero"].update(hp=999, max_hp=999, potions=0, **hero)
+    return state
+
+  def monster(self, **m):
+    return {
+      "id": "x",
+      "name": "試し",
+      "level": 2,
+      "hp": 30,
+      "atk": 1,
+      "def": 0,
+      "spd": 6,
+      "exp": 1,
+      "gold": 0,
+      "terrain": "plain",
+    } | m
+
+  def test_element_rates(self):
+    rates = WORLD["season"]["element_rates"]
+    self.assertEqual(G.element_rate(WORLD, "fire", "ice"), rates["strong"])  # 炎は氷に強い
+    self.assertEqual(G.element_rate(WORLD, "ice", "fire"), rates["weak"])  # 逆は苦手
+    self.assertEqual(G.element_rate(WORLD, "fire", "earth"), 1.0)
+    self.assertEqual(G.element_rate(WORLD, None, "ice"), 1.0)  # 属性なし
+    self.assertEqual(G.element_rate(WORLD, "fire", None), 1.0)
+    for eid, e in WORLD["elements"].items():  # どの属性も、強い相手と弱い相手が 1 つずつ
+      self.assertIn(e["strong"], WORLD["elements"])
+      self.assertEqual(sum(1 for x in WORLD["elements"].values() if x["strong"] == eid), 1)
+
+  def test_hero_switches_to_the_weapon_that_works(self):
+    state = self.hero_state()
+    state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # 鋼の剣（攻 7）がいつもの武器、騎兵の槍（攻 6・風）
+    day = day_of(state)
+    self.assertEqual(G.equipment(WORLD, state)["weapon"], "steel_sword")
+    self.assertEqual(day.pick_weapon(self.monster(element="earth"), 0)[0], "cavalry_lance")  # 風は土に強い
+    self.assertEqual(day.pick_weapon(self.monster(), 0)[0], "steel_sword")
+    day.battle(self.monster(element="earth", hp=1))
+    self.assertIn("騎兵の槍で弱点を突いた", day.events[-1])
+
+  def count_first(self, monster, spd, inventory=None):
+    """勇者と魔物の、最初の数回の攻撃の順番（"h" / "m"）。"""
+    state = self.hero_state(base_spd=spd)
+    state["inventory"] = dict(inventory or {})
+    day = day_of(state)
+    order = []
+
+    def damage(attack, guard):
+      who = "m" if attack == 3 else "h"  # 魔物の攻撃は 3
+      order.append(who)
+      return 1 if who == "m" else 10
+
+    with mock.patch.object(day, "damage", side_effect=damage):
+      day.battle(monster | {"hp": 30, "atk": 3})
+    return "".join(order)
+
+  def test_speed_decides_order_and_double_attacks(self):
+    self.assertEqual(self.count_first(self.monster(spd=6), 6), "hmhmh")  # 同じなら勇者が先
+    self.assertEqual(self.count_first(self.monster(spd=7), 6), "mhmhmh")  # 魔物が速ければ魔物が先
+    self.assertEqual(self.count_first(self.monster(spd=3), 6), "hhmh")  # 2 倍以上なら 2 回攻撃
+    self.assertEqual(self.count_first(self.monster(spd=13), 6), "mmhmmhmmh")  # 魔物も 2 倍以上なら 2 回
+    # 先手の魔物は、勇者のほうが速くても先に攻撃する（2 回攻撃は素早さで決まる）
+    self.assertEqual(self.count_first(self.monster(spd=3, trait="first_strike"), 6), "mhhmh")
+
+  def test_speed_follows_the_weapon_in_hand(self):
+    state = self.hero_state()
+    state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # いつもは鋼の剣（速 -1）で素早さ 5
+    day = day_of(state)
+    self.assertEqual(day.stats["spd"], 5)
+    weapon, rate, spd = day.pick_weapon(self.monster(element="earth"), 0)  # 騎兵の槍に持ち替えると素早さ 6
+    self.assertEqual((weapon, spd), ("cavalry_lance", 6))
+    self.assertEqual(self.count_first(self.monster(spd=6, element="earth"), 6, inventory=state["inventory"])[:1], "h")
+
+  def test_weapon_choice_counts_the_real_guard(self):
+    state = self.hero_state(base_atk=3)
+    state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # 攻 3+7=10（属性なし）と 3+6=9（風）
+    day = day_of(state)
+    # 守りが高い土の魔物: 鋼の剣 (10 - 8) = 2、騎兵の槍 (9 - 8) × 1.5 = 1.5 → 鋼の剣のほうが効く
+    self.assertEqual(day.pick_weapon(self.monster(element="earth"), 16)[0], "steel_sword")
+    self.assertEqual(day.pick_weapon(self.monster(element="earth"), 0)[0], "cavalry_lance")
+
+  def test_shop_buys_weapons_with_new_elements(self):
+    state = self.hero_state(gold=10000)
+    state["inventory"] = {"steel_sword": 1}
+    day_of(state).shop("eques")  # 騎兵の槍（風）は鋼の剣より弱いが、風の武器を持っていないので買う
+    self.assertIn("cavalry_lance", state["inventory"])
+
+  def test_same_element_is_neutral(self):
+    self.assertEqual(G.element_rate(WORLD, "fire", "fire"), 1.0)
+
+  def test_exp_stops_at_max_level(self):
+    state = G.new_state(WORLD)
+    day = day_of(state)
+    day.gain_exp(10**7)
+    day.gain_exp(500)
+    self.assertEqual((state["hero"]["level"], state["hero"]["exp"]), (WORLD["season"]["max_level"], 0))
+
+  def test_trait_is_random_and_kept(self):
+    traits = {G.pick_trait(WORLD, f"h{i}") for i in range(40)}
+    self.assertGreater(len(traits), 2)
+    state = G.new_state(WORLD, "h7")
+    self.assertEqual(state["trait"], G.pick_trait(WORLD, "h7"))
+    self.assertNotIn("personality", state)  # 性格は保留
+    nxt = START
+    while G.season_of(WORLD, nxt) == 1:
+      nxt += timedelta(days=1)
+    G.advance(WORLD, state, START, 0)
+    G.advance(WORLD, state, nxt, 0)  # シーズンが変わっても同じ
+    self.assertEqual(state["trait"], G.pick_trait(WORLD, "h7"))
+
+  def test_old_state_gets_a_trait(self):
+    state = play(1)
+    del state["trait"]
+    state["hero"].pop("base_spd")
+    with tempfile.TemporaryDirectory() as d:
+      path = Path(d) / "h1.json"
+      G.save_state(state, path)
+      loaded = G.load_state(WORLD, path)
+    self.assertEqual(loaded["trait"], G.pick_trait(WORLD, "h1"))
+    self.assertEqual(loaded["hero"]["base_spd"], WORLD["season"]["hero"]["spd"])
+
+  def grown(self, trait, level):
+    state = G.new_state(WORLD)
+    state["trait"] = trait
+    day = day_of(state)
+    while state["hero"]["level"] < level:
+      day.gain_exp(G.exp_need(WORLD, state["hero"]["level"]))
+    s = G.stats(WORLD, state)
+    return s["max_hp"], s["atk"], s["def"], s["spd"]
+
+  def test_traits_grow_on_level_up(self):
+    self.assertEqual(self.grown("lucky", 1), (30, 6, 2, 6))  # Lv1 はみんな同じ
+    self.assertEqual(self.grown("strong", 1), (30, 6, 2, 6))
+    self.assertEqual(self.grown("lucky", 20), (182, 44, 21, 6))  # ふつう（能力は伸びない強運と同じ）
+    self.assertEqual(self.grown("sturdy", 20), (220, 44, 21, 6))  # HP +10
+    self.assertEqual(self.grown("strong", 20), (182, 53, 21, 6))  # 攻撃 +2.5
+    self.assertEqual(self.grown("guard", 20), (182, 44, 30, 6))  # 防御 +1.5
+    self.assertEqual(self.grown("swift", 20), (182, 44, 21, 10))  # 素早さ +0.25
+    self.assertEqual(self.grown("strong", 3)[1], 11)  # +2・+3 と交互に伸びる
+
+  def test_level_stops_at_the_max(self):
+    state = G.new_state(WORLD)
+    day = day_of(state)
+    day.gain_exp(10**7)
+    self.assertEqual(state["hero"]["level"], WORLD["season"]["max_level"])
+
+  def test_level_gain_rounds_down_the_total(self):
+    self.assertEqual([G.level_gain(2.5, lv) for lv in range(2, 6)], [2, 3, 2, 3])
+    self.assertEqual([G.level_gain(0.25, lv) for lv in range(2, 10)], [0, 0, 0, 1, 0, 0, 0, 1])
+
+  def test_lucky_draws_again(self):
+    state = G.new_state(WORLD)
+    state["trait"] = "lucky"
+    day = day_of(state)
+    with mock.patch.object(day, "draw_once", side_effect=[None, "wooden_sword"]) as once:
+      self.assertEqual(day.draw([["none", 1]]), "wooden_sword")
+    self.assertEqual(once.call_count, 2)
+    state["trait"] = "strong"
+    with mock.patch.object(day, "draw_once", side_effect=[None, "wooden_sword"]):
+      self.assertIsNone(day.draw([["none", 1]]))
+
+
 if __name__ == "__main__":
   unittest.main()

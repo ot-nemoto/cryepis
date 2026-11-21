@@ -2,7 +2,7 @@
  "traits": {
   "first_strike": {
    "name": "先手",
-   "text": "先に攻撃してくる"
+   "text": "素早さに関係なく、先に攻撃してくる"
   },
   "poison": {
    "name": "毒",
@@ -25,33 +25,41 @@
    "text": "戦いのあと、ゴールドを盗んで逃げることがある"
   }
  },
+ "elements": {
+  "fire": {"name": "炎", "strong": "ice"},
+  "ice": {"name": "氷", "strong": "wind"},
+  "wind": {"name": "風", "strong": "earth"},
+  "earth": {"name": "土", "strong": "thunder"},
+  "thunder": {"name": "雷", "strong": "water"},
+  "water": {"name": "水", "strong": "fire"}
+ },
  "monsters": [
-  {"id": "wild_dog", "name": "野犬", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "plain"},
-  {"id": "giant_rat", "name": "大ネズミ", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "plain", "trait": "swarm"},
-  {"id": "goblin", "name": "ゴブリン", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "plain", "trait": "thief"},
-  {"id": "giant_spider", "name": "大蜘蛛", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "forest", "trait": "first_strike"},
-  {"id": "forest_wolf", "name": "森オオカミ", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "forest", "trait": "swarm"},
-  {"id": "treant", "name": "木霊", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "forest", "trait": "armored"},
-  {"id": "poison_frog", "name": "毒ガエル", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "jungle", "trait": "poison"},
-  {"id": "vampire_bat", "name": "吸血コウモリ", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "jungle", "trait": "first_strike"},
-  {"id": "jungle_serpent", "name": "密林の大蛇", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "jungle", "trait": "fierce"},
-  {"id": "sand_scorpion", "name": "砂サソリ", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "desert", "trait": "poison"},
-  {"id": "desert_bandit", "name": "砂漠の盗賊", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "desert", "trait": "thief"},
-  {"id": "rock_lizard", "name": "岩トカゲ", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "desert", "trait": "armored"},
-  {"id": "marsh_leech", "name": "沼ヒル", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "wetland", "trait": "poison"},
-  {"id": "mud_golem", "name": "泥人形", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "wetland", "trait": "armored"},
-  {"id": "will_o_wisp", "name": "鬼火", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "wetland", "trait": "first_strike"},
-  {"id": "ice_wolf", "name": "氷狼", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "snow", "trait": "swarm"},
-  {"id": "yeti", "name": "雪男", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "snow", "trait": "fierce"},
-  {"id": "frost_sprite", "name": "氷の精", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "snow", "trait": "first_strike"},
-  {"id": "rock_golem", "name": "岩ゴーレム", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "mountain", "trait": "armored"},
-  {"id": "mountain_bandit", "name": "山賊", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "mountain", "trait": "thief"},
-  {"id": "great_eagle", "name": "大鷲", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "mountain", "trait": "first_strike"},
-  {"id": "fire_lizard", "name": "火トカゲ", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "volcano", "trait": "fierce"},
-  {"id": "lava_slime", "name": "溶岩スライム", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "volcano", "trait": "armored"},
-  {"id": "flame_bird", "name": "炎の鳥", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "volcano", "trait": "first_strike"},
-  {"id": "giant_octopus", "name": "大ダコ", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "sea", "trait": "armored"},
-  {"id": "sahuagin", "name": "サハギン", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "sea", "trait": "swarm"},
-  {"id": "pirate", "name": "海賊", "level": 2, "hp": 20, "atk": 7, "def": 2, "exp": 9, "gold": 7, "terrain": "sea", "trait": "thief"}
+  {"id": "wild_dog", "name": "野犬", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 8, "exp": 9, "gold": 7, "terrain": "plain"},
+  {"id": "giant_rat", "name": "大ネズミ", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 7, "exp": 9, "gold": 7, "terrain": "plain", "trait": "swarm"},
+  {"id": "goblin", "name": "ゴブリン", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 6, "exp": 9, "gold": 7, "terrain": "plain", "trait": "thief"},
+  {"id": "giant_spider", "name": "大蜘蛛", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 7, "exp": 9, "gold": 7, "terrain": "forest", "trait": "first_strike", "element": "earth"},
+  {"id": "forest_wolf", "name": "森オオカミ", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 9, "exp": 9, "gold": 7, "terrain": "forest", "trait": "swarm", "element": "wind"},
+  {"id": "treant", "name": "木霊", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 2, "exp": 9, "gold": 7, "terrain": "forest", "trait": "armored", "element": "earth"},
+  {"id": "poison_frog", "name": "毒ガエル", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 6, "exp": 9, "gold": 7, "terrain": "jungle", "trait": "poison", "element": "water"},
+  {"id": "vampire_bat", "name": "吸血コウモリ", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 13, "exp": 9, "gold": 7, "terrain": "jungle", "trait": "first_strike", "element": "wind"},
+  {"id": "jungle_serpent", "name": "密林の大蛇", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 5, "exp": 9, "gold": 7, "terrain": "jungle", "trait": "fierce", "element": "earth"},
+  {"id": "sand_scorpion", "name": "砂サソリ", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 5, "exp": 9, "gold": 7, "terrain": "desert", "trait": "poison", "element": "earth"},
+  {"id": "desert_bandit", "name": "砂漠の盗賊", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 7, "exp": 9, "gold": 7, "terrain": "desert", "trait": "thief"},
+  {"id": "rock_lizard", "name": "岩トカゲ", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 3, "exp": 9, "gold": 7, "terrain": "desert", "trait": "armored", "element": "earth"},
+  {"id": "marsh_leech", "name": "沼ヒル", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 3, "exp": 9, "gold": 7, "terrain": "wetland", "trait": "poison", "element": "water"},
+  {"id": "mud_golem", "name": "泥人形", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 2, "exp": 9, "gold": 7, "terrain": "wetland", "trait": "armored", "element": "earth"},
+  {"id": "will_o_wisp", "name": "鬼火", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 8, "exp": 9, "gold": 7, "terrain": "wetland", "trait": "first_strike", "element": "fire"},
+  {"id": "ice_wolf", "name": "氷狼", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 9, "exp": 9, "gold": 7, "terrain": "snow", "trait": "swarm", "element": "ice"},
+  {"id": "yeti", "name": "雪男", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 4, "exp": 9, "gold": 7, "terrain": "snow", "trait": "fierce", "element": "ice"},
+  {"id": "frost_sprite", "name": "氷の精", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 8, "exp": 9, "gold": 7, "terrain": "snow", "trait": "first_strike", "element": "ice"},
+  {"id": "rock_golem", "name": "岩ゴーレム", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 2, "exp": 9, "gold": 7, "terrain": "mountain", "trait": "armored", "element": "earth"},
+  {"id": "mountain_bandit", "name": "山賊", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 6, "exp": 9, "gold": 7, "terrain": "mountain", "trait": "thief"},
+  {"id": "great_eagle", "name": "大鷲", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 13, "exp": 9, "gold": 7, "terrain": "mountain", "trait": "first_strike", "element": "wind"},
+  {"id": "fire_lizard", "name": "火トカゲ", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 6, "exp": 9, "gold": 7, "terrain": "volcano", "trait": "fierce", "element": "fire"},
+  {"id": "lava_slime", "name": "溶岩スライム", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 2, "exp": 9, "gold": 7, "terrain": "volcano", "trait": "armored", "element": "fire"},
+  {"id": "flame_bird", "name": "炎の鳥", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 12, "exp": 9, "gold": 7, "terrain": "volcano", "trait": "first_strike", "element": "fire"},
+  {"id": "giant_octopus", "name": "大ダコ", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 3, "exp": 9, "gold": 7, "terrain": "sea", "trait": "armored", "element": "water"},
+  {"id": "sahuagin", "name": "サハギン", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 7, "exp": 9, "gold": 7, "terrain": "sea", "trait": "swarm", "element": "water"},
+  {"id": "pirate", "name": "海賊", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 6, "exp": 9, "gold": 7, "terrain": "sea", "trait": "thief"}
  ]
 }
