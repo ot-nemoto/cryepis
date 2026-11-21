@@ -29,6 +29,17 @@ PLACE_TYPES = ("town", "dungeon")
 ROAD_KINDS = ("land", "sea", "trail")
 LABEL_SIDES = ("up", "down", "left", "right")  # 地図で場所の名前を置く向き
 TERRAINS = ("plain", "forest", "jungle", "desert", "wetland", "snow", "mountain", "volcano", "sea")
+TERRAIN_NAMES = {
+  "plain": "草原",
+  "forest": "森",
+  "jungle": "密林",
+  "desert": "砂漠",
+  "wetland": "湿地",
+  "snow": "雪原",
+  "mountain": "山",
+  "volcano": "火山",
+  "sea": "海",
+}
 TRAITS = ("first_strike", "poison", "swarm", "fierce", "armored", "thief")
 QUEST_TYPES = ("hunt", "deliver")
 ROAD_EVENTS = ("battle", "treasure", "nothing")
