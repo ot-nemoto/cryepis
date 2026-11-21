@@ -812,6 +812,59 @@ class GuildBoardTest(unittest.TestCase):
     day.report(state["quest"])
     self.assertEqual(entry["status"], "done")
 
+  def test_taken_quest_does_not_share_the_steps_with_the_board(self):
+    hunt = next(e for e in self.board if e["type"] == "hunt")
+    for e in self.board:  # この討伐だけを受けられるようにする
+      e["status"] = "open" if e is hunt else "done"
+    fresh = [list(p) for p in hunt["steps"]]
+    hunt["steps"] = [["back", 1]]  # 前に受けた勇者が進めたまま保存された段取り
+    state = play(1, "h1", actions=0)
+    state["place"], state["hero"]["level"] = self.TOWN, 99
+    day = G.Day(WORLD, state, START, random.Random(0), self.guild)
+    day.take_quest(self.TOWN)
+    quest = state["quest"]
+    self.assertEqual(quest["id"], hunt["id"])
+    self.assertEqual(quest["steps"], fresh)  # 段取りは最初から作り直す
+    self.assertEqual((quest["progress"], quest["away"]), (0, 0))
+    quest["steps"][0][1] -= 1  # 勇者が進めても、掲示板の依頼は変わらない
+    self.assertEqual(hunt["steps"], [["back", 1]])
+    self.assertIsNot(quest["reward"], hunt["reward"])
+
+  def test_failed_quest_comes_back_fresh(self):
+    hunt = next(e for e in self.board if e["type"] == "hunt")
+    fresh = [list(p) for p in hunt["steps"]]
+    hunt.update(status="failed", holder="h1", steps=[["back", 1]], away=1)  # 前に共有して減った段取り
+    back = self.next_day()[hunt["id"]]
+    self.assertEqual((back["status"], back["steps"], back["away"], back["progress"]), ("open", fresh, 0, 0))
+
+  def test_broken_hunt_quest_is_dropped_on_load(self):
+    state = play(1, "h1", actions=0)
+    quest = next(e for e in self.board if e["type"] == "hunt")
+    ok = dict(quest, steps=[["hunt", quest["count"] - 1], ["back", 1]], progress=1)
+    self.assertTrue(G.quest_ok(WORLD, ok))
+    for broken in (
+      dict(quest, steps=[], progress=0),  # 段取りが空なのに倒していない
+      dict(quest, steps=[["back", 1]], progress=0),  # 討伐が残っていない
+      dict(quest, steps=[["hunt", 1], ["back", 1]], progress=0),  # 残りの数が合わない
+    ):
+      self.assertFalse(G.quest_ok(WORLD, broken), broken["steps"])
+      self.assertTrue(G.quest_ok(WORLD, broken, steps=False))  # 掲示板では段取りを見ない
+      state["quest"] = broken
+      with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "h1.json"
+        G.save_state(state, path)
+        self.assertIsNone(G.load_state(WORLD, path, "h1")["quest"])
+    self.assertTrue(G.quest_ok(WORLD, dict(quest, steps=[["back", 1]], progress=quest["count"])))  # 倒し終えて帰り道
+
+  def test_hunt_step_with_no_steps_fails_the_quest(self):
+    state = play(1, "h1", actions=0)
+    quest = dict(next(e for e in self.board if e["type"] == "hunt"), steps=[], progress=0)
+    state["quest"] = quest
+    day = G.Day(WORLD, state, START, random.Random(0), self.guild)
+    self.assertTrue(day.hunt_step(quest))  # 止まらない
+    self.assertIsNone(state["quest"])
+    self.assertIn("段取りが壊れていた", day.events[-1])
+
   def test_release_orphans(self):
     a, b, c = self.board[:3]
     a.update(status="held", holder="h1")

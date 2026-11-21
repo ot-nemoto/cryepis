@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import random
 from datetime import date, timedelta
@@ -166,8 +167,21 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
 QUEST_TYPES = ("hunt", "deliver", "patrol")
 
 
-def quest_ok(world: dict, quest: dict) -> bool:
-  """依頼の参照先が今の world/ にあるか（行き先・報告先・依頼を出した町は開放した町、討伐は報告先からの道と魔物）。"""
+def hunt_steps_ok(quest: dict) -> bool:
+  """討伐の段取りが、進み（progress）と合っているか。段取りが空なのに倒し終えていない、残りの討伐の数が
+  count - progress と違う、などは壊れている（前に掲示板と段取りを共有していたころに壊れた依頼）。"""
+  steps, progress, count = quest.get("steps"), quest.get("progress", 0), quest.get("count")
+  if not isinstance(steps, list) or not steps or not isinstance(count, int) or not isinstance(progress, int):
+    return False
+  if not all(isinstance(p, list) and len(p) == 2 and isinstance(p[1], int) and p[1] > 0 for p in steps):
+    return False
+  left = sum(n for phase, n in steps if phase == "hunt")
+  return left == count - progress if left else progress >= count
+
+
+def quest_ok(world: dict, quest: dict, steps: bool = True) -> bool:
+  """依頼の参照先が今の world/ にあるか（行き先・報告先・依頼を出した町は開放した町、討伐は報告先からの道と魔物）。
+  steps が True なら、討伐の段取りが壊れていないかも確かめる。"""
   towns = set(world["towns"])
   if quest.get("type") not in QUEST_TYPES or quest.get("place") not in towns:
     return False
@@ -179,7 +193,7 @@ def quest_ok(world: dict, quest: dict) -> bool:
       (quest.get("report"), quest["place"]) in world["roads"]
       and quest.get("monster") in world["monsters"]
       and not world["monsters"][quest["monster"]].get("boss")  # ボスは道に出ない
-      and isinstance(quest.get("steps"), list)
+      and (hunt_steps_ok(quest) if steps else isinstance(quest.get("steps"), list))
     )
   return True
 
@@ -323,7 +337,10 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
     for e in boards.get(town, []):
       if e.get("status") == "failed":
         e.update(status="open", holder=None, posted=d.isoformat(), returned=True)
-      if e.get("status") not in ("open", "held") or not quest_ok(world, e):
+        if quest_ok(world, e, steps=False):  # 受付に戻すときは、段取り・行動力・報酬を最初の状態に作り直す
+          finish_quest(world, e, e["town"])
+      # 掲示板の段取りは見ない（受けるときに作り直す。受注中の進みは勇者の状態のほう）
+      if e.get("status") not in ("open", "held") or not quest_ok(world, e, steps=False):
         continue  # 達成された依頼（と、world/ から消えた依頼）ははがす
       if e["status"] == "open" and last_open_day(world, e) < d:
         continue  # 誰も受けないまま受付が終わった
@@ -724,7 +741,9 @@ class Day:
     if entries:
       entry = self.rng.choice(entries)
       entry.update(status="held", holder=self.state["id"])
-      quest = {k: v for k, v in entry.items() if k not in GUILD_FIELDS}
+      # 深く写す（掲示板の依頼と段取りの一覧を共有しない）。段取り・進み・行動力・報酬は最初の状態から作り直す
+      # （前に受けた勇者が力尽きて戻ってきた依頼でも、今の world/ の道の長さで、最初の状態で受ける）
+      quest = finish_quest(self.world, copy.deepcopy({k: v for k, v in entry.items() if k not in GUILD_FIELDS}), town)
       self.state["taken"].append(quest["id"])
       self.log(
         f"{self.world['places'][town]['name']}のギルドで依頼を受けた: {quest_text(self.world, quest)}"
@@ -820,6 +839,9 @@ class Day:
 
   def hunt_step(self, quest: dict) -> bool:
     """討伐の依頼を 1 行動ぶん進める（行き・帰りは道の出来事、討伐は目的の魔物と 1 回戦う）。"""
+    if not quest.get("steps"):  # 段取りが壊れている（読み込みで捨てるので、ふつうは起きない）。止まらずに失敗にする
+      self.fail_quest("段取りが壊れていた")
+      return True
     phase = quest["steps"][0]
     if phase[0] == "hunt":
       if not self.battle(self.world["monsters"][quest["monster"]]):
