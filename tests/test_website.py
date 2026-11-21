@@ -313,6 +313,7 @@ class SiteTest(unittest.TestCase):
       self.assertNotIn(f"<td>{name}</td>", roads)
       self.assertIn(f"<td>{name}</td>", elite)
     self.assertIn("カルンの依頼「吹雪の雪男」（Lv10 から）", elite)
+    self.assertIn("ムラリスの依頼「南壁の大鷲」（Lv10 から）", elite)
     self.assertIn("<th>戦える依頼</th>", elite)
     self.assertNotIn("属性の相性", html)  # 説明は手引きのページに
     self.assertIn('<a href="guide.html">手引き</a>', html)

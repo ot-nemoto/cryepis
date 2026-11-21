@@ -182,7 +182,7 @@ class QuestTest(unittest.TestCase):
 
   def test_elites_are_not_on_roads_and_need_their_level(self):
     elites = [mid for mid, m in WORLD["monsters"].items() if m.get("elite")]
-    self.assertEqual(set(elites), {"yeti", "rock_golem"})
+    self.assertEqual(set(elites), {"yeti", "rock_golem", "great_eagle"})
     on_roads = {m for i in WORLD["road_info"].values() for m, _ in i["monsters"]}
     self.assertFalse(on_roads & set(elites))  # 道では出会わない
     quest = next(q for q in WORLD["town_quests"]["karun"] if q.get("monster") == "yeti")
