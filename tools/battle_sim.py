@@ -40,9 +40,10 @@ def make_hero(world: dict, trait: str, level: int, gear: list[str], potions: int
 
 def fight(
   world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int
-) -> tuple[float, float]:
-  """n 回戦って、(勝った割合, 勝ったときに減った HP の割合の平均)。
-  乱数の種は 0〜n-1 なので、同じ条件なら何度やっても同じ結果。回復薬で戻した HP は、減った HP に数えない。"""
+) -> tuple[float, float | None]:
+  """n 回戦って、(勝った割合, 勝ったときに減った HP の割合の平均。1 回も勝てなければ None)。
+  乱数の種は 0〜n-1 なので、同じ条件なら何度やっても同じ結果。
+  減った HP は戦いの前後の差なので、回復薬を使うと、回復した分だけ少なく出る（道の魔物は --potions 0 で測る）。"""
   wins, lost = 0, 0.0
   hero = make_hero(world, trait, level, gear, potions)
   max_hp = game.stats(world, hero)["max_hp"]
@@ -53,7 +54,7 @@ def fight(
     if day.battle(dict(monster)):
       wins += 1
       lost += 1 - state["hero"]["hp"] / max_hp
-  return wins / n, lost / wins if wins else 1.0
+  return wins / n, (lost / wins if wins else None)
 
 
 def win_rate(world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int) -> float:
@@ -131,7 +132,8 @@ def main() -> int:
   if a.hp_loss:
     for t in traits:
       rate, lost = fight(world, monster, t, a.level, gear, a.potions, a.n)
-      print(f"  {names[t]['name']:4s} Lv{a.level}: 勝率 {rate:.1%}  勝ったときに減る HP {lost:.0%}")
+      shown = "—（勝てない）" if lost is None else f"{lost:.0%}"
+      print(f"  {names[t]['name']:4s} Lv{a.level}: 勝率 {rate:.1%}  勝ったときに減る HP {shown}")
     return 0
   if not a.reach:
     for t in traits:

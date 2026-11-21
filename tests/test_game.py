@@ -806,6 +806,25 @@ class GuildBoardTest(unittest.TestCase):
     self.assertFalse(set(self.next_day(days)) & first)  # 次の日に入れ替わる
     self.assertEqual(len(self.board), G.quests_per_day(WORLD, self.TOWN))
 
+  def test_hunt_quest_level_is_the_target_level(self):
+    for town, quests in WORLD["town_quests"].items():
+      for quest in quests:
+        if quest["type"] == "hunt":
+          lv = WORLD["monsters"][quest["monster"]]["level"]
+          self.assertEqual(G.make_town_quest(WORLD, quest, town, START)["level"], [lv, lv], quest["id"])
+    bandit = next(q for q in WORLD["town_quests"]["muralis"] if q.get("monster") == "mountain_bandit")
+    q = G.make_town_quest(WORLD, bandit, "muralis", START)  # 山賊は Lv5: Lv1 では受けない、Lv2 から受ける
+    self.assertFalse(G.suitable(q, 1))
+    self.assertTrue(G.suitable(q, 2))
+    deliver = next(q for q in G.board(WORLD, self.TOWN, START, 1) if q["type"] == "deliver")
+    self.assertEqual(deliver["level"], [G.monster_level(WORLD)] * 2)
+
+  def test_open_quests_follow_the_monster_level(self):
+    hunt = next(e for e in self.board if e["type"] == "hunt")
+    hunt["level"] = [99, 99]  # 魔物のレベルを変える前に貼られた依頼
+    lv = WORLD["monsters"][hunt["monster"]]["level"]
+    self.assertEqual(self.next_day()[hunt["id"]]["level"], [lv, lv])
+
   def test_refresh_once_a_day(self):
     self.board[0]["status"] = "done"
     G.refresh_guild(WORLD, self.guild, START, 1)  # 同じ日は貼り替えない
