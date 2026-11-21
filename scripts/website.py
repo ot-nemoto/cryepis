@@ -111,6 +111,8 @@ h3.sub{font-size:15px;margin:18px 0 0}
 .guide th:first-child,.guide td:first-child{width:9em;white-space:nowrap}
 .card h3+p,.card h3+.scroll{margin-top:8px}
 .icon{text-align:center;white-space:nowrap}
+h4.sub{font-size:14px;margin:16px 0 4px}
+.levels{max-width:420px}
 td.icon .tag{margin-left:0}
 .zero{color:var(--sub)}
 .pill{display:inline-block;margin:2px 6px 2px 0;padding:1px 10px;border:1.5px solid #f0a868;border-radius:999px;
@@ -923,8 +925,28 @@ def build_guide(world: dict) -> str:
     ),
     ("レベル差", "勇者が魔物より 4 以上レベルが高いと、もらえる経験値が減る"),
   ]
+  level_rows = "".join(
+    f'<tr><td class="num">Lv{lv}</td>'
+    + "".join(f'<td class="num">{v}</td>' for v in (b["max_hp"], b["atk"], b["def"], b["spd"], b["dex"]))
+    + "</tr>"
+    for lv in range(1, lv_max + 1)
+    for b in [game.base_stats(world, None, lv)]
+  )
+  level_table = (
+    '<div class="scroll"><table class="levels"><tr><th class="num">Lv</th>'
+    + "".join(f'<th class="num">{h}</th>' for h in ("HP", "攻", "防", "速", "器"))
+    + "</tr>"
+    + level_rows
+    + "</table></div>"
+  )
   cards = [
-    ("能力", table(("能力", "説明"), stats) + f'<p class="note">{escape(stat_note)}</p>'),
+    (
+      "能力",
+      table(("能力", "説明"), stats)
+      + f'<p class="note">{escape(stat_note)}</p>'
+      + '<h4 class="sub">レベルごとの能力（特性の倍率がかかる前の値。強運の勇者と同じ。ほかの特性と装備で変わる）</h4>'
+      + level_table,
+    ),
     (
       "勇者の特性",
       table(("特性", "効果"), hero_traits)
