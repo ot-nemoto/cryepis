@@ -945,11 +945,11 @@ class BattleDepthTest(unittest.TestCase):
     self.assertEqual(self.grown("lucky", 1), (30, 6, 2, 6))  # Lv1 はみんな同じ
     self.assertEqual(self.grown("strong", 1), (30, 6, 2, 6))
     self.assertEqual(self.grown("lucky", 20), (182, 44, 21, 6))  # ふつう（能力は伸びない強運と同じ）
-    self.assertEqual(self.grown("sturdy", 20), (220, 44, 21, 6))  # HP +10
-    self.assertEqual(self.grown("strong", 20), (182, 53, 21, 6))  # 攻撃 +2.5
+    self.assertEqual(self.grown("sturdy", 20), (239, 44, 21, 6))  # HP +11
+    self.assertEqual(self.grown("strong", 20), (182, 51, 21, 6))  # 攻撃 +2.4
     self.assertEqual(self.grown("guard", 20), (182, 44, 30, 6))  # 防御 +1.5
     self.assertEqual(self.grown("swift", 20), (182, 44, 21, 10))  # 素早さ +0.25
-    self.assertEqual(self.grown("strong", 3)[1], 11)  # +2・+3 と交互に伸びる
+    self.assertEqual(self.grown("strong", 3)[1], 10)  # 端数は合計で切り捨て（2.4 × 2 = 4.8 → +4）
 
   def test_level_stops_at_the_max(self):
     state = G.new_state(WORLD)

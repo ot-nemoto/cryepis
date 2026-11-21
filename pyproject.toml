@@ -6,7 +6,7 @@ target-version = "py312"
 line-length = 120
 indent-width = 2
 # scripts/ と tools/worldgen/ のモジュールは、sys.path に足して読み込む（import の並び順で、自分たちのモジュールとして扱う）
-src = [".", "scripts", "tools/worldgen"]
+src = [".", "scripts", "tools", "tools/worldgen"]
 
 [tool.ruff.lint]
 # E/W: 書き方（pycodestyle）、F: 使っていない変数・import など（Pyflakes）、I: import の並び順、

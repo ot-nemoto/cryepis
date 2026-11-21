@@ -128,6 +128,9 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"].update(hero_traits={}), ["hero_traits"])
     self.assertError(lambda r: r["season"]["hero"].pop("spd"), ["hero", "spd"])
 
+  def test_boss_needs_a_dungeon(self):
+    self.assertError(lambda r: r["monsters"][-1].update(boss="salina"), ["den_lord", "boss"])
+
   def test_every_terrain_has_a_japanese_name(self):
     self.assertEqual(set(W.TERRAIN_NAMES), set(W.TERRAINS))
 

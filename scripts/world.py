@@ -452,6 +452,10 @@ def validate(raw: dict) -> list[str]:
     for key, low in (("level", 1), ("hp", 1), ("atk", 0), ("def", 0), ("spd", 1), ("exp", 0), ("gold", 0)):
       if not isinstance(m.get(key), int) or isinstance(m.get(key), bool) or m[key] < low:
         err(f"monsters.json の {mid}: {key} は {low} 以上の整数にしてください")
+    if "boss" in m and places.get(m["boss"], {}).get("type") != "dungeon":
+      err(f"monsters.json の {mid}: boss は、そのボスがいるダンジョンの ID にしてください")
+    if "text" in m and (not isinstance(m["text"], str) or not m["text"]):
+      err(f"monsters.json の {mid}: text は空でない文字列にしてください")
     if "element" in m and (not isinstance(m["element"], str) or m["element"] not in elements):
       err(f"monsters.json の {mid}: element は {'/'.join(elements)} のどれかにしてください（属性なしなら書かない）")
 
@@ -610,7 +614,7 @@ def road_monsters(terrain: list, monsters: list[dict]) -> list[tuple[str, float]
   """道に出る魔物と重み（地形の割合を、その地形の魔物の数で分ける）。"""
   pool = []
   for t, weight in terrain:
-    here = [m["id"] for m in monsters if m["terrain"] == t]
+    here = [m["id"] for m in monsters if m["terrain"] == t and not m.get("boss")]  # ボスは道には出ない
     pool += [(mid, weight / len(here)) for mid in here]
   return pool
 

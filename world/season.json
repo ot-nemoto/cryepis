@@ -15,8 +15,8 @@
   "item_power_rate": 0.4,
   "element_rates": {"strong": 1.5, "weak": 0.7},
   "hero_traits": {
-    "strong": {"name": "怪力", "text": "攻撃が伸びやすい（レベルアップで +2.5）", "grow": {"atk": 2.5}},
-    "sturdy": {"name": "頑丈", "text": "最大 HP が伸びやすい（レベルアップで +10）", "grow": {"hp": 10}},
+    "strong": {"name": "怪力", "text": "攻撃が伸びやすい（レベルアップで +2.4）", "grow": {"atk": 2.4}},
+    "sturdy": {"name": "頑丈", "text": "最大 HP が伸びやすい（レベルアップで +11）", "grow": {"hp": 11}},
     "guard": {"name": "鉄壁", "text": "防御が伸びやすい（レベルアップで +1.5）", "grow": {"def": 1.5}},
     "swift": {"name": "俊足", "text": "素早さが伸びる（レベルアップで +0.25。4 レベルごとに +1）", "grow": {"spd": 0.25}},
     "lucky": {"name": "強運", "text": "宝箱や依頼の報酬で何も出なかったとき、もう 1 度だけ引き直す（能力は伸びない）", "luck": true}

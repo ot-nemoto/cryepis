@@ -60,6 +60,7 @@
   {"id": "flame_bird", "name": "炎の鳥", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 12, "exp": 9, "gold": 7, "terrain": "volcano", "trait": "first_strike", "element": "fire"},
   {"id": "giant_octopus", "name": "大ダコ", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 3, "exp": 9, "gold": 7, "terrain": "sea", "trait": "armored", "element": "water"},
   {"id": "sahuagin", "name": "サハギン", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 7, "exp": 9, "gold": 7, "terrain": "sea", "trait": "swarm", "element": "water"},
-  {"id": "pirate", "name": "海賊", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 6, "exp": 9, "gold": 7, "terrain": "sea", "trait": "thief"}
+  {"id": "pirate", "name": "海賊", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 6, "exp": 9, "gold": 7, "terrain": "sea", "trait": "thief"},
+  {"id": "den_lord", "name": "巣穴の主", "level": 15, "hp": 600, "atk": 24, "def": 12, "spd": 5, "exp": 400, "gold": 300, "terrain": "mountain", "trait": "armored", "element": "earth", "boss": "wall_den", "text": "南壁の巣穴の奥に棲む岩の大鬼。山を越えて南大陸へ魔物を送り出している"}
  ]
 }
