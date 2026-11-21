@@ -556,7 +556,9 @@ def build_towns(world: dict) -> str:
       + (f"<p>{escape(p['text'])}</p>" if p.get("text") else "")
       + '<div class="scroll"><table class="info"><colgroup><col style="width:11em"><col></colgroup>'
       + "".join(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in rows_of(town))
-      + "</table></div></div>"
+      + "</table></div>"
+      '<p class="note">Lv・HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
+      "出会う割合は、その道で戦いになったときに、その魔物が出る割合です。</p></div>"
     )
 
   groups = area_groups(world, towns)
@@ -636,15 +638,21 @@ def build_monsters(world: dict) -> str:
   order = {t: i for i, t in enumerate(W.TERRAINS)}
   place_order = {p: i for i, p in enumerate(places)}
 
-  def table(aid: str) -> str:
+  def rate(r: float) -> str:  # 出会う割合（四捨五入で 0% にならないように）
+    return "1%未満" if r < 0.01 else f"{r:.0%}"
+
+  def table(members: list[str]) -> str:
     seen: dict[str, list[str]] = {}
     for (a, b), info in world["road_info"].items():
-      if place_order[a] > place_order[b] or aid not in (places[a].get("area"), places[b].get("area")):
-        continue  # 同じ道は 1 度だけ。この地方の町につながる道だけ
+      if place_order[a] > place_order[b] or not ({a, b} & set(members)):
+        continue  # 同じ道は 1 度だけ。この地方（のまとまり）の町につながる道だけ
       total = sum(w for _, w in info["monsters"]) or 1
-      road = f"{places[a]['name']}〜{places[b]['name']}"
+      weights: dict[str, float] = {}  # 同じ魔物が地形の重複などで 2 度出ても、1 つにまとめる
       for mid, w in info["monsters"]:
-        seen.setdefault(mid, []).append(f"{escape(road)}（{w / total:.0%}）")
+        weights[mid] = weights.get(mid, 0) + w
+      road = f"{places[a]['name']}〜{places[b]['name']}"
+      for mid, w in weights.items():
+        seen.setdefault(mid, []).append(f"{escape(road)}（{rate(w / total)}）")
     if not seen:
       return '<div class="card"><p class="note">まだ開放されていません（この地方の道は通れません）。</p></div>'
     rows = []
@@ -675,8 +683,8 @@ def build_monsters(world: dict) -> str:
 
   groups = area_groups(world, towns)
   body = ["<h2>魔物の情報</h2>", tab_bar([(aid, a["name"]) for aid, a, _ in groups])]
-  for aid, area, _ in groups:
-    body.append(tab_panel(aid, name_html(area["name"], area.get("en")), table(aid)))
+  for aid, area, members in groups:
+    body.append(tab_panel(aid, name_html(area["name"], area.get("en")), table(members)))
   return page("魔物", "".join(body), "monsters.html", script=TABS_JS)
 
 

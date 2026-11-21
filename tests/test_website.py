@@ -262,6 +262,17 @@ class SiteTest(unittest.TestCase):
     crown = html[html.index('id="panel-crownlands"') :]
     self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
 
+  def test_monsters_page_edge_cases(self):
+    world = copy.deepcopy(WORLD)
+    world["areas"] = {}  # 地方がなくても、その他のまとまりに魔物を出す
+    self.assertNotIn("まだ開放されていません", website.build_monsters(world))
+    world = copy.deepcopy(WORLD)
+    info = world["road_info"][("salina", "eques")]
+    info["monsters"] = [("wild_dog", 1.0), ("wild_dog", 1.0), ("yeti", 0.01)]  # 同じ魔物が 2 度・ごく少ない魔物
+    html = website.build_monsters(world)
+    self.assertEqual(html.count("サリナ〜エクエス（"), 2)  # 野犬は 1 つにまとめる
+    self.assertIn("サリナ〜エクエス（1%未満）", html)
+
   def test_story_markdown(self):
     blocks = website.md_html(
       "# 題\n\n一行目\n二行目\n\n## 見出し\n\n- **太字** と <b>\n- 二つ目\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
