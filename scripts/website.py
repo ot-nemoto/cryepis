@@ -331,7 +331,7 @@ def build_heroes(world: dict, entries: list[tuple[dict, dict]], today: date) -> 
     heroes.append(
       f'<div class="card"><h3><a href="{hero_href(h["id"])}">{escape(h["name"])}</a> '
       f"Lv.{hero['level']}</h3><div>{escape(rpg.location(world, s))}</div>"
-      f"<div>HP {hero['hp']}/{st['max_hp']}　攻{st['atk']} 防{st['def']} 速{st['spd']}　{hero['gold']}G</div>"
+      f"<div>HP {hero['hp']}/{st['max_hp']}　攻{st['atk']} 防{st['def']} 速{st['spd']} 器{st['dex']}　{hero['gold']}G</div>"
       f"<div>"
       f"特性: {escape(game.hero_trait(world, s).get('name', '-'))}</div>"
       f"<div>装備: {escape(rpg.gear_text(world, s))}</div>"

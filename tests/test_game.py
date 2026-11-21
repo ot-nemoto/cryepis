@@ -527,12 +527,24 @@ class RoadTest(unittest.TestCase):
 
 
 class TraitTest(unittest.TestCase):
+  """魔物の性質の効き方（会心の運で結果がぶれないよう、勇者と魔物の器用さを 0 にして、会心を出さずに確かめる）。"""
+
+  def test_critical_hits(self):
+    day = day_of(G.new_state(WORLD))
+    div = WORLD["season"]["critical"]["dex_divisor"]
+    self.assertEqual(day.damage(10, 0, div) % 3, 0)  # 器用さ ÷ 150 が 1 なら必ず会心: 3 倍
+    self.assertGreaterEqual(day.damage(10, 0, div), 24)
+    self.assertLessEqual(day.damage(10, 0, 0), 12)  # 器用さ 0 なら会心なし
+    hits = sum(day.damage(10, 0, 30) > 12 for _ in range(2000))  # 器用さ 30 なら 20%
+    self.assertTrue(300 <= hits <= 500, hits)
+
   def fight(self, trait, hp=None, potions=3, seed="t"):
     state = G.new_state(WORLD)
+    state["hero"]["base_dex"] = 0
     state["hero"]["potions"] = potions
     if hp is not None:
       state["hero"]["hp"] = hp
-    monster = dict(WORLD["monsters"]["wild_dog"]) | ({"trait": trait} if trait else {})
+    monster = dict(WORLD["monsters"]["wild_dog"], dex=0) | ({"trait": trait} if trait else {})
     day = day_of(state, seed=seed)
     return day.battle(monster), state, day
 
@@ -564,8 +576,8 @@ class TraitTest(unittest.TestCase):
       total = 0
       for seed in range(30):
         state = G.new_state(WORLD)
-        state["hero"].update(max_hp=999, hp=999)
-        monster = dict(WORLD["monsters"]["wild_dog"]) | ({"trait": trait} if trait else {})
+        state["hero"].update(max_hp=999, hp=999, base_dex=0)
+        monster = dict(WORLD["monsters"]["wild_dog"], dex=0) | ({"trait": trait} if trait else {})
         day_of(state, seed=str(seed)).battle(monster)
         total += 999 - state["hero"]["hp"]
       return total
@@ -573,7 +585,22 @@ class TraitTest(unittest.TestCase):
     plain = hp_lost(None)
     self.assertGreater(hp_lost("fierce"), plain)  # 凶暴は攻撃が強い
     self.assertGreater(hp_lost("swarm"), plain)  # 群れは攻撃の回数が多い
-    self.assertGreater(hp_lost("armored"), plain)  # 硬いので戦いが長引く
+    guards = {}
+    for trait in (None, "armored"):  # 硬い: 勇者の攻撃を受ける守りが固い
+      state = G.new_state(WORLD)
+      state["hero"]["base_dex"] = 0
+      day = day_of(state)
+      seen = []
+      real = day.damage
+
+      def spy(attack, guard, dex=0, seen=seen, real=real):
+        seen.append(guard)
+        return real(attack, guard, dex)
+
+      with mock.patch.object(day, "damage", side_effect=spy):
+        day.battle(dict(WORLD["monsters"]["wild_dog"], dex=0) | ({"trait": trait} if trait else {}))
+      guards[trait] = min(seen)  # 勇者の攻撃を受けたときの守り（魔物の攻撃を受ける勇者の守り 6 より低い）
+    self.assertGreater(guards["armored"], guards[None])
 
 
 class StateFileTest(unittest.TestCase):
@@ -661,6 +688,7 @@ class StateFileTest(unittest.TestCase):
       ({"type": "hunt", "place": near, "monster": "wild_dog"}, True),
       ({"type": "hunt", "place": far, "monster": "wild_dog"}, False),  # 道がない
       ({"type": "hunt", "place": near, "monster": "slime"}, False),  # 魔物がいない
+      ({"type": "hunt", "place": near, "monster": "den_lord"}, False),  # ボスは道に出ない
       ({"type": "deliver", "place": "jade_tomb", "monster": None}, False),  # ダンジョンへは配達しない
       ({"type": "deliver", "place": far, "monster": None}, True),
       ({"type": "teleport", "place": near, "monster": None}, False),
@@ -858,7 +886,7 @@ class BattleDepthTest(unittest.TestCase):
     day = day_of(state)
     order = []
 
-    def damage(attack, guard):
+    def damage(attack, guard, dex=0):
       who = "m" if attack == 3 else "h"  # 魔物の攻撃は 3
       order.append(who)
       return 1 if who == "m" else 10
@@ -878,6 +906,7 @@ class BattleDepthTest(unittest.TestCase):
   def test_speed_follows_the_weapon_in_hand(self):
     state = self.hero_state()
     state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # いつもは鋼の剣（速 -1）で素早さ 5
+    state["hero"]["base_spd"] = 6
     day = day_of(state)
     self.assertEqual(day.stats["spd"], 5)
     weapon, rate, spd = day.pick_weapon(self.monster(element="earth"), 0)  # 騎兵の槍に持ち替えると素早さ 6
@@ -930,7 +959,7 @@ class BattleDepthTest(unittest.TestCase):
       G.save_state(state, path)
       loaded = G.load_state(WORLD, path)
     self.assertEqual(loaded["trait"], G.pick_trait(WORLD, "h1"))
-    self.assertEqual(loaded["hero"]["base_spd"], WORLD["season"]["hero"]["spd"])
+    self.assertEqual(loaded["hero"]["base_spd"], G.base_stats(WORLD, loaded["trait"], 1)["spd"])
 
   def grown(self, trait, level):
     state = G.new_state(WORLD)
@@ -939,27 +968,30 @@ class BattleDepthTest(unittest.TestCase):
     while state["hero"]["level"] < level:
       day.gain_exp(G.exp_need(WORLD, state["hero"]["level"]))
     s = G.stats(WORLD, state)
-    return s["max_hp"], s["atk"], s["def"], s["spd"]
+    return s["max_hp"], s["atk"], s["def"], s["spd"], s["dex"]
 
   def test_traits_grow_on_level_up(self):
-    self.assertEqual(self.grown("lucky", 1), (30, 6, 2, 6))  # Lv1 はみんな同じ
-    self.assertEqual(self.grown("strong", 1), (30, 6, 2, 6))
-    self.assertEqual(self.grown("lucky", 20), (182, 44, 21, 6))  # ふつう（能力は伸びない強運と同じ）
-    self.assertEqual(self.grown("sturdy", 20), (220, 44, 21, 6))  # HP +10
-    self.assertEqual(self.grown("strong", 20), (182, 53, 21, 6))  # 攻撃 +2.5
-    self.assertEqual(self.grown("guard", 20), (182, 44, 30, 6))  # 防御 +1.5
-    self.assertEqual(self.grown("swift", 20), (182, 44, 21, 10))  # 素早さ +0.25
-    self.assertEqual(self.grown("strong", 3)[1], 11)  # +2・+3 と交互に伸びる
+    self.assertEqual(self.grown("lucky", 1), (30, 6, 6, 6, 6))  # Lv1 はみんな同じ
+    self.assertEqual(self.grown("strong", 1), (30, 6, 6, 6, 6))
+    self.assertEqual(self.grown("lucky", 20), (182, 30, 30, 30, 30))  # ふつう（能力は伸びない強運と同じ）
+    self.assertEqual(self.grown("sturdy", 20), (239, 28, 30, 30, 30))  # HP 1.375 倍・攻撃 0.9 倍
+    self.assertEqual(self.grown("strong", 20), (136, 36, 30, 30, 30))  # 攻撃 1.25 倍・HP 0.7 倍
+    self.assertEqual(self.grown("guard", 20), (182, 30, 36, 30, 30))
+    self.assertEqual(self.grown("swift", 20), (182, 30, 30, 36, 30))
+    self.assertEqual(self.grown("skilled", 20), (182, 30, 30, 30, 36))
+    self.assertEqual(self.grown("lucky", 15), (142, 28, 20, 26, 24))  # growth の一覧の値
+
+  def test_base_stats_follow_the_growth_table(self):
+    season = WORLD["season"]
+    for stat in G.GROWN:
+      self.assertEqual([G.base_stats(WORLD, None, lv)[stat] for lv in range(1, 21)], season["growth"][stat])
+    self.assertEqual(G.base_stats(WORLD, "strong", 2)["atk"], 9)  # 6 + (8 - 6) × 1.25 = 8.5 → 四捨五入で 9
 
   def test_level_stops_at_the_max(self):
     state = G.new_state(WORLD)
     day = day_of(state)
     day.gain_exp(10**7)
     self.assertEqual(state["hero"]["level"], WORLD["season"]["max_level"])
-
-  def test_level_gain_rounds_down_the_total(self):
-    self.assertEqual([G.level_gain(2.5, lv) for lv in range(2, 6)], [2, 3, 2, 3])
-    self.assertEqual([G.level_gain(0.25, lv) for lv in range(2, 10)], [0, 0, 0, 1, 0, 0, 0, 1])
 
   def test_lucky_draws_again(self):
     state = G.new_state(WORLD)

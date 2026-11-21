@@ -102,7 +102,7 @@
   "day": 40,
   "last_date": "2027-01-09",
   "trait": "swift",
-  "hero": {"level": 12, "exp": 120, "max_hp": 118, "hp": 117, "base_atk": 28, "base_def": 13, "base_spd": 8,
+  "hero": {"level": 12, "exp": 120, "max_hp": 118, "hp": 117, "base_atk": 24, "base_def": 15, "base_spd": 25, "base_dex": 20,
            "gold": 1587, "potions": 3},
   "inventory": {"wooden_sword": 1, "iron_sword": 1, "iron_shield": 1, "lucky_charm": 1},
   "place": "lost_forest",

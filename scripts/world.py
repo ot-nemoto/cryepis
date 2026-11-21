@@ -70,17 +70,11 @@ SEASON_KEYS = {
 }
 HERO_KEYS = {
   "max_hp": (int, 1, BIG),
-  "atk": (int, 0, BIG),
-  "def": (int, 0, BIG),
-  "spd": (int, 1, BIG),
   "gold": (int, 0, BIG),
   "potions": (int, 0, BIG),
 }
 LEVEL_UP_KEYS = {
   "hp": (int, 0, BIG),
-  "atk": (int, 0, BIG),
-  "def": (int, 0, BIG),
-  "spd": (float, 0, BIG),
   "exp_base": (float, 0.01, BIG),
   "exp_power": (float, 0.01, 10),
 }
@@ -155,9 +149,11 @@ def _weights_ok(pairs) -> bool:
 
 
 def stat_at(season: dict, stat: str, level: int) -> int:
-  """レベル level の基本能力値（装備なし）。"""
-  base = {"atk": "atk", "def": "def", "hp": "max_hp"}[stat]
-  return season["hero"][base] + season["level_up"][stat] * (level - 1)
+  """レベル level の基本能力値（装備なし・特性なし）。HP は level_up、ほかは growth の一覧。"""
+  if stat == "hp":
+    return season["hero"]["max_hp"] + season["level_up"]["hp"] * (level - 1)
+  table = season["growth"][stat]
+  return table[max(0, min(level, len(table)) - 1)]
 
 
 def open_towns(mp: dict) -> set:
@@ -340,7 +336,7 @@ def validate(raw: dict) -> list[str]:
             f"map.json: world/{name} が {len(bg['bytes']) // 1024}KB あります"
             f"（{BACKGROUND_MAX_BYTES // 1024}KB 以下にしてください。目安は 300KB 以下）"
           )
-  monster_terrains = {m.get("terrain") for m in monsters.values()}
+  monster_terrains = {m.get("terrain") for m in monsters.values() if not m.get("boss")}  # ボスは道に出ない
   for i, r in enumerate(mp.get("roads", [])):
     where = f"map.json の roads[{i}]"
     kind = r.get("kind", "land")
@@ -365,7 +361,7 @@ def validate(raw: dict) -> list[str]:
     elif not _weights_ok(terrain) or any(t not in TERRAINS for t, _ in terrain):
       err(f"{where}: terrain は [地形, 正の重み] の一覧にしてください（地形は {'/'.join(TERRAINS)}）")
     elif not any(t in monster_terrains for t, _ in terrain):
-      err(f"{where}: terrain のどの地形にも、monsters.json の魔物がいません")
+      err(f"{where}: terrain のどの地形にも、monsters.json の魔物がいません（ボス以外）")
     path = r.get("path")
     if path is not None and (not isinstance(path, list) or len(path) < 2 or not all(_point_ok(p) for p in path)):
       err(f"{where}: path（地図に描く線）は [x, y] の一覧（2 点以上）にしてください")
@@ -406,6 +402,32 @@ def validate(raw: dict) -> list[str]:
       err(
         f"monsters.json の elements の {eid}: name（文字列）と strong（自分以外の、強い相手の属性の ID）を書いてください"
       )
+  crit = season.get("critical")
+  if (
+    not isinstance(crit, dict)
+    or not isinstance(crit.get("dex_divisor"), (int, float))
+    or isinstance(crit.get("dex_divisor"), bool)
+    or crit["dex_divisor"] <= 0
+    or not isinstance(crit.get("multiplier"), int)
+    or isinstance(crit.get("multiplier"), bool)
+    or crit["multiplier"] < 1
+  ):
+    err(
+      "season.json: critical には dex_divisor（器用さをこれで割った値が会心率。正の数）と multiplier（倍率。1 以上の整数）を書いてください"
+    )
+
+  # 能力の伸び（season.json の growth）: 攻撃・防御・素早さ・器用さの Lv1〜最大レベルの一覧（下がらない整数）
+  growth = season.get("growth")
+  levels = season.get("max_level") if isinstance(season.get("max_level"), int) else 0
+  for stat in ("atk", "def", "spd", "dex"):
+    table = growth.get(stat) if isinstance(growth, dict) else None
+    if (
+      not isinstance(table, list)
+      or len(table) != levels
+      or not all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in table)
+      or any(b < a for a, b in zip(table, table[1:]))
+    ):
+      err(f"season.json: growth の {stat} は、Lv1〜{levels} の値（0 以上の整数・下がらない）の一覧にしてください")
   rates = season.get("element_rates")
   if not isinstance(rates, dict) or any(
     not isinstance(rates.get(k), (int, float)) or isinstance(rates.get(k), bool) or rates[k] <= 0
@@ -413,10 +435,10 @@ def validate(raw: dict) -> list[str]:
   ):
     err("season.json: element_rates には strong と weak（正の数）を書いてください")
 
-  # 勇者の特性（season.json の hero_traits）。grow はレベルアップでの伸び（level_up の代わり）、luck は引き直し
+  # 勇者の特性（season.json の hero_traits）。growth は Lv1 からの伸びにかける倍率、luck は引き直し
   table = season.get("hero_traits")
   if not isinstance(table, dict) or not table:
-    err("season.json: hero_traits を 1 つ以上書いてください（name・text、grow か luck）")
+    err("season.json: hero_traits を 1 つ以上書いてください（name・text、growth か luck）")
     table = {}
   for tid, t in table.items():
     where = f"season.json の hero_traits の {tid}"
@@ -428,12 +450,12 @@ def validate(raw: dict) -> list[str]:
     ):
       err(f"{where}: name と text（文字列）を書いてください")
       continue
-    grow = t.get("grow", {})
-    if not isinstance(grow, dict) or any(
-      k not in ("hp", "atk", "def", "spd") or not isinstance(v, (int, float)) or isinstance(v, bool) or v < 0
-      for k, v in grow.items()
+    mult = t.get("growth", {})
+    if not isinstance(mult, dict) or any(
+      k not in ("hp", "atk", "def", "spd", "dex") or not isinstance(v, (int, float)) or isinstance(v, bool) or v < 0
+      for k, v in mult.items()
     ):
-      err(f"{where}: grow は {{hp/atk/def/spd: レベルアップでの伸び（0 以上の数）}} にしてください")
+      err(f"{where}: growth は {{hp/atk/def/spd/dex: 伸びの倍率（0 以上の数）}} にしてください")
     if "luck" in t and not isinstance(t["luck"], bool):
       err(f"{where}: luck は true か false にしてください")
 
@@ -449,9 +471,13 @@ def validate(raw: dict) -> list[str]:
       err(f"monsters.json の {mid}: terrain は {'/'.join(TERRAINS)} のどれかにしてください")
     if "trait" in m and m["trait"] not in TRAITS:
       err(f"monsters.json の {mid}: trait は {'/'.join(TRAITS)} のどれかにしてください")
-    for key, low in (("level", 1), ("hp", 1), ("atk", 0), ("def", 0), ("spd", 1), ("exp", 0), ("gold", 0)):
+    for key, low in (("level", 1), ("hp", 1), ("atk", 0), ("def", 0), ("spd", 1), ("dex", 0), ("exp", 0), ("gold", 0)):
       if not isinstance(m.get(key), int) or isinstance(m.get(key), bool) or m[key] < low:
         err(f"monsters.json の {mid}: {key} は {low} 以上の整数にしてください")
+    if "boss" in m and (not isinstance(m["boss"], str) or places.get(m["boss"], {}).get("type") != "dungeon"):
+      err(f"monsters.json の {mid}: boss は、そのボスがいるダンジョンの ID にしてください")
+    if "text" in m and (not isinstance(m["text"], str) or not m["text"]):
+      err(f"monsters.json の {mid}: text は空でない文字列にしてください")
     if "element" in m and (not isinstance(m["element"], str) or m["element"] not in elements):
       err(f"monsters.json の {mid}: element は {'/'.join(elements)} のどれかにしてください（属性なしなら書かない）")
 
@@ -473,6 +499,8 @@ def validate(raw: dict) -> list[str]:
         err(f"{where}: {key} は 0 以上の整数にしてください")
     if "spd" in it and (not isinstance(it["spd"], int) or isinstance(it["spd"], bool)):
       err(f"{where}: spd（素早さの増減。重い装備はマイナス）は整数にしてください")
+    if "dex" in it and (not isinstance(it["dex"], int) or isinstance(it["dex"], bool) or it["dex"] < 0):
+      err(f"{where}: dex（器用さ）は 0 以上の整数にしてください")
     if "element" in it and (
       it.get("slot") != "weapon" or not isinstance(it["element"], str) or it["element"] not in elements
     ):
@@ -573,8 +601,10 @@ def validate(raw: dict) -> list[str]:
       if q.get("type") == "hunt":
         if (tid, to) not in road_terrain:
           err(f"{where}: to の {to!r} は、{tid} から陸路・航路で直接つながる開放した町にしてください")
-        elif monsters.get(q.get("monster"), {}).get("terrain") not in road_terrain[(tid, to)]:
-          err(f"{where}: monster の {q.get('monster')!r} は、その道に出る魔物にしてください")
+        elif monsters.get(q.get("monster"), {}).get("terrain") not in road_terrain[(tid, to)] or monsters[
+          q["monster"]
+        ].get("boss"):
+          err(f"{where}: monster の {q.get('monster')!r} は、その道に出る魔物（ボス以外）にしてください")
         if not isinstance(q.get("count"), int) or q["count"] < 1:
           err(f"{where}: count は 1 以上の整数にしてください")
       elif q.get("type") == "deliver":
@@ -610,7 +640,7 @@ def road_monsters(terrain: list, monsters: list[dict]) -> list[tuple[str, float]
   """道に出る魔物と重み（地形の割合を、その地形の魔物の数で分ける）。"""
   pool = []
   for t, weight in terrain:
-    here = [m["id"] for m in monsters if m["terrain"] == t]
+    here = [m["id"] for m in monsters if m["terrain"] == t and not m.get("boss")]  # ボスは道には出ない
     pool += [(mid, weight / len(here)) for mid in here]
   return pool
 
