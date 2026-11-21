@@ -213,7 +213,7 @@ def build_text(world: dict, state: dict, fold: bool = True) -> str:
     )
     + f"  回復薬: {hero['potions']}",
     f"攻撃 {s['atk']}（基本 {hero['base_atk']}）  防御 {s['def']}（基本 {hero['base_def']}）  "
-    f"最大HP {s['max_hp']}（基本 {hero['max_hp']}）  素早さ {s['spd']}",
+    f"最大HP {s['max_hp']}（基本 {hero['max_hp']}）  素早さ {s['spd']}  器用さ {s['dex']}",
     trait_text(world, state),
     "",
     "── 装備 ──",

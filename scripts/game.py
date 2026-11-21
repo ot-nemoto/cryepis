@@ -51,16 +51,38 @@ def season_range(world: dict, season: int) -> tuple[date, date]:
 
 
 # ---- 状態 -----------------------------------------------------------------------------
+GROWN = ("atk", "def", "spd", "dex")  # Lv1〜最大レベルの一覧（season.json の growth）で伸びる能力
+
+
+def base_stats(world: dict, trait_id: str | None, level: int) -> dict[str, int]:
+  """レベルで決まる基本の能力（装備なし）。HP は Lv1 の max_hp から毎レベル level_up.hp ずつ、
+  攻撃・防御・素早さ・器用さは growth の一覧の値。特性の growth（倍率）は、Lv1 からの伸びにかける（四捨五入）。"""
+  season = world["season"]
+  mult = season["hero_traits"].get(trait_id, {}).get("growth", {})
+  level = max(1, min(level, season["max_level"]))
+  out = {"max_hp": int(season["hero"]["max_hp"] + season["level_up"]["hp"] * (level - 1) * mult.get("hp", 1) + 0.5)}
+  for stat in GROWN:
+    table = season["growth"][stat]
+    out[stat] = int(table[0] + (table[level - 1] - table[0]) * mult.get(stat, 1) + 0.5)
+  return out
+
+
+def set_base_stats(world: dict, state: dict) -> None:
+  """勇者の基本の能力を、今のレベルと特性に合わせる（レベルアップ・読み込みのとき）。"""
+  base, hero = base_stats(world, state.get("trait"), state["hero"]["level"]), state["hero"]
+  hero["max_hp"] = base["max_hp"]
+  for stat in GROWN:
+    hero[f"base_{stat}"] = base[stat]
+
+
 def new_hero(world: dict) -> dict:
-  h = world["season"]["hero"]
+  h, base = world["season"]["hero"], base_stats(world, None, 1)
   return {
     "level": 1,
     "exp": 0,
-    "max_hp": h["max_hp"],
-    "hp": h["max_hp"],
-    "base_atk": h["atk"],
-    "base_def": h["def"],
-    "base_spd": h["spd"],
+    "max_hp": base["max_hp"],
+    "hp": base["max_hp"],
+    **{f"base_{stat}": base[stat] for stat in GROWN},
     "gold": h["gold"],
     "potions": h["potions"],
   }
@@ -119,6 +141,8 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
   state["hero"] = {**new_hero(world), **state["hero"]}
   if state.get("trait") not in world["season"]["hero_traits"]:  # 前の形式・world/ から消えた特性は、付け直す
     state["trait"] = pick_trait(world, state["id"])
+  state["hero"]["level"] = max(1, min(state["hero"]["level"], world["season"]["max_level"]))
+  set_base_stats(world, state)  # 能力の伸び方が変わっても、今のレベルと特性に合わせる
   state["season_stats"] = {**new_season_stats(), **state["season_stats"]}
   places = world["places"]
   fallback = start_town(world, state["id"], state["season"])
@@ -185,25 +209,16 @@ def hero_trait(world: dict, state: dict) -> dict:
   return world["season"]["hero_traits"].get(state.get("trait"), {})
 
 
-def growth(world: dict, state: dict, stat: str) -> float:
-  """レベルアップでの伸び（特性の grow があればそれ、なければ season.json の level_up）。"""
-  return hero_trait(world, state).get("grow", {}).get(stat, world["season"]["level_up"].get(stat, 0))
-
-
-def level_gain(rate: float, level: int) -> int:
-  """level に上がったときに増える量（伸びに端数があっても、合計の端数を切り捨てて増やす。+2.5 なら +2・+3 と交互）。"""
-  return int(rate * (level - 1) + 1e-9) - int(rate * (level - 2) + 1e-9)
-
-
 def stats(world: dict, state: dict) -> dict[str, int]:
-  """装備を足した能力値（素早さは 1 より下にはならない）。特性は、レベルアップでの伸びで効く（growth）。"""
+  """装備を足した能力値（素早さは 1 より下にはならない）。特性は、レベルで決まる基本の能力に効く（base_stats）。"""
   hero = state["hero"]
   worn = [world["items"][i] for i in equipment(world, state).values() if i]
   return {
     "atk": hero["base_atk"] + sum(i.get("atk", 0) for i in worn),
     "def": hero["base_def"] + sum(i.get("def", 0) for i in worn),
     "max_hp": hero["max_hp"] + sum(i.get("hp", 0) for i in worn),
-    "spd": max(1, hero.get("base_spd", world["season"]["hero"]["spd"]) + sum(i.get("spd", 0) for i in worn)),
+    "spd": max(1, hero["base_spd"] + sum(i.get("spd", 0) for i in worn)),
+    "dex": max(0, hero["base_dex"] + sum(i.get("dex", 0) for i in worn)),
   }
 
 
@@ -484,12 +499,13 @@ class Day:
     return stats(self.world, self.state)
 
   # 戦闘 ----------------------------------------------------------------------------
-  def damage(self, attack: int, guard: int) -> int:
-    """1 回の攻撃のダメージ。ときどき会心の一撃（season.json の critical: rate の確率で multiplier 倍）になる。
+  def damage(self, attack: int, guard: int, dex: int = 0) -> int:
+    """1 回の攻撃のダメージ。器用さ（dex）÷ critical.dex_divisor の確率で会心の一撃（multiplier 倍）になる。
     勇者も魔物も同じ。会心があるので、能力の差が小さいと勝ち負けに幅が出る。"""
     hit = max(1, attack - guard // 2 + self.rng.randint(-2, 2))
-    crit = self.cfg.get("critical") or {}
-    if crit.get("rate", 0) > 0 and self.rng.random() < crit["rate"]:  # 会心がなければ乱数を使わない
+    crit = self.cfg["critical"]
+    rate = dex / crit["dex_divisor"]
+    if rate > 0 and self.rng.random() < rate:  # 会心がなければ乱数を使わない
       return hit * crit["multiplier"]
     return hit
 
@@ -536,14 +552,14 @@ class Day:
       for side in ("hero", "monster") if hero_first else ("monster", "hero"):
         if side == "hero":
           for _ in range(hero_hits):
-            hp -= max(1, round(self.damage(hero_atk, guard) * rate))
+            hp -= max(1, round(self.damage(hero_atk, guard, s["dex"]) * rate))
             if hp <= 0:
               break
           if hp <= 0:
             break
           continue
         for _ in range(hits):
-          hero["hp"] -= self.damage(atk, s["def"])
+          hero["hp"] -= self.damage(atk, s["def"], monster.get("dex", 6))
           if hero["hp"] <= 0:
             if hero["potions"]:  # 倒れる前に回復薬を使う
               hero["potions"] -= 1
@@ -588,11 +604,7 @@ class Day:
     while hero["level"] < self.cfg["max_level"] and hero["exp"] >= exp_need(self.world, hero["level"]):
       hero["exp"] -= exp_need(self.world, hero["level"])
       hero["level"] += 1
-      grow = {k: level_gain(growth(self.world, self.state, k), hero["level"]) for k in ("hp", "atk", "def", "spd")}
-      hero["max_hp"] += grow["hp"]
-      hero["base_atk"] += grow["atk"]
-      hero["base_def"] += grow["def"]
-      hero["base_spd"] = hero.get("base_spd", self.cfg["hero"]["spd"]) + grow["spd"]
+      set_base_stats(self.world, self.state)
       hero["hp"] = self.stats["max_hp"]
       self.log(f"レベルが上がった！ Lv.{hero['level']}")
     if hero["level"] >= self.cfg["max_level"]:

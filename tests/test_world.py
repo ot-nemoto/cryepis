@@ -122,14 +122,17 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["elements"]["fire"].update(strong=["ice"]), ["elements", "fire"])  # 落ちずに返す
     self.assertError(lambda r: r["monsters"][0].update(element=["fire"]), ["wild_dog", "element"])
     self.assertError(lambda r: r["season"]["element_rates"].pop("weak"), ["element_rates"])
-    self.assertError(lambda r: r["season"]["hero_traits"]["strong"].update(grow={"atk": "2"}), ["strong", "grow"])
-    self.assertError(lambda r: r["season"]["hero_traits"]["strong"].update(grow={"luck": 1}), ["strong", "grow"])
+    self.assertError(lambda r: r["season"]["hero_traits"]["strong"].update(growth={"atk": "2"}), ["strong", "growth"])
+    self.assertError(lambda r: r["season"]["hero_traits"]["strong"].update(growth={"luck": 1}), ["strong", "growth"])
+    self.assertError(lambda r: r["season"]["growth"]["atk"].pop(), ["growth", "atk"])  # 最大レベルの数だけ要る
+    self.assertError(lambda r: r["season"]["growth"]["def"].__setitem__(5, 1), ["growth", "def"])  # 下がらない
+    self.assertError(lambda r: r["monsters"][0].update(dex=-1), ["wild_dog", "dex"])
     self.assertError(lambda r: r["season"].pop("max_level"), ["max_level"])
     self.assertError(lambda r: r["season"].update(hero_traits={}), ["hero_traits"])
-    self.assertError(lambda r: r["season"]["hero"].pop("spd"), ["hero", "spd"])
+    self.assertError(lambda r: r["season"].pop("growth"), ["growth"])
 
   def test_critical_is_checked(self):
-    self.assertError(lambda r: r["season"]["critical"].update(rate=2), ["critical"])
+    self.assertError(lambda r: r["season"]["critical"].update(dex_divisor=0), ["critical"])
     self.assertError(lambda r: r["season"].pop("critical"), ["critical"])
 
   def test_boss_needs_a_dungeon(self):
@@ -298,9 +301,9 @@ class ValidateTest(unittest.TestCase):
     self.assertError(bad_scenery, ["terrain_scenery"])
 
     def bad_hero(r):
-      del r["season"]["hero"]["atk"]
+      del r["season"]["hero"]["max_hp"]
 
-    self.assertError(bad_hero, ["hero", "atk"])
+    self.assertError(bad_hero, ["hero", "max_hp"])
 
     def bad_rate(r):
       r["season"]["potion"]["heal_rate"] = 2

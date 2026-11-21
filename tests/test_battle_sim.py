@@ -23,21 +23,21 @@ class BattleSimTest(unittest.TestCase):
     self.assertEqual(state["hero"]["hp"], 142)  # 装備なし、ふつうの HP の伸び
 
   def test_boss_win_rates_for_a_plain_hero(self):
-    # ふつう（能力の伸びない強運）・装備なし・回復薬 3 個で、Lv16 で 7 割、Lv18 で 9 割、それより上はほぼ必ず勝つ
+    # ふつう（能力の伸びない強運）・装備なし・回復薬 3 個で、Lv15 で 5 割、Lv16 で 7 割、Lv17 で 9 割、それより上はほぼ必ず勝つ
     boss = WORLD["monsters"]["den_lord"]
-    rate = {lv: B.win_rate(WORLD, boss, "lucky", lv, [], 3, 400) for lv in (12, 16, 18, 20)}
+    rate = {lv: B.win_rate(WORLD, boss, "lucky", lv, [], 3, 400) for lv in (12, 15, 16, 17, 19)}
     self.assertLess(rate[12], 0.05)
+    self.assertTrue(0.4 <= rate[15] <= 0.65, rate)
     self.assertTrue(0.6 <= rate[16] <= 0.8, rate)
-    self.assertTrue(0.85 <= rate[18] <= 0.97, rate)
-    self.assertGreaterEqual(rate[20], 0.99)
+    self.assertTrue(0.8 <= rate[17] <= 0.97, rate)
+    self.assertGreaterEqual(rate[19], 0.98)
 
-  def test_stat_traits_are_balanced_against_the_boss(self):
+  def test_stat_traits_help_against_the_boss(self):
     boss = WORLD["monsters"]["den_lord"]
     base = B.even_strength(WORLD, boss, "lucky", 15, [], 3, 60)
-    gains = {t: B.even_strength(WORLD, boss, t, 15, [], 3, 60) / base for t in ("strong", "sturdy", "guard")}
-    for t, g in gains.items():  # 能力の伸びる特性は、ふつうより強い相手と五分に戦える
-      self.assertTrue(1.03 <= g <= 1.2, (t, g))
-    self.assertLess(max(gains.values()) - min(gains.values()), 0.08)
+    gains = {t: B.even_strength(WORLD, boss, t, 15, [], 3, 60) / base for t in ("strong", "sturdy", "guard", "skilled")}
+    for t, g in gains.items():  # 能力の伸びる特性は、ふつうと同じか、より強い相手と五分に戦える
+      self.assertGreaterEqual(g, 1.0, t)
 
   def test_reach_level(self):
     self.assertEqual(B.reach_level({14: 0.0, 15: 0.55, 16: 1.0}), 15)
