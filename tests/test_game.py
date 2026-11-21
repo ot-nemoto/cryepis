@@ -578,7 +578,9 @@ class TraitTest(unittest.TestCase):
         state = G.new_state(WORLD)
         state["hero"].update(max_hp=999, hp=999, base_dex=0)
         monster = dict(WORLD["monsters"]["wild_dog"], dex=0) | ({"trait": trait} if trait else {})
-        day_of(state, seed=str(seed)).battle(monster)
+        day = day_of(state, seed=str(seed))
+        day.gain_exp = lambda exp: None  # レベルが上がると HP が戻るので、育てない
+        day.battle(monster)
         total += 999 - state["hero"]["hp"]
       return total
 

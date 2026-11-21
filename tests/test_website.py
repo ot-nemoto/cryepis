@@ -329,6 +329,10 @@ class SiteTest(unittest.TestCase):
     self.assertIn("器用さ ÷ 150 の確率で、ダメージが 3 倍", html)
     self.assertIn("最大 HP の 50% まで回復", html)
     self.assertIn("Lv20 で 182。特性で変わる", html)
+    self.assertIn("<h3>魔物の経験値とお金</h3>", html)
+    self.assertIn("HP + 攻 × 4 + 防 × 4 + 速 × 2 + 器 × 2", html)
+    self.assertIn("先手は速 +10・毒は攻 +2として数える", html)
+    self.assertIn("強さ点 × 強さ点 ÷ 700", html)
     self.assertIn("攻は Lv1 で 6、Lv20 で 30・防は Lv1 で 6", html)  # 能力ごとの値
 
   def test_guide_page_follows_the_data(self):

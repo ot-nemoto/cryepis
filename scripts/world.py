@@ -41,6 +41,7 @@ TERRAIN_NAMES = {
   "sea": "海",
 }
 TRAITS = ("first_strike", "poison", "swarm", "fierce", "armored", "thief")
+REWARD_STATS = ("hp", "atk", "def", "spd", "dex")  # 魔物の強さ点に使う能力（season.json の monster_reward）
 QUEST_TYPES = ("hunt", "deliver")
 ROAD_EVENTS = ("battle", "treasure", "nothing")
 STATS = ("atk", "def", "hp")
@@ -461,9 +462,29 @@ def validate(raw: dict) -> list[str]:
 
   # monsters.json
   traits = raw.get("traits", {})
+  reward_cfg = season.get("monster_reward")
+  weights = reward_cfg.get("weights") if isinstance(reward_cfg, dict) else None
+  if (
+    not isinstance(weights, dict)
+    or not weights
+    or any(k not in REWARD_STATS or not _num(v) or v < 0 for k, v in weights.items())
+    or not _num(reward_cfg.get("exp_divisor"))
+    or reward_cfg["exp_divisor"] <= 0
+    or not _num(reward_cfg.get("gold_rate"))
+    or reward_cfg["gold_rate"] < 0
+  ):
+    err(
+      "season.json: monster_reward は {weights: {hp/atk/def/spd/dex: 重み（0 以上）}, exp_divisor: 正の数, "
+      "gold_rate: 0 以上の数} にしてください"
+    )
   for key in TRAITS:
     if not isinstance(traits.get(key), dict) or not traits[key].get("name"):
       err(f"monsters.json: traits に {key}（name のある項目）を書いてください")
+    elif "score" in traits[key] and (
+      not isinstance(traits[key]["score"], dict)
+      or any(k not in REWARD_STATS or not _num(v) for k, v in traits[key]["score"].items())
+    ):
+      err(f"monsters.json の traits の {key}: score は {{hp/atk/def/spd/dex: 強さ点で足す値}} にしてください")
   for mid, m in monsters.items():
     if not m.get("name"):
       err(f"monsters.json の {mid}: name がありません")
@@ -471,9 +492,12 @@ def validate(raw: dict) -> list[str]:
       err(f"monsters.json の {mid}: terrain は {'/'.join(TERRAINS)} のどれかにしてください")
     if "trait" in m and m["trait"] not in TRAITS:
       err(f"monsters.json の {mid}: trait は {'/'.join(TRAITS)} のどれかにしてください")
-    for key, low in (("level", 1), ("hp", 1), ("atk", 0), ("def", 0), ("spd", 1), ("dex", 0), ("exp", 0), ("gold", 0)):
+    for key, low in (("level", 1), ("hp", 1), ("atk", 0), ("def", 0), ("spd", 1), ("dex", 0)):
       if not isinstance(m.get(key), int) or isinstance(m.get(key), bool) or m[key] < low:
         err(f"monsters.json の {mid}: {key} は {low} 以上の整数にしてください")
+    for key in ("exp", "gold"):
+      if key in m:
+        err(f"monsters.json の {mid}: {key} は書かないでください（能力から計算する。season.json の monster_reward）")
     if "boss" in m and (not isinstance(m["boss"], str) or places.get(m["boss"], {}).get("type") != "dungeon"):
       err(f"monsters.json の {mid}: boss は、そのボスがいるダンジョンの ID にしてください")
     if "text" in m and (not isinstance(m["text"], str) or not m["text"]):
@@ -645,6 +669,38 @@ def road_monsters(terrain: list, monsters: list[dict]) -> list[tuple[str, float]
   return pool
 
 
+def _num(v) -> bool:
+  return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def trait_effect(monster: dict) -> dict:
+  """性質で変わる、戦いで効く値 {hp, atk, guard, hits}（凶暴・硬い・群れ）。戦い（game.Day.battle）と報酬の計算で使う。"""
+  hp, atk, guard, hits = monster["hp"], monster["atk"], monster["def"], 1
+  trait = monster.get("trait")
+  if trait == "fierce":  # 凶暴: 攻撃が強いが、守りが弱い
+    atk, guard = round(atk * 1.3), guard // 2
+  elif trait == "armored":  # 硬い: 守りが固く、攻撃は少し弱い
+    atk, guard = max(1, round(atk * 0.9)), guard * 2 + 1
+  elif trait == "swarm":  # 群れ: 数が多い（倒すのに手間がかかり、攻撃の回数が多い）
+    hp, atk, hits = round(hp * 1.5), max(1, round(atk * 0.6)), 2
+  return {"hp": hp, "atk": atk, "guard": guard, "hits": hits}
+
+
+def monster_score(monster: dict, traits: dict, cfg: dict) -> float:
+  """魔物の強さ点: 戦いで効く値（性質の効果のあと。攻撃は 1 回の番の合計）に、性質の score を足して、重みをかけて足す。"""
+  e = trait_effect(monster)
+  stats = {"hp": e["hp"], "atk": e["atk"] * e["hits"], "def": e["guard"], "spd": monster["spd"], "dex": monster["dex"]}
+  bonus = traits.get(monster.get("trait"), {}).get("score", {})
+  return sum(w * (stats[k] + bonus.get(k, 0)) for k, w in cfg["weights"].items())
+
+
+def monster_reward(monster: dict, traits: dict, cfg: dict) -> tuple[int, int]:
+  """倒したときの経験値とお金: 経験値 = 強さ点² ÷ exp_divisor、お金 = 経験値 × gold_rate（どちらも四捨五入）。"""
+  score = monster_score(monster, traits, cfg)
+  exp = round(score * score / cfg["exp_divisor"])
+  return exp, round(exp * cfg["gold_rate"])
+
+
 def build(raw: dict) -> dict:
   mp = raw["map"]
   places = {p["id"]: p for p in mp["places"]}
@@ -702,7 +758,10 @@ def build(raw: dict) -> dict:
     "neighbors": {t: sorted((b for (a, b) in roads if a == t), key=lambda b: order[b]) for t in towns},
     "dist": dist,
     "next": nxt,
-    "monsters": {m["id"]: m for m in raw["monsters"]},
+    "monsters": {
+      m["id"]: m | dict(zip(("exp", "gold"), monster_reward(m, raw.get("traits", {}), raw["season"]["monster_reward"])))
+      for m in raw["monsters"]
+    },
     "traits": raw.get("traits", {}),
     "elements": raw.get("elements", {}),
     "rarities": raw["rarities"],

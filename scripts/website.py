@@ -863,6 +863,26 @@ def build_guide(world: dict) -> str:
     ("回復薬", f"HP が 0 になりそうなとき、自動で使う。最大 HP の {potion['heal_rate']:.0%} まで回復する"),
     ("武器の持ち替え", "勇者は戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える"),
   ]
+  reward = cfg["monster_reward"]
+  names_all = {"hp": "HP", "atk": "攻", "def": "防", "spd": "速", "dex": "器"}
+  score_text = " + ".join(f"{names_all[k]}" + (f" × {w}" if w != 1 else "") for k, w in reward["weights"].items() if w)
+  trait_bonus = "・".join(
+    f"{t['name']}は" + "・".join(f"{names_all.get(k, k)} {v:+g}" for k, v in t["score"].items())
+    for t in world["traits"].values()
+    if t.get("score")
+  )
+  reward_rows = [
+    (
+      "強さ点",
+      escape(
+        f"{score_text}。性質の効果がかかったあとの値で数える（凶暴・硬い・群れ）"
+        + (f"。{trait_bonus}として数える" if trait_bonus else "")
+      ),
+    ),
+    ("経験値", escape(f"強さ点 × 強さ点 ÷ {reward['exp_divisor']:g}（四捨五入）")),
+    ("お金", escape(f"経験値 × {reward['gold_rate']:g}（四捨五入）")),
+    ("レベル差", "勇者が魔物より 4 以上レベルが高いと、もらえる経験値が減る"),
+  ]
   cards = [
     ("能力", table(("能力", "説明"), stats) + f'<p class="note">{escape(stat_note)}</p>'),
     (
@@ -887,6 +907,7 @@ def build_guide(world: dict) -> str:
       )
     )
   cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))
+  cards.append(("魔物の経験値とお金", table(("項目", "決め方"), reward_rows)))
   body = "<h2>手引き</h2>" + "".join(f'<div class="card"><h3>{escape(h)}</h3>{inner}</div>' for h, inner in cards)
   return page("手引き", body, "guide.html")
 

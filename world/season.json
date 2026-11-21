@@ -20,6 +20,7 @@
   "balance_level": 20,
   "item_power_rate": 0.4,
   "element_rates": {"strong": 1.5, "weak": 0.7},
+  "monster_reward": {"weights": {"hp": 1, "atk": 4, "def": 4, "spd": 2, "dex": 2}, "exp_divisor": 700, "gold_rate": 0.75},
   "critical": {"dex_divisor": 150, "multiplier": 3},
   "hero_traits": {
     "strong": {"name": "怪力", "text": "攻撃の伸びが 1.25 倍。そのかわり HP の伸びが 0.7 倍（打たれ弱い）", "growth": {"atk": 1.25, "hp": 0.7}},
