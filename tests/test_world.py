@@ -131,6 +131,9 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"].update(hero_traits={}), ["hero_traits"])
     self.assertError(lambda r: r["season"].pop("growth"), ["growth"])
 
+  def test_element_emoji_is_checked(self):
+    self.assertError(lambda r: r["elements"]["fire"].update(emoji=""), ["fire", "emoji"])
+
   def test_critical_is_checked(self):
     self.assertError(lambda r: r["season"]["critical"].update(dex_divisor=0), ["critical"])
     self.assertError(lambda r: r["season"].pop("critical"), ["critical"])

@@ -105,6 +105,8 @@ padding:6px 12px;margin-bottom:-2px;cursor:pointer}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:#e8833a}
 h2.area{font-size:17px;margin:6px 0 10px;border-left:0;padding-left:0}
 .minus{color:var(--minus);font-weight:bold}
+.icon{text-align:center;white-space:nowrap}
+td.icon a{text-decoration:none}
 .zero{color:var(--sub)}
 .pill{display:inline-block;margin:2px 6px 2px 0;padding:1px 10px;border:1.5px solid #f0a868;border-radius:999px;
   background:var(--card);color:var(--ink);text-decoration:none;font-size:13px;white-space:nowrap}
@@ -576,8 +578,11 @@ def build_towns(world: dict) -> str:
 
 # ---- アイテム ---------------------------------------------------------------------------
 def item_rows(world: dict) -> dict[str, list[dict]]:
-  """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）: {部位: [{id, item, shops, towns}]}。
-  shops は売っている町、towns は依頼の報酬で出る町（どちらも開放した町の ID）。"""
+  """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）:
+  {部位: [{id, item, shops, towns, specialty}]}。
+  shops は売っている町、towns は依頼の報酬で出る町（どちらも開放した町の ID）。
+  specialty は、その品を特産として売る町の ID（世界でその町だけが売る品。なければ None）。
+  開放していない町のこともある（町のページには全部の町があるので、リンクは切れない）。"""
   places, items = world["places"], world["items"]
   shops: dict[str, list[str]] = {}
   for t in world["towns"]:
@@ -589,9 +594,10 @@ def item_rows(world: dict) -> dict[str, list[dict]]:
     towns = [t for t in it.get("towns", []) if t in world["towns"]]
     if iid in world["region_items"] or towns:
       sellers = [t for t, p in places.items() if p["type"] == "town" and iid in p.get("shop", [])]
+      specialty = sellers[0] if len(sellers) == 1 else None  # 世界でその町だけが売る品（その町の ID）
       rows[it["slot"]].append(
-        {"id": iid, "item": it, "shops": shops.get(iid, []), "towns": towns, "specialty": len(sellers) == 1}
-      )  # 世界でその町だけが売る品
+        {"id": iid, "item": it, "shops": shops.get(iid, []), "towns": towns, "specialty": specialty}
+      )
   for slot in rows:
     rows[slot].sort(key=lambda r: (-rank[r["item"]["rarity"]], -game.item_score(r["item"]), r["item"].get("price", 0)))
   return rows
@@ -619,6 +625,39 @@ def stat_cell(value: int) -> str:
   return f'<td class="{cls}">{value:+d}</td>' if value else f'<td class="{cls}">0</td>'
 
 
+SPECIALTY_MARK = "🏷️"  # 特産の印（どの町の特産も同じ）
+
+
+def specialty_cell(world: dict, town: str | None) -> str:
+  """特産の欄（🏷️。押すと、特産として売る町のページ）。特産でなければ空。"""
+  if not town:
+    return '<td class="icon"></td>'
+  p = world["places"][town]
+  label = f"{p['name']}の特産"
+  return (
+    f'<td class="icon"><a href="towns.html#{escape(town)}" title="{escape(label)}" aria-label="{escape(label)}">'
+    f"{SPECIALTY_MARK}</a></td>"
+  )
+
+
+def element_cell(world: dict, element: str | None) -> str:
+  """属性の欄（属性の絵文字。絵文字がなければ名前）。属性がなければ空。"""
+  e = world["elements"].get(element)
+  if not e:
+    return '<td class="icon"></td>'
+  label = f"{e['name']}属性"
+  return (
+    f'<td class="icon" title="{escape(label)}"><span role="img" aria-label="{escape(label)}">'
+    f"{escape(e.get('emoji') or e['name'])}</span></td>"
+  )
+
+
+def element_label(world: dict, element: str | None) -> str:
+  """属性の絵文字と名前（🔥 炎 など）。属性がなければ -。"""
+  e = world["elements"].get(element)
+  return f"{e.get('emoji', '')} {e['name']}".strip() if e else "-"
+
+
 def build_items(world: dict) -> str:
   """開放した地域で手に入るアイテムの一覧。装備の種類ごとのタブで、レアリティで絞り込める。
   能力は HP・攻・防・速・器の列に分けて出す。入手方法は、買える店（町の札）か、報酬で出る依頼の町。"""
@@ -640,21 +679,20 @@ def build_items(world: dict) -> str:
         how = (
           "".join(town_pill(world, t) for t in r["shops"]) or "店: なし"
         ) + '<div class="note">宝箱・依頼の報酬でも出る</div>'
-      element = world["elements"].get(it.get("element"), {}).get("name")
       trs.append(
         f'<tr data-f="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
-        f"<td>{escape(it['name'])}"
-        + ('<span class="tag">特産</span>' if r["specialty"] else "")
-        + (f'<span class="tag">{escape(element)}属性</span>' if element else "")
-        + "</td>"
+        f"<td>{escape(it['name'])}</td>"
+        + specialty_cell(world, r["specialty"])
+        + element_cell(world, it.get("element"))
         + "".join(stat_cell(it.get(k, 0)) for k, _ in ITEM_STATS)
         + f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>'
       )
     table = (
       '<div class="card board"><div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em">'
-      '<col style="width:13em">'
+      '<col style="width:13em"><col style="width:3.5em"><col style="width:3.5em">'
       + '<col style="width:3em">' * len(ITEM_STATS)
       + '<col style="width:5.5em"><col></colgroup><tr><th></th><th>名前</th>'
+      + '<th class="icon">特産</th><th class="icon">属性</th>'
       + "".join(f'<th class="num">{name}</th>' for _, name in ITEM_STATS)
       + '<th class="num">値段</th><th>入手方法</th></tr>'
       + "".join(trs)
@@ -701,7 +739,7 @@ def build_monsters(world: dict) -> str:
           if trait
           else "<td>-</td>"
         )
-        + f"<td>{escape(world['elements'].get(m.get('element'), {}).get('name', '-'))}</td>"
+        + f"<td>{escape(element_label(world, m.get('element')))}</td>"
         + "".join(f'<td class="num">{m[k]}</td>' for k in ("level", "hp", "atk", "def", "spd", "exp", "gold"))
         + f"<td>{'<br>'.join(seen[mid])}</td></tr>"
       )
@@ -725,11 +763,11 @@ def build_monsters(world: dict) -> str:
     chart.append(cur)
     cur = elements[cur]["strong"]
   if chart and len(chart) == len(elements) and cur == chart[0]:
-    chart = "→".join(escape(elements[e]["name"]) for e in chart + [cur])
+    chart = "→".join(escape(element_label(world, e)) for e in chart + [cur])
   else:  # 輪になっていなければ、組ごとに出す
     chart = "・".join(
-      f"{escape(e['name'])}→{escape(elements[e['strong']]['name'])}"
-      for e in elements.values()
+      f"{escape(element_label(world, eid))}→{escape(element_label(world, e['strong']))}"
+      for eid, e in elements.items()
       if e["strong"] in elements
     )
   element_line = (  # 属性がなければ出さない
