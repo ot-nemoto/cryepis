@@ -189,6 +189,12 @@ class QuestTest(unittest.TestCase):
     q = G.make_town_quest(WORLD, quest, "karun", START)
     self.assertFalse(G.suitable(q, 9))  # Lv10 の強敵は Lv10 から
     self.assertTrue(G.suitable(q, 10))
+    self.assertEqual(q["level"], [10, 10])  # 依頼のレベルも魔物のレベル
+    self.assertTrue(G.quest_ok(WORLD, q, steps=False))
+    # 強敵にする前に貼られた依頼（Lv の決まりがなく、数も多い）は捨てる（掲示板からも、勇者の状態からも）
+    old = {k: v for k, v in q.items() if k != "min_level"} | {"count": 5, "level": [2, 2]}
+    self.assertFalse(G.quest_ok(WORLD, old, steps=False))
+    self.assertFalse(G.quest_ok(WORLD, q | {"count": 5}, steps=False))
 
   def test_board_has_town_quests_once_a_day(self):
     names = {q["name"] for t in WORLD["town_quests"].values() for q in t}

@@ -503,6 +503,16 @@ def validate(raw: dict) -> list[str]:
       err(f"monsters.json の {mid}: boss は、そのボスがいるダンジョンの ID にしてください")
     if "elite" in m and (not isinstance(m["elite"], bool) or (m["elite"] and "boss" in m)):
       err(f"monsters.json の {mid}: elite（強敵。道に出ず、討伐の依頼で狙う）は true か false。ボスには付けない")
+    elif m.get("elite") and not any(
+      q.get("type") == "hunt" and q.get("monster") == mid
+      for town, qs in (raw.get("town_quests") or {}).items()
+      if town in opened and isinstance(qs, list)
+      for q in qs
+      if isinstance(q, dict)
+    ):
+      err(
+        f"monsters.json の {mid}: 強敵（elite）は、開放した町の討伐の依頼で狙えるようにしてください（道では出会わないため）"
+      )
     if "text" in m and (not isinstance(m["text"], str) or not m["text"]):
       err(f"monsters.json の {mid}: text は空でない文字列にしてください")
     if "element" in m and (not isinstance(m["element"], str) or m["element"] not in elements):
