@@ -339,6 +339,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("HP + 攻 × 4 + 防 × 4 + 速 × 2 + 器 × 2", html)
     self.assertIn("先手は速 +10・毒は攻 +2として数える", html)
     self.assertIn("強さ点 × 強さ点 ÷ 700", html)
+    self.assertIn("経験値 × 0.75（四捨五入）。盗みの魔物は × 1.5", html)
     self.assertIn("攻は Lv1 で 6、Lv20 で 30・防は Lv1 で 6", html)  # 能力ごとの値
 
   def test_guide_page_follows_the_data(self):
