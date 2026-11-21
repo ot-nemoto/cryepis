@@ -105,6 +105,7 @@ padding:6px 12px;margin-bottom:-2px;cursor:pointer}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:#e8833a}
 h2.area{font-size:17px;margin:6px 0 10px;border-left:0;padding-left:0}
 .minus{color:var(--minus);font-weight:bold}
+h3.sub{font-size:15px;margin:18px 0 0}
 .icon{text-align:center;white-space:nowrap}
 td.icon .tag{margin-left:0}
 .zero{color:var(--sub)}
@@ -690,9 +691,14 @@ def build_items(world: dict) -> str:
 
 
 # ---- 魔物 ---------------------------------------------------------------------------------
+MONSTER_STATS = ("hp", "atk", "def", "spd", "exp", "gold")  # 魔物のページの強さの列（Lv は出さない）
+MONSTER_STAT_NAMES = ("HP", "攻", "防", "速", "EXP", "G")
+
+
 def build_monsters(world: dict) -> str:
-  """開放した道に出る魔物の一覧（地方ごとのタブ。地形・性質・強さ・出る道と、その道で出会う割合）。
-  道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。"""
+  """開放した道に出る魔物の一覧（地方ごとのタブ。地形・性質・属性・強さ・出る道と、その道で出会う割合）。
+  道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
+  ボスは、いるダンジョンの地方に、道の魔物とは別の表で出す（開放した町のある地方だけ）。"""
   places, monsters, traits = world["places"], world["monsters"], world["traits"]
   towns = [t for t, p in places.items() if p["type"] == "town"]
   order = {t: i for i, t in enumerate(W.TERRAINS)}
@@ -715,33 +721,58 @@ def build_monsters(world: dict) -> str:
         seen.setdefault(mid, []).append(f"{escape(road)}（{rate(w / total)}）")
     if not seen:
       return '<div class="card"><p class="note">まだ開放されていません（この地方の道は通れません）。</p></div>'
-    rows = []
-    for mid in sorted(seen, key=lambda m: (order.get(monsters[m]["terrain"], 99), m)):
-      m = monsters[mid]
-      trait = traits.get(m.get("trait"), {})
-      rows.append(
-        f"<tr><td>{escape(m['name'])}</td><td>{escape(W.TERRAIN_NAMES.get(m['terrain'], m['terrain']))}</td>"
-        + (
-          f'<td>{escape(trait["name"])}<div class="note">{escape(trait.get("text", ""))}</div></td>'
-          if trait
-          else "<td>-</td>"
-        )
-        + f"<td>{escape(element_label(world, m.get('element')))}</td>"
-        + "".join(f'<td class="num">{m[k]}</td>' for k in ("level", "hp", "atk", "def", "spd", "exp", "gold"))
-        + f"<td>{'<br>'.join(seen[mid])}</td></tr>"
+    rows = [
+      monster_row(mid, "<br>".join(seen[mid]))
+      for mid in sorted(seen, key=lambda m: (order.get(monsters[m]["terrain"], 99), m))
+    ]
+    return (
+      monster_table(rows, "出る道（その道で出会う割合）")
+      + '<p class="note">HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
+      "出会う割合は、その道で戦いになったときに、その魔物が出る割合です。</p></div>"
+    )
+
+  def monster_row(mid: str, where: str) -> str:  # 魔物の 1 行（where は「出る道」「いる場所」の欄の HTML）
+    m = monsters[mid]
+    trait = traits.get(m.get("trait"), {})
+    return (
+      f"<tr><td>{escape(m['name'])}</td><td>{escape(W.TERRAIN_NAMES.get(m['terrain'], m['terrain']))}</td>"
+      + (
+        f'<td>{escape(trait["name"])}<div class="note">{escape(trait.get("text", ""))}</div></td>'
+        if trait
+        else "<td>-</td>"
       )
+      + element_cell(world, m.get("element"))
+      + "".join(f'<td class="num">{m[k]}</td>' for k in MONSTER_STATS)
+      + f"<td>{where}</td></tr>"
+    )
+
+  def monster_table(rows: list[str], where: str) -> str:  # 魔物の表（カードを開いたまま返す。閉じるのは呼ぶ側）
     return (
       '<div class="card"><div class="scroll"><table class="wide-table monsters"><colgroup><col style="width:7em">'
-      '<col style="width:4em"><col style="width:12em"><col style="width:3.5em">'
-      + '<col style="width:3.5em">'
-      * 7
-      + "<col></colgroup><tr><th>名前</th><th>地形</th><th>性質</th><th>属性</th>"
-      '<th class="num">Lv</th><th class="num">HP</th><th class="num">攻</th><th class="num">防</th>'
-      '<th class="num">速</th><th class="num">EXP</th><th class="num">G</th><th>出る道（その道で出会う割合）</th></tr>'
+      '<col style="width:4em"><col style="width:12em"><col style="width:5em">'
+      + '<col style="width:3.5em">' * len(MONSTER_STATS)
+      + '<col></colgroup><tr><th>名前</th><th>地形</th><th>性質</th><th class="icon">属性</th>'
+      + "".join(f'<th class="num">{name}</th>' for name in MONSTER_STAT_NAMES)
+      + f"<th>{where}</th></tr>"
       + "".join(rows)
       + "</table></div>"
-      '<p class="note">Lv・HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
-      "出会う割合は、その道で戦いになったときに、その魔物が出る割合です。</p></div>"
+    )
+
+  def boss_table(
+    aid: str, members: list[str]
+  ) -> str:  # この地方のダンジョンにいるボス（開放した町のない地方は出さない）
+    if not set(members) & set(world["towns"]):
+      return ""
+    bosses = [mid for mid, m in monsters.items() if m.get("boss") in places and places[m["boss"]].get("area") == aid]
+    if not bosses:
+      return ""
+    rows = [
+      monster_row(mid, f"{escape(places[monsters[mid]['boss']]['name'])}（ダンジョン・まだ挑めない）") for mid in bosses
+    ]
+    return (
+      '<h3 class="sub">ボス</h3>'
+      + monster_table(rows, "いる場所")
+      + '<p class="note">ボスは道には出ず、ダンジョンの奥にいます。HP・攻・防は、性質の効果がかかる前の値です。</p></div>'
     )
 
   elements, rates = world["elements"], world["season"]["element_rates"]
@@ -773,7 +804,7 @@ def build_monsters(world: dict) -> str:
   groups = area_groups(world, towns)
   body = ["<h2>魔物の情報</h2>", tab_bar([(aid, a["name"]) for aid, a, _ in groups]), guide]
   for aid, area, members in groups:
-    body.append(tab_panel(aid, name_html(area["name"], area.get("en")), table(members)))
+    body.append(tab_panel(aid, name_html(area["name"], area.get("en")), table(members) + boss_table(aid, members)))
   return page("魔物", "".join(body), "monsters.html", script=TABS_JS)
 
 
