@@ -106,7 +106,7 @@ padding:6px 12px;margin-bottom:-2px;cursor:pointer}
 h2.area{font-size:17px;margin:6px 0 10px;border-left:0;padding-left:0}
 .minus{color:var(--minus);font-weight:bold}
 .icon{text-align:center;white-space:nowrap}
-td.icon a{text-decoration:none}
+td.icon .tag{margin-left:0}
 .zero{color:var(--sub)}
 .pill{display:inline-block;margin:2px 6px 2px 0;padding:1px 10px;border:1.5px solid #f0a868;border-radius:999px;
   background:var(--card);color:var(--ink);text-decoration:none;font-size:13px;white-space:nowrap}
@@ -625,37 +625,24 @@ def stat_cell(value: int) -> str:
   return f'<td class="{cls}">{value:+d}</td>' if value else f'<td class="{cls}">0</td>'
 
 
-SPECIALTY_MARK = "🏷️"  # 特産の印（どの町の特産も同じ）
-
-
 def specialty_cell(world: dict, town: str | None) -> str:
-  """特産の欄（🏷️。押すと、特産として売る町のページ）。特産でなければ空。"""
+  """特産の欄（「特産」の枠の札。マウスを乗せると、どの町の特産かが出る）。特産でなければ空。"""
   if not town:
     return '<td class="icon"></td>'
-  p = world["places"][town]
-  label = f"{p['name']}の特産"
-  return (
-    f'<td class="icon"><a href="towns.html#{escape(town)}" title="{escape(label)}" aria-label="{escape(label)}">'
-    f"{SPECIALTY_MARK}</a></td>"
-  )
+  label = f"{world['places'][town]['name']}の特産"
+  return f'<td class="icon"><span class="tag" title="{escape(label)}">特産</span></td>'
 
 
 def element_cell(world: dict, element: str | None) -> str:
-  """属性の欄（属性の絵文字。絵文字がなければ名前）。属性がなければ空。"""
+  """属性の欄（「風属性」などの枠の札）。属性がなければ空。"""
   e = world["elements"].get(element)
-  if not e:
-    return '<td class="icon"></td>'
-  label = f"{e['name']}属性"
-  return (
-    f'<td class="icon" title="{escape(label)}"><span role="img" aria-label="{escape(label)}">'
-    f"{escape(e.get('emoji') or e['name'])}</span></td>"
-  )
+  return f'<td class="icon"><span class="tag">{escape(e["name"])}属性</span></td>' if e else '<td class="icon"></td>'
 
 
 def element_label(world: dict, element: str | None) -> str:
-  """属性の絵文字と名前（🔥 炎 など）。属性がなければ -。"""
+  """属性の名前（炎 など）。属性がなければ -。"""
   e = world["elements"].get(element)
-  return f"{e.get('emoji', '')} {e['name']}".strip() if e else "-"
+  return e["name"] if e else "-"
 
 
 def build_items(world: dict) -> str:
@@ -689,10 +676,10 @@ def build_items(world: dict) -> str:
       )
     table = (
       '<div class="card board"><div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em">'
-      '<col style="width:13em"><col style="width:3.5em"><col style="width:3.5em">'
+      '<col style="width:13em"><col style="width:4em"><col style="width:5em">'
       + '<col style="width:3em">' * len(ITEM_STATS)
       + '<col style="width:5.5em"><col></colgroup><tr><th></th><th>名前</th>'
-      + '<th class="icon">特産</th><th class="icon">属性</th>'
+      + '<th></th><th class="icon">属性</th>'  # 特産の列は見出しを出さない
       + "".join(f'<th class="num">{name}</th>' for _, name in ITEM_STATS)
       + '<th class="num">値段</th><th>入手方法</th></tr>'
       + "".join(trs)

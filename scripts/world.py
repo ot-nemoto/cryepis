@@ -402,8 +402,6 @@ def validate(raw: dict) -> list[str]:
       err(
         f"monsters.json の elements の {eid}: name（文字列）と strong（自分以外の、強い相手の属性の ID）を書いてください"
       )
-    elif "emoji" in e and (not isinstance(e["emoji"], str) or not e["emoji"]):
-      err(f"monsters.json の elements の {eid}: emoji（サイトで出す絵文字）は空でない文字列にしてください")
   crit = season.get("critical")
   if (
     not isinstance(crit, dict)
