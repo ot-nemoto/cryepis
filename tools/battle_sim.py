@@ -96,31 +96,39 @@ FIT_SEARCH_N, FIT_PICK_N = 300, 1000  # fit_hp_loss で、倍率を探すとき�
 
 def shaped(monster: dict, factor: float) -> dict:
   """HP・攻撃・防御を、ROAD_SHAPE の factor 倍（四捨五入した整数）にした魔物。ほかの値（速さ・性質など）はそのまま。"""
-  return monster | {k: max(1 if k != "def" else 0, round(v * factor)) for k, v in ROAD_SHAPE.items()}
+  return monster | {k: max(1 if k != "def" else 0, W.half_up(v * factor)) for k, v in ROAD_SHAPE.items()}
 
 
-def fit_hp_loss(world: dict, monster: dict, level: int, goal: float) -> dict:
-  """基準の勇者（強運・装備なし・回復薬なし）が Lv level で戦うと、勝ったときに減る HP が goal に近くなる魔物。
+FIT_LOW, FIT_HIGH = 0.2, 6.0  # fit_hp_loss が探す倍率の範囲
+FIT_MIN_WIN = 0.99  # fit_hp_loss で選ぶ魔物は、この勝率以上で勝てる強さ
+
+
+def fit_hp_loss(world: dict, monster: dict, level: int, goal: float) -> tuple[dict, bool]:
+  """基準の勇者（強運・装備なし・回復薬なし）が Lv level で戦うと、勝ったときに減る HP が goal に近くなる魔物と、
+  探す範囲（FIT_LOW〜FIT_HIGH 倍）の端に当たったか（当たったら、目標に届いていない）。
   1. ROAD_SHAPE に掛ける倍率を二分探索する（勝率 99% 以上で、減る HP が goal 未満なら、もっと強くする）
-  2. 探し終えた範囲の両端（goal 未満のいちばん強い倍率と、そのすぐ上の倍率）を整数にして、goal に近いほうを選ぶ"""
+  2. 探し終えた範囲の両端（goal 未満のいちばん強い倍率と、そのすぐ上の倍率）を整数にして、
+     勝率 99% 以上のもののうち、goal に近いほうを選ぶ（どちらも届かなければ弱いほう）"""
 
   def ok(m: dict, n: int) -> tuple[float, float | None]:
     return fight(world, m, "lucky", level, [], 0, n)
 
-  low, high = 0.2, 6.0
+  low, high = FIT_LOW, FIT_HIGH
   for _ in range(14):
     mid = (low + high) / 2
     rate, lost = ok(shaped(monster, mid), FIT_SEARCH_N)
-    if rate >= 0.99 and lost is not None and lost < goal:
+    if rate >= FIT_MIN_WIN and lost is not None and lost < goal:
       low = mid
     else:
       high = mid
-
-  def gap(m: dict) -> float:
-    lost = ok(m, FIT_PICK_N)[1]
-    return 1.0 if lost is None else abs(lost - goal)
-
-  return min((shaped(monster, low), shaped(monster, high)), key=gap)
+  capped = low < FIT_LOW * 1.01 or high > FIT_HIGH * 0.99
+  weak, strong = shaped(monster, low), shaped(monster, high)
+  picked = []
+  for m in (weak, strong):
+    rate, lost = ok(m, FIT_PICK_N)
+    if rate >= FIT_MIN_WIN and lost is not None:
+      picked.append((abs(lost - goal), m))
+  return (min(picked, key=lambda x: x[0])[1] if picked else weak), capped
 
 
 def reach_level(rates: dict[int, float], goal: float = 0.5) -> int | None:
@@ -136,9 +144,9 @@ def main() -> int:
     help="戦う魔物の ID（既定: 巣穴の主）。--fit-hp-loss では road＝開放した道の魔物すべて",
   )
   ap.add_argument("--level", type=int, help="勇者のレベル（既定: 15。--fit-hp-loss では魔物のレベル）")
-  ap.add_argument("--trait", default="all", help="特性の ID（既定: all＝全部の特性）")
+  ap.add_argument("--trait", help="特性の ID（既定: 全部の特性）")
   ap.add_argument("--gear", default="", help="装備の ID を , でつなぐ（既定: 装備なし）")
-  ap.add_argument("--potions", type=int, default=3, help="回復薬の数（既定: 3）")
+  ap.add_argument("--potions", type=int, help="回復薬の数（既定: 3）")
   ap.add_argument("-n", type=int, default=2000, help="戦う回数（既定: 2000）")
   ap.add_argument("--reach", action="store_true", help="特性ごとに、勝率 50%% に届くレベルを出す（Lv10〜最大レベル）")
   ap.add_argument("--strength", action="store_true", help="特性ごとに、五分で戦える魔物の強さの倍率を出す")
@@ -152,8 +160,12 @@ def main() -> int:
   a = ap.parse_args()
   world = W.load_world()
   if a.fit_hp_loss is not None:
+    if a.trait is not None or a.gear or a.potions is not None:
+      raise SystemExit("--fit-hp-loss は強運・装備なし・回復薬なしで測るので、--trait・--gear・--potions は使えません")
     return fit_main(world, a)
   a.level = 15 if a.level is None else a.level
+  a.trait = "all" if a.trait is None else a.trait
+  a.potions = 3 if a.potions is None else a.potions
   if a.monster not in world["monsters"]:
     raise SystemExit(f"魔物 {a.monster!r} がいません")
   gear = [g for g in a.gear.split(",") if g]
@@ -208,6 +220,8 @@ def fit_main(world: dict, a: argparse.Namespace) -> int:
     ids = sorted({m for i in world["road_info"].values() for m, _ in i["monsters"]})
     ids.sort(key=lambda m: (world["monsters"][m]["level"], m))
   elif a.monster in world["monsters"]:
+    if not W.on_road(world["monsters"][a.monster]):  # 強敵・ボスは 20:7:2 の比ではない
+      raise SystemExit(f"{world['monsters'][a.monster]['name']} は強敵かボスです（--fit-hp-loss は道の魔物だけ）")
     ids = [a.monster]
   else:
     raise SystemExit(f"魔物 {a.monster!r} がいません（道の魔物すべては road）")
@@ -215,7 +229,7 @@ def fit_main(world: dict, a: argparse.Namespace) -> int:
   for mid in ids:
     m = world["monsters"][mid]
     level = m["level"] if a.level is None else a.level
-    fit = fit_hp_loss(world, m, level, a.fit_hp_loss)
+    fit, capped = fit_hp_loss(world, m, level, a.fit_hp_loss)
     rate, lost = fight(world, fit, "lucky", level, [], 0, a.n)
     exp, gold = W.monster_reward(fit, world["traits"], world["season"]["monster_reward"])
     same = all(fit[k] == m[k] for k in ROAD_SHAPE)
@@ -224,6 +238,7 @@ def fit_main(world: dict, a: argparse.Namespace) -> int:
       f"  Lv{level} {m['name']}（{mid}）: HP{fit['hp']} 攻{fit['atk']} 防{fit['def']}  "
       f"勝率 {rate:.1%} 減る HP {shown}  EXP{exp} G{gold}"
       + ("" if same else f"  ← 今は HP{m['hp']} 攻{m['atk']} 防{m['def']}")
+      + ("  （探す範囲の端。目標に届いていない）" if capped else "")
     )
   return 0
 

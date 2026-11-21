@@ -43,6 +43,7 @@ class BattleSimTest(unittest.TestCase):
     dog = WORLD["monsters"]["wild_dog"]
     m = B.shaped(dog, 0.5)
     self.assertEqual((m["hp"], m["atk"], m["def"]), (10, 4, 1))  # 20・7・2 の半分（四捨五入。3.5 → 4）
+    self.assertEqual(B.shaped(dog, 0.625)["hp"], 13)  # 12.5 → 13（偶数に丸めない）
     self.assertEqual((m["spd"], m["dex"], m.get("trait")), (dog["spd"], dog["dex"], dog.get("trait")))
     self.assertEqual(B.shaped(dog, 0.01)["hp"], 1)  # HP と攻撃は 1 より下げない
     self.assertEqual(B.shaped(dog, 0.01)["def"], 0)
@@ -52,8 +53,15 @@ class BattleSimTest(unittest.TestCase):
     ids = {m for i in WORLD["road_info"].values() for m, _ in i["monsters"]}
     for mid in ids:
       m = WORLD["monsters"][mid]
-      fit = B.fit_hp_loss(WORLD, m, m["level"], 0.2)
+      fit, capped = B.fit_hp_loss(WORLD, m, m["level"], 0.2)
+      self.assertFalse(capped, mid)
       self.assertEqual((fit["hp"], fit["atk"], fit["def"]), (m["hp"], m["atk"], m["def"]), mid)
+
+  def test_fit_reports_when_the_goal_is_out_of_range(self):
+    dog = WORLD["monsters"]["wild_dog"]
+    fit, capped = B.fit_hp_loss(WORLD, dog, 1, 0.001)  # いちばん弱くしても、HP が 0.1% より多く減る
+    self.assertTrue(capped)
+    self.assertLessEqual(fit["hp"], B.shaped(dog, B.FIT_LOW * 1.01)["hp"])
 
   def test_is_capped(self):
     self.assertTrue(B.is_capped(B.HIGH))
