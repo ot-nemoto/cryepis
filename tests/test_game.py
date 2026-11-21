@@ -812,6 +812,24 @@ class GuildBoardTest(unittest.TestCase):
     day.report(state["quest"])
     self.assertEqual(entry["status"], "done")
 
+  def test_taken_quest_does_not_share_the_steps_with_the_board(self):
+    hunt = next(e for e in self.board if e["type"] == "hunt")
+    for e in self.board:  # この討伐だけを受けられるようにする
+      e["status"] = "open" if e is hunt else "done"
+    fresh = [list(p) for p in hunt["steps"]]
+    hunt["steps"] = [["back", 1]]  # 前に受けた勇者が進めたまま保存された段取り
+    state = play(1, "h1", actions=0)
+    state["place"], state["hero"]["level"] = self.TOWN, 99
+    day = G.Day(WORLD, state, START, random.Random(0), self.guild)
+    day.take_quest(self.TOWN)
+    quest = state["quest"]
+    self.assertEqual(quest["id"], hunt["id"])
+    self.assertEqual(quest["steps"], fresh)  # 段取りは最初から作り直す
+    self.assertEqual((quest["progress"], quest["away"]), (0, 0))
+    quest["steps"][0][1] -= 1  # 勇者が進めても、掲示板の依頼は変わらない
+    self.assertEqual(hunt["steps"], [["back", 1]])
+    self.assertIsNot(quest["reward"], hunt["reward"])
+
   def test_release_orphans(self):
     a, b, c = self.board[:3]
     a.update(status="held", holder="h1")

@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import random
 from datetime import date, timedelta
@@ -724,7 +725,12 @@ class Day:
     if entries:
       entry = self.rng.choice(entries)
       entry.update(status="held", holder=self.state["id"])
-      quest = {k: v for k, v in entry.items() if k not in GUILD_FIELDS}
+      # 深く写す（掲示板の依頼と段取りの一覧を共有しない）。討伐は段取りを最初から作り直す
+      # （前に受けた勇者が力尽きて戻ってきた依頼でも、最初の状態で受ける）
+      quest = copy.deepcopy({k: v for k, v in entry.items() if k not in GUILD_FIELDS})
+      if quest["type"] == "hunt":
+        quest.update(steps=hunt_steps(self.world, quest["report"], quest["place"], quest["count"]), away=0)
+      quest["progress"] = 0
       self.state["taken"].append(quest["id"])
       self.log(
         f"{self.world['places'][town]['name']}のギルドで依頼を受けた: {quest_text(self.world, quest)}"
