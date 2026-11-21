@@ -623,15 +623,18 @@ def stat_cell(value: int) -> str:
   return f'<td class="{cls}">{value:+d}</td>' if value else f'<td class="{cls}">0</td>'
 
 
+SPECIALTY_MARK = "🏷️"  # 特産の印（どの町の特産も同じ）
+
+
 def specialty_cell(world: dict, town: str | None) -> str:
-  """特産の欄（特産として売る町の絵文字。押すと町のページ）。特産でなければ空。"""
+  """特産の欄（🏷️。押すと、特産として売る町のページ）。特産でなければ空。"""
   if not town:
     return '<td class="icon"></td>'
   p = world["places"][town]
   label = f"{p['name']}の特産"
   return (
     f'<td class="icon"><a href="towns.html#{escape(town)}" title="{escape(label)}" aria-label="{escape(label)}">'
-    f"{escape(p.get('emoji') or '特産')}</a></td>"
+    f"{SPECIALTY_MARK}</a></td>"
   )
 
 

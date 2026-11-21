@@ -193,7 +193,7 @@ class SiteTest(unittest.TestCase):
     lance = html.split("騎兵の槍</td>")[1].split("</tr>")[0]  # エクエスの特産・風属性
     self.assertTrue(
       lance.startswith(
-        '<td class="icon"><a href="towns.html#eques" title="エクエスの特産" aria-label="エクエスの特産">🐎</a></td>'
+        '<td class="icon"><a href="towns.html#eques" title="エクエスの特産" aria-label="エクエスの特産">🏷️</a></td>'
         '<td class="icon" title="風属性"><span aria-label="風属性">🌪️</span></td>'
       ),
       lance,
