@@ -1,27 +1,97 @@
 {
   "id": "h3",
   "name": "BERENICE",
-  "day": 0,
-  "lap": 1,
-  "lap_day": 0,
-  "pos": 0,
-  "boss_cleared": [],
+  "trait": "swift",
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-21",
   "hero": {
     "level": 1,
     "exp": 0,
     "max_hp": 30,
     "hp": 30,
-    "base_atk": 5,
+    "base_atk": 6,
     "base_def": 2,
-    "gold": 50,
-    "potions": 1,
-    "weapon": null,
-    "armor": null
+    "base_spd": 6,
+    "gold": 0,
+    "potions": 3
   },
-  "kills": 0,
-  "deaths": 0,
-  "last_date": null,
-  "last": null,
-  "journal": [],
-  "records": []
+  "inventory": {
+    "wooden_sword": 1
+  },
+  "place": "eques",
+  "home_town": "eques",
+  "road": {
+    "to": "karun",
+    "left": 1
+  },
+  "quest": {
+    "type": "deliver",
+    "place": "karun",
+    "report": "karun",
+    "monster": null,
+    "count": 1,
+    "template": "salina_2",
+    "name": "塩の積み出し",
+    "rank": 1,
+    "text": "塩田で作った塩を、冬の保存食にする凍原の村へ届けてほしい",
+    "town": "salina",
+    "progress": 0,
+    "level": [
+      2,
+      2
+    ],
+    "deadline": null,
+    "cost": 4,
+    "reward": {
+      "exp": 20,
+      "gold": 32,
+      "item": [
+        [
+          "none",
+          88
+        ],
+        [
+          "common",
+          10
+        ],
+        [
+          "rare",
+          2
+        ]
+      ]
+    },
+    "id": "2026-11-21-salina-0"
+  },
+  "taken": [
+    "2026-11-21-salina-0"
+  ],
+  "season_stats": {
+    "quests_done": 0,
+    "quests_failed": 0,
+    "kills": 0,
+    "deaths": 0,
+    "rares": []
+  },
+  "last": {
+    "date": "2026-11-21",
+    "actions": 3,
+    "events": [
+      "サリナで木の剣を買った",
+      "サリナのギルドで依頼を受けた: ★ 塩の積み出し（カルンへ荷物を届ける）（行動力 4）",
+      "葦の間を小舟がすべっていった",
+      "草原を風が吹き抜けていく",
+      "エクエスに着いた",
+      "遠くで雪崩の音がした"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-21",
+      "actions": 3,
+      "text": "サリナで木の剣を買った / サリナのギルドで依頼を受けた: ★ 塩の積み出し（カルンへ荷物を届ける）（行動力 4） / 葦の間を小舟がすべっていった / 草原を風が吹き抜けていく / エクエスに着いた / 遠くで雪崩の音がした"
+    }
+  ],
+  "seasons": []
 }

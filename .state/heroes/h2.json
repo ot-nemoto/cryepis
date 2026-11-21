@@ -1,27 +1,109 @@
 {
   "id": "h2",
   "name": "CASSIA",
-  "day": 0,
-  "lap": 1,
-  "lap_day": 0,
-  "pos": 0,
-  "boss_cleared": [],
+  "trait": "swift",
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-21",
   "hero": {
-    "level": 1,
-    "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 5,
-    "base_def": 2,
-    "gold": 50,
-    "potions": 1,
-    "weapon": null,
-    "armor": null
+    "level": 2,
+    "exp": 8,
+    "max_hp": 38,
+    "hp": 38,
+    "base_atk": 8,
+    "base_def": 3,
+    "base_spd": 6,
+    "gold": 14,
+    "potions": 2
   },
-  "kills": 0,
-  "deaths": 0,
-  "last_date": null,
-  "last": null,
-  "journal": [],
-  "records": []
+  "inventory": {
+    "wooden_sword": 1
+  },
+  "place": "salina",
+  "home_town": "salina",
+  "road": null,
+  "quest": {
+    "type": "hunt",
+    "place": "muralis",
+    "report": "salina",
+    "monster": "will_o_wisp",
+    "count": 4,
+    "template": "salina_3",
+    "name": "干潟の鬼火",
+    "rank": 2,
+    "text": "夜の干潟に出て、貝採りを迷わせる鬼火を追い払ってほしい",
+    "steps": [
+      [
+        "hunt",
+        3
+      ],
+      [
+        "back",
+        2
+      ]
+    ],
+    "away": 2,
+    "town": "salina",
+    "progress": 1,
+    "level": [
+      2,
+      2
+    ],
+    "deadline": null,
+    "cost": 8,
+    "reward": {
+      "exp": 80,
+      "gold": 128,
+      "item": [
+        [
+          "none",
+          65
+        ],
+        [
+          "common",
+          15
+        ],
+        [
+          "rare",
+          18
+        ],
+        [
+          "epic",
+          2
+        ]
+      ]
+    },
+    "id": "2026-11-21-salina-1"
+  },
+  "taken": [
+    "2026-11-21-salina-1"
+  ],
+  "season_stats": {
+    "quests_done": 0,
+    "quests_failed": 0,
+    "kills": 2,
+    "deaths": 0,
+    "rares": []
+  },
+  "last": {
+    "date": "2026-11-21",
+    "actions": 3,
+    "events": [
+      "サリナで木の剣を買った",
+      "サリナのギルドで依頼を受けた: ★★ 干潟の鬼火（サリナとムラリスの間の道で鬼火を4体討伐）（行動力 8）",
+      "眼下に雲海が広がっている",
+      "野犬を倒した (+9EXP)",
+      "鬼火〔先手〕を倒した (+9EXP)",
+      "レベルが上がった！ Lv.2"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-21",
+      "actions": 3,
+      "text": "サリナで木の剣を買った / サリナのギルドで依頼を受けた: ★★ 干潟の鬼火（サリナとムラリスの間の道で鬼火を4体討伐）（行動力 8） / 眼下に雲海が広がっている / 野犬を倒した (+9EXP) / 鬼火〔先手〕を倒した (+9EXP) / レベルが上がった！ Lv.2"
+    }
+  ],
+  "seasons": []
 }

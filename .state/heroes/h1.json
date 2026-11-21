@@ -1,43 +1,60 @@
 {
   "id": "h1",
   "name": "GOLD HILDR",
+  "trait": "strong",
+  "season": 1,
+  "season_day": 1,
   "day": 1,
-  "lap": 1,
-  "lap_day": 1,
-  "pos": 1,
-  "boss_cleared": [],
+  "last_date": "2026-11-21",
   "hero": {
-    "level": 1,
-    "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 5,
-    "base_def": 2,
-    "gold": 10,
-    "potions": 1,
-    "weapon": {
-      "name": "銅の剣",
-      "power": 3
-    },
-    "armor": null
+    "level": 2,
+    "exp": 9,
+    "max_hp": 38,
+    "hp": 21,
+    "base_atk": 8,
+    "base_def": 3,
+    "base_spd": 6,
+    "gold": 23,
+    "potions": 3
   },
-  "kills": 0,
-  "deaths": 0,
-  "last_date": "2026-11-19",
+  "inventory": {
+    "wooden_sword": 1
+  },
+  "place": "salina",
+  "home_town": "salina",
+  "road": null,
+  "quest": null,
+  "taken": [
+    "2026-11-21-eques-0"
+  ],
+  "season_stats": {
+    "quests_done": 1,
+    "quests_failed": 0,
+    "kills": 1,
+    "deaths": 0,
+    "rares": []
+  },
   "last": {
-    "date": "2026-11-19",
-    "steps": 1,
+    "date": "2026-11-21",
+    "actions": 3,
     "events": [
-      "はじまりの村で休んだ、銅の剣を買った",
-      "遠くで羊が鳴いている"
+      "エクエスで木の剣を買った",
+      "エクエスのギルドで依頼を受けた: ★ 馬の受け渡し（サリナへ荷物を届ける）（行動力 2）",
+      "草原を風が吹き抜けていく",
+      "遠くで羊の群れが草を食んでいる",
+      "サリナに着いた",
+      "依頼達成！★ 馬の受け渡し（サリナへ荷物を届ける）（+10EXP +16G）",
+      "レベルが上がった！ Lv.2",
+      "サリナの周りを散策した",
+      "大ネズミ〔群れ〕を倒した (+9EXP)"
     ]
   },
   "journal": [
     {
-      "date": "2026-11-19",
-      "steps": 1,
-      "text": "はじまりの村で休んだ、銅の剣を買った / 遠くで羊が鳴いている"
+      "date": "2026-11-21",
+      "actions": 3,
+      "text": "エクエスで木の剣を買った / エクエスのギルドで依頼を受けた: ★ 馬の受け渡し（サリナへ荷物を届ける）（行動力 2） / 草原を風が吹き抜けていく / 遠くで羊の群れが草を食んでいる / サリナに着いた / 依頼達成！★ 馬の受け渡し（サリナへ荷物を届ける）（+10EXP +16G） / レベルが上がった！ Lv.2 / サリナの周りを散策した / 大ネズミ〔群れ〕を倒した (+9EXP)"
     }
   ],
-  "records": []
+  "seasons": []
 }
