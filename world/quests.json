@@ -28,7 +28,7 @@
    {"id": "muralis_1", "rank": 1, "type": "hunt", "name": "砦のまわりの見回り", "to": "salina", "monster": "wild_dog", "count": 3, "text": "砦のまわりをうろつく野犬を追い払ってほしい"},
    {"id": "muralis_2", "rank": 1, "type": "deliver", "name": "交代の兵", "to": "salina", "text": "交代の兵の名簿を、干潟の港へ届けてほしい"},
    {"id": "muralis_3", "rank": 2, "type": "hunt", "name": "山越えの山賊", "to": "salina", "monster": "mountain_bandit", "count": 5, "text": "山脈の切れ目から入り込む山賊を討ってほしい"},
-   {"id": "muralis_4", "rank": 3, "type": "hunt", "name": "南壁の大鷲", "to": "salina", "monster": "great_eagle", "count": 5, "text": "砦の見張り台を襲う大鷲を追い払ってほしい"}
+   {"id": "muralis_4", "rank": 3, "type": "hunt", "name": "南壁の大鷲", "to": "salina", "monster": "great_eagle", "count": 1, "text": "砦の見張り台を襲う大鷲を追い払ってほしい"}
   ],
   "karun": [
    {"id": "karun_1", "rank": 1, "type": "hunt", "name": "トナカイを襲う氷狼", "to": "eques", "monster": "ice_wolf", "count": 3, "text": "放牧のトナカイを狙う氷狼の群れを追い払ってほしい"},
