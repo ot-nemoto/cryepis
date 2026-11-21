@@ -185,12 +185,20 @@ class QuestTest(unittest.TestCase):
     self.assertEqual(set(elites), {"yeti", "rock_golem", "great_eagle"})
     on_roads = {m for i in WORLD["road_info"].values() for m, _ in i["monsters"]}
     self.assertFalse(on_roads & set(elites))  # 道では出会わない
+    for town, quests in WORLD["town_quests"].items():  # どの強敵の依頼も、魔物のレベルから受けられる
+      for quest in quests:
+        if quest.get("monster") not in elites:
+          continue
+        lv = WORLD["monsters"][quest["monster"]]["level"]
+        q = G.make_town_quest(WORLD, quest, town, START)
+        self.assertEqual((q["min_level"], q["level"], q["count"]), (lv, [lv, lv], 1), quest["id"])
+        self.assertFalse(G.suitable(q, lv - 1))
+        self.assertTrue(G.suitable(q, lv))
+        self.assertTrue(G.quest_ok(WORLD, q, steps=False))
+    targets = {q.get("monster") for qs in WORLD["town_quests"].values() for q in qs}
+    self.assertLessEqual(set(elites), targets)  # どの強敵も、町の依頼で狙える
     quest = next(q for q in WORLD["town_quests"]["karun"] if q.get("monster") == "yeti")
     q = G.make_town_quest(WORLD, quest, "karun", START)
-    self.assertFalse(G.suitable(q, 9))  # Lv10 の強敵は Lv10 から
-    self.assertTrue(G.suitable(q, 10))
-    self.assertEqual(q["level"], [10, 10])  # 依頼のレベルも魔物のレベル
-    self.assertTrue(G.quest_ok(WORLD, q, steps=False))
     # 強敵にする前に貼られた依頼（Lv の決まりがなく、数も多い）は捨てる（掲示板からも、勇者の状態からも）
     old = {k: v for k, v in q.items() if k != "min_level"} | {"count": 5, "level": [2, 2]}
     self.assertFalse(G.quest_ok(WORLD, old, steps=False))
