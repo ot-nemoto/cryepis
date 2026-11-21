@@ -253,13 +253,25 @@ def site_url() -> str | None:
   if "/" not in repo:
     return None
   owner, name = repo.split("/", 1)
+  if name.lower() == f"{owner.lower()}.github.io":  # ユーザー・組織のサイトのリポジトリは、ドメインの直下
+    return f"https://{owner.lower()}.github.io/"
   return f"https://{owner.lower()}.github.io/{name}/"
 
 
-def current_entries(world: dict) -> list[tuple[dict, dict]]:
-  """現役の勇者の今の状態（冒険は進めない）。"""
+def hero_link(hero_id: str) -> str:
+  """登録・引退のときの案内に出す、勇者の詳細のページへの案内（ページはサイトの次の公開で書き出される）。"""
+  url = site_url()
+  return (
+    f"サイトの勇者のページ（{url}heroes/{hero_id}.html。次のサイトの公開のあとに見られる）"
+    if url
+    else "サイトの勇者のページ"
+  )
+
+
+def current_entries(world: dict, retired: bool = False) -> list[tuple[dict, dict]]:
+  """現役の勇者（retired なら引退した勇者）の今の状態（冒険は進めない）。"""
   entries = []
-  for hero in [h for h in load_heroes() if h["active"]]:
+  for hero in [h for h in load_heroes() if h["active"] != retired]:
     path = hero_state_path(hero["id"])
     if path.exists():
       entries.append((hero, game.load_state(world, path, hero["id"], hero["name"])))
@@ -465,7 +477,7 @@ def new_game(world: dict, raw_name: str, today: date) -> int:
   where = f"ランキングの Gist（{board['gist_url']}）" if board else "ランキングの Gist（次回の毎日の実行で作られます）"
   write_summary(
     f"## 勇者「{md_escape(name)}」({hero_id}) が旅立ちます\n\n"
-    f"冒険は次回の毎日の実行から進みます。様子は{where}と {page_url(hero_id)} で見られます。"
+    f"冒険は次回の毎日の実行から進みます。様子は{where}と、{hero_link(hero_id)}で見られます。"
   )
   return 0
 
@@ -478,7 +490,7 @@ def retire(key: str) -> int:
   for h in [h for h in active if h["id"] == key] + [h for h in active if h["name"] == key]:
     h["active"] = False
     save_heroes(heroes)
-    write_summary(f"勇者「{md_escape(h['name'])}」({h['id']}) を引退させました（記録: {page_url(h['id'])}）")
+    write_summary(f"勇者「{md_escape(h['name'])}」({h['id']}) を引退させました（記録: {hero_link(h['id'])}）")
     return 0
   raise SystemExit(f"引退させられる勇者「{key}」がいません（ID か名前で、現役の勇者を指定してください）")
 

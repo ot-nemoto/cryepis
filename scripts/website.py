@@ -659,8 +659,16 @@ def check_out(out: Path) -> None:
     )
 
 
-def write_site(world: dict, entries: list[tuple[dict, dict]], today: date, guild: dict, out: Path) -> list[Path]:
-  """サイトを out に書き出す（out の中身は作り直す）。書き出したファイルの一覧を返す。"""
+def write_site(
+  world: dict,
+  entries: list[tuple[dict, dict]],
+  today: date,
+  guild: dict,
+  out: Path,
+  retired: list[tuple[dict, dict]] | None = None,
+) -> list[Path]:
+  """サイトを out に書き出す（out の中身は作り直す）。書き出したファイルの一覧を返す。
+  retired（引退した勇者）は、詳細のページだけを書き出す（一覧やランキングには出さない）。"""
   check_out(out)
   if out.exists():
     shutil.rmtree(out)
@@ -674,7 +682,7 @@ def write_site(world: dict, entries: list[tuple[dict, dict]], today: date, guild
     "items.html": build_items(world),
     "towns.html": build_towns(world),
   }
-  for hero, state in entries:
+  for hero, state in entries + (retired or []):
     files[f"heroes/{hero['id']}.html"] = build_hero(world, hero, state)
   written = []
   for rel, text in files.items():
@@ -698,7 +706,8 @@ def main() -> int:
   world = rpg.load_world()
   entries = rpg.current_entries(world)
   today = date.fromisoformat(a.date) if a.date else shown_day(entries)
-  written = write_site(world, entries, today, rpg.load_guild(), Path(a.out))
+  retired = rpg.current_entries(world, retired=True)
+  written = write_site(world, entries, today, rpg.load_guild(), Path(a.out), retired)
   print(f"{a.out} に {len(written)} ファイルを書き出しました")
   return 0
 

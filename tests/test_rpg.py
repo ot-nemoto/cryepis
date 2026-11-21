@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import common  # noqa: E402
 import game  # noqa: E402
 import rpg  # noqa: E402
+import website  # noqa: E402
 
 WORLD = rpg.load_world()
 DAY = date.fromisoformat(WORLD["season"]["start"])
@@ -293,6 +294,12 @@ class HeroesTest(unittest.TestCase):
     self.assertNotIn("引退者", board)
     self.assertEqual((load("h1")["day"], load("h3")["day"]), (1, 0))  # 引退者は進まない
 
+  def test_site_url_for_a_user_pages_repo(self):
+    with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "Alice/alice.github.io"}, clear=True):
+      self.assertEqual(rpg.site_url(), "https://alice.github.io/")
+    with mock.patch.dict("os.environ", {}, clear=True):
+      self.assertEqual(rpg.hero_link("h1"), "サイトの勇者のページ")  # サイトの URL が分からなければ、URL は出さない
+
   def test_page_url_points_to_the_site(self):
     with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "O/r"}, clear=True):
       self.assertEqual(rpg.page_url("h1"), "https://o.github.io/r/heroes/h1.html")  # サイトの勇者の詳細
@@ -319,7 +326,7 @@ class HeroesTest(unittest.TestCase):
     self.assertIn("■ ボブ", board)  # 進められた勇者だけでランキングを作る
     self.assertNotIn("■ アリス", board)
 
-  def test_hero_that_failed_does_not_stop_the_others(self):
+  def test_hero_that_failed_stays_on_the_site_map(self):
     self.new_game("アリス")
     self.new_game("ボブ")
     self.daily("2026-12-01")
@@ -332,7 +339,22 @@ class HeroesTest(unittest.TestCase):
 
     with mock.patch.object(game, "advance", side_effect=fail_alice), mock.patch.object(common, "warn"):
       self.assertEqual(self.daily("2026-12-02"), 1)
-    self.assertEqual((load("h1")["day"], load("h2")["day"]), (1, 2))  # アリスは保存しない、ボブは進む
+    world = rpg.load_world()
+    html = website.build_map(world, rpg.current_entries(world), date(2026, 12, 2))
+    self.assertIn("🧙 アリス Lv.", html)  # 進められなかった勇者も、保存してある状態でサイトの地図に載る
+    self.assertIn("🧙 ボブ Lv.", html)
+
+  def test_retired_heroes_keep_their_site_page(self):
+    self.new_game("アリス")
+    self.new_game("ボブ")
+    self.run_main(["--retire", "h2"])
+    world = rpg.load_world()
+    self.assertEqual([h["id"] for h, _ in rpg.current_entries(world)], ["h1"])
+    self.assertEqual([h["id"] for h, _ in rpg.current_entries(world, retired=True)], ["h2"])
+    out = self.dir / "site"
+    website.write_site(world, rpg.current_entries(world), DAY, game.new_guild(), out, rpg.current_entries(world, True))
+    self.assertTrue((out / "heroes" / "h2.html").exists())  # 引退した勇者の詳細も残る
+    self.assertNotIn("ボブ", (out / "heroes.html").read_text(encoding="utf-8"))  # 一覧には出さない
 
   def test_failed_heros_changes_to_the_guild_are_undone(self):
     guild = game.new_guild()
