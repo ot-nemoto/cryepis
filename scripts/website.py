@@ -638,7 +638,7 @@ def specialty_cell(world: dict, town: str | None) -> str:
 
 
 def element_cell(world: dict, element: str | None) -> str:
-  """属性の欄（「風属性」などの枠の札）。属性がなければ空。"""
+  """属性の欄（「火属性」などの枠の札）。属性がなければ空。"""
   e = world["elements"].get(element)
   return f'<td class="icon"><span class="tag">{escape(e["name"])}属性</span></td>' if e else '<td class="icon"></td>'
 
