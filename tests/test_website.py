@@ -179,7 +179,9 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(html.count('class="chip" data-f='), 2)  # ★ と ★★
     knight = html.split("騎士の剣")[1].split("</tr>")[0]  # ★★騎士の剣
     self.assertIn('<span class="how">依頼の報酬</span><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a>', knight)
-    self.assertIn('<td class="icon" title="雷属性"><span aria-label="雷属性">⚡</span></td>', knight)  # 属性の列
+    self.assertIn(
+      '<td class="icon" title="雷属性"><span role="img" aria-label="雷属性">⚡</span></td>', knight
+    )  # 属性の列
     head = '<th class="num">HP</th><th class="num">攻</th><th class="num">防</th><th class="num">速</th><th class="num">器</th>'
     self.assertIn(head + '<th class="num">値段</th><th>入手方法</th>', html)  # 能力ごとの列
     header = html.split("<th>名前</th>")[1].split("</tr>")[0]  # 表の見出しの行
@@ -194,7 +196,7 @@ class SiteTest(unittest.TestCase):
     self.assertTrue(
       lance.startswith(
         '<td class="icon"><a href="towns.html#eques" title="エクエスの特産" aria-label="エクエスの特産">🏷️</a></td>'
-        '<td class="icon" title="風属性"><span aria-label="風属性">🌪️</span></td>'
+        '<td class="icon" title="風属性"><span role="img" aria-label="風属性">🌪️</span></td>'
       ),
       lance,
     )
@@ -290,8 +292,8 @@ class SiteTest(unittest.TestCase):
     self.assertIn("サリナ〜エクエス（", south)  # 出る道と割合
     self.assertIn("<td>群れ<div", south)  # 性質
     self.assertIn("<th>属性</th>", html)
-    self.assertIn("<td>水</td>", south)  # 沼ヒル
-    self.assertIn("属性の相性（左が右に強い）: 炎→氷→風→土→雷→水→炎", html)
+    self.assertIn("<td>💧 水</td>", south)  # 沼ヒル（属性は絵文字と名前）
+    self.assertIn("属性の相性（左が右に強い）: 🔥 炎→❄️ 氷→🌪️ 風→🪨 土→⚡ 雷→💧 水→🔥 炎", html)
     self.assertNotIn("性質の効果がかかる前", website.build_towns(WORLD))  # 魔物の注記は町のページに出さない
     self.assertIn("性質の効果がかかる前", html)
     crown = html[html.index('id="panel-crownlands"') :]

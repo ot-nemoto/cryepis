@@ -578,9 +578,11 @@ def build_towns(world: dict) -> str:
 
 # ---- アイテム ---------------------------------------------------------------------------
 def item_rows(world: dict) -> dict[str, list[dict]]:
-  """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）: {部位: [{id, item, shops, towns}]}。
+  """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）:
+  {部位: [{id, item, shops, towns, specialty}]}。
   shops は売っている町、towns は依頼の報酬で出る町（どちらも開放した町の ID）。
-  specialty は、その品を特産として売る町の ID（世界でその町だけが売る品。なければ None）。"""
+  specialty は、その品を特産として売る町の ID（世界でその町だけが売る品。なければ None）。
+  開放していない町のこともある（町のページには全部の町があるので、リンクは切れない）。"""
   places, items = world["places"], world["items"]
   shops: dict[str, list[str]] = {}
   for t in world["towns"]:
@@ -644,7 +646,16 @@ def element_cell(world: dict, element: str | None) -> str:
   if not e:
     return '<td class="icon"></td>'
   label = f"{e['name']}属性"
-  return f'<td class="icon" title="{escape(label)}"><span aria-label="{escape(label)}">{escape(e.get("emoji") or e["name"])}</span></td>'
+  return (
+    f'<td class="icon" title="{escape(label)}"><span role="img" aria-label="{escape(label)}">'
+    f"{escape(e.get('emoji') or e['name'])}</span></td>"
+  )
+
+
+def element_label(world: dict, element: str | None) -> str:
+  """属性の絵文字と名前（🔥 炎 など）。属性がなければ -。"""
+  e = world["elements"].get(element)
+  return f"{e.get('emoji', '')} {e['name']}".strip() if e else "-"
 
 
 def build_items(world: dict) -> str:
@@ -728,7 +739,7 @@ def build_monsters(world: dict) -> str:
           if trait
           else "<td>-</td>"
         )
-        + f"<td>{escape(world['elements'].get(m.get('element'), {}).get('name', '-'))}</td>"
+        + f"<td>{escape(element_label(world, m.get('element')))}</td>"
         + "".join(f'<td class="num">{m[k]}</td>' for k in ("level", "hp", "atk", "def", "spd", "exp", "gold"))
         + f"<td>{'<br>'.join(seen[mid])}</td></tr>"
       )
@@ -752,11 +763,11 @@ def build_monsters(world: dict) -> str:
     chart.append(cur)
     cur = elements[cur]["strong"]
   if chart and len(chart) == len(elements) and cur == chart[0]:
-    chart = "→".join(escape(elements[e]["name"]) for e in chart + [cur])
+    chart = "→".join(escape(element_label(world, e)) for e in chart + [cur])
   else:  # 輪になっていなければ、組ごとに出す
     chart = "・".join(
-      f"{escape(e['name'])}→{escape(elements[e['strong']]['name'])}"
-      for e in elements.values()
+      f"{escape(element_label(world, eid))}→{escape(element_label(world, e['strong']))}"
+      for eid, e in elements.items()
       if e["strong"] in elements
     )
   element_line = (  # 属性がなければ出さない
