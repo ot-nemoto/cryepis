@@ -297,6 +297,8 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<th class="icon">属性</th><th class="num">HP</th>', html)  # Lv の列は出さない
     self.assertIn('<th class="num">速</th><th class="num">器</th><th class="num">EXP</th>', html)  # 器用さ
     self.assertNotIn(">Lv<", html)
+    self.assertIn('<th>名前</th><th class="icon">性質</th>', html)  # 地形の列は出さない
+    self.assertNotIn("<th>地形</th>", html)
     self.assertIn('<td class="icon"><span class="tag">水属性</span></td>', south)  # 沼ヒル（アイテムと同じ枠の札）
     roads, boss = south.split('<h3 class="sub">ボス</h3>')  # ボスは道の魔物とは別の表
     self.assertNotIn("巣穴の主", roads)

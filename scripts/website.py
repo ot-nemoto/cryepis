@@ -8,7 +8,7 @@
   heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
-  monsters.html       開放した道に出る魔物とボス（地方ごとのタブ。地形・性質・属性・強さ・出る道）
+  monsters.html       開放した道に出る魔物とボス（地方ごとのタブ。性質・属性・強さ・出る道）
   guide.html          手引き（能力・勇者の特性・魔物の性質・属性と相性・戦いの決まりの説明）
   guild.html          町ごとのギルドの掲示板（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
@@ -80,7 +80,7 @@ table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--sub);font-weight:normal;font-size:13px;white-space:nowrap}
 .wide-table{min-width:640px;table-layout:fixed}
-.monsters{min-width:900px}
+.monsters{min-width:820px}
 .num{text-align:right;white-space:nowrap}
 .scroll{overflow-x:auto}
 .mark{color:#b7791f;white-space:nowrap;width:5em}
@@ -700,7 +700,8 @@ MONSTER_STAT_NAMES = ("HP", "攻", "防", "速", "器", "EXP", "G")
 
 
 def build_monsters(world: dict) -> str:
-  """開放した道に出る魔物の一覧（地方ごとのタブ。地形・性質・属性・強さ・出る道と、その道で出会う割合）。
+  """開放した道に出る魔物の一覧（地方ごとのタブ。性質・属性・強さ・出る道と、その道で出会う割合）。
+  並びは地形の順（同じ土地の魔物がまとまる）。地形の列は出さない（出る場所は「出る道」で分かる）。
   道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
   ボスは、いるダンジョンの地方に、道の魔物とは別の表で出す（開放した町のある地方だけ）。"""
   places, monsters, traits = world["places"], world["monsters"], world["traits"]
@@ -739,7 +740,7 @@ def build_monsters(world: dict) -> str:
     m = monsters[mid]
     trait = traits.get(m.get("trait"), {})
     return (
-      f"<tr><td>{escape(m['name'])}</td><td>{escape(W.TERRAIN_NAMES.get(m['terrain'], m['terrain']))}</td>"
+      f"<tr><td>{escape(m['name'])}</td>"
       + (
         f'<td class="icon"><span class="tag">{escape(trait["name"])}</span></td>' if trait else '<td class="icon"></td>'
       )
@@ -751,9 +752,9 @@ def build_monsters(world: dict) -> str:
   def monster_table(rows: list[str], where: str) -> str:  # 魔物の表（カードを開いたまま返す。閉じるのは呼ぶ側）
     return (
       '<div class="card"><div class="scroll"><table class="wide-table monsters"><colgroup><col style="width:7em">'
-      '<col style="width:4em"><col style="width:5em"><col style="width:5em">'
+      '<col style="width:5em"><col style="width:5em">'
       + '<col style="width:3.5em">' * len(MONSTER_STATS)
-      + '<col></colgroup><tr><th>名前</th><th>地形</th><th class="icon">性質</th><th class="icon">属性</th>'
+      + '<col></colgroup><tr><th>名前</th><th class="icon">性質</th><th class="icon">属性</th>'
       + "".join(f'<th class="num">{name}</th>' for name in MONSTER_STAT_NAMES)
       + f"<th>{where}</th></tr>"
       + "".join(rows)
