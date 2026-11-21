@@ -39,6 +39,11 @@ class BattleSimTest(unittest.TestCase):
     for t, g in gains.items():  # 能力の伸びる特性は、ふつうと同じか、より強い相手と五分に戦える
       self.assertGreaterEqual(g, 1.0, t)
 
+  def test_is_capped(self):
+    self.assertTrue(B.is_capped(B.HIGH))
+    self.assertTrue(B.is_capped(B.LOW))
+    self.assertFalse(B.is_capped(1.0))
+
   def test_reach_level(self):
     self.assertEqual(B.reach_level({14: 0.0, 15: 0.55, 16: 1.0}), 15)
     self.assertIsNone(B.reach_level({14: 0.0, 15: 0.4}))

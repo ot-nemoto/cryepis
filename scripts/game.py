@@ -178,6 +178,7 @@ def quest_ok(world: dict, quest: dict) -> bool:
     return (
       (quest.get("report"), quest["place"]) in world["roads"]
       and quest.get("monster") in world["monsters"]
+      and not world["monsters"][quest["monster"]].get("boss")  # ボスは道に出ない
       and isinstance(quest.get("steps"), list)
     )
   return True

@@ -137,6 +137,27 @@ class ValidateTest(unittest.TestCase):
 
   def test_boss_needs_a_dungeon(self):
     self.assertError(lambda r: r["monsters"][-1].update(boss="salina"), ["den_lord", "boss"])
+    self.assertError(lambda r: r["monsters"][-1].update(boss=["wall_den"]), ["den_lord", "boss"])  # 落ちない
+
+  def test_road_needs_a_monster_other_than_the_boss(self):
+    def boss_only(r):  # 火山にはボスだけ、という道
+      r["monsters"] = [m for m in r["monsters"] if m["terrain"] != "volcano" or m.get("boss")]
+      r["monsters"][-1]["terrain"] = "volcano"
+      r["map"]["roads"][0]["terrain"] = [["volcano", 1]]
+
+    self.assertError(boss_only, ["roads[0]", "ボス以外"])
+
+  def test_hunt_quest_cannot_target_the_boss(self):
+    def boss_quest(r):
+      q = r["town_quests"]["salina"][0]
+      boss = r["monsters"][-1]
+      boss["terrain"] = next(m["terrain"] for m in r["monsters"] if m["id"] == q["monster"])  # 道の地形に合わせる
+      q["monster"] = boss["id"]
+
+    self.assertError(boss_quest, ["salina_1", "ボス以外"])
+
+  def test_item_dex_is_checked(self):
+    self.assertError(lambda r: r["items"][-1].update(dex="2"), ["power_ring", "dex"])
 
   def test_every_terrain_has_a_japanese_name(self):
     self.assertEqual(set(W.TERRAIN_NAMES), set(W.TERRAINS))

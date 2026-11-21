@@ -336,7 +336,7 @@ def validate(raw: dict) -> list[str]:
             f"map.json: world/{name} が {len(bg['bytes']) // 1024}KB あります"
             f"（{BACKGROUND_MAX_BYTES // 1024}KB 以下にしてください。目安は 300KB 以下）"
           )
-  monster_terrains = {m.get("terrain") for m in monsters.values()}
+  monster_terrains = {m.get("terrain") for m in monsters.values() if not m.get("boss")}  # ボスは道に出ない
   for i, r in enumerate(mp.get("roads", [])):
     where = f"map.json の roads[{i}]"
     kind = r.get("kind", "land")
@@ -361,7 +361,7 @@ def validate(raw: dict) -> list[str]:
     elif not _weights_ok(terrain) or any(t not in TERRAINS for t, _ in terrain):
       err(f"{where}: terrain は [地形, 正の重み] の一覧にしてください（地形は {'/'.join(TERRAINS)}）")
     elif not any(t in monster_terrains for t, _ in terrain):
-      err(f"{where}: terrain のどの地形にも、monsters.json の魔物がいません")
+      err(f"{where}: terrain のどの地形にも、monsters.json の魔物がいません（ボス以外）")
     path = r.get("path")
     if path is not None and (not isinstance(path, list) or len(path) < 2 or not all(_point_ok(p) for p in path)):
       err(f"{where}: path（地図に描く線）は [x, y] の一覧（2 点以上）にしてください")
@@ -474,7 +474,7 @@ def validate(raw: dict) -> list[str]:
     for key, low in (("level", 1), ("hp", 1), ("atk", 0), ("def", 0), ("spd", 1), ("dex", 0), ("exp", 0), ("gold", 0)):
       if not isinstance(m.get(key), int) or isinstance(m.get(key), bool) or m[key] < low:
         err(f"monsters.json の {mid}: {key} は {low} 以上の整数にしてください")
-    if "boss" in m and places.get(m["boss"], {}).get("type") != "dungeon":
+    if "boss" in m and (not isinstance(m["boss"], str) or places.get(m["boss"], {}).get("type") != "dungeon"):
       err(f"monsters.json の {mid}: boss は、そのボスがいるダンジョンの ID にしてください")
     if "text" in m and (not isinstance(m["text"], str) or not m["text"]):
       err(f"monsters.json の {mid}: text は空でない文字列にしてください")
@@ -499,6 +499,8 @@ def validate(raw: dict) -> list[str]:
         err(f"{where}: {key} は 0 以上の整数にしてください")
     if "spd" in it and (not isinstance(it["spd"], int) or isinstance(it["spd"], bool)):
       err(f"{where}: spd（素早さの増減。重い装備はマイナス）は整数にしてください")
+    if "dex" in it and (not isinstance(it["dex"], int) or isinstance(it["dex"], bool) or it["dex"] < 0):
+      err(f"{where}: dex（器用さ）は 0 以上の整数にしてください")
     if "element" in it and (
       it.get("slot") != "weapon" or not isinstance(it["element"], str) or it["element"] not in elements
     ):
@@ -599,8 +601,10 @@ def validate(raw: dict) -> list[str]:
       if q.get("type") == "hunt":
         if (tid, to) not in road_terrain:
           err(f"{where}: to の {to!r} は、{tid} から陸路・航路で直接つながる開放した町にしてください")
-        elif monsters.get(q.get("monster"), {}).get("terrain") not in road_terrain[(tid, to)]:
-          err(f"{where}: monster の {q.get('monster')!r} は、その道に出る魔物にしてください")
+        elif monsters.get(q.get("monster"), {}).get("terrain") not in road_terrain[(tid, to)] or monsters[
+          q["monster"]
+        ].get("boss"):
+          err(f"{where}: monster の {q.get('monster')!r} は、その道に出る魔物（ボス以外）にしてください")
         if not isinstance(q.get("count"), int) or q["count"] < 1:
           err(f"{where}: count は 1 以上の整数にしてください")
       elif q.get("type") == "deliver":

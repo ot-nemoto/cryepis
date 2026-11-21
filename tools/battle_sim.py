@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import random
 import sys
 from datetime import date
@@ -29,9 +30,8 @@ def make_hero(world: dict, trait: str, level: int, gear: list[str], potions: int
   """特性 trait の勇者を、レベルアップの伸びだけで level まで育てる（装備は gear、回復薬は potions 個）。"""
   state = game.new_state(world, "sim", "試し")
   state["trait"] = trait
-  day = game.Day(world, state, DAY, random.Random(0))
-  while state["hero"]["level"] < level:
-    day.gain_exp(game.exp_need(world, state["hero"]["level"]))
+  state["hero"]["level"] = level
+  game.set_base_stats(world, state)  # レベルと特性で決まる能力（レベルアップを繰り返したのと同じ）
   state["inventory"] = {iid: 1 for iid in gear}
   state["hero"].update(potions=potions, hp=game.stats(world, state)["max_hp"], exp=0)
   return state
@@ -40,8 +40,9 @@ def make_hero(world: dict, trait: str, level: int, gear: list[str], potions: int
 def win_rate(world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int) -> float:
   """n 回戦って、勝った割合（乱数の種は 0〜n-1 なので、同じ条件なら何度やっても同じ結果）。"""
   wins = 0
+  hero = make_hero(world, trait, level, gear, potions)
   for seed in range(n):
-    state = make_hero(world, trait, level, gear, potions)
+    state = copy.deepcopy(hero)
     day = game.Day(world, state, DAY, random.Random(seed))
     day.gain_exp = lambda exp: None  # 勝っても育たない（戦いの結果だけを見る）
     wins += day.battle(dict(monster))
@@ -55,8 +56,9 @@ def scaled(monster: dict, factor: float) -> dict:
 
 def even_strength(world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int) -> float:
   """勝率がちょうど 50% になる、魔物の強さの倍率（HP と攻撃を同じ倍率で変える。二分探索）。
-  1.0 より大きいほど、元の魔物より強い相手と五分に戦える。"""
-  low, high = 0.3, 3.0
+  1.0 より大きいほど、元の魔物より強い相手と五分に戦える。
+  探す範囲（LOW〜HIGH 倍）の外なら、端の値を返す（is_capped で確かめられる）。"""
+  low, high = LOW, HIGH
   for _ in range(14):
     mid = (low + high) / 2
     if win_rate(world, scaled(monster, mid), trait, level, gear, potions, n) >= 0.5:
@@ -64,6 +66,14 @@ def even_strength(world: dict, monster: dict, trait: str, level: int, gear: list
     else:
       high = mid
   return (low + high) / 2
+
+
+LOW, HIGH = 0.3, 3.0  # even_strength が探す倍率の範囲
+
+
+def is_capped(factor: float) -> bool:
+  """even_strength の結果が、探す範囲の端（それより先は測っていない）か。"""
+  return factor < LOW * 1.01 or factor > HIGH * 0.99
 
 
 def reach_level(rates: dict[int, float], goal: float = 0.5) -> int | None:
@@ -89,6 +99,8 @@ def main() -> int:
   for g in gear:
     if g not in world["items"]:
       raise SystemExit(f"装備 {g!r} がありません")
+  if a.trait != "all" and a.trait not in world["season"]["hero_traits"]:
+    raise SystemExit(f"特性 {a.trait!r} がありません（{'/'.join(sorted(world['season']['hero_traits']))}）")
   traits = sorted(world["season"]["hero_traits"]) if a.trait == "all" else [a.trait]
   monster = world["monsters"][a.monster]
   names = world["season"]["hero_traits"]
@@ -100,7 +112,8 @@ def main() -> int:
     base = even_strength(world, monster, "lucky", a.level, gear, a.potions, a.n)  # 強運＝能力が伸びない（ふつう）
     for t in traits:
       f = even_strength(world, monster, t, a.level, gear, a.potions, a.n)
-      print(f"  {names[t]['name']:4s} Lv{a.level}: 五分で戦える強さ ×{f:.3f}（ふつうの {f / base:.0%}）")
+      note = "（探す範囲の端。正しく測れていない）" if is_capped(f) or is_capped(base) else ""
+      print(f"  {names[t]['name']:4s} Lv{a.level}: 五分で戦える強さ ×{f:.3f}（ふつうの {f / base:.0%}）{note}")
     return 0
   if not a.reach:
     for t in traits:

@@ -688,6 +688,7 @@ class StateFileTest(unittest.TestCase):
       ({"type": "hunt", "place": near, "monster": "wild_dog"}, True),
       ({"type": "hunt", "place": far, "monster": "wild_dog"}, False),  # 道がない
       ({"type": "hunt", "place": near, "monster": "slime"}, False),  # 魔物がいない
+      ({"type": "hunt", "place": near, "monster": "den_lord"}, False),  # ボスは道に出ない
       ({"type": "deliver", "place": "jade_tomb", "monster": None}, False),  # ダンジョンへは配達しない
       ({"type": "deliver", "place": far, "monster": None}, True),
       ({"type": "teleport", "place": near, "monster": None}, False),
