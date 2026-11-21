@@ -14,6 +14,7 @@ GitHub プロフィールに Pin した Gist の中身を、GitHub Actions の�
 - workflow・スクリプト・ファイルの関係と、各ファイルの使い道は [docs/DATA_FLOW.md](docs/DATA_FLOW.md) の図を参照
 - `.state/` 配下のファイルの JSON 構成と項目の意味は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md) を参照
 - セットアップ（Gist・PAT・Secrets / Variables）は [docs/SETUP.md](docs/SETUP.md) を参照
+- 強敵とボスの強さの決め方（基準・目標の勝率・検証の結果・測り方）は [docs/BALANCE.md](docs/BALANCE.md) を参照
   （ネタを追加したら、これらのドキュメントにも追記する）
 - Gist の更新には `gist` スコープの Classic PAT（Secret `GIST_PAT`）を使う。Gist の ID は `.state/` のファイル（RPG は `board.json`）に記録する
 - Pinned カードには Gist の**名前順で先頭のファイル**の、先頭 5 行（見出し + 4 行）ほどしか出ず、1 行 55 桁前後で切れる。
