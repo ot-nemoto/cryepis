@@ -760,7 +760,12 @@ def build_monsters(world: dict) -> str:
   ) -> str:  # この地方のダンジョンにいるボス（開放した町のない地方は出さない）
     if not set(members) & set(world["towns"]):
       return ""
-    bosses = [mid for mid, m in monsters.items() if m.get("boss") in places and places[m["boss"]].get("area") == aid]
+
+    def boss_area(m: dict) -> str:  # ダンジョンの地方（地方がない・知らない地方なら、その他のまとまり）
+      area = places[m["boss"]].get("area")
+      return area if area in world["areas"] else OTHER_AREA
+
+    bosses = [mid for mid, m in monsters.items() if m.get("boss") in places and boss_area(m) == aid]
     if not bosses:
       return ""
     rows = [
@@ -814,33 +819,35 @@ def build_guide(world: dict) -> str:
   def tag(name: str) -> str:
     return f'<span class="tag">{escape(name)}</span>'
 
-  first = {k: growth[k][0] for k in growth}
-  last = {k: growth[k][-1] for k in growth}
   hp1, hp_up = cfg["hero"]["max_hp"], cfg["level_up"]["hp"]
   crit = cfg["critical"]
   stats = [
     (
       "HP",
-      f"体力。0 になると力尽きる。Lv1 で {hp1}、レベルが上がるごとに +{hp_up}（Lv{lv_max} で {hp1 + hp_up * (lv_max - 1)}）",
+      f"体力。0 になると力尽きる。Lv1 で {hp1}、レベルが上がるごとに +{hp_up}（Lv{lv_max} で {hp1 + hp_up * (lv_max - 1)}。"
+      "特性で変わる）",
     ),
     ("攻", "攻撃。与えるダメージが増える"),
     ("防", "防御。受けるダメージが減る（相手の攻撃から、防御の半分を引く）"),
     ("速", "素早さ。先に攻撃できるか、2 回攻撃できるかが決まる"),
     ("器", f"器用さ。会心の一撃の出やすさ（器用さ ÷ {crit['dex_divisor']} の確率）"),
   ]
+  names = {"atk": "攻", "def": "防", "spd": "速", "dex": "器"}
   stat_note = (
-    f"攻・防・速・器は、Lv1 で {first.get('atk', '-')}、Lv{lv_max} で {last.get('atk', '-')}。"
-    "伸びる時期は能力ごとに違う（攻撃は早く、防御は遅く伸びる）。装備でも増える・減る"
+    "・".join(f"{names[k]}は Lv1 で {growth[k][0]}、Lv{lv_max} で {growth[k][-1]}" for k in names if k in growth)
+    + "。伸びる時期は能力ごとに違い、特性で伸び方が変わる。装備でも増える・減る"
   )
   hero_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in cfg["hero_traits"].values()]
   monster_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in world["traits"].values()]
   elements, rates = world["elements"], cfg["element_rates"]
-  weak_to = {e["strong"]: eid for eid, e in elements.items()}  # その属性に強い属性
+  weak_to: dict[str, list[str]] = {}  # その属性に強い属性（いくつあってもよい）
+  for eid, e in elements.items():
+    weak_to.setdefault(e["strong"], []).append(eid)
   element_rows = [
     (
       tag(f"{e['name']}属性"),
       escape(element_label(world, e["strong"])),
-      escape(element_label(world, weak_to.get(eid))),
+      escape("・".join(element_label(world, w) for w in weak_to.get(eid, [])) or "-"),
     )
     for eid, e in elements.items()
   ]

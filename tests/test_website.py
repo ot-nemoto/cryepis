@@ -328,7 +328,27 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<td><span class="tag">風属性</span></td><td>土</td><td>氷</td>', html)  # 強い相手・苦手な相手
     self.assertIn("器用さ ÷ 150 の確率で、ダメージが 3 倍", html)
     self.assertIn("最大 HP の 50% まで回復", html)
-    self.assertIn("Lv20 で 182", html)
+    self.assertIn("Lv20 で 182。特性で変わる", html)
+    self.assertIn("攻は Lv1 で 6、Lv20 で 30・防は Lv1 で 6", html)  # 能力ごとの値
+
+  def test_guide_page_follows_the_data(self):
+    world = copy.deepcopy(WORLD)
+    world["season"]["growth"]["def"][-1] = 40  # 防御だけ Lv20 の値を変える
+    world["elements"]["water"]["strong"] = "ice"  # 氷に強い属性が 2 つ、炎に強い属性はなし
+    html = website.build_guide(world)
+    self.assertIn("防は Lv1 で 6、Lv20 で 40", html)
+    self.assertIn("攻は Lv1 で 6、Lv20 で 30", html)
+    self.assertIn('<td><span class="tag">氷属性</span></td><td>風</td><td>炎・水</td>', html)
+    self.assertIn('<td><span class="tag">炎属性</span></td><td>氷</td><td>-</td>', html)
+
+  def test_boss_without_an_area_is_in_the_other_group(self):
+    world = copy.deepcopy(WORLD)
+    world["places"]["wall_den"].pop("area")
+    for t in world["towns"]:  # 開放した町も地方なし（その他のまとまり）
+      world["places"][t].pop("area")
+    html = website.build_monsters(world)
+    other = html[html.index(f'id="panel-{website.OTHER_AREA}"') :]
+    self.assertIn("<td>巣穴の主</td>", other[: other.index("</section>")])
 
   def test_guide_page_without_elements(self):
     world = copy.deepcopy(WORLD)
