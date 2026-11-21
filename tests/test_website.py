@@ -182,10 +182,11 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<span class="tag">雷属性</span>', knight)  # 属性は名前の横に
     head = '<th class="num">HP</th><th class="num">攻</th><th class="num">防</th><th class="num">速</th><th class="num">器</th>'
     self.assertIn(head + '<th class="num">値段</th><th>入手方法</th>', html)  # 能力ごとの列
-    self.assertNotIn("性能", html)
-    self.assertNotIn("手に入れ方", html)
+    header = html.split("<th>名前</th>")[1].split("</tr>")[0]  # 表の見出しの行
+    self.assertNotIn("性能", header)
+    self.assertNotIn("手に入れ方", header)
     steel = html.split("鋼の剣")[1].split("</tr>")[0]  # 攻+7・速-1、鋼の剣を売る開放した町はムラリスだけ
-    self.assertIn('<td class="num zero">0</td><td class="num">7</td><td class="num zero">0</td>', steel)
+    self.assertIn('<td class="num zero">0</td><td class="num">+7</td><td class="num zero">0</td>', steel)
     self.assertIn('<td class="num minus">-1</td>', steel)  # マイナスは赤字
     self.assertIn('<a class="pill" href="towns.html#muralis">🛡️ ムラリス</a><div class="note">', steel)  # 買える店
     self.assertIn('騎兵の槍<span class="tag">特産</span>', html)
@@ -194,6 +195,15 @@ class SiteTest(unittest.TestCase):
     for slot in ("weapon", "helmet", "shield", "accessory"):  # ★ の多い順
       marks = [len(game.rarity_mark(WORLD, r["item"]["rarity"])) for r in website.item_rows(WORLD)[slot]]
       self.assertEqual(marks, sorted(marks, reverse=True))
+
+  def test_town_pill_and_stat_cell(self):
+    world = copy.deepcopy(WORLD)
+    world["places"]["muralis"].pop("emoji")
+    self.assertEqual(website.town_pill(world, "muralis"), '<a class="pill" href="towns.html#muralis">ムラリス</a>')
+    self.assertEqual(website.stat_cell(3), '<td class="num">+3</td>')
+    self.assertEqual(website.stat_cell(-2), '<td class="num minus">-2</td>')
+    self.assertEqual(website.stat_cell(0), '<td class="num zero">0</td>')
+    self.assertIn("--minus:#f87171", website.build_items(WORLD))  # ダークモードでは明るい赤
 
   def test_towns_page(self):
     html = website.build_towns(WORLD)

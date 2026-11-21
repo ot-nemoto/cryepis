@@ -52,9 +52,9 @@ PAGES = (
 
 CSS = """
 :root{--bg:#f6efdc;--card:#fffaf0;--ink:#3f2f22;--sub:#6b5a48;--line:#d9c9a8;--accent:#7a5530;--hero:#b91c1c;
-color-scheme:light}
+--minus:#c0262d;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#1f1a14;--card:#2a231b;--ink:#efe4cf;--sub:#bfae92;--line:#4a3d2c;
---accent:#e0b878;--hero:#f87171;color-scheme:dark}}
+--accent:#e0b878;--hero:#f87171;--minus:#f87171;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 'Hiragino Sans','Hiragino Kaku Gothic ProN',
 'Noto Sans JP','Yu Gothic',Meiryo,sans-serif}
@@ -104,7 +104,7 @@ padding:6px 12px;margin-bottom:-2px;cursor:pointer}
 .tab:hover{color:var(--ink)}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:#e8833a}
 h2.area{font-size:17px;margin:6px 0 10px;border-left:0;padding-left:0}
-.minus{color:#c0262d;font-weight:bold}
+.minus{color:var(--minus);font-weight:bold}
 .zero{color:var(--sub)}
 .pill{display:inline-block;margin:2px 6px 2px 0;padding:1px 10px;border:1.5px solid #f0a868;border-radius:999px;
   background:var(--card);color:var(--ink);text-decoration:none;font-size:13px;white-space:nowrap}
@@ -609,13 +609,14 @@ def slot_label(slot: str) -> str:
 def town_pill(world: dict, town: str) -> str:
   """町の楕円の札（絵文字と名前。町のページへのリンク）。"""
   p = world["places"][town]
-  return f'<a class="pill" href="towns.html#{escape(town)}">{escape(p.get("emoji", ""))} {escape(p["name"])}</a>'
+  label = f"{p.get('emoji', '')} {p['name']}".strip()
+  return f'<a class="pill" href="towns.html#{escape(town)}">{escape(label)}</a>'
 
 
 def stat_cell(value: int) -> str:
-  """能力の値の欄（マイナスは赤字、0 は薄く）。"""
+  """能力の値の欄（装備で増える・減る値なので +7・-1 のように符号を付ける。マイナスは赤字、0 は薄く）。"""
   cls = "num minus" if value < 0 else "num zero" if value == 0 else "num"
-  return f'<td class="{cls}">{value}</td>'
+  return f'<td class="{cls}">{value:+d}</td>' if value else f'<td class="{cls}">0</td>'
 
 
 def build_items(world: dict) -> str:
