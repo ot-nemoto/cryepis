@@ -179,7 +179,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<h2 class="area">💍 装飾品</h2>', html)
     self.assertEqual(html.count('class="chip" data-f='), 2)  # ★ と ★★
     knight = html.split("騎士の剣")[1].split("</tr>")[0]  # ★★騎士の剣
-    self.assertIn('<span class="how">依頼の報酬</span><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a>', knight)
+    self.assertIn('<td><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a></td>', knight)  # 依頼を出す町
     self.assertIn('<td class="icon"><span class="tag">雷属性</span></td>', knight)  # 属性の列（枠の札）
     head = '<th class="num">HP</th><th class="num">攻</th><th class="num">防</th><th class="num">速</th><th class="num">器</th>'
     self.assertIn(head + '<th class="num">値段</th><th>入手方法</th>', html)  # 能力ごとの列
@@ -189,7 +189,9 @@ class SiteTest(unittest.TestCase):
     steel = html.split("鋼の剣")[1].split("</tr>")[0]  # 攻+7・速-1、鋼の剣を売る開放した町はムラリスだけ
     self.assertIn('<td class="num zero">0</td><td class="num">+7</td><td class="num zero">0</td>', steel)
     self.assertIn('<td class="num minus">-1</td>', steel)  # マイナスは赤字
-    self.assertIn('<a class="pill" href="towns.html#muralis">🛡️ ムラリス</a><div class="note">', steel)  # 買える店
+    self.assertIn('<td><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a></td>', steel)  # 買える店
+    self.assertNotIn("依頼の報酬", html)  # 入手方法の補足の文は出さない
+    self.assertNotIn("宝箱", html)
     self.assertIn(
       '<th>名前</th><th></th><th class="icon">属性</th><th class="num">HP</th>', html
     )  # 特産の列は見出しなし

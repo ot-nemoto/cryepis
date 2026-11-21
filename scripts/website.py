@@ -116,7 +116,6 @@ td.icon .tag{margin-left:0}
 .pill{display:inline-block;margin:2px 6px 2px 0;padding:1px 10px;border:1.5px solid #f0a868;border-radius:999px;
   background:var(--card);color:var(--ink);text-decoration:none;font-size:13px;white-space:nowrap}
 .pill:hover{border-color:#e8833a}
-.how{font-size:13px;color:var(--sub);margin-right:6px}
 .tag{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #e8833a;border-radius:4px;color:#c2621c;font-size:11px}
 .chip{font:inherit;font-size:14px;font-weight:bold;color:var(--ink);background:var(--card);border:1.5px solid #f0a868;
 border-radius:999px;padding:4px 14px;cursor:pointer;box-shadow:0 0 0 2px rgba(240,168,104,.15)}
@@ -652,7 +651,7 @@ def element_label(world: dict, element: str | None) -> str:
 
 def build_items(world: dict) -> str:
   """開放した地域で手に入るアイテムの一覧。装備の種類ごとのタブで、レアリティで絞り込める。
-  能力は HP・攻・防・速・器の列に分けて出す。入手方法は、買える店（町の札）か、報酬で出る依頼の町。"""
+  能力は HP・攻・防・速・器の列に分けて出す。入手方法は町の札（レアは報酬で出る依頼の町、ほかは買える店）。"""
   rows = item_rows(world)
   used = [r for r in world["rarities"] if any(x["item"]["rarity"] == r for rs in rows.values() for x in rs)]
   slots = [slot for slot in W.SLOTS if rows[slot]]  # 開放した地域で手に入る装備のない種類は、タブを出さない
@@ -665,12 +664,7 @@ def build_items(world: dict) -> str:
     trs = []
     for r in rows[slot]:
       it = r["item"]
-      if r["towns"]:
-        how = '<span class="how">依頼の報酬</span>' + "".join(town_pill(world, t) for t in r["towns"])
-      else:
-        how = (
-          "".join(town_pill(world, t) for t in r["shops"]) or "店: なし"
-        ) + '<div class="note">宝箱・依頼の報酬でも出る</div>'
+      how = "".join(town_pill(world, t) for t in r["towns"] or r["shops"]) or "-"  # レアは依頼を出す町、ほかは店
       trs.append(
         f'<tr data-f="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
         f"<td>{escape(it['name'])}</td>"
