@@ -33,8 +33,8 @@
   "karun": [
    {"id": "karun_1", "rank": 1, "type": "hunt", "name": "トナカイを襲う氷狼", "to": "eques", "monster": "ice_wolf", "count": 3, "text": "放牧のトナカイを狙う氷狼の群れを追い払ってほしい"},
    {"id": "karun_2", "rank": 1, "type": "deliver", "name": "毛皮の交易", "to": "eques", "text": "冬のあいだに鞣した毛皮を、大草原の町へ届けてほしい"},
-   {"id": "karun_3", "rank": 2, "type": "hunt", "name": "吹雪の雪男", "to": "muralis", "monster": "yeti", "count": 5, "text": "吹雪とともに山から下りてくる雪男を食い止めてほしい"},
-   {"id": "karun_4", "rank": 3, "type": "hunt", "name": "巣穴からあふれた岩ゴーレム", "to": "muralis", "monster": "rock_golem", "count": 6, "text": "南壁の巣穴からあふれ出た岩ゴーレムを討ってほしい"}
+   {"id": "karun_3", "rank": 2, "type": "hunt", "name": "吹雪の雪男", "to": "muralis", "monster": "yeti", "count": 1, "text": "吹雪とともに山から下りてくる雪男を食い止めてほしい"},
+   {"id": "karun_4", "rank": 3, "type": "hunt", "name": "巣穴からあふれた岩ゴーレム", "to": "muralis", "monster": "rock_golem", "count": 1, "text": "南壁の巣穴からあふれ出た岩ゴーレムを討ってほしい"}
   ]
  }
 }

@@ -166,6 +166,10 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"].update(hero_traits={}), ["hero_traits"])
     self.assertError(lambda r: r["season"].pop("growth"), ["growth"])
 
+  def test_elite_needs_a_town_hunt_quest(self):
+    self.assertError(lambda r: r["monsters"][1].update(elite=True), ["giant_rat", "強敵"])  # 狙える依頼がない
+    self.assertError(lambda r: r["monsters"][-1].update(elite=True), ["den_lord", "elite"])  # ボスには付けない
+
   def test_monster_reward_is_checked(self):
     self.assertError(lambda r: r["monsters"][0].update(exp=9), ["wild_dog", "exp", "計算"])  # 経験値は書かない
     self.assertError(lambda r: r["season"]["monster_reward"].update(exp_divisor=0), ["monster_reward"])

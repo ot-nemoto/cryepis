@@ -179,6 +179,23 @@ def hunt_steps_ok(quest: dict) -> bool:
   return left == count - progress if left else progress >= count
 
 
+def elite_ok(world: dict, quest: dict) -> bool:
+  """強敵の討伐が、今の決まりで作られた依頼か（受けられるレベルが魔物のレベルで、倒す数が町の依頼と同じ）。
+  強敵にする前に貼られた・受けられた依頼（Lv の決まりがなく、数も多い）は捨てる。強敵でなければ True。"""
+  target = world["monsters"].get(quest.get("monster"), {})
+  if not target.get("elite"):
+    return True
+  template = next(
+    (q for q in world["town_quests"].get(quest.get("town"), []) if q["id"] == quest.get("template")), None
+  )
+  return (
+    template is not None
+    and quest.get("min_level") == target["level"]
+    and quest.get("count") == template["count"]
+    and quest.get("level") == [target["level"], target["level"]]
+  )
+
+
 def quest_ok(world: dict, quest: dict, steps: bool = True) -> bool:
   """依頼の参照先が今の world/ にあるか（行き先・報告先・依頼を出した町は開放した町、討伐は報告先からの道と魔物）。
   steps が True なら、討伐の段取りが壊れていないかも確かめる。"""
@@ -193,6 +210,7 @@ def quest_ok(world: dict, quest: dict, steps: bool = True) -> bool:
       (quest.get("report"), quest["place"]) in world["roads"]
       and quest.get("monster") in world["monsters"]
       and not world["monsters"][quest["monster"]].get("boss")  # ボスは道に出ない
+      and elite_ok(world, quest)
       and (hunt_steps_ok(quest) if steps else isinstance(quest.get("steps"), list))
     )
   return True
@@ -392,6 +410,9 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
   base, cfg = world["quest_reward"], world["quest_ranks"][rank - 1]
   if quest["type"] == "hunt":
     quest["steps"] = hunt_steps(world, town, quest["place"], quest["count"])
+    target = world["monsters"].get(quest["monster"], {})
+    if target.get("elite"):  # 強敵は、魔物のレベル以上の勇者だけが受ける（依頼のレベルも魔物のレベル）
+      quest["min_level"] = lvl = target["level"]
     quest["away"] = 0  # 町から何行動ぶん離れているか（地図に描く位置）
     cost = sum(n for _, n in quest["steps"])
   else:
@@ -440,8 +461,9 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> 
 
 
 def suitable(quest: dict, level: int) -> bool:
-  """受けられる依頼か（魔物の強さはどこでも同じなので、強すぎる依頼だけを避ける。弱すぎる依頼も受ける）。"""
-  return quest["level"][0] <= level + 3
+  """受けられる依頼か（魔物の強さはどこでも同じなので、強すぎる依頼だけを避ける。弱すぎる依頼も受ける）。
+  強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level）。"""
+  return quest["level"][0] <= level + 3 and level >= quest.get("min_level", 0)
 
 
 def patrol(world: dict, state: dict, rng: random.Random) -> dict:

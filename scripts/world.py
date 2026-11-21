@@ -338,7 +338,7 @@ def validate(raw: dict) -> list[str]:
             f"map.json: world/{name} が {len(bg['bytes']) // 1024}KB あります"
             f"（{BACKGROUND_MAX_BYTES // 1024}KB 以下にしてください。目安は 300KB 以下）"
           )
-  monster_terrains = {m.get("terrain") for m in monsters.values() if not m.get("boss")}  # ボスは道に出ない
+  monster_terrains = {m.get("terrain") for m in monsters.values() if on_road(m)}  # ボス・強敵は道に出ない
   for i, r in enumerate(mp.get("roads", [])):
     where = f"map.json の roads[{i}]"
     kind = r.get("kind", "land")
@@ -501,6 +501,18 @@ def validate(raw: dict) -> list[str]:
         err(f"monsters.json の {mid}: {key} は書かないでください（能力から計算する。season.json の monster_reward）")
     if "boss" in m and (not isinstance(m["boss"], str) or places.get(m["boss"], {}).get("type") != "dungeon"):
       err(f"monsters.json の {mid}: boss は、そのボスがいるダンジョンの ID にしてください")
+    if "elite" in m and (not isinstance(m["elite"], bool) or (m["elite"] and "boss" in m)):
+      err(f"monsters.json の {mid}: elite（強敵。道に出ず、討伐の依頼で狙う）は true か false。ボスには付けない")
+    elif m.get("elite") and not any(
+      q.get("type") == "hunt" and q.get("monster") == mid
+      for town, qs in (raw.get("town_quests") or {}).items()
+      if town in opened and isinstance(qs, list)
+      for q in qs
+      if isinstance(q, dict)
+    ):
+      err(
+        f"monsters.json の {mid}: 強敵（elite）は、開放した町の討伐の依頼で狙えるようにしてください（道では出会わないため）"
+      )
     if "text" in m and (not isinstance(m["text"], str) or not m["text"]):
       err(f"monsters.json の {mid}: text は空でない文字列にしてください")
     if "element" in m and (not isinstance(m["element"], str) or m["element"] not in elements):
@@ -665,9 +677,14 @@ def road_monsters(terrain: list, monsters: list[dict]) -> list[tuple[str, float]
   """道に出る魔物と重み（地形の割合を、その地形の魔物の数で分ける）。"""
   pool = []
   for t, weight in terrain:
-    here = [m["id"] for m in monsters if m["terrain"] == t and not m.get("boss")]  # ボスは道には出ない
+    here = [m["id"] for m in monsters if m["terrain"] == t and on_road(m)]  # ボス・強敵は道には出ない
     pool += [(mid, weight / len(here)) for mid in here]
   return pool
+
+
+def on_road(monster: dict) -> bool:
+  """道で出会う魔物か（ボスと強敵は道に出ない。強敵は町の討伐の依頼で狙って戦う）。"""
+  return not monster.get("boss") and not monster.get("elite")
 
 
 def _num(v) -> bool:

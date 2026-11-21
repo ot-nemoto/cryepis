@@ -308,6 +308,12 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("属性</span>", boss)  # 巣穴の主は属性なし
     self.assertIn("<td>南壁の巣穴（ダンジョン・まだ挑めない）</td>", boss)
     self.assertIn("<th>いる場所</th>", boss)
+    roads, elite = roads.split('<h3 class="sub">強敵</h3>')  # 強敵も道の魔物とは別の表（ボスの前）
+    for name in ("雪男", "岩ゴーレム"):
+      self.assertNotIn(f"<td>{name}</td>", roads)
+      self.assertIn(f"<td>{name}</td>", elite)
+    self.assertIn("カルンの依頼「吹雪の雪男」（Lv10 から）", elite)
+    self.assertIn("<th>戦える依頼</th>", elite)
     self.assertNotIn("属性の相性", html)  # 説明は手引きのページに
     self.assertIn('<a href="guide.html">手引き</a>', html)
     self.assertNotIn("性質の効果がかかる前", website.build_towns(WORLD))  # 魔物の注記は町のページに出さない
