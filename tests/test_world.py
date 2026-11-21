@@ -8,6 +8,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import world as W  # noqa: E402
 
 RAW = W.load_raw()
+WORLD = W.build(copy.deepcopy(RAW))
 
 
 def errors_after(change) -> list[str]:
@@ -47,6 +48,40 @@ class DataTest(unittest.TestCase):
     self.assertTrue(sea)
     for key in sea:
       self.assertTrue(all(world["monsters"][m]["terrain"] == "sea" for m, _ in world["road_info"][key]["monsters"]))
+
+
+class MonsterRewardTest(unittest.TestCase):
+  """魔物の経験値とお金は、能力から計算する（強さ点² ÷ exp_divisor、お金は経験値 × gold_rate）。"""
+
+  def test_rewards_follow_the_stats(self):
+    cfg, traits, monsters = WORLD["season"]["monster_reward"], WORLD["traits"], WORLD["monsters"]
+    dog = monsters["wild_dog"]  # HP20・攻7・防2・速8・器6 → 20 + 4×9 + 2×14 = 84 → 84² ÷ 700 = 10.08
+    self.assertEqual(W.monster_score(dog, traits, cfg), 84)
+    self.assertEqual((dog["exp"], dog["gold"]), (10, 8))
+    eagle = monsters["great_eagle"]  # 先手は速 +10 として数える
+    plain = W.monster_score(eagle | {"trait": None}, traits, cfg)
+    self.assertEqual(W.monster_score(eagle, traits, cfg), plain + cfg["weights"]["spd"] * 10)
+    rat = monsters["giant_rat"]  # 群れは戦いで効く値（HP ×1.5・攻撃 ×0.6 を 2 回）
+    self.assertGreater(rat["exp"], W.monster_reward(rat | {"trait": None}, traits, cfg)[0])
+    boss = monsters["den_lord"]
+    self.assertGreater(boss["exp"], 400)
+    self.assertEqual(boss["gold"], round(boss["exp"] * cfg["gold_rate"]))
+
+  def test_reward_rounds_half_up_and_never_grows_from_a_negative_score(self):
+    self.assertEqual((W.half_up(4.5), W.half_up(10.5), W.half_up(10.49)), (5, 11, 10))
+    cfg = {"weights": {"hp": 1}, "exp_divisor": 1, "gold_rate": 0.75}
+    m = {"hp": 6, "atk": 0, "def": 0, "spd": 1, "dex": 0}
+    self.assertEqual(W.monster_reward(m, {}, cfg), (36, 27))  # 36 × 0.75 = 27
+    self.assertEqual(W.monster_reward(m | {"hp": 3}, {}, cfg | {"gold_rate": 0.5}), (9, 5))  # 4.5 → 5
+    traits = {"thief": {"score": {"hp": -200}}}
+    self.assertEqual(W.monster_reward(m | {"trait": "thief"}, traits, cfg), (0, 0))  # マイナスは 0 にする
+
+  def test_trait_effect_is_shared_with_the_battle(self):
+    m = {"hp": 20, "atk": 10, "def": 4}
+    self.assertEqual(W.trait_effect(m), {"hp": 20, "atk": 10, "guard": 4, "hits": 1})
+    self.assertEqual(W.trait_effect(m | {"trait": "fierce"}), {"hp": 20, "atk": 13, "guard": 2, "hits": 1})
+    self.assertEqual(W.trait_effect(m | {"trait": "armored"}), {"hp": 20, "atk": 9, "guard": 9, "hits": 1})
+    self.assertEqual(W.trait_effect(m | {"trait": "swarm"}), {"hp": 30, "atk": 6, "guard": 4, "hits": 2})
 
 
 class ValidateTest(unittest.TestCase):
@@ -130,6 +165,12 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"].pop("max_level"), ["max_level"])
     self.assertError(lambda r: r["season"].update(hero_traits={}), ["hero_traits"])
     self.assertError(lambda r: r["season"].pop("growth"), ["growth"])
+
+  def test_monster_reward_is_checked(self):
+    self.assertError(lambda r: r["monsters"][0].update(exp=9), ["wild_dog", "exp", "計算"])  # 経験値は書かない
+    self.assertError(lambda r: r["season"]["monster_reward"].update(exp_divisor=0), ["monster_reward"])
+    self.assertError(lambda r: r["season"]["monster_reward"]["weights"].update(luck=1), ["monster_reward"])
+    self.assertError(lambda r: r["traits"]["poison"].update(score={"atk": "2"}), ["poison", "score"])
 
   def test_critical_is_checked(self):
     self.assertError(lambda r: r["season"]["critical"].update(dex_divisor=0), ["critical"])

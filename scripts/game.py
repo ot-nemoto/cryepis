@@ -552,13 +552,8 @@ class Day:
     素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する（性質「先手」は、素早さに関係なく魔物が先）。
     勇者は戦いのたびに、持ち物の中からいちばん効く武器に持ち替える（攻撃と素早さは、持ち替えた武器のもの）。"""
     hero, s, trait = self.hero, self.stats, monster.get("trait")
-    hp, atk, guard, hits = monster["hp"], monster["atk"], monster["def"], 1
-    if trait == "fierce":  # 凶暴: 攻撃が強いが、守りが弱い
-      atk, guard = round(atk * 1.3), guard // 2
-    elif trait == "armored":  # 硬い: 守りが固く、攻撃は少し弱い
-      atk, guard = max(1, round(atk * 0.9)), guard * 2 + 1
-    elif trait == "swarm":  # 群れ: 数が多い（倒すのに手間がかかり、攻撃の回数が多い）
-      hp, atk, hits = round(hp * 1.5), max(1, round(atk * 0.6)), 2
+    e = W.trait_effect(monster)  # 凶暴・硬い・群れで変わる値
+    hp, atk, guard, hits = e["hp"], e["atk"], e["guard"], e["hits"]
     weapon, rate, spd = self.pick_weapon(monster, guard)
     items, worn = self.world["items"], equipment(self.world, self.state)["weapon"]
     hero_atk = s["atk"] - (items[worn].get("atk", 0) if worn else 0) + (items[weapon].get("atk", 0) if weapon else 0)

@@ -578,7 +578,9 @@ class TraitTest(unittest.TestCase):
         state = G.new_state(WORLD)
         state["hero"].update(max_hp=999, hp=999, base_dex=0)
         monster = dict(WORLD["monsters"]["wild_dog"], dex=0) | ({"trait": trait} if trait else {})
-        day_of(state, seed=str(seed)).battle(monster)
+        day = day_of(state, seed=str(seed))
+        day.gain_exp = lambda exp: None  # レベルが上がると HP が戻るので、育てない
+        day.battle(monster)
         total += 999 - state["hero"]["hp"]
       return total
 
@@ -913,10 +915,12 @@ class BattleDepthTest(unittest.TestCase):
 
   def test_element_rates(self):
     rates = WORLD["season"]["element_rates"]
-    self.assertEqual(G.element_rate(WORLD, "fire", "ice"), rates["strong"])  # 炎は氷に強い
-    self.assertEqual(G.element_rate(WORLD, "ice", "fire"), rates["weak"])  # 逆は苦手
-    self.assertEqual(G.element_rate(WORLD, "fire", "earth"), 1.0)
-    self.assertEqual(G.element_rate(WORLD, None, "ice"), 1.0)  # 属性なし
+    self.assertEqual(G.element_rate(WORLD, "fire", "wood"), rates["strong"])  # 火は木に強い
+    self.assertEqual(G.element_rate(WORLD, "wood", "fire"), rates["weak"])  # 逆は苦手
+    self.assertEqual(G.element_rate(WORLD, "water", "fire"), rates["strong"])  # 水は火に強い
+    self.assertEqual(G.element_rate(WORLD, "wood", "water"), rates["strong"])  # 木は水に強い
+    self.assertEqual(set(WORLD["elements"]), {"fire", "water", "wood"})  # 属性は火・水・木の 3 つ
+    self.assertEqual(G.element_rate(WORLD, None, "wood"), 1.0)  # 属性なし
     self.assertEqual(G.element_rate(WORLD, "fire", None), 1.0)
     for eid, e in WORLD["elements"].items():  # どの属性も、強い相手と弱い相手が 1 つずつ
       self.assertIn(e["strong"], WORLD["elements"])
@@ -924,12 +928,12 @@ class BattleDepthTest(unittest.TestCase):
 
   def test_hero_switches_to_the_weapon_that_works(self):
     state = self.hero_state()
-    state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # 鋼の剣（攻 7）がいつもの武器、騎兵の槍（攻 6・風）
+    state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # 鋼の剣（攻 7）がいつもの武器、騎兵の槍（攻 6・木）
     day = day_of(state)
     self.assertEqual(G.equipment(WORLD, state)["weapon"], "steel_sword")
-    self.assertEqual(day.pick_weapon(self.monster(element="earth"), 0)[0], "cavalry_lance")  # 風は土に強い
+    self.assertEqual(day.pick_weapon(self.monster(element="water"), 0)[0], "cavalry_lance")  # 木は水に強い
     self.assertEqual(day.pick_weapon(self.monster(), 0)[0], "steel_sword")
-    day.battle(self.monster(element="earth", hp=1))
+    day.battle(self.monster(element="water", hp=1))
     self.assertIn("騎兵の槍で弱点を突いた", day.events[-1])
 
   def count_first(self, monster, spd, inventory=None):
@@ -962,22 +966,22 @@ class BattleDepthTest(unittest.TestCase):
     state["hero"]["base_spd"] = 6
     day = day_of(state)
     self.assertEqual(day.stats["spd"], 5)
-    weapon, rate, spd = day.pick_weapon(self.monster(element="earth"), 0)  # 騎兵の槍に持ち替えると素早さ 6
+    weapon, rate, spd = day.pick_weapon(self.monster(element="water"), 0)  # 騎兵の槍に持ち替えると素早さ 6
     self.assertEqual((weapon, spd), ("cavalry_lance", 6))
-    self.assertEqual(self.count_first(self.monster(spd=6, element="earth"), 6, inventory=state["inventory"])[:1], "h")
+    self.assertEqual(self.count_first(self.monster(spd=6, element="water"), 6, inventory=state["inventory"])[:1], "h")
 
   def test_weapon_choice_counts_the_real_guard(self):
     state = self.hero_state(base_atk=3)
-    state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # 攻 3+7=10（属性なし）と 3+6=9（風）
+    state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # 攻 3+7=10（属性なし）と 3+6=9（木）
     day = day_of(state)
-    # 守りが高い土の魔物: 鋼の剣 (10 - 8) = 2、騎兵の槍 (9 - 8) × 1.5 = 1.5 → 鋼の剣のほうが効く
-    self.assertEqual(day.pick_weapon(self.monster(element="earth"), 16)[0], "steel_sword")
-    self.assertEqual(day.pick_weapon(self.monster(element="earth"), 0)[0], "cavalry_lance")
+    # 守りが高い水の魔物: 鋼の剣 (10 - 8) = 2、騎兵の槍 (9 - 8) × 1.5 = 1.5 → 鋼の剣のほうが効く
+    self.assertEqual(day.pick_weapon(self.monster(element="water"), 16)[0], "steel_sword")
+    self.assertEqual(day.pick_weapon(self.monster(element="water"), 0)[0], "cavalry_lance")
 
   def test_shop_buys_weapons_with_new_elements(self):
     state = self.hero_state(gold=10000)
     state["inventory"] = {"steel_sword": 1}
-    day_of(state).shop("eques")  # 騎兵の槍（風）は鋼の剣より弱いが、風の武器を持っていないので買う
+    day_of(state).shop("eques")  # 騎兵の槍（木）は鋼の剣より弱いが、木の武器を持っていないので買う
     self.assertIn("cavalry_lance", state["inventory"])
 
   def test_same_element_is_neutral(self):
