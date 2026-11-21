@@ -973,8 +973,8 @@ class BattleDepthTest(unittest.TestCase):
     self.assertEqual(self.grown("lucky", 1), (30, 6, 6, 6, 6))  # Lv1 はみんな同じ
     self.assertEqual(self.grown("strong", 1), (30, 6, 6, 6, 6))
     self.assertEqual(self.grown("lucky", 20), (182, 30, 30, 30, 30))  # ふつう（能力は伸びない強運と同じ）
-    self.assertEqual(self.grown("sturdy", 20), (239, 30, 30, 30, 30))  # HP の伸び 1.375 倍（毎レベル +11）
-    self.assertEqual(self.grown("strong", 20), (182, 36, 30, 30, 30))  # 攻撃の伸び 1.25 倍
+    self.assertEqual(self.grown("sturdy", 20), (239, 28, 30, 30, 30))  # HP 1.375 倍・攻撃 0.9 倍
+    self.assertEqual(self.grown("strong", 20), (136, 36, 30, 30, 30))  # 攻撃 1.25 倍・HP 0.7 倍
     self.assertEqual(self.grown("guard", 20), (182, 30, 36, 30, 30))
     self.assertEqual(self.grown("swift", 20), (182, 30, 30, 36, 30))
     self.assertEqual(self.grown("skilled", 20), (182, 30, 30, 30, 36))

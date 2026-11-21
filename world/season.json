@@ -22,8 +22,8 @@
   "element_rates": {"strong": 1.5, "weak": 0.7},
   "critical": {"dex_divisor": 150, "multiplier": 3},
   "hero_traits": {
-    "strong": {"name": "怪力", "text": "攻撃の伸びが 1.25 倍", "growth": {"atk": 1.25}},
-    "sturdy": {"name": "頑丈", "text": "HP の伸びが 1.375 倍（レベルアップで +11）", "growth": {"hp": 1.375}},
+    "strong": {"name": "怪力", "text": "攻撃の伸びが 1.25 倍。そのかわり HP の伸びが 0.7 倍（打たれ弱い）", "growth": {"atk": 1.25, "hp": 0.7}},
+    "sturdy": {"name": "頑丈", "text": "HP の伸びが 1.375 倍（レベルアップで +11）。そのかわり攻撃の伸びが 0.9 倍", "growth": {"hp": 1.375, "atk": 0.9}},
     "guard": {"name": "鉄壁", "text": "防御の伸びが 1.25 倍", "growth": {"def": 1.25}},
     "swift": {"name": "俊足", "text": "素早さの伸びが 1.25 倍", "growth": {"spd": 1.25}},
     "skilled": {"name": "技巧", "text": "器用さの伸びが 1.25 倍（会心の一撃が出やすい）", "growth": {"dex": 1.25}},

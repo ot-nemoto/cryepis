@@ -20,7 +20,7 @@ class BattleSimTest(unittest.TestCase):
   def test_make_hero_grows_by_trait(self):
     state = B.make_hero(WORLD, "strong", 15, [], 3)
     self.assertEqual((state["hero"]["level"], state["hero"]["potions"], state["inventory"]), (15, 3, {}))
-    self.assertEqual(state["hero"]["hp"], 142)  # 装備なし、ふつうの HP の伸び
+    self.assertEqual(state["hero"]["hp"], 108)  # 装備なし、怪力は HP の伸びが 0.7 倍（30 + 8×14×0.7 = 108.4）
 
   def test_boss_win_rates_for_a_plain_hero(self):
     # ふつう（能力の伸びない強運）・装備なし・回復薬 3 個で、Lv15 で 5 割、Lv16 で 7 割、Lv17 で 9 割、それより上はほぼ必ず勝つ
