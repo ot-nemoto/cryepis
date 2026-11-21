@@ -41,6 +41,7 @@
   {"id": "jade_ring", "name": "翠玉の指輪", "slot": "accessory", "rarity": "common", "atk": 1, "hp": 5, "price": 350},
   {"id": "ruby_ring", "name": "紅玉の指輪", "slot": "accessory", "rarity": "common", "atk": 1, "hp": 8, "price": 400},
   {"id": "stargazer_amulet", "name": "星読みの護符", "slot": "accessory", "rarity": "common", "hp": 12, "price": 500},
+  {"id": "racer_horseshoe", "name": "駿馬の蹄鉄", "slot": "accessory", "rarity": "rare", "spd": 3, "towns": ["eques"]},
   {"id": "power_ring", "name": "力の指輪", "slot": "accessory", "rarity": "rare", "atk": 2, "hp": 5, "towns": ["eques"]}
  ]
 }
