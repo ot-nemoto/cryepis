@@ -486,6 +486,10 @@ def validate(raw: dict) -> list[str]:
       or any(k not in REWARD_STATS or not _num(v) for k, v in traits[key]["score"].items())
     ):
       err(f"monsters.json の traits の {key}: score は {{hp/atk/def/spd/dex: 強さ点で足す値}} にしてください")
+    if isinstance(traits.get(key), dict) and (
+      "gold_rate" in traits[key] and (not _num(traits[key]["gold_rate"]) or traits[key]["gold_rate"] < 0)
+    ):
+      err(f"monsters.json の traits の {key}: gold_rate（倒したときのお金の倍率）は 0 以上の数にしてください")
   for mid, m in monsters.items():
     if not m.get("name"):
       err(f"monsters.json の {mid}: name がありません")
@@ -718,11 +722,11 @@ def half_up(x: float) -> int:
 
 
 def monster_reward(monster: dict, traits: dict, cfg: dict) -> tuple[int, int]:
-  """倒したときの経験値とお金: 経験値 = 強さ点² ÷ exp_divisor、お金 = 経験値 × gold_rate（どちらも四捨五入）。
-  強さ点は 0 より小さくしない（性質の score をマイナスにしても、2 乗で報酬が増えないように）。"""
+  """倒したときの経験値とお金: 経験値 = 強さ点² ÷ exp_divisor、お金 = 経験値 × gold_rate × 性質の gold_rate
+  （盗みは多い。どちらも四捨五入）。強さ点は 0 より小さくしない（性質の score をマイナスにしても、2 乗で報酬が増えないように）。"""
   score = max(0.0, monster_score(monster, traits, cfg))
   exp = half_up(score * score / cfg["exp_divisor"])
-  return exp, half_up(exp * cfg["gold_rate"])
+  return exp, half_up(exp * cfg["gold_rate"] * traits.get(monster.get("trait"), {}).get("gold_rate", 1))
 
 
 def build(raw: dict) -> dict:

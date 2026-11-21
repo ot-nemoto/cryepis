@@ -909,7 +909,18 @@ def build_guide(world: dict) -> str:
       ),
     ),
     ("経験値", escape(f"強さ点 × 強さ点 ÷ {reward['exp_divisor']:g}（四捨五入）")),
-    ("お金", escape(f"経験値 × {reward['gold_rate']:g}（四捨五入）")),
+    (
+      "お金",
+      escape(
+        f"経験値 × {reward['gold_rate']:g}"
+        + "".join(
+          f"（{t['name']}の魔物はさらに × {t['gold_rate']:g}）"
+          for t in world["traits"].values()
+          if t.get("gold_rate", 1) != 1
+        )
+        + "。最後に四捨五入"
+      ),
+    ),
     ("レベル差", "勇者が魔物より 4 以上レベルが高いと、もらえる経験値が減る"),
   ]
   cards = [
