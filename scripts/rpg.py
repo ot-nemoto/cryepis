@@ -413,7 +413,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
 
   detail = ["", f"── シーズン{season}（{first}〜{last}）──", f"MAP: {repo_url('heroes/' + MAP_NAME)}"]
   if site_url():
-    detail.append(f"サイト（地図・ランキング・ギルド）: {site_url()}")
+    detail.append(f"サイト「クリエピス戦記」（ストーリー・地図・ランキング・勇者・町・ギルド・アイテム）: {site_url()}")
   for title, _, key, value, unit in RANKINGS:
     detail += ["", f"── {title} ──"]
     detail += [

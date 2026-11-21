@@ -169,26 +169,31 @@ def updated(today: date) -> str:
 
 # ---- ストーリー ---------------------------------------------------------------------------
 def inline_md(text: str) -> str:
-  """1 行の中の書式（**太字** だけ）。"""
+  """1 行の中の書式（**太字** だけ）。対になっていない ** は、そのまま出す。"""
   parts = escape(text).split("**")
+  if len(parts) % 2 == 0:  # ** が奇数個: 最後の ** は対がないので、文字として戻す
+    parts[-2:] = [parts[-2] + "**" + parts[-1]]
   return "".join(f"<strong>{p}</strong>" if i % 2 else p for i, p in enumerate(parts))
 
 
 def md_html(text: str) -> list[str]:
-  """Markdown のごく一部を HTML のかたまりの一覧にする: # 見出し・## 見出し・- 箇条書き・| 表 |・段落（**太字**）。
-  段落の中の改行はそのまま改行にする。"""
+  """Markdown のごく一部を HTML のかたまりの一覧にする: # 見出し・## 見出し・### 見出し・- 箇条書き・| 表 |・
+  段落（**太字**）。段落の中の改行はそのまま改行にする。ほかの書き方は、段落の文字としてそのまま出す。"""
   blocks: list[str] = []
-  lines = text.splitlines() + [""]
+  lines = [line.rstrip() for line in text.splitlines()]
+  headings = (("### ", "<h3>{}</h3>"), ("## ", '<h2 class="area">{}</h2>'), ("# ", '<h2 class="story-title">{}</h2>'))
+
+  def special(line: str) -> bool:  # 段落以外のかたまりの始まり
+    return line.startswith(("- ", "|")) or any(line.startswith(p) for p, _ in headings)
+
   i = 0
   while i < len(lines):
-    line = lines[i].rstrip()
-    if not line:
+    line = lines[i]
+    heading = next((h for h in headings if line.startswith(h[0])), None)
+    if not line.strip():
       i += 1
-    elif line.startswith("## "):
-      blocks.append(f'<h2 class="area">{inline_md(line[3:])}</h2>')
-      i += 1
-    elif line.startswith("# "):
-      blocks.append(f'<h2 class="story-title">{inline_md(line[2:])}</h2>')
+    elif heading:
+      blocks.append(heading[1].format(inline_md(line[len(heading[0]) :])))
       i += 1
     elif line.startswith("- "):
       items = []
@@ -197,13 +202,14 @@ def md_html(text: str) -> list[str]:
         i += 1
       blocks.append(f"<ul>{''.join(items)}</ul>")
     elif line.startswith("|"):
-      rows = []
+      rows, start = [], i
       while i < len(lines) and lines[i].startswith("|"):
         cells = [c.strip() for c in lines[i].strip().strip("|").split("|")]
-        if not all(set(c) <= set("-: ") for c in cells):  # 区切りの行（|---|）は飛ばす
+        is_rule = all(c and set(c) <= set("-: ") for c in cells)
+        if not (i == start + 1 and is_rule):  # 見出しのすぐ下の行の区切り（|---|）だけ飛ばす
           rows.append(cells)
         i += 1
-      head, *body = rows or [[]]
+      head, *body = rows
       blocks.append(
         '<div class="scroll"><table class="story-table"><tr>'
         + "".join(f"<th>{inline_md(c)}</th>" for c in head)
@@ -212,8 +218,9 @@ def md_html(text: str) -> list[str]:
         + "</table></div>"
       )
     else:
-      para = []
-      while i < len(lines) and lines[i].strip() and not lines[i].startswith(("#", "- ", "|")):
+      para = [inline_md(line.strip())]  # 最初の行は必ず取る（どのかたまりにも当たらない行で止まらないように）
+      i += 1
+      while i < len(lines) and lines[i].strip() and not special(lines[i]):
         para.append(inline_md(lines[i].strip()))
         i += 1
       blocks.append(f'<p class="story">{"<br>".join(para)}</p>')
@@ -223,7 +230,8 @@ def md_html(text: str) -> list[str]:
 def build_story(world: dict, entries: list[tuple[dict, dict]], today: date, story: str | None = None) -> str:
   """最初のページ: 物語（world/story.md）と、いまの冒険の状況（シーズン・勇者・開放した地方と町）。"""
   if story is None:
-    story = STORY_PATH.read_text(encoding="utf-8") if STORY_PATH.is_file() else f"# {TITLE}\n"
+    # Windows のエディタが付ける BOM があっても読めるように utf-8-sig
+    story = STORY_PATH.read_text(encoding="utf-8-sig") if STORY_PATH.is_file() else f"# {TITLE}\n"
   blocks = md_html(story)
   season = game.season_of(world, today)
   first, last = game.season_range(world, season)

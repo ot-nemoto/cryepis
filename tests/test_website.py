@@ -261,6 +261,22 @@ class SiteTest(unittest.TestCase):
       ],
     )
 
+  def test_story_markdown_edge_cases(self):
+    # どのかたまりにも当たらない # の行でも止まらない（### は小見出し、#1位 は段落の文字）
+    self.assertEqual(website.md_html("### 小見出し\n#1位\n"), ["<h3>小見出し</h3>", '<p class="story">#1位</p>'])
+    self.assertEqual(website.inline_md("**太字"), "**太字")  # 対のない ** はそのまま
+    self.assertEqual(website.inline_md("**a** と **b"), "<strong>a</strong> と **b")
+    table = website.md_html("| a | b |\n|---|---|\n| - | - |\n")[0]  # 中身が - だけの行は消さない
+    self.assertIn("<tr><td>-</td><td>-</td></tr>", table)
+
+  def test_story_file_with_bom(self):
+    with tempfile.TemporaryDirectory() as d:
+      path = Path(d) / "story.md"
+      path.write_text("\ufeff# 題\n", encoding="utf-8")
+      with mock.patch.object(website, "STORY_PATH", path):
+        html = website.build_story(WORLD, [], DAY)
+    self.assertIn('<h2 class="story-title">題</h2>', html)
+
   def test_guild_before_anyone_played(self):
     html = website.build_guild(WORLD, [], DAY, game.new_guild())
     self.assertIn('<span class="open">受付中</span>', html)
