@@ -777,11 +777,38 @@ def build_monsters(world: dict) -> str:
       + '<p class="note">ボスは道には出ず、ダンジョンの奥にいます。HP・攻・防は、性質の効果がかかる前の値です。</p></div>'
     )
 
+  def elite_table(aid: str, members: list[str]) -> str:  # この地方の町の討伐の依頼で狙う強敵
+    where: dict[str, list[str]] = {}
+    for town in members:
+      if town not in world["towns"]:
+        continue
+      for q in world["town_quests"].get(town, []):
+        target = monsters.get(q.get("monster"), {})
+        if q.get("type") == "hunt" and target.get("elite"):
+          where.setdefault(q["monster"], []).append(
+            f"{escape(places[town]['name'])}の依頼「{escape(q['name'])}」（Lv{target['level']} から）"
+          )
+    if not where:
+      return ""
+    rows = [monster_row(mid, "<br>".join(where[mid])) for mid in sorted(where, key=list(monsters).index)]
+    return (
+      '<h3 class="sub">強敵</h3>'
+      + monster_table(rows, "戦える依頼")
+      + '<p class="note">強敵は道では出会わず、町の討伐の依頼で狙って戦います（魔物のレベル以上の勇者が受けられる）。'
+      "HP・攻・防は、性質の効果がかかる前の値です。</p></div>"
+    )
+
   groups = area_groups(world, towns)
   guide = '<p class="note">性質・属性・素早さなどの説明は、<a href="guide.html">手引き</a>にまとめています。</p>'
   body = ["<h2>魔物の情報</h2>", tab_bar([(aid, a["name"]) for aid, a, _ in groups]), guide]
   for aid, area, members in groups:
-    body.append(tab_panel(aid, name_html(area["name"], area.get("en")), table(members) + boss_table(aid, members)))
+    body.append(
+      tab_panel(
+        aid,
+        name_html(area["name"], area.get("en")),
+        table(members) + elite_table(aid, members) + boss_table(aid, members),
+      )
+    )
   return page("魔物", "".join(body), "monsters.html", script=TABS_JS)
 
 
@@ -862,6 +889,8 @@ def build_guide(world: dict) -> str:
     ("2 回攻撃", "相手の 2 倍以上素早ければ、1 回の番に 2 回攻撃する（魔物も同じ）"),
     ("回復薬", f"HP が 0 になりそうなとき、自動で使う。最大 HP の {potion['heal_rate']:.0%} まで回復する"),
     ("武器の持ち替え", "勇者は戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える"),
+    ("強敵", "道では出会わない。町の討伐の依頼で狙って戦う。依頼は、魔物のレベル以上の勇者だけが受けられる"),
+    ("ボス", "道では出会わない。ダンジョンの奥にいる"),
   ]
   reward = cfg["monster_reward"]
   names_all = {"hp": "HP", "atk": "攻", "def": "防", "spd": "速", "dex": "器"}

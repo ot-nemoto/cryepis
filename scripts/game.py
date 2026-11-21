@@ -392,6 +392,9 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
   base, cfg = world["quest_reward"], world["quest_ranks"][rank - 1]
   if quest["type"] == "hunt":
     quest["steps"] = hunt_steps(world, town, quest["place"], quest["count"])
+    target = world["monsters"].get(quest["monster"], {})
+    if target.get("elite"):  # 強敵は、魔物のレベル以上の勇者だけが受ける
+      quest["min_level"] = target["level"]
     quest["away"] = 0  # 町から何行動ぶん離れているか（地図に描く位置）
     cost = sum(n for _, n in quest["steps"])
   else:
@@ -440,8 +443,9 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> 
 
 
 def suitable(quest: dict, level: int) -> bool:
-  """受けられる依頼か（魔物の強さはどこでも同じなので、強すぎる依頼だけを避ける。弱すぎる依頼も受ける）。"""
-  return quest["level"][0] <= level + 3
+  """受けられる依頼か（魔物の強さはどこでも同じなので、強すぎる依頼だけを避ける。弱すぎる依頼も受ける）。
+  強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level）。"""
+  return quest["level"][0] <= level + 3 and level >= quest.get("min_level", 0)
 
 
 def patrol(world: dict, state: dict, rng: random.Random) -> dict:

@@ -169,10 +169,26 @@ class QuestTest(unittest.TestCase):
           self.assertIsNone(q["deadline"])
           self.assertGreater(q["cost"], 0)
           self.assertTrue(G.quest_ok(WORLD, q))
-          if q["type"] == "hunt":  # 討伐は町から出る道で、その道に出る魔物
+          if q["type"] == "hunt":  # 討伐は町から出る道で、その道に出る魔物（強敵は、その道の地形の強敵）
             self.assertEqual(q["report"], town)
-            pool = [m for m, _ in WORLD["road_info"][(town, q["place"])]["monsters"]]
-            self.assertIn(q["monster"], pool)
+            target = WORLD["monsters"][q["monster"]]
+            if target.get("elite"):
+              self.assertIn(target["terrain"], WORLD["road_info"][(town, q["place"])]["terrain"])
+              self.assertEqual(q["min_level"], target["level"])  # 魔物のレベル以上で受けられる
+            else:
+              pool = [m for m, _ in WORLD["road_info"][(town, q["place"])]["monsters"]]
+              self.assertIn(q["monster"], pool)
+              self.assertNotIn("min_level", q)
+
+  def test_elites_are_not_on_roads_and_need_their_level(self):
+    elites = [mid for mid, m in WORLD["monsters"].items() if m.get("elite")]
+    self.assertEqual(set(elites), {"yeti", "rock_golem"})
+    on_roads = {m for i in WORLD["road_info"].values() for m, _ in i["monsters"]}
+    self.assertFalse(on_roads & set(elites))  # 道では出会わない
+    quest = next(q for q in WORLD["town_quests"]["karun"] if q.get("monster") == "yeti")
+    q = G.make_town_quest(WORLD, quest, "karun", START)
+    self.assertFalse(G.suitable(q, 9))  # Lv10 の強敵は Lv10 から
+    self.assertTrue(G.suitable(q, 10))
 
   def test_board_has_town_quests_once_a_day(self):
     names = {q["name"] for t in WORLD["town_quests"].values() for q in t}
