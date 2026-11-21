@@ -52,9 +52,9 @@ PAGES = (
 
 CSS = """
 :root{--bg:#f6efdc;--card:#fffaf0;--ink:#3f2f22;--sub:#6b5a48;--line:#d9c9a8;--accent:#7a5530;--hero:#b91c1c;
-color-scheme:light}
+--minus:#c0262d;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#1f1a14;--card:#2a231b;--ink:#efe4cf;--sub:#bfae92;--line:#4a3d2c;
---accent:#e0b878;--hero:#f87171;color-scheme:dark}}
+--accent:#e0b878;--hero:#f87171;--minus:#f87171;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 'Hiragino Sans','Hiragino Kaku Gothic ProN',
 'Noto Sans JP','Yu Gothic',Meiryo,sans-serif}
@@ -104,6 +104,12 @@ padding:6px 12px;margin-bottom:-2px;cursor:pointer}
 .tab:hover{color:var(--ink)}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:#e8833a}
 h2.area{font-size:17px;margin:6px 0 10px;border-left:0;padding-left:0}
+.minus{color:var(--minus);font-weight:bold}
+.zero{color:var(--sub)}
+.pill{display:inline-block;margin:2px 6px 2px 0;padding:1px 10px;border:1.5px solid #f0a868;border-radius:999px;
+  background:var(--card);color:var(--ink);text-decoration:none;font-size:13px;white-space:nowrap}
+.pill:hover{border-color:#e8833a}
+.how{font-size:13px;color:var(--sub);margin-right:6px}
 .tag{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #e8833a;border-radius:4px;color:#c2621c;font-size:11px}
 .chip{font:inherit;font-size:14px;font-weight:bold;color:var(--ink);background:var(--card);border:1.5px solid #f0a868;
 border-radius:999px;padding:4px 14px;cursor:pointer;box-shadow:0 0 0 2px rgba(240,168,104,.15)}
@@ -570,16 +576,17 @@ def build_towns(world: dict) -> str:
 
 # ---- アイテム ---------------------------------------------------------------------------
 def item_rows(world: dict) -> dict[str, list[dict]]:
-  """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）: {部位: [{id, item, shops, towns}]}。"""
+  """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）: {部位: [{id, item, shops, towns}]}。
+  shops は売っている町、towns は依頼の報酬で出る町（どちらも開放した町の ID）。"""
   places, items = world["places"], world["items"]
   shops: dict[str, list[str]] = {}
   for t in world["towns"]:
     for iid in places[t].get("shop", []):
-      shops.setdefault(iid, []).append(places[t]["name"])
+      shops.setdefault(iid, []).append(t)
   rank = {r: i for i, r in enumerate(world["rarities"])}
   rows: dict[str, list[dict]] = {slot: [] for slot in W.SLOTS}
   for iid, it in items.items():
-    towns = [places[t]["name"] for t in it.get("towns", []) if t in world["towns"]]
+    towns = [t for t in it.get("towns", []) if t in world["towns"]]
     if iid in world["region_items"] or towns:
       sellers = [t for t, p in places.items() if p["type"] == "town" and iid in p.get("shop", [])]
       rows[it["slot"]].append(
@@ -590,14 +597,37 @@ def item_rows(world: dict) -> dict[str, list[dict]]:
   return rows
 
 
+SLOT_EMOJI = {"weapon": "⚔️", "helmet": "🪖", "shield": "🛡️", "accessory": "💍"}  # 部位の名前の先頭に付ける
+ITEM_STATS = (("hp", "HP"), ("atk", "攻"), ("def", "防"), ("spd", "速"), ("dex", "器"))  # アイテムページの能力の列
+
+
+def slot_label(slot: str) -> str:
+  """部位の名前（先頭に絵文字。町の名前と同じ形）。"""
+  return f"{SLOT_EMOJI.get(slot, '')} {W.SLOT_NAMES[slot]}".strip()
+
+
+def town_pill(world: dict, town: str) -> str:
+  """町の楕円の札（絵文字と名前。町のページへのリンク）。"""
+  p = world["places"][town]
+  label = f"{p.get('emoji', '')} {p['name']}".strip()
+  return f'<a class="pill" href="towns.html#{escape(town)}">{escape(label)}</a>'
+
+
+def stat_cell(value: int) -> str:
+  """能力の値の欄（装備で増える・減る値なので +7・-1 のように符号を付ける。マイナスは赤字、0 は薄く）。"""
+  cls = "num minus" if value < 0 else "num zero" if value == 0 else "num"
+  return f'<td class="{cls}">{value:+d}</td>' if value else f'<td class="{cls}">0</td>'
+
+
 def build_items(world: dict) -> str:
-  """開放した地域で手に入るアイテムの一覧。装備の種類ごとのタブで、レアリティで絞り込める。"""
+  """開放した地域で手に入るアイテムの一覧。装備の種類ごとのタブで、レアリティで絞り込める。
+  能力は HP・攻・防・速・器の列に分けて出す。入手方法は、買える店（町の札）か、報酬で出る依頼の町。"""
   rows = item_rows(world)
   used = [r for r in world["rarities"] if any(x["item"]["rarity"] == r for rs in rows.values() for x in rs)]
   slots = [slot for slot in W.SLOTS if rows[slot]]  # 開放した地域で手に入る装備のない種類は、タブを出さない
   body = [
     "<h2>アイテム一覧</h2>",
-    tab_bar([(slot, W.SLOT_NAMES[slot]) for slot in slots]),
+    tab_bar([(slot, slot_label(slot)) for slot in slots]),
     rarity_filter([(r, game.rarity_mark(world, r)) for r in used], "条件に合うアイテムはありません。"),
   ]
   for slot in slots:
@@ -605,27 +635,32 @@ def build_items(world: dict) -> str:
     for r in rows[slot]:
       it = r["item"]
       if r["towns"]:
-        how = "依頼の報酬: " + "・".join(escape(t) for t in r["towns"])
+        how = '<span class="how">依頼の報酬</span>' + "".join(town_pill(world, t) for t in r["towns"])
       else:
         how = (
-          "店: "
-          + ("・".join(escape(t) for t in r["shops"]) or "なし")
-          + '<div class="note">宝箱・依頼の報酬でも出る</div>'
-        )
+          "".join(town_pill(world, t) for t in r["shops"]) or "店: なし"
+        ) + '<div class="note">宝箱・依頼の報酬でも出る</div>'
+      element = world["elements"].get(it.get("element"), {}).get("name")
       trs.append(
         f'<tr data-f="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
-        f"<td>{escape(it['name'])}" + ('<span class="tag">特産</span>' if r["specialty"] else "") + "</td>"
-        f"<td>{escape(rpg.item_power(it, world))}</td>"
-        f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>'
+        f"<td>{escape(it['name'])}"
+        + ('<span class="tag">特産</span>' if r["specialty"] else "")
+        + (f'<span class="tag">{escape(element)}属性</span>' if element else "")
+        + "</td>"
+        + "".join(stat_cell(it.get(k, 0)) for k, _ in ITEM_STATS)
+        + f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>'
       )
     table = (
       '<div class="card board"><div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em">'
-      '<col style="width:13em"><col style="width:9em"><col style="width:5.5em"><col></colgroup>'
-      '<tr><th></th><th>名前</th><th>性能</th><th class="num">値段</th><th>手に入れ方</th></tr>'
+      '<col style="width:13em">'
+      + '<col style="width:3em">' * len(ITEM_STATS)
+      + '<col style="width:5.5em"><col></colgroup><tr><th></th><th>名前</th>'
+      + "".join(f'<th class="num">{name}</th>' for _, name in ITEM_STATS)
+      + '<th class="num">値段</th><th>入手方法</th></tr>'
       + "".join(trs)
       + "</table></div></div>"
     )
-    body.append(tab_panel(slot, escape(W.SLOT_NAMES[slot]), table))
+    body.append(tab_panel(slot, escape(slot_label(slot)), table))
   return page("アイテム", "".join(body), "items.html", script=FILTER_JS + TABS_JS)
 
 
