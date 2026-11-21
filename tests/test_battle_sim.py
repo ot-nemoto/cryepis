@@ -39,6 +39,22 @@ class BattleSimTest(unittest.TestCase):
     for t, g in gains.items():  # 能力の伸びる特性は、ふつうと同じか、より強い相手と五分に戦える
       self.assertGreaterEqual(g, 1.0, t)
 
+  def test_shaped_keeps_the_ratio_and_other_stats(self):
+    dog = WORLD["monsters"]["wild_dog"]
+    m = B.shaped(dog, 0.5)
+    self.assertEqual((m["hp"], m["atk"], m["def"]), (10, 4, 1))  # 20・7・2 の半分（四捨五入。3.5 → 4）
+    self.assertEqual((m["spd"], m["dex"], m.get("trait")), (dog["spd"], dog["dex"], dog.get("trait")))
+    self.assertEqual(B.shaped(dog, 0.01)["hp"], 1)  # HP と攻撃は 1 より下げない
+    self.assertEqual(B.shaped(dog, 0.01)["def"], 0)
+
+  def test_road_monsters_meet_the_hp_loss_goal(self):
+    # 道の魔物は、同じ Lv の勇者（強運・装備なし・回復薬なし）が勝つと HP が 20% 減る強さ（docs/BALANCE.md の 7）
+    ids = {m for i in WORLD["road_info"].values() for m, _ in i["monsters"]}
+    for mid in ids:
+      m = WORLD["monsters"][mid]
+      fit = B.fit_hp_loss(WORLD, m, m["level"], 0.2)
+      self.assertEqual((fit["hp"], fit["atk"], fit["def"]), (m["hp"], m["atk"], m["def"]), mid)
+
   def test_is_capped(self):
     self.assertTrue(B.is_capped(B.HIGH))
     self.assertTrue(B.is_capped(B.LOW))

@@ -196,8 +196,32 @@ python tools/battle_sim.py --monster yeti --level 9 -n 1000         # Lv10 よ�
 | 前（全員 Lv2 相当・経験値が減る） | Lv8 | Lv11 | Lv13 | 9〜17 | 0 |
 | 今（Lv1〜6・経験値は減らない） | Lv8 | Lv11.5 | Lv14 | 9〜19 | 0 |
 
-測り方:
+### 値の探し方
+
+`tools/battle_sim.py --fit-hp-loss` で探す（上の表の値は、どれもこのコマンドで出る。テストでも確かめている）。
+
+1. HP・攻撃・防御の比は、どの道の魔物も **20 : 7 : 2**（`battle_sim.py` の `ROAD_SHAPE`）。この比に掛ける倍率だけを探す
+2. 倍率を 0.2〜6.0 の範囲で二分探索する（14 回）。1 回ごとに 300 戦して、
+   **勝率 99% 以上で、勝ったときに減る HP が 20% 未満**なら、もっと強くする。そうでなければ弱くする
+3. 探し終えた範囲の両端（20% 未満のいちばん強い倍率と、そのすぐ上の倍率）で、HP・攻撃・防御を四捨五入して整数にする
+   （HP と攻撃は 1 より下げない）
+4. 2 つの候補を 1000 戦ずつして、減る HP が 20% に近いほうを選ぶ
+5. 経験値とお金は書かない（能力から計算される）
+
+勇者は基準の勇者（強運・装備なし・回復薬なし）で、魔物と同じ Lv。減る HP は戦いの前と後の HP の差で、毒で戦いのあとに減る HP は入れない。
 
 ```sh
-python tools/battle_sim.py --monster wild_dog --level 1 --potions 0 --hp-loss -n 2000   # 勝率と、勝ったときに減る HP
+python tools/battle_sim.py --monster road --fit-hp-loss 0.2                          # 開放した道の魔物すべて（いまの値と違えば「← 今は」と出る）
+python tools/battle_sim.py --monster wild_dog --fit-hp-loss 0.2                      # 1 体だけ（Lv は魔物の level）
+python tools/battle_sim.py --monster wild_dog --level 3 --fit-hp-loss 0.2            # Lv を変えて試す
+python tools/battle_sim.py --monster wild_dog --level 1 --potions 0 --hp-loss -n 2000   # 決めた値の勝率と、勝ったときに減る HP（特性ごと）
 ```
+
+### 新しい道の魔物を足すとき（地方を開放するとき）
+
+1. 魔物の Lv（1〜6。開放する地方に合わせて決める）と、戦い方の個性（素早さ・器用さ・性質・属性）を先に決める
+2. `monsters.json` に、HP・攻撃・防御を仮の値（20・7・2）で書く
+3. 地方を開放して道に出るようにしてから、`--monster road --fit-hp-loss 0.2` で値を出し、「← 今は」と出た魔物の値を書き換える
+4. `--hp-loss` で特性ごとの減る HP を見て、ある特性だけ極端に有利・不利でないか確かめる
+5. 90 日のシミュレーションで、力尽きる勇者が増えないか、レベルの上がり方が変わりすぎないかを見る
+6. この節の表を直す
