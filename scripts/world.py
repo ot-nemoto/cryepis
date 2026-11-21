@@ -486,7 +486,9 @@ def validate(raw: dict) -> list[str]:
       or any(k not in REWARD_STATS or not _num(v) for k, v in traits[key]["score"].items())
     ):
       err(f"monsters.json の traits の {key}: score は {{hp/atk/def/spd/dex: 強さ点で足す値}} にしてください")
-    elif "gold_rate" in traits[key] and (not _num(traits[key]["gold_rate"]) or traits[key]["gold_rate"] < 0):
+    if isinstance(traits.get(key), dict) and (
+      "gold_rate" in traits[key] and (not _num(traits[key]["gold_rate"]) or traits[key]["gold_rate"] < 0)
+    ):
       err(f"monsters.json の traits の {key}: gold_rate（倒したときのお金の倍率）は 0 以上の数にしてください")
   for mid, m in monsters.items():
     if not m.get("name"):

@@ -154,7 +154,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `world/map.json` | 場所（町・ダンジョン）と道、開放した町（`open`。勇者が行ける町。ほかの町への道は描かず通れない）、最初の町の候補（`starts`。開放した町から）、地図の大きさとベースの地図（`layout`）。町には名前・呼び名（`alias`）・地域（`region`）・説明（`text`。サイトの町のページに出す）・店・地図の座標（`pos`。1600×1000、北が上）。道には種類（`kind`: 陸路 `land`・航路 `sea`・ダンジョンへの道 `trail`）・行動回数（`distance`）・地形の割合（`terrain`。出る魔物が決まる）・地図に描く線（`path`）。地方（`areas`: ID・名前・英語名）と、場所ごとの地方（`area`）と英語名（`en`）もある。いまは町 25（開放 4）・ダンジョン 7・陸路 24・航路 3（開放した道は陸路 4） |
 | `world/map-base.svg` | ベースの地図（地形の絵） |
 | `tools/worldgen/` | 地図づくりのスクリプト。`python tools/worldgen/make.py` で地形・陸路・航路・行動回数を作り直し、`world/map.json` と `world/map-base.svg` を書き出す（町の配置は `places.py`、名前は `names.py`、山脈・地域・川は `terrain.py`） |
-| `world/monsters.json` | 魔物（出る地形 `terrain`・性質 `trait`・属性 `element`・素早さ `spd`・器用さ `dex`。経験値とお金は書かず、能力から計算する: `season.json` の `monster_reward`）と、性質の一覧（`traits`。`score` は強さ点で足す値、`gold_rate` は倒したときのお金の倍率。盗みは 1.5）、属性と相性（`elements`: 名前と、強い相手の属性 `strong`） |
+| `world/monsters.json` | 魔物（出る地形 `terrain`・性質 `trait`・属性 `element`・素早さ `spd`・器用さ `dex`。経験値とお金は書かず、能力から計算する: `season.json` の `monster_reward`）と、性質の一覧（`traits`。`score` は強さ点で足す値、`gold_rate` は倒したときのお金の倍率。盗みの魔物は多い）、属性と相性（`elements`: 名前と、強い相手の属性 `strong`） |
 | `world/items.json` | アイテムと珍しさ（common / rare / epic / legendary。印は ★〜★★★★ で、依頼のレアリティと同じく ★ から始まる）。店で売るもの（common）は `price` を書く。レア（rare 以上）は `towns` に書いた町の依頼の報酬でしか出ない（レベルの制限なし）。町ごとの特産とレアは [docs/WORLD.md](docs/WORLD.md) |
 | `world/quests.json` | ギルドの依頼。1 行動あたりの報酬（`reward`）、レアリティ（`ranks`: ★〜★★★★ の出やすさ・報酬の倍率・アイテムのドロップ表）、共通の依頼（`templates`）、町ごとの依頼（`towns`: 名前・内容・ギルドの言葉。開放した町だけに書く。いまは南大陸の 4 町で 16 件） |
 | `world/story.md` | サイトの最初のページ（ストーリー）の文。Markdown の一部（`#`・`##` の見出し、`-` の箇条書き、`|` の表、`**太字**`、段落）が使える。物語を書き足すときはここを編集する |

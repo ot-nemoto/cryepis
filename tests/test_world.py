@@ -79,9 +79,11 @@ class MonsterRewardTest(unittest.TestCase):
   def test_thief_pays_more_gold(self):
     cfg, traits, monsters = WORLD["season"]["monster_reward"], WORLD["traits"], WORLD["monsters"]
     bandit = monsters["mountain_bandit"]  # 盗み
-    exp, gold = W.monster_reward(bandit | {"trait": None}, traits, cfg)
+    rate = traits["thief"]["gold_rate"]
+    self.assertGreater(rate, 1)
+    exp, gold = W.monster_reward(bandit, traits | {"thief": {**traits["thief"], "gold_rate": 1}}, cfg)
     self.assertEqual(bandit["exp"], exp)  # 経験値は変わらない
-    self.assertEqual(bandit["gold"], W.half_up(exp * cfg["gold_rate"] * 1.5))
+    self.assertEqual(bandit["gold"], W.half_up(exp * cfg["gold_rate"] * rate))  # 四捨五入は最後に 1 回
     self.assertGreater(bandit["gold"], gold)
 
   def test_trait_effect_is_shared_with_the_battle(self):
@@ -184,6 +186,12 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"]["monster_reward"]["weights"].update(luck=1), ["monster_reward"])
     self.assertError(lambda r: r["traits"]["poison"].update(score={"atk": "2"}), ["poison", "score"])
     self.assertError(lambda r: r["traits"]["thief"].update(gold_rate=-1), ["thief", "gold_rate"])
+
+    def both(r):  # score と gold_rate の両方が誤りなら、両方を 1 度に知らせる
+      r["traits"]["thief"].update(score={"atk": "2"}, gold_rate=-1)
+
+    self.assertError(both, ["thief", "score"])
+    self.assertError(both, ["thief", "gold_rate"])
 
   def test_critical_is_checked(self):
     self.assertError(lambda r: r["season"]["critical"].update(dex_divisor=0), ["critical"])
