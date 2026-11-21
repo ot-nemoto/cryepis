@@ -809,7 +809,7 @@ class GuildBoardTest(unittest.TestCase):
 
 
 class BattleDepthTest(unittest.TestCase):
-  """属性・素早さ・性格と特性。"""
+  """属性・素早さ・特性。"""
 
   def hero_state(self, **hero):
     state = G.new_state(WORLD)
@@ -846,26 +846,25 @@ class BattleDepthTest(unittest.TestCase):
     state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # 鋼の剣（攻 7）がいつもの武器、騎兵の槍（攻 6・風）
     day = day_of(state)
     self.assertEqual(G.equipment(WORLD, state)["weapon"], "steel_sword")
-    self.assertEqual(day.pick_weapon(self.monster(element="earth"))[0], "cavalry_lance")  # 風は土に強い
-    self.assertEqual(day.pick_weapon(self.monster())[0], "steel_sword")
+    self.assertEqual(day.pick_weapon(self.monster(element="earth"), 0)[0], "cavalry_lance")  # 風は土に強い
+    self.assertEqual(day.pick_weapon(self.monster(), 0)[0], "steel_sword")
     day.battle(self.monster(element="earth", hp=1))
     self.assertIn("騎兵の槍で弱点を突いた", day.events[-1])
 
-  def count_first(self, monster, spd):
+  def count_first(self, monster, spd, inventory=None):
     """勇者と魔物の、最初の数回の攻撃の順番（"h" / "m"）。"""
     state = self.hero_state(base_spd=spd)
+    state["inventory"] = dict(inventory or {})
     day = day_of(state)
     order = []
-    hp = [monster["hp"]]
 
     def damage(attack, guard):
-      who = "h" if attack == day.stats["atk"] else "m"
+      who = "m" if attack == 3 else "h"  # 魔物の攻撃は 3
       order.append(who)
       return 1 if who == "m" else 10
 
     with mock.patch.object(day, "damage", side_effect=damage):
       day.battle(monster | {"hp": 30, "atk": 3})
-    del hp
     return "".join(order)
 
   def test_speed_decides_order_and_double_attacks(self):
@@ -875,6 +874,39 @@ class BattleDepthTest(unittest.TestCase):
     self.assertEqual(self.count_first(self.monster(spd=13), 6), "mmhmmhmmh")  # 魔物も 2 倍以上なら 2 回
     # 先手の魔物は、勇者のほうが速くても先に攻撃する（2 回攻撃は素早さで決まる）
     self.assertEqual(self.count_first(self.monster(spd=3, trait="first_strike"), 6), "mhhmh")
+
+  def test_speed_follows_the_weapon_in_hand(self):
+    state = self.hero_state()
+    state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # いつもは鋼の剣（速 -1）で素早さ 5
+    day = day_of(state)
+    self.assertEqual(day.stats["spd"], 5)
+    weapon, rate, spd = day.pick_weapon(self.monster(element="earth"), 0)  # 騎兵の槍に持ち替えると素早さ 6
+    self.assertEqual((weapon, spd), ("cavalry_lance", 6))
+    self.assertEqual(self.count_first(self.monster(spd=6, element="earth"), 6, inventory=state["inventory"])[:1], "h")
+
+  def test_weapon_choice_counts_the_real_guard(self):
+    state = self.hero_state(base_atk=3)
+    state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # 攻 3+7=10（属性なし）と 3+6=9（風）
+    day = day_of(state)
+    # 守りが高い土の魔物: 鋼の剣 (10 - 8) = 2、騎兵の槍 (9 - 8) × 1.5 = 1.5 → 鋼の剣のほうが効く
+    self.assertEqual(day.pick_weapon(self.monster(element="earth"), 16)[0], "steel_sword")
+    self.assertEqual(day.pick_weapon(self.monster(element="earth"), 0)[0], "cavalry_lance")
+
+  def test_shop_buys_weapons_with_new_elements(self):
+    state = self.hero_state(gold=10000)
+    state["inventory"] = {"steel_sword": 1}
+    day_of(state).shop("eques")  # 騎兵の槍（風）は鋼の剣より弱いが、風の武器を持っていないので買う
+    self.assertIn("cavalry_lance", state["inventory"])
+
+  def test_same_element_is_neutral(self):
+    self.assertEqual(G.element_rate(WORLD, "fire", "fire"), 1.0)
+
+  def test_exp_stops_at_max_level(self):
+    state = G.new_state(WORLD)
+    day = day_of(state)
+    day.gain_exp(10**7)
+    day.gain_exp(500)
+    self.assertEqual((state["hero"]["level"], state["hero"]["exp"]), (WORLD["season"]["max_level"], 0))
 
   def test_trait_is_random_and_kept(self):
     traits = {G.pick_trait(WORLD, f"h{i}") for i in range(40)}

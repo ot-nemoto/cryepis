@@ -267,6 +267,12 @@ class SiteTest(unittest.TestCase):
     crown = html[html.index('id="panel-crownlands"') :]
     self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
 
+  def test_monsters_page_without_elements(self):
+    world = copy.deepcopy(WORLD)
+    world["elements"] = {}
+    html = website.build_monsters(world)  # 属性がなくても落ちない
+    self.assertNotIn("属性の相性", html)
+
   def test_monsters_page_edge_cases(self):
     world = copy.deepcopy(WORLD)
     world["areas"] = {}  # 地方がなくても、その他のまとまりに魔物を出す

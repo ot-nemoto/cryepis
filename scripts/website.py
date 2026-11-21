@@ -689,7 +689,7 @@ def build_monsters(world: dict) -> str:
   while cur in elements and cur not in chart:
     chart.append(cur)
     cur = elements[cur]["strong"]
-  if len(chart) == len(elements) and cur == chart[0]:
+  if chart and len(chart) == len(elements) and cur == chart[0]:
     chart = "→".join(escape(elements[e]["name"]) for e in chart + [cur])
   else:  # 輪になっていなければ、組ごとに出す
     chart = "・".join(
@@ -697,11 +697,16 @@ def build_monsters(world: dict) -> str:
       for e in elements.values()
       if e["strong"] in elements
     )
-  guide = (
-    '<div class="card"><h3>属性と素早さ</h3><ul class="plain">'
+  element_line = (  # 属性がなければ出さない
     f"<li>属性の相性（左が右に強い）: {chart}。強い属性の武器で攻めるとダメージ {rates['strong']} 倍、"
     f"弱い属性だと {rates['weak']} 倍。勇者は戦いのたびに、持ち物の中からいちばん効く武器に持ち替える</li>"
-    "<li>素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する。性質「先手」の魔物は、素早さに関係なく先に攻撃する</li>"
+    if elements
+    else ""
+  )
+  guide = (
+    '<div class="card"><h3>属性と素早さ</h3><ul class="plain">'
+    + element_line
+    + "<li>素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する。性質「先手」の魔物は、素早さに関係なく先に攻撃する</li>"
     "</ul></div>"
   )
 

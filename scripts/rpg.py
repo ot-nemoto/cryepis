@@ -205,7 +205,13 @@ def build_text(world: dict, state: dict, fold: bool = True) -> str:
     "",
     "── ステータス ──",
     f"シーズン{state['season'] or '-'} {state['season_day']}日目 / 通算 {state['day']}日",
-    f"Lv.{hero['level']}  EXP {hero['exp']}/{game.exp_need(world, hero['level'])}  回復薬: {hero['potions']}",
+    f"Lv.{hero['level']}  "
+    + (
+      "EXP MAX"
+      if hero["level"] >= world["season"]["max_level"]
+      else f"EXP {hero['exp']}/{game.exp_need(world, hero['level'])}"
+    )
+    + f"  回復薬: {hero['potions']}",
     f"攻撃 {s['atk']}（基本 {hero['base_atk']}）  防御 {s['def']}（基本 {hero['base_def']}）  "
     f"最大HP {s['max_hp']}（基本 {hero['max_hp']}）  素早さ {s['spd']}",
     trait_text(world, state),

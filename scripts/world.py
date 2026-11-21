@@ -394,10 +394,18 @@ def validate(raw: dict) -> list[str]:
     err("monsters.json: elements は {属性の ID: {name, strong}} にしてください")
     elements = {}
   for eid, e in elements.items():
+    strong = e.get("strong") if isinstance(e, dict) else None
     if (
-      not isinstance(e, dict) or not isinstance(e.get("name"), str) or not e["name"] or e.get("strong") not in elements
+      not isinstance(e, dict)
+      or not isinstance(e.get("name"), str)
+      or not e["name"]
+      or not isinstance(strong, str)
+      or strong not in elements
+      or strong == eid
     ):
-      err(f"monsters.json の elements の {eid}: name（文字列）と strong（強い相手の属性の ID）を書いてください")
+      err(
+        f"monsters.json の elements の {eid}: name（文字列）と strong（自分以外の、強い相手の属性の ID）を書いてください"
+      )
   rates = season.get("element_rates")
   if not isinstance(rates, dict) or any(
     not isinstance(rates.get(k), (int, float)) or isinstance(rates.get(k), bool) or rates[k] <= 0
@@ -444,7 +452,7 @@ def validate(raw: dict) -> list[str]:
     for key, low in (("level", 1), ("hp", 1), ("atk", 0), ("def", 0), ("spd", 1), ("exp", 0), ("gold", 0)):
       if not isinstance(m.get(key), int) or isinstance(m.get(key), bool) or m[key] < low:
         err(f"monsters.json の {mid}: {key} は {low} 以上の整数にしてください")
-    if "element" in m and m["element"] not in elements:
+    if "element" in m and (not isinstance(m["element"], str) or m["element"] not in elements):
       err(f"monsters.json の {mid}: element は {'/'.join(elements)} のどれかにしてください（属性なしなら書かない）")
 
   # items.json
@@ -465,7 +473,9 @@ def validate(raw: dict) -> list[str]:
         err(f"{where}: {key} は 0 以上の整数にしてください")
     if "spd" in it and (not isinstance(it["spd"], int) or isinstance(it["spd"], bool)):
       err(f"{where}: spd（素早さの増減。重い装備はマイナス）は整数にしてください")
-    if "element" in it and (it.get("slot") != "weapon" or it["element"] not in elements):
+    if "element" in it and (
+      it.get("slot") != "weapon" or not isinstance(it["element"], str) or it["element"] not in elements
+    ):
       err(f"{where}: element は武器だけに、{'/'.join(elements)} のどれかで書いてください")
     if "drop_level" in it:
       err(f"{where}: drop_level はもう使いません（出やすさはドロップ表の重みで決める）")
