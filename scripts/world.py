@@ -67,10 +67,12 @@ SEASON_KEYS = {
   "balance_level": (int, 1, BIG),
   "item_power_rate": (float, 0.01, BIG),
 }
+QUEST_PREFS = ("low", "high", "rich", "any")  # 性格による依頼の選び方（★ の少ない・多い・お金の多い・ランダム）
 HERO_KEYS = {
   "max_hp": (int, 1, BIG),
   "atk": (int, 0, BIG),
   "def": (int, 0, BIG),
+  "spd": (int, 1, BIG),
   "gold": (int, 0, BIG),
   "potions": (int, 0, BIG),
 }
@@ -110,6 +112,7 @@ def load_raw(directory: Path | None = None) -> dict:
     "background": background,
     "monsters": monsters["monsters"],
     "traits": monsters.get("traits", {}),
+    "elements": monsters.get("elements", {}),
     "rarities": items["rarities"],
     "items": items["items"],
     "quests": quests["templates"],
@@ -384,6 +387,54 @@ def validate(raw: dict) -> list[str]:
     for pid in sorted(opened - seen):
       err(f"map.json: {pid} に最初の町から行けません（開放した町どうしの陸路・航路がつながっていません）")
 
+  # 属性（monsters.json の elements）と相性の倍率（season.json の element_rates）
+  elements = raw.get("elements") or {}
+  if not isinstance(elements, dict):
+    err("monsters.json: elements は {属性の ID: {name, strong}} にしてください")
+    elements = {}
+  for eid, e in elements.items():
+    if (
+      not isinstance(e, dict) or not isinstance(e.get("name"), str) or not e["name"] or e.get("strong") not in elements
+    ):
+      err(f"monsters.json の elements の {eid}: name（文字列）と strong（強い相手の属性の ID）を書いてください")
+  rates = season.get("element_rates")
+  if not isinstance(rates, dict) or any(
+    not isinstance(rates.get(k), (int, float)) or isinstance(rates.get(k), bool) or rates[k] <= 0
+    for k in ("strong", "weak")
+  ):
+    err("season.json: element_rates には strong と weak（正の数）を書いてください")
+
+  # 勇者の性格と特性（season.json の personalities と hero_traits）
+  for key, spec in (("personalities", "name・text・retreat_hp_rate・quest・potions"), ("hero_traits", "name・text")):
+    table = season.get(key)
+    if not isinstance(table, dict) or not table:
+      err(f"season.json: {key} を 1 つ以上書いてください（{spec}）")
+      continue
+    for pid_, p_ in table.items():
+      where = f"season.json の {key} の {pid_}"
+      if (
+        not isinstance(p_, dict)
+        or not isinstance(p_.get("name"), str)
+        or not p_["name"]
+        or not isinstance(p_.get("text"), str)
+      ):
+        err(f"{where}: name と text（文字列）を書いてください")
+        continue
+      if key == "personalities":
+        r = p_.get("retreat_hp_rate")
+        if not isinstance(r, (int, float)) or isinstance(r, bool) or not 0 <= r <= 1:
+          err(f"{where}: retreat_hp_rate は 0〜1 の数にしてください")
+        if p_.get("quest") not in QUEST_PREFS:
+          err(f"{where}: quest は {'/'.join(QUEST_PREFS)} のどれかにしてください")
+        if not isinstance(p_.get("potions"), int) or isinstance(p_.get("potions"), bool):
+          err(f"{where}: potions（回復薬を持つ数の増減）は整数にしてください")
+      else:
+        for stat in ("atk", "def", "hp", "spd"):
+          if stat in p_ and (not isinstance(p_[stat], int) or isinstance(p_[stat], bool)):
+            err(f"{where}: {stat} は整数にしてください")
+        if "luck" in p_ and not isinstance(p_["luck"], bool):
+          err(f"{where}: luck は true か false にしてください")
+
   # monsters.json
   traits = raw.get("traits", {})
   for key in TRAITS:
@@ -396,9 +447,11 @@ def validate(raw: dict) -> list[str]:
       err(f"monsters.json の {mid}: terrain は {'/'.join(TERRAINS)} のどれかにしてください")
     if "trait" in m and m["trait"] not in TRAITS:
       err(f"monsters.json の {mid}: trait は {'/'.join(TRAITS)} のどれかにしてください")
-    for key, low in (("level", 1), ("hp", 1), ("atk", 0), ("def", 0), ("exp", 0), ("gold", 0)):
-      if not isinstance(m.get(key), int) or m[key] < low:
+    for key, low in (("level", 1), ("hp", 1), ("atk", 0), ("def", 0), ("spd", 1), ("exp", 0), ("gold", 0)):
+      if not isinstance(m.get(key), int) or isinstance(m.get(key), bool) or m[key] < low:
         err(f"monsters.json の {mid}: {key} は {low} 以上の整数にしてください")
+    if "element" in m and m["element"] not in elements:
+      err(f"monsters.json の {mid}: element は {'/'.join(elements)} のどれかにしてください（属性なしなら書かない）")
 
   # items.json
   if not rarities or len(set(rarities)) != len(rarities) or NONE in rarities or COMMON not in rarities:
@@ -416,6 +469,10 @@ def validate(raw: dict) -> list[str]:
     for key in STATS:
       if key in it and (not isinstance(it[key], int) or it[key] < 0):
         err(f"{where}: {key} は 0 以上の整数にしてください")
+    if "spd" in it and (not isinstance(it["spd"], int) or isinstance(it["spd"], bool)):
+      err(f"{where}: spd（素早さの増減。重い装備はマイナス）は整数にしてください")
+    if "element" in it and (it.get("slot") != "weapon" or it["element"] not in elements):
+      err(f"{where}: element は武器だけに、{'/'.join(elements)} のどれかで書いてください")
     if "drop_level" in it:
       err(f"{where}: drop_level はもう使いません（出やすさはドロップ表の重みで決める）")
     towns = it.get("towns")
@@ -613,6 +670,7 @@ def build(raw: dict) -> dict:
     "next": nxt,
     "monsters": {m["id"]: m for m in raw["monsters"]},
     "traits": raw.get("traits", {}),
+    "elements": raw.get("elements", {}),
     "rarities": raw["rarities"],
     "items": {i["id"]: i for i in raw["items"]},
     # 開放した地域の common（開放した町の店で売っている品）。宝箱と依頼の報酬の common はここから出る

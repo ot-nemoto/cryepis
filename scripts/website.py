@@ -78,7 +78,7 @@ table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--sub);font-weight:normal;font-size:13px;white-space:nowrap}
 .wide-table{min-width:640px;table-layout:fixed}
-.monsters{min-width:900px}
+.monsters{min-width:1000px}
 .num{text-align:right;white-space:nowrap}
 .scroll{overflow-x:auto}
 .mark{color:#b7791f;white-space:nowrap;width:5em}
@@ -331,7 +331,9 @@ def build_heroes(world: dict, entries: list[tuple[dict, dict]], today: date) -> 
     heroes.append(
       f'<div class="card"><h3><a href="{hero_href(h["id"])}">{escape(h["name"])}</a> '
       f"Lv.{hero['level']}</h3><div>{escape(rpg.location(world, s))}</div>"
-      f"<div>HP {hero['hp']}/{st['max_hp']}　攻{st['atk']} 防{st['def']}　{hero['gold']}G</div>"
+      f"<div>HP {hero['hp']}/{st['max_hp']}　攻{st['atk']} 防{st['def']} 速{st['spd']}　{hero['gold']}G</div>"
+      f"<div>性格: {escape(game.personality(world, s).get('name', '-'))}　"
+      f"特性: {escape(game.hero_trait(world, s).get('name', '-'))}</div>"
       f"<div>装備: {escape(rpg.gear_text(world, s))}</div>"
       f'<div class="note">今日: {escape("、".join(events) or "—")}</div></div>'
     )
@@ -504,7 +506,7 @@ def build_towns(world: dict) -> str:
     it = items[iid]
     return (
       f'<span class="chip-mark">{escape(game.rarity_mark(world, it["rarity"]))}</span>{escape(it["name"])}'
-      f'<span class="note">（{escape(rpg.item_power(it))}）</span>'
+      f'<span class="note">（{escape(rpg.item_power(it, world))}）</span>'
     )
 
   p = world["season"]["potion"]  # 回復薬はどの町の店でも売る（装備のあとに出す）
@@ -556,9 +558,7 @@ def build_towns(world: dict) -> str:
       + (f"<p>{escape(p['text'])}</p>" if p.get("text") else "")
       + '<div class="scroll"><table class="info"><colgroup><col style="width:11em"><col></colgroup>'
       + "".join(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in rows_of(town))
-      + "</table></div>"
-      '<p class="note">Lv・HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
-      "出会う割合は、その道で戦いになったときに、その魔物が出る割合です。</p></div>"
+      + "</table></div></div>"
     )
 
   groups = area_groups(world, towns)
@@ -615,7 +615,7 @@ def build_items(world: dict) -> str:
       trs.append(
         f'<tr data-f="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
         f"<td>{escape(it['name'])}" + ('<span class="tag">特産</span>' if r["specialty"] else "") + "</td>"
-        f"<td>{escape(rpg.item_power(it))}</td>"
+        f"<td>{escape(rpg.item_power(it, world))}</td>"
         f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>'
       )
     table = (
@@ -666,23 +666,47 @@ def build_monsters(world: dict) -> str:
           if trait
           else "<td>-</td>"
         )
-        + "".join(f'<td class="num">{m[k]}</td>' for k in ("level", "hp", "atk", "def", "exp", "gold"))
+        + f"<td>{escape(world['elements'].get(m.get('element'), {}).get('name', '-'))}</td>"
+        + "".join(f'<td class="num">{m[k]}</td>' for k in ("level", "hp", "atk", "def", "spd", "exp", "gold"))
         + f"<td>{'<br>'.join(seen[mid])}</td></tr>"
       )
     return (
       '<div class="card"><div class="scroll"><table class="wide-table monsters"><colgroup><col style="width:7em">'
-      '<col style="width:4em"><col style="width:12em">'
+      '<col style="width:4em"><col style="width:12em"><col style="width:3.5em">'
       + '<col style="width:3.5em">'
-      * 6
-      + "<col></colgroup><tr><th>名前</th><th>地形</th><th>性質</th>"
+      * 7
+      + "<col></colgroup><tr><th>名前</th><th>地形</th><th>性質</th><th>属性</th>"
       '<th class="num">Lv</th><th class="num">HP</th><th class="num">攻</th><th class="num">防</th>'
-      '<th class="num">EXP</th><th class="num">G</th><th>出る道（その道で出会う割合）</th></tr>'
+      '<th class="num">速</th><th class="num">EXP</th><th class="num">G</th><th>出る道（その道で出会う割合）</th></tr>'
       + "".join(rows)
-      + "</table></div></div>"
+      + "</table></div>"
+      '<p class="note">Lv・HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
+      "出会う割合は、その道で戦いになったときに、その魔物が出る割合です。</p></div>"
     )
 
+  elements, rates = world["elements"], world["season"]["element_rates"]
+  chart, cur = [], next(iter(elements), None)  # 強い相手をたどって、輪にして出す（炎→氷→…→炎）
+  while cur in elements and cur not in chart:
+    chart.append(cur)
+    cur = elements[cur]["strong"]
+  if len(chart) == len(elements) and cur == chart[0]:
+    chart = "→".join(escape(elements[e]["name"]) for e in chart + [cur])
+  else:  # 輪になっていなければ、組ごとに出す
+    chart = "・".join(
+      f"{escape(e['name'])}→{escape(elements[e['strong']]['name'])}"
+      for e in elements.values()
+      if e["strong"] in elements
+    )
+  guide = (
+    '<div class="card"><h3>属性と素早さ</h3><ul class="plain">'
+    f"<li>属性の相性（左が右に強い）: {chart}。強い属性の武器で攻めるとダメージ {rates['strong']} 倍、"
+    f"弱い属性だと {rates['weak']} 倍。勇者は戦いのたびに、持ち物の中からいちばん効く武器に持ち替える</li>"
+    "<li>素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する。性質「先手」の魔物は、素早さに関係なく先に攻撃する</li>"
+    "</ul></div>"
+  )
+
   groups = area_groups(world, towns)
-  body = ["<h2>魔物の情報</h2>", tab_bar([(aid, a["name"]) for aid, a, _ in groups])]
+  body = ["<h2>魔物の情報</h2>", tab_bar([(aid, a["name"]) for aid, a, _ in groups]), guide]
   for aid, area, members in groups:
     body.append(tab_panel(aid, name_html(area["name"], area.get("en")), table(members)))
   return page("魔物", "".join(body), "monsters.html", script=TABS_JS)

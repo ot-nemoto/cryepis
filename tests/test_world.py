@@ -112,6 +112,18 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["map"]["areas"].append({"id": "eques", "name": "x"}), ["areas", "町・ダンジョンの ID"])
     self.assertError(lambda r: r["map"]["areas"].append({"id": "_other", "name": "x"}), ["areas", "_"])
 
+  def test_elements_speed_and_personas_are_checked(self):
+    self.assertError(lambda r: r["monsters"][0].update(element="light"), ["wild_dog", "element"])
+    self.assertError(lambda r: r["monsters"][0].pop("spd"), ["wild_dog", "spd"])
+    self.assertError(lambda r: r["items"][0].update(element="fire", slot="helmet"), ["element", "武器"])
+    self.assertError(lambda r: r["items"][0].update(spd="速い"), ["spd"])
+    self.assertError(lambda r: r["elements"]["fire"].update(strong="light"), ["elements", "fire"])
+    self.assertError(lambda r: r["season"]["element_rates"].pop("weak"), ["element_rates"])
+    self.assertError(lambda r: r["season"]["personalities"]["brave"].update(quest="all"), ["brave", "quest"])
+    self.assertError(lambda r: r["season"]["hero_traits"]["strong"].update(atk="2"), ["strong", "atk"])
+    self.assertError(lambda r: r["season"].update(hero_traits={}), ["hero_traits"])
+    self.assertError(lambda r: r["season"]["hero"].pop("spd"), ["hero", "spd"])
+
   def test_every_terrain_has_a_japanese_name(self):
     self.assertEqual(set(W.TERRAIN_NAMES), set(W.TERRAINS))
 

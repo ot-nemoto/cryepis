@@ -808,5 +808,131 @@ class GuildBoardTest(unittest.TestCase):
     self.assertEqual(self.guild["season"], 2)
 
 
+class BattleDepthTest(unittest.TestCase):
+  """属性・素早さ・性格と特性。"""
+
+  def hero_state(self, **hero):
+    state = G.new_state(WORLD)
+    state["hero"].update(hp=999, max_hp=999, potions=0, **hero)
+    return state
+
+  def monster(self, **m):
+    return {
+      "id": "x",
+      "name": "試し",
+      "level": 2,
+      "hp": 30,
+      "atk": 1,
+      "def": 0,
+      "spd": 6,
+      "exp": 1,
+      "gold": 0,
+      "terrain": "plain",
+    } | m
+
+  def test_element_rates(self):
+    rates = WORLD["season"]["element_rates"]
+    self.assertEqual(G.element_rate(WORLD, "fire", "ice"), rates["strong"])  # 炎は氷に強い
+    self.assertEqual(G.element_rate(WORLD, "ice", "fire"), rates["weak"])  # 逆は苦手
+    self.assertEqual(G.element_rate(WORLD, "fire", "earth"), 1.0)
+    self.assertEqual(G.element_rate(WORLD, None, "ice"), 1.0)  # 属性なし
+    self.assertEqual(G.element_rate(WORLD, "fire", None), 1.0)
+    for eid, e in WORLD["elements"].items():  # どの属性も、強い相手と弱い相手が 1 つずつ
+      self.assertIn(e["strong"], WORLD["elements"])
+      self.assertEqual(sum(1 for x in WORLD["elements"].values() if x["strong"] == eid), 1)
+
+  def test_hero_switches_to_the_weapon_that_works(self):
+    state = self.hero_state()
+    state["inventory"] = {"steel_sword": 1, "cavalry_lance": 1}  # 鋼の剣（攻 7）がいつもの武器、騎兵の槍（攻 6・風）
+    day = day_of(state)
+    self.assertEqual(G.equipment(WORLD, state)["weapon"], "steel_sword")
+    self.assertEqual(day.pick_weapon(self.monster(element="earth"))[0], "cavalry_lance")  # 風は土に強い
+    self.assertEqual(day.pick_weapon(self.monster())[0], "steel_sword")
+    day.battle(self.monster(element="earth", hp=1))
+    self.assertIn("騎兵の槍で弱点を突いた", day.events[-1])
+
+  def count_first(self, monster, spd):
+    """勇者と魔物の、最初の数回の攻撃の順番（"h" / "m"）。"""
+    state = self.hero_state(base_spd=spd)
+    day = day_of(state)
+    order = []
+    hp = [monster["hp"]]
+
+    def damage(attack, guard):
+      who = "h" if attack == day.stats["atk"] else "m"
+      order.append(who)
+      return 1 if who == "m" else 10
+
+    with mock.patch.object(day, "damage", side_effect=damage):
+      day.battle(monster | {"hp": 30, "atk": 3})
+    del hp
+    return "".join(order)
+
+  def test_speed_decides_order_and_double_attacks(self):
+    self.assertEqual(self.count_first(self.monster(spd=6), 6), "hmhmh")  # 同じなら勇者が先
+    self.assertEqual(self.count_first(self.monster(spd=7), 6), "mhmhmh")  # 魔物が速ければ魔物が先
+    self.assertEqual(self.count_first(self.monster(spd=3), 6), "hhmh")  # 2 倍以上なら 2 回攻撃
+    self.assertEqual(self.count_first(self.monster(spd=13), 6), "mmhmmhmmh")  # 魔物も 2 倍以上なら 2 回
+    # 先手の魔物は、勇者のほうが速くても先に攻撃する（2 回攻撃は素早さで決まる）
+    self.assertEqual(self.count_first(self.monster(spd=3, trait="first_strike"), 6), "mhhmh")
+
+  def test_persona_is_random_and_kept(self):
+    personas = {G.persona(WORLD, f"h{i}") for i in range(40)}
+    self.assertGreater(len({p for p, _ in personas}), 2)
+    self.assertGreater(len({t for _, t in personas}), 2)
+    state = G.new_state(WORLD, "h7")
+    self.assertEqual((state["personality"], state["trait"]), G.persona(WORLD, "h7"))
+    nxt = START
+    while G.season_of(WORLD, nxt) == 1:
+      nxt += timedelta(days=1)
+    G.advance(WORLD, state, START, 0)
+    G.advance(WORLD, state, nxt, 0)  # シーズンが変わっても同じ
+    self.assertEqual((state["personality"], state["trait"]), G.persona(WORLD, "h7"))
+
+  def test_old_state_gets_persona(self):
+    state = play(1)
+    del state["personality"], state["trait"]
+    state["hero"].pop("base_spd")
+    with tempfile.TemporaryDirectory() as d:
+      path = Path(d) / "h1.json"
+      G.save_state(state, path)
+      loaded = G.load_state(WORLD, path)
+    self.assertEqual((loaded["personality"], loaded["trait"]), G.persona(WORLD, "h1"))
+    self.assertEqual(loaded["hero"]["base_spd"], WORLD["season"]["hero"]["spd"])
+
+  def test_traits_change_stats(self):
+    state = G.new_state(WORLD)
+    state["inventory"] = {"wall_shield": 1, "travel_bangle": 1}  # 速 -2・+1
+    base = WORLD["season"]["hero"]
+    for tid, t in WORLD["season"]["hero_traits"].items():
+      state["trait"] = tid
+      s = G.stats(WORLD, state)
+      self.assertEqual(s["atk"], base["atk"] + t.get("atk", 0))
+      self.assertEqual(s["spd"], max(1, base["spd"] - 1 + t.get("spd", 0)))
+      self.assertEqual(s["max_hp"], base["max_hp"] + 4 + 8 + t.get("hp", 0))
+
+  def test_personality_chooses_quests(self):
+    entries = [
+      {"rank": 1, "reward": {"gold": 50}},
+      {"rank": 3, "reward": {"gold": 10}},
+      {"rank": 2, "reward": {"gold": 90}},
+    ]
+    state = G.new_state(WORLD)
+    for pid, want in (("cautious", 1), ("brave", 3), ("greedy", 2)):
+      state["personality"] = pid
+      self.assertEqual(day_of(state).choose_quest(entries)["rank"], want, pid)
+
+  def test_lucky_draws_again(self):
+    state = G.new_state(WORLD)
+    state["trait"] = "lucky"
+    day = day_of(state)
+    with mock.patch.object(day, "draw_once", side_effect=[None, "wooden_sword"]) as once:
+      self.assertEqual(day.draw([["none", 1]]), "wooden_sword")
+    self.assertEqual(once.call_count, 2)
+    state["trait"] = "strong"
+    with mock.patch.object(day, "draw_once", side_effect=[None, "wooden_sword"]):
+      self.assertIsNone(day.draw([["none", 1]]))
+
+
 if __name__ == "__main__":
   unittest.main()

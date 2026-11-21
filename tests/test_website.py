@@ -259,6 +259,11 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の魔物は出さない
     self.assertIn("サリナ〜エクエス（", south)  # 出る道と割合
     self.assertIn("<td>群れ<div", south)  # 性質
+    self.assertIn("<th>属性</th>", html)
+    self.assertIn("<td>水</td>", south)  # 沼ヒル
+    self.assertIn("属性の相性（左が右に強い）: 炎→氷→風→土→雷→水→炎", html)
+    self.assertNotIn("性質の効果がかかる前", website.build_towns(WORLD))  # 魔物の注記は町のページに出さない
+    self.assertIn("性質の効果がかかる前", html)
     crown = html[html.index('id="panel-crownlands"') :]
     self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
 

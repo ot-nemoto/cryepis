@@ -60,6 +60,7 @@ def new_hero(world: dict) -> dict:
     "hp": h["max_hp"],
     "base_atk": h["atk"],
     "base_def": h["def"],
+    "base_spd": h["spd"],
     "gold": h["gold"],
     "potions": h["potions"],
   }
@@ -74,11 +75,20 @@ def start_town(world: dict, hero_id: str, season: int | None) -> str:
   return random.Random(f"start-{season or 0}-{hero_id}").choice(world["starts"])
 
 
+def persona(world: dict, hero_id: str) -> tuple[str, str]:
+  """勇者を作るときにランダムで付ける (性格, 特性)。勇者の ID で決まる（シーズンが変わっても同じ）。"""
+  rng = random.Random(f"persona-{hero_id}")
+  return rng.choice(sorted(world["season"]["personalities"])), rng.choice(sorted(world["season"]["hero_traits"]))
+
+
 def new_state(world: dict, hero_id: str = "h1", name: str = "勇者") -> dict:
   town = start_town(world, hero_id, None)
+  personality_id, trait_id = persona(world, hero_id)
   return {
     "id": hero_id,
     "name": name,
+    "personality": personality_id,
+    "trait": trait_id,
     "season": None,
     "season_day": 0,
     "day": 0,
@@ -110,6 +120,11 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
     return new_state(world, loaded.get("id", hero_id), loaded.get("name", name))
   state = {**new_state(world, hero_id, name), **loaded}
   state["hero"] = {**new_hero(world), **state["hero"]}
+  personality_id, trait_id = persona(world, state["id"])  # 前の形式・world/ から消えた性格や特性は、付け直す
+  if state.get("personality") not in world["season"]["personalities"]:
+    state["personality"] = personality_id
+  if state.get("trait") not in world["season"]["hero_traits"]:
+    state["trait"] = trait_id
   state["season_stats"] = {**new_season_stats(), **state["season_stats"]}
   places = world["places"]
   fallback = start_town(world, state["id"], state["season"])
@@ -172,14 +187,38 @@ def equipment(world: dict, state: dict) -> dict[str, str | None]:
   return best
 
 
+def hero_trait(world: dict, state: dict) -> dict:
+  return world["season"]["hero_traits"].get(state.get("trait"), {})
+
+
+def personality(world: dict, state: dict) -> dict:
+  return world["season"]["personalities"].get(state.get("personality"), {})
+
+
 def stats(world: dict, state: dict) -> dict[str, int]:
-  hero = state["hero"]
+  """装備と特性を足した能力値（素早さは 1 より下にはならない）。"""
+  hero, trait = state["hero"], hero_trait(world, state)
   worn = [world["items"][i] for i in equipment(world, state).values() if i]
   return {
-    "atk": hero["base_atk"] + sum(i.get("atk", 0) for i in worn),
-    "def": hero["base_def"] + sum(i.get("def", 0) for i in worn),
-    "max_hp": hero["max_hp"] + sum(i.get("hp", 0) for i in worn),
+    "atk": hero["base_atk"] + sum(i.get("atk", 0) for i in worn) + trait.get("atk", 0),
+    "def": hero["base_def"] + sum(i.get("def", 0) for i in worn) + trait.get("def", 0),
+    "max_hp": hero["max_hp"] + sum(i.get("hp", 0) for i in worn) + trait.get("hp", 0),
+    "spd": max(
+      1, hero.get("base_spd", world["season"]["hero"]["spd"]) + sum(i.get("spd", 0) for i in worn) + trait.get("spd", 0)
+    ),
   }
+
+
+def element_rate(world: dict, attack: str | None, guard: str | None) -> float:
+  """属性の相性の倍率。攻める属性が守る属性に強ければ strong、守る属性が攻める属性に強ければ weak、ほかは 1。"""
+  elements, rates = world["elements"], world["season"]["element_rates"]
+  if not attack or not guard or attack not in elements or guard not in elements:
+    return 1.0
+  if elements[attack]["strong"] == guard:
+    return rates["strong"]
+  if elements[guard]["strong"] == attack:
+    return rates["weak"]
+  return 1.0
 
 
 def exp_need(world: dict, level: int) -> int:
@@ -450,8 +489,23 @@ class Day:
   def damage(self, attack: int, guard: int) -> int:
     return max(1, attack - guard // 2 + self.rng.randint(-2, 2))
 
+  def pick_weapon(self, monster: dict) -> tuple[str | None, float]:
+    """この魔物に、いちばんダメージの大きい武器（持ち物から持ち替える）と、属性の倍率。"""
+    items, worn = self.world["items"], equipment(self.world, self.state)["weapon"]
+    base = self.stats["atk"] - (items[worn].get("atk", 0) if worn else 0)
+    best, best_key = worn, None
+    for iid in sorted(i for i in self.state["inventory"] if items[i]["slot"] == "weapon"):
+      rate = element_rate(self.world, items[iid].get("element"), monster.get("element"))
+      key = ((base + items[iid].get("atk", 0)) * rate, iid == worn)  # 同じなら、いつもの武器
+      if best_key is None or key > best_key:
+        best, best_key = iid, key
+    rate = element_rate(self.world, items[best].get("element") if best else None, monster.get("element"))
+    return best, rate
+
   def battle(self, monster: dict) -> bool:
-    """勝てば True。回復薬が尽きて HP が 0 になったら False。魔物の性質（trait）で戦い方が変わる。"""
+    """勝てば True。回復薬が尽きて HP が 0 になったら False。
+    魔物の性質（trait）・属性の相性（武器の属性と魔物の属性）・素早さで戦い方が変わる。
+    素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する（性質「先手」は、素早さに関係なく魔物が先）。"""
     hero, s, trait = self.hero, self.stats, monster.get("trait")
     hp, atk, guard, hits = monster["hp"], monster["atk"], monster["def"], 1
     if trait == "fierce":  # 凶暴: 攻撃が強いが、守りが弱い
@@ -460,29 +514,44 @@ class Day:
       atk, guard = max(1, round(atk * 0.9)), guard * 2 + 1
     elif trait == "swarm":  # 群れ: 数が多い（倒すのに手間がかかり、攻撃の回数が多い）
       hp, atk, hits = round(hp * 1.5), max(1, round(atk * 0.6)), 2
-    monster_first = trait == "first_strike"  # 先手: 先に攻撃してくる
+    weapon, rate = self.pick_weapon(monster)
+    items, worn = self.world["items"], equipment(self.world, self.state)["weapon"]
+    hero_atk = s["atk"] - (items[worn].get("atk", 0) if worn else 0) + (items[weapon].get("atk", 0) if weapon else 0)
+    mspd = monster.get("spd", s["spd"])
+    hero_hits = 2 if s["spd"] >= 2 * mspd else 1
+    hits *= 2 if mspd >= 2 * s["spd"] else 1
+    hero_first = trait != "first_strike" and s["spd"] >= mspd
     while True:
-      if not monster_first:
-        hp -= self.damage(s["atk"], guard)
-        if hp <= 0:
-          break
-      monster_first = False
-      for _ in range(hits):
-        hero["hp"] -= self.damage(atk, s["def"])
-        if hero["hp"] <= 0:
-          if hero["potions"]:  # 倒れる前に回復薬を使う
-            hero["potions"] -= 1
-            hero["hp"] = max(1, int(s["max_hp"] * self.cfg["potion"]["heal_rate"]))
-            continue
-          hero["hp"] = 0
-          self.log(f"{self.monster_name(monster)}に敗れた")
-          return False
+      for side in ("hero", "monster") if hero_first else ("monster", "hero"):
+        if side == "hero":
+          for _ in range(hero_hits):
+            hp -= max(1, round(self.damage(hero_atk, guard) * rate))
+            if hp <= 0:
+              break
+          if hp <= 0:
+            break
+          continue
+        for _ in range(hits):
+          hero["hp"] -= self.damage(atk, s["def"])
+          if hero["hp"] <= 0:
+            if hero["potions"]:  # 倒れる前に回復薬を使う
+              hero["potions"] -= 1
+              hero["hp"] = max(1, int(s["max_hp"] * self.cfg["potion"]["heal_rate"]))
+              continue
+            hero["hp"] = 0
+            self.log(f"{self.monster_name(monster)}に敗れた")
+            return False
+      if hp <= 0:
+        break
     # 自分よりずっと弱い敵からは経験値が少ない
     gap = hero["level"] - monster["level"]
     exp = round(monster["exp"] * (1 if gap <= 3 else max(0.2, 1 - 0.15 * (gap - 3))))
     hero["gold"] += monster["gold"]
     self.state["season_stats"]["kills"] += 1
-    self.log(f"{self.monster_name(monster)}を倒した (+{exp}EXP)")
+    note = ""
+    if rate > 1:
+      note = f"（{items[weapon]['name']}で弱点を突いた）" if weapon != worn else "（弱点を突いた）"
+    self.log(f"{self.monster_name(monster)}を倒した{note} (+{exp}EXP)")
     if trait == "poison":  # 毒: 倒したあとも HP が減る（0 にはならない）
       lost = min(hero["hp"] - 1, max(1, s["max_hp"] // 10))
       if lost > 0:
@@ -513,6 +582,13 @@ class Day:
 
   # アイテム -------------------------------------------------------------------------
   def draw(self, table: list | None, town: str | None = None) -> str | None:
+    """ドロップ表から抽選する（特性「強運」なら、何も出なかったときに 1 度だけ引き直す）。"""
+    got = self.draw_once(table, town)
+    if got is None and table and hero_trait(self.world, self.state).get("luck"):
+      got = self.draw_once(table, town)
+    return got
+
+  def draw_once(self, table: list | None, town: str | None = None) -> str | None:
     """ドロップ表から抽選する。珍しさが当たったら、その珍しさのアイテムから均等に選ぶ。
     common は、開放した地域のもの（開放した町の店で売っている品）だけ。
     レア（common 以外）は、その町（town。依頼を出した町）の依頼で出るもの（items.json の towns）だけ。
@@ -586,7 +662,8 @@ class Day:
   def shop(self, town: str) -> None:
     hero, items, bought = self.hero, self.world["items"], []
     potion = self.cfg["potion"]
-    reserve = potion["price"] * max(0, potion["keep"] - hero["potions"])  # 回復薬の分は残して装備を買う
+    keep = max(0, potion["keep"] + personality(self.world, self.state).get("potions", 0))  # 性格で持つ数が変わる
+    reserve = potion["price"] * max(0, keep - hero["potions"])  # 回復薬の分は残して装備を買う
     worn = equipment(self.world, self.state)
     for iid in self.world["places"][town].get("shop", []):
       item, cur = items[iid], worn[items[iid]["slot"]]
@@ -596,12 +673,26 @@ class Day:
         self.state["inventory"][iid] = 1
         worn = equipment(self.world, self.state)
         bought.append(item["name"])
-    while hero["potions"] < potion["keep"] and hero["gold"] >= potion["price"]:
+    while hero["potions"] < keep and hero["gold"] >= potion["price"]:
       hero["gold"] -= potion["price"]
       hero["potions"] += 1
     name = self.world["places"][town]["name"]
     if bought:
       self.log(f"{name}で{'と'.join(bought)}を買った")
+
+  def choose_quest(self, entries: list[dict]) -> dict:
+    """性格で依頼を選ぶ: 慎重は ★ の少ないもの、勇敢は ★ の多いもの、欲張りはお金の多いもの、ほかはランダム。"""
+    how = personality(self.world, self.state).get("quest", "any")
+    if how == "low":
+      best = min(e["rank"] for e in entries)
+      entries = [e for e in entries if e["rank"] == best]
+    elif how == "high":
+      best = max(e["rank"] for e in entries)
+      entries = [e for e in entries if e["rank"] == best]
+    elif how == "rich":
+      best = max(e["reward"]["gold"] for e in entries)
+      entries = [e for e in entries if e["reward"]["gold"] == best]
+    return self.rng.choice(entries)
 
   def take_quest(self, town: str) -> None:
     level = self.hero["level"]
@@ -612,7 +703,7 @@ class Day:
       if e["status"] == "open" and suitable(e, level) and e["id"] not in self.state["taken"]
     ]
     if entries:
-      entry = self.rng.choice(entries)
+      entry = self.choose_quest(entries)
       entry.update(status="held", holder=self.state["id"])
       quest = {k: v for k, v in entry.items() if k not in GUILD_FIELDS}
       self.state["taken"].append(quest["id"])
@@ -742,7 +833,8 @@ class Day:
     state, hero = self.state, self.hero
     for _ in range(5):  # 町での受注・報告は行動回数を使わない
       if state["road"]:
-        if hero["hp"] < self.stats["max_hp"] * self.cfg["retreat_hp_rate"] and not hero["potions"]:
+        retreat = personality(self.world, self.state).get("retreat_hp_rate", self.cfg["retreat_hp_rate"])
+        if hero["hp"] < self.stats["max_hp"] * retreat and not hero["potions"]:
           self.turn_back()
         return self.step(state["road"])
       place, quest = state["place"], state["quest"]
