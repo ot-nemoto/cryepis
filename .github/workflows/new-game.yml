@@ -1,7 +1,7 @@
 name: New game (add a hero)
 
 # 新しい勇者を登録する: 勇者の名前を入れて手動実行すると、勇者管理シート（.state/heroes.json）・
-# 勇者の状態（.state/heroes/<id>.json）・勇者の詳細のページ（heroes/<id>.md）を master にコミットする（Gist は作らない）。
+# 勇者の状態（.state/heroes/<id>.json）を master にコミットする（Gist は作らない。勇者の詳細はサイトで見る）。
 # 勇者は最大 30 人（引退した勇者は数えない）。冒険は次回の毎日の実行（hero-adventure.yml）から進む。
 
 on:
@@ -46,7 +46,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A .state heroes
+          git add -A .state
           git commit -m "chore: new hero"
           git pull --rebase
           git push
