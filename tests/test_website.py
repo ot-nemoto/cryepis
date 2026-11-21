@@ -174,12 +174,23 @@ class SiteTest(unittest.TestCase):
     for slot in ("weapon", "helmet", "shield", "accessory"):  # 装備の種類ごとのタブ
       self.assertIn(f'role="tab" id="tab-{slot}"', html)
       self.assertIn(f'id="panel-{slot}"', html)
-    self.assertIn('data-tab="weapon" aria-selected="true" tabindex="0">武器</button>', html)
+    self.assertIn('data-tab="weapon" aria-selected="true" tabindex="0">⚔️ 武器</button>', html)  # 部位の先頭に絵文字
+    self.assertIn('<h2 class="area">💍 装飾品</h2>', html)
     self.assertEqual(html.count('class="chip" data-f='), 2)  # ★ と ★★
-    self.assertIn("依頼の報酬: ムラリス", html)  # ★★騎士の剣
+    knight = html.split("騎士の剣")[1].split("</tr>")[0]  # ★★騎士の剣
+    self.assertIn('<span class="how">依頼の報酬</span><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a>', knight)
+    self.assertIn('<span class="tag">雷属性</span>', knight)  # 属性は名前の横に
+    head = '<th class="num">HP</th><th class="num">攻</th><th class="num">防</th><th class="num">速</th><th class="num">器</th>'
+    self.assertIn(head + '<th class="num">値段</th><th>入手方法</th>', html)  # 能力ごとの列
+    self.assertNotIn("性能", html)
+    self.assertNotIn("手に入れ方", html)
+    steel = html.split("鋼の剣")[1].split("</tr>")[0]  # 攻+7・速-1、鋼の剣を売る開放した町はムラリスだけ
+    self.assertIn('<td class="num zero">0</td><td class="num">7</td><td class="num zero">0</td>', steel)
+    self.assertIn('<td class="num minus">-1</td>', steel)  # マイナスは赤字
+    self.assertIn('<a class="pill" href="towns.html#muralis">🛡️ ムラリス</a><div class="note">', steel)  # 買える店
     self.assertIn('騎兵の槍<span class="tag">特産</span>', html)
     self.assertNotIn('鋼の剣<span class="tag">特産</span>', html)  # 開放していない町でも売っている
-    self.assertIn('<td class="mark">★★</td><td>騎士の剣</td>', html)  # ★ は先頭の列
+    self.assertIn('<td class="mark">★★</td><td>騎士の剣<span', html)  # ★ は先頭の列
     for slot in ("weapon", "helmet", "shield", "accessory"):  # ★ の多い順
       marks = [len(game.rarity_mark(WORLD, r["item"]["rarity"])) for r in website.item_rows(WORLD)[slot]]
       self.assertEqual(marks, sorted(marks, reverse=True))
