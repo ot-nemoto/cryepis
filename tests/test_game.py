@@ -1017,6 +1017,18 @@ class BattleDepthTest(unittest.TestCase):
   def test_same_element_is_neutral(self):
     self.assertEqual(G.element_rate(WORLD, "fire", "fire"), 1.0)
 
+  def test_exp_does_not_shrink_with_level_gap(self):
+    dog = WORLD["monsters"]["wild_dog"]
+    state = G.new_state(WORLD)
+    state["hero"]["level"] = 15  # 魔物（Lv1）よりずっと高くても、経験値は減らない
+    G.set_base_stats(WORLD, state)
+    state["hero"]["hp"] = G.stats(WORLD, state)["max_hp"]
+    day = day_of(state)
+    got = []
+    day.gain_exp = got.append
+    self.assertTrue(day.battle(dict(dog)))
+    self.assertEqual(got, [dog["exp"]])
+
   def test_exp_stops_at_max_level(self):
     state = G.new_state(WORLD)
     day = day_of(state)

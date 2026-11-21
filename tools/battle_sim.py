@@ -7,6 +7,7 @@
   python tools/battle_sim.py --level 16 --gear steel_sword,cavalry_lance
   python tools/battle_sim.py --reach                  # 特性ごとに、勝率 50% に届くレベル（とレベルごとの勝率）
   python tools/battle_sim.py --strength               # 特性ごとに、五分（勝率 50%）で戦えるボスの強さ（HP と攻撃の倍率）
+  python tools/battle_sim.py --monster wild_dog --level 1 --potions 0 --hp-loss  # 勝ったときに減る HP（道の魔物の調整）
   python tools/battle_sim.py --monster rock_golem -n 5000
 """
 
@@ -37,16 +38,27 @@ def make_hero(world: dict, trait: str, level: int, gear: list[str], potions: int
   return state
 
 
-def win_rate(world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int) -> float:
-  """n 回戦って、勝った割合（乱数の種は 0〜n-1 なので、同じ条件なら何度やっても同じ結果）。"""
-  wins = 0
+def fight(
+  world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int
+) -> tuple[float, float]:
+  """n 回戦って、(勝った割合, 勝ったときに減った HP の割合の平均)。
+  乱数の種は 0〜n-1 なので、同じ条件なら何度やっても同じ結果。回復薬で戻した HP は、減った HP に数えない。"""
+  wins, lost = 0, 0.0
   hero = make_hero(world, trait, level, gear, potions)
+  max_hp = game.stats(world, hero)["max_hp"]
   for seed in range(n):
     state = copy.deepcopy(hero)
     day = game.Day(world, state, DAY, random.Random(seed))
     day.gain_exp = lambda exp: None  # 勝っても育たない（戦いの結果だけを見る）
-    wins += day.battle(dict(monster))
-  return wins / n
+    if day.battle(dict(monster)):
+      wins += 1
+      lost += 1 - state["hero"]["hp"] / max_hp
+  return wins / n, lost / wins if wins else 1.0
+
+
+def win_rate(world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int) -> float:
+  """n 回戦って、勝った割合。"""
+  return fight(world, monster, trait, level, gear, potions, n)[0]
 
 
 def scaled(monster: dict, factor: float) -> dict:
@@ -91,6 +103,7 @@ def main() -> int:
   ap.add_argument("-n", type=int, default=2000, help="戦う回数（既定: 2000）")
   ap.add_argument("--reach", action="store_true", help="特性ごとに、勝率 50%% に届くレベルを出す（Lv10〜最大レベル）")
   ap.add_argument("--strength", action="store_true", help="特性ごとに、五分で戦える魔物の強さの倍率を出す")
+  ap.add_argument("--hp-loss", action="store_true", help="特性ごとに、勝率と、勝ったときに減る HP の平均を出す")
   a = ap.parse_args()
   world = W.load_world()
   if a.monster not in world["monsters"]:
@@ -114,6 +127,11 @@ def main() -> int:
       f = even_strength(world, monster, t, a.level, gear, a.potions, a.n)
       note = "（探す範囲の端。正しく測れていない）" if is_capped(f) or is_capped(base) else ""
       print(f"  {names[t]['name']:4s} Lv{a.level}: 五分で戦える強さ ×{f:.3f}（ふつうの {f / base:.0%}）{note}")
+    return 0
+  if a.hp_loss:
+    for t in traits:
+      rate, lost = fight(world, monster, t, a.level, gear, a.potions, a.n)
+      print(f"  {names[t]['name']:4s} Lv{a.level}: 勝率 {rate:.1%}  勝ったときに減る HP {lost:.0%}")
     return 0
   if not a.reach:
     for t in traits:

@@ -923,7 +923,6 @@ def build_guide(world: dict) -> str:
         + "。最後に四捨五入"
       ),
     ),
-    ("レベル差", "勇者が魔物より 4 以上レベルが高いと、もらえる経験値が減る"),
   ]
   level_rows = "".join(
     f'<tr><td class="num">Lv{lv}</td>'

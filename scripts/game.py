@@ -605,9 +605,7 @@ class Day:
             return False
       if hp <= 0:
         break
-    # 自分よりずっと弱い敵からは経験値が少ない
-    gap = hero["level"] - monster["level"]
-    exp = round(monster["exp"] * (1 if gap <= 3 else max(0.2, 1 - 0.15 * (gap - 3))))
+    exp = monster["exp"]
     hero["gold"] += monster["gold"]
     self.state["season_stats"]["kills"] += 1
     note = ""

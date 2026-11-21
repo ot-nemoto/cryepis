@@ -55,9 +55,9 @@ class MonsterRewardTest(unittest.TestCase):
 
   def test_rewards_follow_the_stats(self):
     cfg, traits, monsters = WORLD["season"]["monster_reward"], WORLD["traits"], WORLD["monsters"]
-    dog = monsters["wild_dog"]  # HP20・攻7・防2・速8・器6 → 20 + 4×9 + 2×14 = 84 → 84² ÷ 700 = 10.08
-    self.assertEqual(W.monster_score(dog, traits, cfg), 84)
-    self.assertEqual((dog["exp"], dog["gold"]), (10, 8))
+    dog = monsters["wild_dog"]  # HP13・攻5・防1・速8・器6 → 13 + 4×6 + 2×14 = 65 → 65² ÷ 700 = 6.04
+    self.assertEqual(W.monster_score(dog, traits, cfg), 65)
+    self.assertEqual((dog["exp"], dog["gold"]), (6, 5))  # お金は 6 × 0.75 = 4.5 → 5
     eagle = monsters["great_eagle"]  # 先手は速 +10 として数える
     plain = W.monster_score(eagle | {"trait": None}, traits, cfg)
     self.assertEqual(W.monster_score(eagle, traits, cfg), plain + cfg["weights"]["spd"] * 10)
