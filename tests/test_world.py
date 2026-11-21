@@ -112,6 +112,9 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["map"]["areas"].append({"id": "eques", "name": "x"}), ["areas", "町・ダンジョンの ID"])
     self.assertError(lambda r: r["map"]["areas"].append({"id": "_other", "name": "x"}), ["areas", "_"])
 
+  def test_every_terrain_has_a_japanese_name(self):
+    self.assertEqual(set(W.TERRAIN_NAMES), set(W.TERRAINS))
+
   def test_areas_and_english_names(self):
     self.assertError(lambda r: r["map"]["places"][0].update(area="moon"), ["area", "地方"])
     self.assertError(lambda r: r["map"]["places"][0].pop("area"), ["area", "地方"])

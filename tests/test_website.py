@@ -60,6 +60,7 @@ class SiteTest(unittest.TestCase):
         "heroes.html",
         "guild.html",
         "items.html",
+        "monsters.html",
         "towns.html",
         "heroes/h1.html",
         "heroes/h2.html",
@@ -245,6 +246,32 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f'<a href="heroes/{h["id"]}.html">{h["name"]}</a>', html)
     self.assertNotIn("<h2>勇者たち</h2>", website.build_ranking(WORLD, entries, today))  # ランキングからは移した
     self.assertIn("まだ勇者がいません", website.build_heroes(WORLD, [], today))
+
+  def test_monsters_page(self):
+    html = website.build_monsters(WORLD)
+    self.assertIn('<a href="monsters.html" class="on">魔物</a>', html)
+    self.assertIn('data-tab="austral_land" aria-selected="true" tabindex="0">南大陸</button>', html)  # 地方のタブ
+    south = html[html.index('id="panel-austral_land"') :]
+    south = south[: south.index("</section>")]
+    shown = {m for (a, b), i in WORLD["road_info"].items() for m, _ in i["monsters"]}
+    for mid in shown:  # 開放した道に出る魔物
+      self.assertIn(f"<td>{WORLD['monsters'][mid]['name']}</td>", south)
+    self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の魔物は出さない
+    self.assertIn("サリナ〜エクエス（", south)  # 出る道と割合
+    self.assertIn("<td>群れ<div", south)  # 性質
+    crown = html[html.index('id="panel-crownlands"') :]
+    self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
+
+  def test_monsters_page_edge_cases(self):
+    world = copy.deepcopy(WORLD)
+    world["areas"] = {}  # 地方がなくても、その他のまとまりに魔物を出す
+    self.assertNotIn("まだ開放されていません", website.build_monsters(world))
+    world = copy.deepcopy(WORLD)
+    info = world["road_info"][("salina", "eques")]
+    info["monsters"] = [("wild_dog", 1.0), ("wild_dog", 1.0), ("yeti", 0.01)]  # 同じ魔物が 2 度・ごく少ない魔物
+    html = website.build_monsters(world)
+    self.assertEqual(html.count("サリナ〜エクエス（"), 2)  # 野犬は 1 つにまとめる
+    self.assertIn("サリナ〜エクエス（1%未満）", html)
 
   def test_story_markdown(self):
     blocks = website.md_html(

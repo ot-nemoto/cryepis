@@ -8,6 +8,7 @@
   heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
+  monsters.html       開放した道に出る魔物（地方ごとのタブ。地形・性質・強さ・出る道）
   guild.html          町ごとのギルドの掲示板（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
 
@@ -46,6 +47,7 @@ PAGES = (
   ("towns.html", "町"),
   ("guild.html", "ギルド"),
   ("items.html", "アイテム"),
+  ("monsters.html", "魔物"),
 )
 
 CSS = """
@@ -76,6 +78,7 @@ table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--sub);font-weight:normal;font-size:13px;white-space:nowrap}
 .wide-table{min-width:640px;table-layout:fixed}
+.monsters{min-width:900px}
 .num{text-align:right;white-space:nowrap}
 .scroll{overflow-x:auto}
 .mark{color:#b7791f;white-space:nowrap;width:5em}
@@ -553,7 +556,9 @@ def build_towns(world: dict) -> str:
       + (f"<p>{escape(p['text'])}</p>" if p.get("text") else "")
       + '<div class="scroll"><table class="info"><colgroup><col style="width:11em"><col></colgroup>'
       + "".join(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in rows_of(town))
-      + "</table></div></div>"
+      + "</table></div>"
+      '<p class="note">Lv・HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
+      "出会う割合は、その道で戦いになったときに、その魔物が出る割合です。</p></div>"
     )
 
   groups = area_groups(world, towns)
@@ -624,6 +629,65 @@ def build_items(world: dict) -> str:
   return page("アイテム", "".join(body), "items.html", script=FILTER_JS + TABS_JS)
 
 
+# ---- 魔物 ---------------------------------------------------------------------------------
+def build_monsters(world: dict) -> str:
+  """開放した道に出る魔物の一覧（地方ごとのタブ。地形・性質・強さ・出る道と、その道で出会う割合）。
+  道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。"""
+  places, monsters, traits = world["places"], world["monsters"], world["traits"]
+  towns = [t for t, p in places.items() if p["type"] == "town"]
+  order = {t: i for i, t in enumerate(W.TERRAINS)}
+  place_order = {p: i for i, p in enumerate(places)}
+
+  def rate(r: float) -> str:  # 出会う割合（四捨五入で 0% にならないように）
+    return "1%未満" if r < 0.01 else f"{r:.0%}"
+
+  def table(members: list[str]) -> str:
+    seen: dict[str, list[str]] = {}
+    for (a, b), info in world["road_info"].items():
+      if place_order[a] > place_order[b] or not ({a, b} & set(members)):
+        continue  # 同じ道は 1 度だけ。この地方（のまとまり）の町につながる道だけ
+      total = sum(w for _, w in info["monsters"]) or 1
+      weights: dict[str, float] = {}  # 同じ魔物が地形の重複などで 2 度出ても、1 つにまとめる
+      for mid, w in info["monsters"]:
+        weights[mid] = weights.get(mid, 0) + w
+      road = f"{places[a]['name']}〜{places[b]['name']}"
+      for mid, w in weights.items():
+        seen.setdefault(mid, []).append(f"{escape(road)}（{rate(w / total)}）")
+    if not seen:
+      return '<div class="card"><p class="note">まだ開放されていません（この地方の道は通れません）。</p></div>'
+    rows = []
+    for mid in sorted(seen, key=lambda m: (order.get(monsters[m]["terrain"], 99), m)):
+      m = monsters[mid]
+      trait = traits.get(m.get("trait"), {})
+      rows.append(
+        f"<tr><td>{escape(m['name'])}</td><td>{escape(W.TERRAIN_NAMES.get(m['terrain'], m['terrain']))}</td>"
+        + (
+          f'<td>{escape(trait["name"])}<div class="note">{escape(trait.get("text", ""))}</div></td>'
+          if trait
+          else "<td>-</td>"
+        )
+        + "".join(f'<td class="num">{m[k]}</td>' for k in ("level", "hp", "atk", "def", "exp", "gold"))
+        + f"<td>{'<br>'.join(seen[mid])}</td></tr>"
+      )
+    return (
+      '<div class="card"><div class="scroll"><table class="wide-table monsters"><colgroup><col style="width:7em">'
+      '<col style="width:4em"><col style="width:12em">'
+      + '<col style="width:3.5em">'
+      * 6
+      + "<col></colgroup><tr><th>名前</th><th>地形</th><th>性質</th>"
+      '<th class="num">Lv</th><th class="num">HP</th><th class="num">攻</th><th class="num">防</th>'
+      '<th class="num">EXP</th><th class="num">G</th><th>出る道（その道で出会う割合）</th></tr>'
+      + "".join(rows)
+      + "</table></div></div>"
+    )
+
+  groups = area_groups(world, towns)
+  body = ["<h2>魔物の情報</h2>", tab_bar([(aid, a["name"]) for aid, a, _ in groups])]
+  for aid, area, members in groups:
+    body.append(tab_panel(aid, name_html(area["name"], area.get("en")), table(members)))
+  return page("魔物", "".join(body), "monsters.html", script=TABS_JS)
+
+
 # ---- 勇者の詳細 ---------------------------------------------------------------------------
 def build_hero(world: dict, hero: dict, state: dict) -> str:
   body = (
@@ -680,6 +744,7 @@ def write_site(
     "heroes.html": build_heroes(world, entries, today),
     "guild.html": build_guild(world, entries, today, guild),
     "items.html": build_items(world),
+    "monsters.html": build_monsters(world),
     "towns.html": build_towns(world),
   }
   for hero, state in entries + (retired or []):
