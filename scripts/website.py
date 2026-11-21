@@ -2,8 +2,10 @@
 """GitHub Pages に載せるサイト（HTML）を書き出す。冒険は進めない（今の状態を見せるだけ）。
 
 ページ:
-  index.html          世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
-  ranking.html        今シーズンのランキングと、勇者の一覧
+  index.html          ストーリー（world/story.md の物語・世界・歴史と、いまの冒険の状況）
+  map.html            世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
+  ranking.html        今シーズンのランキングと、今日の出来事
+  heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
   guild.html          町ごとのギルドの掲示板（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
@@ -34,10 +36,13 @@ import mapsvg  # noqa: E402
 import rpg  # noqa: E402
 import world as W  # noqa: E402
 
-TITLE = "オルドラ冒険記"
+TITLE = "クリエピス戦記"
+STORY_PATH = W.WORLD_DIR / "story.md"  # ストーリーのページの文（Markdown の一部だけ使える。md_html を参照）
 PAGES = (
-  ("index.html", "地図"),
+  ("index.html", "ストーリー"),
+  ("map.html", "地図"),
   ("ranking.html", "ランキング"),
+  ("heroes.html", "勇者"),
   ("towns.html", "町"),
   ("guild.html", "ギルド"),
   ("items.html", "アイテム"),
@@ -85,6 +90,10 @@ font-size:13px;letter-spacing:.12em;transform:rotate(-8deg);opacity:.85;margin:2
 .chip-mark{color:#b7791f;white-space:nowrap}
 .info th{width:11em;vertical-align:top;padding-top:6px}
 .closed{opacity:.75}
+.story-title{font-size:24px;border-left:0;padding-left:0;margin-top:12px;letter-spacing:.05em}
+p.story{line-height:2;margin:10px 0 18px}
+.story-table td:first-child{white-space:nowrap;font-weight:bold}
+ul.plain{margin:0;padding-left:1.2em}
 .en{font-weight:normal;font-style:italic;color:var(--sub);font-size:.85em;letter-spacing:.02em}
 .tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:2px solid var(--line);margin:4px 0 14px}
 .tab{font:inherit;font-weight:bold;color:var(--sub);background:none;border:0;border-bottom:3px solid transparent;
@@ -158,8 +167,98 @@ def updated(today: date) -> str:
   return f'<p class="note">{today.isoformat()} の冒険を終えた状態（毎朝 7 時すぎに更新）</p>'
 
 
+# ---- ストーリー ---------------------------------------------------------------------------
+def inline_md(text: str) -> str:
+  """1 行の中の書式（**太字** だけ）。対になっていない ** は、そのまま出す。"""
+  parts = escape(text).split("**")
+  if len(parts) % 2 == 0:  # ** が奇数個: 最後の ** は対がないので、文字として戻す
+    parts[-2:] = [parts[-2] + "**" + parts[-1]]
+  return "".join(f"<strong>{p}</strong>" if i % 2 else p for i, p in enumerate(parts))
+
+
+def md_html(text: str) -> list[str]:
+  """Markdown のごく一部を HTML のかたまりの一覧にする: # 見出し・## 見出し・### 見出し・- 箇条書き・| 表 |・
+  段落（**太字**）。段落の中の改行はそのまま改行にする。ほかの書き方は、段落の文字としてそのまま出す。"""
+  blocks: list[str] = []
+  lines = [line.rstrip() for line in text.splitlines()]
+  headings = (("### ", "<h3>{}</h3>"), ("## ", '<h2 class="area">{}</h2>'), ("# ", '<h2 class="story-title">{}</h2>'))
+
+  def special(line: str) -> bool:  # 段落以外のかたまりの始まり
+    return line.startswith(("- ", "|")) or any(line.startswith(p) for p, _ in headings)
+
+  i = 0
+  while i < len(lines):
+    line = lines[i]
+    heading = next((h for h in headings if line.startswith(h[0])), None)
+    if not line.strip():
+      i += 1
+    elif heading:
+      blocks.append(heading[1].format(inline_md(line[len(heading[0]) :])))
+      i += 1
+    elif line.startswith("- "):
+      items = []
+      while i < len(lines) and lines[i].startswith("- "):
+        items.append(f"<li>{inline_md(lines[i][2:].strip())}</li>")
+        i += 1
+      blocks.append(f"<ul>{''.join(items)}</ul>")
+    elif line.startswith("|"):
+      rows, start = [], i
+      while i < len(lines) and lines[i].startswith("|"):
+        cells = [c.strip() for c in lines[i].strip().strip("|").split("|")]
+        is_rule = all(c and set(c) <= set("-: ") for c in cells)
+        if not (i == start + 1 and is_rule):  # 見出しのすぐ下の行の区切り（|---|）だけ飛ばす
+          rows.append(cells)
+        i += 1
+      head, *body = rows
+      blocks.append(
+        '<div class="scroll"><table class="story-table"><tr>'
+        + "".join(f"<th>{inline_md(c)}</th>" for c in head)
+        + "</tr>"
+        + "".join("<tr>" + "".join(f"<td>{inline_md(c)}</td>" for c in r) + "</tr>" for r in body)
+        + "</table></div>"
+      )
+    else:
+      para = [inline_md(line.strip())]  # 最初の行は必ず取る（どのかたまりにも当たらない行で止まらないように）
+      i += 1
+      while i < len(lines) and lines[i].strip() and not special(lines[i]):
+        para.append(inline_md(lines[i].strip()))
+        i += 1
+      blocks.append(f'<p class="story">{"<br>".join(para)}</p>')
+  return blocks
+
+
+def build_story(world: dict, entries: list[tuple[dict, dict]], today: date, story: str | None = None) -> str:
+  """最初のページ: 物語（world/story.md）と、いまの冒険の状況（シーズン・勇者・開放した地方と町）。"""
+  if story is None:
+    # Windows のエディタが付ける BOM があっても読めるように utf-8-sig
+    story = STORY_PATH.read_text(encoding="utf-8-sig") if STORY_PATH.is_file() else f"# {TITLE}\n"
+  blocks = md_html(story)
+  season = game.season_of(world, today)
+  first, last = game.season_range(world, season)
+  day = "開幕前" if today < first else f"{(today - first).days + 1} 日目（{(last - first).days + 1} 日のうち）"
+  places = world["places"]
+  areas = []
+  for _, area, members in area_groups(world, world["towns"]):
+    towns = "・".join(
+      f'<a href="towns.html#{escape(t)}">{escape(places[t].get("emoji", ""))} {escape(places[t]["name"])}</a>'
+      for t in members
+    )
+    areas.append(f"<li>{name_html(area['name'], area.get('en'))}: {towns}</li>")
+  status = (
+    '<div class="card"><h3>いまの冒険</h3><table class="info"><colgroup><col style="width:11em"><col></colgroup>'
+    f"<tr><th>星の巡り</th><td>シーズン{season}（{first}〜{last}）・{day}</td></tr>"
+    f'<tr><th>旅をしている勇者</th><td>{len(entries)} 人（<a href="heroes.html">勇者の一覧</a>）</td></tr>'
+    f'<tr><th>旅のできる地方</th><td><ul class="plain">{"".join(areas)}</ul></td></tr>'
+    "</table></div>"
+  )
+  # 物語の最初の見出し（## …）の前に、いまの冒険の状況を入れる
+  at = next((i for i, b in enumerate(blocks) if b.startswith('<h2 class="area">')), len(blocks))
+  body = blocks[:at] + [status] + blocks[at:]
+  return page("ストーリー", "".join(body), "index.html")
+
+
 # ---- 地図 -------------------------------------------------------------------------------
-def build_index(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
+def build_map(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
   svg = mapsvg.render(world, entries, links={h["id"]: hero_href(h["id"]) for h, _ in entries})
   body = [f"<h2>世界の地図</h2>{updated(today)}"]
   if svg:
@@ -184,7 +283,7 @@ def build_index(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
     )
   else:
     body.append('<p class="note">まだ勇者がいません。</p>')
-  return page("地図", "".join(body), "index.html", script=MAP_JS if svg else "")
+  return page("地図", "".join(body), "map.html", script=MAP_JS if svg else "")
 
 
 # ---- ランキング ---------------------------------------------------------------------------
@@ -212,7 +311,15 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
       + "</div>"
     )
   body.append('<div class="grid">' + "".join(cards) + "</div>")
-  body.append("<h2>勇者たち</h2>")
+  return page("ランキング", "".join(body), "ranking.html")
+
+
+# ---- 勇者 ---------------------------------------------------------------------------------
+def build_heroes(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
+  """旅をしている勇者の一覧（居場所・能力・装備・今日の出来事。名前から詳細のページへ）。"""
+  season = game.season_of(world, today)
+  views = [(h, rpg.season_view(world, s, season)) for h, s in entries]
+  body = [f"<h2>勇者たち</h2>{updated(today)}"]
   heroes = []
   for h, s in views:
     hero, st = s["hero"], game.stats(world, s)
@@ -226,7 +333,7 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
       f'<div class="note">今日: {escape("、".join(events) or "—")}</div></div>'
     )
   body.append('<div class="grid">' + ("".join(heroes) or '<p class="note">まだ勇者がいません。</p>') + "</div>")
-  return page("ランキング", "".join(body), "ranking.html")
+  return page("勇者", "".join(body), "heroes.html")
 
 
 # ---- タブと絞り込み（町・ギルド・アイテムのページで使う）------------------------------------------
@@ -397,6 +504,12 @@ def build_towns(world: dict) -> str:
       f'<span class="note">（{escape(rpg.item_power(it))}）</span>'
     )
 
+  p = world["season"]["potion"]  # 回復薬はどの町の店でも売る（装備のあとに出す）
+  potion = (
+    f'回復薬<span class="note">（{p["price"]}G。戦いで倒れそうになったときに使い、最大 HP の {p["heal_rate"]:.0%} まで回復。'
+    f"町で {p['keep']} 個まで買い足す）</span>"
+  )
+
   def rows_of(town: str) -> list[tuple[str, str]]:
     size = f"依頼の枠 {game.quests_per_day(world, town)} 件"
     if town not in opened:
@@ -426,7 +539,7 @@ def build_towns(world: dict) -> str:
       ("ギルドの規模", f'{size}（<a href="guild.html#{escape(town)}">掲示板を見る</a>）'),
       ("特産品", "<br>".join(label(i) for i in shop if sellers.get(i) == 1) or "-"),
       ("依頼の報酬で出るレア", "<br>".join(label(i) for i in rares) or "-"),
-      ("店の品ぞろえ", "<br>".join(label(i) for i in shop) or "-"),
+      ("店の品ぞろえ", "<br>".join([label(i) for i in shop] + [potion])),
       ("道（行き先と行動回数）", "・".join(roads) or "-"),
     ]
 
@@ -477,7 +590,6 @@ def build_items(world: dict) -> str:
   rows = item_rows(world)
   used = [r for r in world["rarities"] if any(x["item"]["rarity"] == r for rs in rows.values() for x in rs)]
   slots = [slot for slot in W.SLOTS if rows[slot]]  # 開放した地域で手に入る装備のない種類は、タブを出さない
-  potion = world["season"]["potion"]
   body = [
     "<h2>アイテム一覧</h2>",
     tab_bar([(slot, W.SLOT_NAMES[slot]) for slot in slots]),
@@ -509,10 +621,6 @@ def build_items(world: dict) -> str:
       + "</table></div></div>"
     )
     body.append(tab_panel(slot, escape(W.SLOT_NAMES[slot]), table))
-  body.append(
-    f'<div class="card"><h3>回復薬</h3><div>どの町の店でも {potion["price"]}G。戦いで倒れそうになったときに使い、'
-    f"最大 HP の {potion['heal_rate']:.0%} まで回復します（町で {potion['keep']} 個まで買い足します）。</div></div>"
-  )
   return page("アイテム", "".join(body), "items.html", script=FILTER_JS + TABS_JS)
 
 
@@ -521,7 +629,7 @@ def build_hero(world: dict, hero: dict, state: dict) -> str:
   body = (
     f"<h2>{escape(hero['name'])}（{escape(hero['id'])}）</h2>"
     f"<pre>{escape(rpg.build_text(world, state, fold=False))}</pre>"
-    '<p><a href="../ranking.html">ランキングへ戻る</a></p>'
+    '<p><a href="../heroes.html">勇者の一覧へ戻る</a></p>'
   )
   return page(hero["name"], body, "", depth=1)
 
@@ -558,8 +666,10 @@ def write_site(world: dict, entries: list[tuple[dict, dict]], today: date, guild
     shutil.rmtree(out)
   (out / "heroes").mkdir(parents=True)
   files = {
-    "index.html": build_index(world, entries, today),
+    "index.html": build_story(world, entries, today),
+    "map.html": build_map(world, entries, today),
     "ranking.html": build_ranking(world, entries, today),
+    "heroes.html": build_heroes(world, entries, today),
     "guild.html": build_guild(world, entries, today, guild),
     "items.html": build_items(world),
     "towns.html": build_towns(world),
