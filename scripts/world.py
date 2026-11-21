@@ -65,9 +65,9 @@ SEASON_KEYS = {
   "quest_open_days": (int, 1, 30),
   "deliver_range": (int, 1, BIG),
   "balance_level": (int, 1, BIG),
+  "max_level": (int, 1, BIG),
   "item_power_rate": (float, 0.01, BIG),
 }
-QUEST_PREFS = ("low", "high", "rich", "any")  # 性格による依頼の選び方（★ の少ない・多い・お金の多い・ランダム）
 HERO_KEYS = {
   "max_hp": (int, 1, BIG),
   "atk": (int, 0, BIG),
@@ -80,6 +80,7 @@ LEVEL_UP_KEYS = {
   "hp": (int, 0, BIG),
   "atk": (int, 0, BIG),
   "def": (int, 0, BIG),
+  "spd": (float, 0, BIG),
   "exp_base": (float, 0.01, BIG),
   "exp_power": (float, 0.01, 10),
 }
@@ -404,36 +405,29 @@ def validate(raw: dict) -> list[str]:
   ):
     err("season.json: element_rates には strong と weak（正の数）を書いてください")
 
-  # 勇者の性格と特性（season.json の personalities と hero_traits）
-  for key, spec in (("personalities", "name・text・retreat_hp_rate・quest・potions"), ("hero_traits", "name・text")):
-    table = season.get(key)
-    if not isinstance(table, dict) or not table:
-      err(f"season.json: {key} を 1 つ以上書いてください（{spec}）")
+  # 勇者の特性（season.json の hero_traits）。grow はレベルアップでの伸び（level_up の代わり）、luck は引き直し
+  table = season.get("hero_traits")
+  if not isinstance(table, dict) or not table:
+    err("season.json: hero_traits を 1 つ以上書いてください（name・text、grow か luck）")
+    table = {}
+  for tid, t in table.items():
+    where = f"season.json の hero_traits の {tid}"
+    if (
+      not isinstance(t, dict)
+      or not isinstance(t.get("name"), str)
+      or not t["name"]
+      or not isinstance(t.get("text"), str)
+    ):
+      err(f"{where}: name と text（文字列）を書いてください")
       continue
-    for pid_, p_ in table.items():
-      where = f"season.json の {key} の {pid_}"
-      if (
-        not isinstance(p_, dict)
-        or not isinstance(p_.get("name"), str)
-        or not p_["name"]
-        or not isinstance(p_.get("text"), str)
-      ):
-        err(f"{where}: name と text（文字列）を書いてください")
-        continue
-      if key == "personalities":
-        r = p_.get("retreat_hp_rate")
-        if not isinstance(r, (int, float)) or isinstance(r, bool) or not 0 <= r <= 1:
-          err(f"{where}: retreat_hp_rate は 0〜1 の数にしてください")
-        if p_.get("quest") not in QUEST_PREFS:
-          err(f"{where}: quest は {'/'.join(QUEST_PREFS)} のどれかにしてください")
-        if not isinstance(p_.get("potions"), int) or isinstance(p_.get("potions"), bool):
-          err(f"{where}: potions（回復薬を持つ数の増減）は整数にしてください")
-      else:
-        for stat in ("atk", "def", "hp", "spd"):
-          if stat in p_ and (not isinstance(p_[stat], int) or isinstance(p_[stat], bool)):
-            err(f"{where}: {stat} は整数にしてください")
-        if "luck" in p_ and not isinstance(p_["luck"], bool):
-          err(f"{where}: luck は true か false にしてください")
+    grow = t.get("grow", {})
+    if not isinstance(grow, dict) or any(
+      k not in ("hp", "atk", "def", "spd") or not isinstance(v, (int, float)) or isinstance(v, bool) or v < 0
+      for k, v in grow.items()
+    ):
+      err(f"{where}: grow は {{hp/atk/def/spd: レベルアップでの伸び（0 以上の数）}} にしてください")
+    if "luck" in t and not isinstance(t["luck"], bool):
+      err(f"{where}: luck は true か false にしてください")
 
   # monsters.json
   traits = raw.get("traits", {})

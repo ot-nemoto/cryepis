@@ -119,8 +119,9 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["items"][0].update(spd="速い"), ["spd"])
     self.assertError(lambda r: r["elements"]["fire"].update(strong="light"), ["elements", "fire"])
     self.assertError(lambda r: r["season"]["element_rates"].pop("weak"), ["element_rates"])
-    self.assertError(lambda r: r["season"]["personalities"]["brave"].update(quest="all"), ["brave", "quest"])
-    self.assertError(lambda r: r["season"]["hero_traits"]["strong"].update(atk="2"), ["strong", "atk"])
+    self.assertError(lambda r: r["season"]["hero_traits"]["strong"].update(grow={"atk": "2"}), ["strong", "grow"])
+    self.assertError(lambda r: r["season"]["hero_traits"]["strong"].update(grow={"luck": 1}), ["strong", "grow"])
+    self.assertError(lambda r: r["season"].pop("max_level"), ["max_level"])
     self.assertError(lambda r: r["season"].update(hero_traits={}), ["hero_traits"])
     self.assertError(lambda r: r["season"]["hero"].pop("spd"), ["hero", "spd"])
 

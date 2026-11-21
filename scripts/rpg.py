@@ -135,10 +135,10 @@ def item_label(world: dict, iid: str) -> str:
   return game.rarity_mark(world, item["rarity"]) + item["name"]
 
 
-def persona_text(world: dict, state: dict) -> str:
-  """性格と特性（勇者を作るときにランダムで決まる）。"""
-  p, t = game.personality(world, state), game.hero_trait(world, state)
-  return f"性格: {p.get('name', '-')}（{p.get('text', '')}）  特性: {t.get('name', '-')}（{t.get('text', '')}）"
+def trait_text(world: dict, state: dict) -> str:
+  """特性（勇者を作るときにランダムで決まる）。"""
+  t = game.hero_trait(world, state)
+  return f"特性: {t.get('name', '-')}（{t.get('text', '')}）"
 
 
 def item_power(item: dict, world: dict | None = None) -> str:
@@ -208,7 +208,7 @@ def build_text(world: dict, state: dict, fold: bool = True) -> str:
     f"Lv.{hero['level']}  EXP {hero['exp']}/{game.exp_need(world, hero['level'])}  回復薬: {hero['potions']}",
     f"攻撃 {s['atk']}（基本 {hero['base_atk']}）  防御 {s['def']}（基本 {hero['base_def']}）  "
     f"最大HP {s['max_hp']}（基本 {hero['max_hp']}）  素早さ {s['spd']}",
-    persona_text(world, state),
+    trait_text(world, state),
     "",
     "── 装備 ──",
   ]

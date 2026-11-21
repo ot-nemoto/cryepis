@@ -75,20 +75,17 @@ def start_town(world: dict, hero_id: str, season: int | None) -> str:
   return random.Random(f"start-{season or 0}-{hero_id}").choice(world["starts"])
 
 
-def persona(world: dict, hero_id: str) -> tuple[str, str]:
-  """勇者を作るときにランダムで付ける (性格, 特性)。勇者の ID で決まる（シーズンが変わっても同じ）。"""
-  rng = random.Random(f"persona-{hero_id}")
-  return rng.choice(sorted(world["season"]["personalities"])), rng.choice(sorted(world["season"]["hero_traits"]))
+def pick_trait(world: dict, hero_id: str) -> str:
+  """勇者を作るときにランダムで付ける特性。勇者の ID で決まる（シーズンが変わっても同じ）。"""
+  return random.Random(f"trait-{hero_id}").choice(sorted(world["season"]["hero_traits"]))
 
 
 def new_state(world: dict, hero_id: str = "h1", name: str = "勇者") -> dict:
   town = start_town(world, hero_id, None)
-  personality_id, trait_id = persona(world, hero_id)
   return {
     "id": hero_id,
     "name": name,
-    "personality": personality_id,
-    "trait": trait_id,
+    "trait": pick_trait(world, hero_id),
     "season": None,
     "season_day": 0,
     "day": 0,
@@ -120,11 +117,8 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
     return new_state(world, loaded.get("id", hero_id), loaded.get("name", name))
   state = {**new_state(world, hero_id, name), **loaded}
   state["hero"] = {**new_hero(world), **state["hero"]}
-  personality_id, trait_id = persona(world, state["id"])  # 前の形式・world/ から消えた性格や特性は、付け直す
-  if state.get("personality") not in world["season"]["personalities"]:
-    state["personality"] = personality_id
-  if state.get("trait") not in world["season"]["hero_traits"]:
-    state["trait"] = trait_id
+  if state.get("trait") not in world["season"]["hero_traits"]:  # 前の形式・world/ から消えた特性は、付け直す
+    state["trait"] = pick_trait(world, state["id"])
   state["season_stats"] = {**new_season_stats(), **state["season_stats"]}
   places = world["places"]
   fallback = start_town(world, state["id"], state["season"])
@@ -191,21 +185,25 @@ def hero_trait(world: dict, state: dict) -> dict:
   return world["season"]["hero_traits"].get(state.get("trait"), {})
 
 
-def personality(world: dict, state: dict) -> dict:
-  return world["season"]["personalities"].get(state.get("personality"), {})
+def growth(world: dict, state: dict, stat: str) -> float:
+  """レベルアップでの伸び（特性の grow があればそれ、なければ season.json の level_up）。"""
+  return hero_trait(world, state).get("grow", {}).get(stat, world["season"]["level_up"].get(stat, 0))
+
+
+def level_gain(rate: float, level: int) -> int:
+  """level に上がったときに増える量（伸びに端数があっても、合計の端数を切り捨てて増やす。+2.5 なら +2・+3 と交互）。"""
+  return int(rate * (level - 1) + 1e-9) - int(rate * (level - 2) + 1e-9)
 
 
 def stats(world: dict, state: dict) -> dict[str, int]:
-  """装備と特性を足した能力値（素早さは 1 より下にはならない）。"""
-  hero, trait = state["hero"], hero_trait(world, state)
+  """装備を足した能力値（素早さは 1 より下にはならない）。特性は、レベルアップでの伸びで効く（growth）。"""
+  hero = state["hero"]
   worn = [world["items"][i] for i in equipment(world, state).values() if i]
   return {
-    "atk": hero["base_atk"] + sum(i.get("atk", 0) for i in worn) + trait.get("atk", 0),
-    "def": hero["base_def"] + sum(i.get("def", 0) for i in worn) + trait.get("def", 0),
-    "max_hp": hero["max_hp"] + sum(i.get("hp", 0) for i in worn) + trait.get("hp", 0),
-    "spd": max(
-      1, hero.get("base_spd", world["season"]["hero"]["spd"]) + sum(i.get("spd", 0) for i in worn) + trait.get("spd", 0)
-    ),
+    "atk": hero["base_atk"] + sum(i.get("atk", 0) for i in worn),
+    "def": hero["base_def"] + sum(i.get("def", 0) for i in worn),
+    "max_hp": hero["max_hp"] + sum(i.get("hp", 0) for i in worn),
+    "spd": max(1, hero.get("base_spd", world["season"]["hero"]["spd"]) + sum(i.get("spd", 0) for i in worn)),
   }
 
 
@@ -569,14 +567,16 @@ class Day:
     return f"{monster['name']}〔{trait['name']}〕" if trait else monster["name"]
 
   def gain_exp(self, exp: int) -> None:
-    hero, up = self.hero, self.cfg["level_up"]
+    hero = self.hero
     hero["exp"] += exp
-    while hero["exp"] >= exp_need(self.world, hero["level"]):
+    while hero["level"] < self.cfg["max_level"] and hero["exp"] >= exp_need(self.world, hero["level"]):
       hero["exp"] -= exp_need(self.world, hero["level"])
       hero["level"] += 1
-      hero["max_hp"] += up["hp"]
-      hero["base_atk"] += up["atk"]
-      hero["base_def"] += up["def"]
+      grow = {k: level_gain(growth(self.world, self.state, k), hero["level"]) for k in ("hp", "atk", "def", "spd")}
+      hero["max_hp"] += grow["hp"]
+      hero["base_atk"] += grow["atk"]
+      hero["base_def"] += grow["def"]
+      hero["base_spd"] = hero.get("base_spd", self.cfg["hero"]["spd"]) + grow["spd"]
       hero["hp"] = self.stats["max_hp"]
       self.log(f"レベルが上がった！ Lv.{hero['level']}")
 
@@ -662,7 +662,7 @@ class Day:
   def shop(self, town: str) -> None:
     hero, items, bought = self.hero, self.world["items"], []
     potion = self.cfg["potion"]
-    keep = max(0, potion["keep"] + personality(self.world, self.state).get("potions", 0))  # 性格で持つ数が変わる
+    keep = potion["keep"]
     reserve = potion["price"] * max(0, keep - hero["potions"])  # 回復薬の分は残して装備を買う
     worn = equipment(self.world, self.state)
     for iid in self.world["places"][town].get("shop", []):
@@ -680,20 +680,6 @@ class Day:
     if bought:
       self.log(f"{name}で{'と'.join(bought)}を買った")
 
-  def choose_quest(self, entries: list[dict]) -> dict:
-    """性格で依頼を選ぶ: 慎重は ★ の少ないもの、勇敢は ★ の多いもの、欲張りはお金の多いもの、ほかはランダム。"""
-    how = personality(self.world, self.state).get("quest", "any")
-    if how == "low":
-      best = min(e["rank"] for e in entries)
-      entries = [e for e in entries if e["rank"] == best]
-    elif how == "high":
-      best = max(e["rank"] for e in entries)
-      entries = [e for e in entries if e["rank"] == best]
-    elif how == "rich":
-      best = max(e["reward"]["gold"] for e in entries)
-      entries = [e for e in entries if e["reward"]["gold"] == best]
-    return self.rng.choice(entries)
-
   def take_quest(self, town: str) -> None:
     level = self.hero["level"]
     refresh_guild(self.world, self.guild, self.today, season_of(self.world, self.today), [town])
@@ -703,7 +689,7 @@ class Day:
       if e["status"] == "open" and suitable(e, level) and e["id"] not in self.state["taken"]
     ]
     if entries:
-      entry = self.choose_quest(entries)
+      entry = self.rng.choice(entries)
       entry.update(status="held", holder=self.state["id"])
       quest = {k: v for k, v in entry.items() if k not in GUILD_FIELDS}
       self.state["taken"].append(quest["id"])
@@ -833,8 +819,7 @@ class Day:
     state, hero = self.state, self.hero
     for _ in range(5):  # 町での受注・報告は行動回数を使わない
       if state["road"]:
-        retreat = personality(self.world, self.state).get("retreat_hp_rate", self.cfg["retreat_hp_rate"])
-        if hero["hp"] < self.stats["max_hp"] * retreat and not hero["potions"]:
+        if hero["hp"] < self.stats["max_hp"] * self.cfg["retreat_hp_rate"] and not hero["potions"]:
           self.turn_back()
         return self.step(state["road"])
       place, quest = state["place"], state["quest"]

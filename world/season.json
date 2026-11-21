@@ -2,7 +2,8 @@
   "start": "2026-12-01",
   "months": 3,
   "hero": {"max_hp": 30, "atk": 6, "def": 2, "spd": 6, "gold": 60, "potions": 1},
-  "level_up": {"hp": 8, "atk": 2, "def": 1, "exp_base": 10, "exp_power": 1.5},
+  "level_up": {"hp": 8, "atk": 2, "def": 1, "spd": 0, "exp_base": 10, "exp_power": 1.5},
+  "max_level": 20,
   "potion": {"price": 15, "heal_rate": 0.5, "keep": 3},
   "rest_heal_rate": 0.25,
   "retreat_hp_rate": 0.3,
@@ -13,18 +14,12 @@
   "balance_level": 20,
   "item_power_rate": 0.4,
   "element_rates": {"strong": 1.5, "weak": 0.7},
-  "personalities": {
-    "cautious": {"name": "慎重", "text": "HP が半分を切ると引き返し、★ の少ない依頼を選ぶ。回復薬を 1 つ多く持つ", "retreat_hp_rate": 0.5, "quest": "low", "potions": 1},
-    "brave": {"name": "勇敢", "text": "HP が少なくなっても進み、★ の多い依頼を選ぶ", "retreat_hp_rate": 0.15, "quest": "high", "potions": 0},
-    "greedy": {"name": "欲張り", "text": "お金の多い依頼を選ぶ。回復薬は 1 つ少なく持つ", "retreat_hp_rate": 0.3, "quest": "rich", "potions": -1},
-    "whimsical": {"name": "気まぐれ", "text": "依頼を気の向くままに選ぶ", "retreat_hp_rate": 0.3, "quest": "any", "potions": 0}
-  },
   "hero_traits": {
-    "strong": {"name": "怪力", "text": "攻撃が 2 高い", "atk": 2},
-    "sturdy": {"name": "頑丈", "text": "最大 HP が 10 高い", "hp": 10},
-    "guard": {"name": "鉄壁", "text": "防御が 2 高い", "def": 2},
-    "swift": {"name": "俊足", "text": "素早さが 3 高い", "spd": 3},
-    "lucky": {"name": "強運", "text": "宝箱や依頼の報酬で何も出なかったとき、もう 1 度だけ引き直す", "luck": true}
+    "strong": {"name": "怪力", "text": "攻撃が伸びやすい（レベルアップで +2.5）", "grow": {"atk": 2.5}},
+    "sturdy": {"name": "頑丈", "text": "最大 HP が伸びやすい（レベルアップで +10）", "grow": {"hp": 10}},
+    "guard": {"name": "鉄壁", "text": "防御が伸びやすい（レベルアップで +1.5）", "grow": {"def": 1.5}},
+    "swift": {"name": "俊足", "text": "素早さが伸びる（レベルアップで +0.25。4 レベルごとに +1）", "grow": {"spd": 0.25}},
+    "lucky": {"name": "強運", "text": "宝箱や依頼の報酬で何も出なかったとき、もう 1 度だけ引き直す（能力は伸びない）", "luck": true}
   },
   "treasure": [["none", 80], ["common", 20]],
   "rest": ["焚き火のそばで体を休めた", "宿で一日のんびり過ごした", "夢の中で冒険の続きを見た"],

@@ -876,51 +876,58 @@ class BattleDepthTest(unittest.TestCase):
     # 先手の魔物は、勇者のほうが速くても先に攻撃する（2 回攻撃は素早さで決まる）
     self.assertEqual(self.count_first(self.monster(spd=3, trait="first_strike"), 6), "mhhmh")
 
-  def test_persona_is_random_and_kept(self):
-    personas = {G.persona(WORLD, f"h{i}") for i in range(40)}
-    self.assertGreater(len({p for p, _ in personas}), 2)
-    self.assertGreater(len({t for _, t in personas}), 2)
+  def test_trait_is_random_and_kept(self):
+    traits = {G.pick_trait(WORLD, f"h{i}") for i in range(40)}
+    self.assertGreater(len(traits), 2)
     state = G.new_state(WORLD, "h7")
-    self.assertEqual((state["personality"], state["trait"]), G.persona(WORLD, "h7"))
+    self.assertEqual(state["trait"], G.pick_trait(WORLD, "h7"))
+    self.assertNotIn("personality", state)  # 性格は保留
     nxt = START
     while G.season_of(WORLD, nxt) == 1:
       nxt += timedelta(days=1)
     G.advance(WORLD, state, START, 0)
     G.advance(WORLD, state, nxt, 0)  # シーズンが変わっても同じ
-    self.assertEqual((state["personality"], state["trait"]), G.persona(WORLD, "h7"))
+    self.assertEqual(state["trait"], G.pick_trait(WORLD, "h7"))
 
-  def test_old_state_gets_persona(self):
+  def test_old_state_gets_a_trait(self):
     state = play(1)
-    del state["personality"], state["trait"]
+    del state["trait"]
     state["hero"].pop("base_spd")
     with tempfile.TemporaryDirectory() as d:
       path = Path(d) / "h1.json"
       G.save_state(state, path)
       loaded = G.load_state(WORLD, path)
-    self.assertEqual((loaded["personality"], loaded["trait"]), G.persona(WORLD, "h1"))
+    self.assertEqual(loaded["trait"], G.pick_trait(WORLD, "h1"))
     self.assertEqual(loaded["hero"]["base_spd"], WORLD["season"]["hero"]["spd"])
 
-  def test_traits_change_stats(self):
+  def grown(self, trait, level):
     state = G.new_state(WORLD)
-    state["inventory"] = {"wall_shield": 1, "travel_bangle": 1}  # 速 -2・+1
-    base = WORLD["season"]["hero"]
-    for tid, t in WORLD["season"]["hero_traits"].items():
-      state["trait"] = tid
-      s = G.stats(WORLD, state)
-      self.assertEqual(s["atk"], base["atk"] + t.get("atk", 0))
-      self.assertEqual(s["spd"], max(1, base["spd"] - 1 + t.get("spd", 0)))
-      self.assertEqual(s["max_hp"], base["max_hp"] + 4 + 8 + t.get("hp", 0))
+    state["trait"] = trait
+    day = day_of(state)
+    while state["hero"]["level"] < level:
+      day.gain_exp(G.exp_need(WORLD, state["hero"]["level"]))
+    s = G.stats(WORLD, state)
+    return s["max_hp"], s["atk"], s["def"], s["spd"]
 
-  def test_personality_chooses_quests(self):
-    entries = [
-      {"rank": 1, "reward": {"gold": 50}},
-      {"rank": 3, "reward": {"gold": 10}},
-      {"rank": 2, "reward": {"gold": 90}},
-    ]
+  def test_traits_grow_on_level_up(self):
+    self.assertEqual(self.grown("lucky", 1), (30, 6, 2, 6))  # Lv1 はみんな同じ
+    self.assertEqual(self.grown("strong", 1), (30, 6, 2, 6))
+    self.assertEqual(self.grown("lucky", 20), (182, 44, 21, 6))  # ふつう（能力は伸びない強運と同じ）
+    self.assertEqual(self.grown("sturdy", 20), (220, 44, 21, 6))  # HP +10
+    self.assertEqual(self.grown("strong", 20), (182, 53, 21, 6))  # 攻撃 +2.5
+    self.assertEqual(self.grown("guard", 20), (182, 44, 30, 6))  # 防御 +1.5
+    self.assertEqual(self.grown("swift", 20), (182, 44, 21, 10))  # 素早さ +0.25
+    self.assertEqual(self.grown("strong", 3)[1], 11)  # +2・+3 と交互に伸びる
+
+  def test_level_stops_at_the_max(self):
     state = G.new_state(WORLD)
-    for pid, want in (("cautious", 1), ("brave", 3), ("greedy", 2)):
-      state["personality"] = pid
-      self.assertEqual(day_of(state).choose_quest(entries)["rank"], want, pid)
+    day = day_of(state)
+    day.gain_exp(10**7)
+    self.assertEqual(state["hero"]["level"], WORLD["season"]["max_level"])
+
+  def test_level_gain_rounds_down_the_total(self):
+    self.assertEqual([G.level_gain(2.5, lv) for lv in range(2, 6)], [2, 3, 2, 3])
+    self.assertEqual([G.level_gain(0.25, lv) for lv in range(2, 10)], [0, 0, 0, 1, 0, 0, 0, 1])
 
   def test_lucky_draws_again(self):
     state = G.new_state(WORLD)
