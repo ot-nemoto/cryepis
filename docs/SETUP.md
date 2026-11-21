@@ -11,7 +11,7 @@ Gist は Fine-grained PAT に対応していないため Classic PAT を使い�
 ## 2. 勇者の冒険（テキスト RPG）
 
 1. **Actions** → *New game (add a hero)* → **Run workflow** で、勇者の名前を入れて実行する。
-   勇者管理シート `.state/heroes.json` に登録され、詳細のページ `heroes/<id>.md` が作られる（Gist は作らない。冒険はまだ進まない）
+   勇者管理シート `.state/heroes.json` に登録される（Gist は作らない。冒険はまだ進まない。詳細はサイトの勇者のページで見る）
 2. 冒険は次回の毎日の実行（JST 7:17）から進む。すぐ進めたいときは *Advance hero adventure (text RPG)* を **Run workflow** で手動実行する
 3. 最初の毎日の実行で**ランキングの Gist**（`hero-ranking.txt`）が作られる（URL は実行結果の **Summary** と `.state/board.json`）。
    プロフィールの **Customize your pins** でこれを Pin する（Pin は repo と合わせて 6 件まで）

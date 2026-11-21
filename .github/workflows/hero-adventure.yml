@@ -1,7 +1,7 @@
 name: Advance hero adventure (text RPG)
 
 # 現役の勇者（.state/heroes.json）を全員 1 日分進め、ランキングの Gist を更新する（1 日の行動回数は決まっていて、出来事が乱数で決まる。世界は world/ のデータ）。
-# 状態は .state/heroes/<id>.json、勇者ごとの詳細は heroes/<id>.md に書き、最後に master にコミットする。勇者は new-game.yml で増やす。
+# 状態は .state/heroes/<id>.json に書き、最後に master にコミットする（勇者の詳細と地図はサイトで見る。pages.yml が公開する）。勇者は new-game.yml で増やす。
 
 on:
   schedule:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write # RPG の状態（.state/）・勇者の詳細（heroes/）と keepalive（.state/last-run）をコミットするために必要
+  contents: write # RPG の状態（.state/）と keepalive（.state/last-run）をコミットするために必要
 
 jobs:
   advance:
@@ -42,7 +42,7 @@ jobs:
           GIST_PAT: ${{ secrets.GIST_PAT }}
         run: python scripts/rpg.py
 
-      # rpg.py が更新した状態（.state/）と勇者の詳細（heroes/）を master にコミットする。
+      # rpg.py が更新した状態（.state/）を master にコミットする。
       # あわせて 60 日間アクティビティがないと scheduled workflow が停止するのを防ぐため、
       # .state/last-run も更新する（keepalive）。変更が無ければコミットしない。
       # Test が失敗した日も keepalive は残す（!cancelled()）。
@@ -50,15 +50,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           TODAY=$(TZ=Asia/Tokyo date +%F)
-          mkdir -p .state heroes
+          mkdir -p .state
           echo "$TODAY" > .state/last-run
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A .state heroes
+          git add -A .state
           if git diff --cached --quiet; then
             echo "変更なし"
           else
-            if git diff --cached --quiet -- .state heroes ':!.state/last-run'; then
+            if git diff --cached --quiet -- .state ':!.state/last-run'; then
               MSG="chore: keepalive $TODAY"
             else
               MSG="chore: update state $TODAY"

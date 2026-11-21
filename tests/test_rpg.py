@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import common  # noqa: E402
 import game  # noqa: E402
 import rpg  # noqa: E402
+import website  # noqa: E402
 
 WORLD = rpg.load_world()
 DAY = date.fromisoformat(WORLD["season"]["start"])
@@ -101,6 +102,12 @@ class DisplayTest(unittest.TestCase):
     self.assertIn("★★力の指輪", text)
     self.assertIn("シーズン0: Lv.20", text)
 
+  def test_board_links_to_the_site(self):
+    with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "o/r"}, clear=True):
+      text = rpg.build_board(WORLD, [({"id": "h1", "name": "アリス"}, play(1))], DAY)
+    self.assertIn("詳細: https://o.github.io/r/heroes/h1.html", text)
+    self.assertNotIn("MAP:", text)  # リポジトリの MAP のページはない
+
   def test_board_card_fits_and_ranks(self):
     names = ["アリス", "ボブ", "ゴールドヒルデガルト", "あ" * 8]
     entries = [
@@ -162,18 +169,6 @@ class DisplayTest(unittest.TestCase):
     text = rpg.build_board(WORLD, [({"id": "h1", "name": "アリス", "gist_url": "u"}, state)], DAY)
     self.assertIn("シーズン1: 最高レベル アリス Lv.22  討伐数 アリス 150体", text)
 
-  def test_map_page_has_image_and_hero_positions(self):
-    state = play(5)
-    text = rpg.build_map(WORLD, [({"id": "h1", "name": "アリス", "gist_url": "u"}, state)])
-    self.assertIn(f"![世界の MAP]({rpg.MAP_IMAGE})", text)
-    self.assertNotIn("mermaid", text)
-    self.assertIn(f"- 🧙 アリス Lv.{state['hero']['level']}  📍 {WORLD['places'][state['place']]['name']}", text)
-
-  def test_map_page_without_heroes_or_layout(self):
-    text = rpg.build_map({**WORLD, "layout": None}, [])
-    self.assertNotIn("![", text)
-    self.assertIn("- まだいない", text)
-
   def test_highlights_prefer_important_events_and_merge_level_ups(self):
     events = ["スライムを倒した", "レベルが上がった！ Lv.2", "レベルが上がった！ Lv.3", "依頼達成！x", "景色"]
     self.assertEqual(rpg.highlights(events), ["レベルが上がった！ Lv.3", "依頼達成！x"])
@@ -208,7 +203,6 @@ class HeroesTest(unittest.TestCase):
       ("HEROES_PATH", self.dir / "heroes.json"),
       ("HERO_DIR", self.dir / "heroes"),
       ("BOARD_PATH", self.dir / "board.json"),
-      ("PAGE_DIR", self.dir / "pages"),
       ("GUILD_PATH", self.dir / "guild.json"),
     ):
       patcher = mock.patch.object(rpg, target, value)
@@ -253,8 +247,9 @@ class HeroesTest(unittest.TestCase):
     (hero,) = rpg.load_heroes()
     self.assertEqual(hero, {"id": "h1", "name": "アリス", "created": hero["created"], "active": True})
     self.assertEqual(load("h1")["name"], "アリス")
-    page = rpg.page_path("h1").read_text(encoding="utf-8")
-    self.assertTrue(page.startswith("# アリス（h1）\n\n```text\n⚔️ アリス Lv.1"))
+    self.assertFalse(
+      (rpg.common.ROOT / "heroes" / "h1.md").exists()
+    )  # 詳細のページはリポジトリに書かない（サイトで見る）
 
   def test_new_game_rejects_bad_names_and_options(self):
     with self.assertRaises(SystemExit):
@@ -283,12 +278,11 @@ class HeroesTest(unittest.TestCase):
     with self.assertRaises(SystemExit):
       self.run_main(["--retire", "勇者2"])  # 引退済み
 
-  def test_daily_advances_active_heroes_writes_pages_and_only_the_board_gist(self):
+  def test_daily_advances_active_heroes_and_only_the_board_gist(self):
     self.new_game("アリス")
     self.new_game("ボブ")
     self.new_game("引退者")
     self.run_main(["--retire", "h3"])
-    retired_page = rpg.page_path("h3").read_text(encoding="utf-8")
     self.assertEqual(self.daily(), 0)
     # Gist はランキングの 1 つだけ（最初の実行で作られ、board.json に記録される）
     self.assertEqual(self.create_board.call_count, 1)
@@ -299,15 +293,18 @@ class HeroesTest(unittest.TestCase):
     self.assertIn("■ アリス", board)
     self.assertNotIn("引退者", board)
     self.assertEqual((load("h1")["day"], load("h3")["day"]), (1, 0))  # 引退者は進まない
-    self.assertIn("S1 Day 1", rpg.page_path("h1").read_text(encoding="utf-8"))
-    self.assertEqual(rpg.page_path("h3").read_text(encoding="utf-8"), retired_page)
 
-  def test_page_url_points_to_github_in_actions(self):
-    env = {"GITHUB_SERVER_URL": "https://github.com", "GITHUB_REPOSITORY": "o/r", "GITHUB_REF_NAME": "master"}
-    with mock.patch.dict("os.environ", env, clear=True):
-      self.assertEqual(rpg.page_url("h1"), "https://github.com/o/r/blob/master/heroes/h1.md")
+  def test_site_url_for_a_user_pages_repo(self):
+    with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "Alice/alice.github.io"}, clear=True):
+      self.assertEqual(rpg.site_url(), "https://alice.github.io/")
     with mock.patch.dict("os.environ", {}, clear=True):
-      self.assertEqual(rpg.page_url("h1"), "heroes/h1.md")
+      self.assertEqual(rpg.hero_link("h1"), "サイトの勇者のページ")  # サイトの URL が分からなければ、URL は出さない
+
+  def test_page_url_points_to_the_site(self):
+    with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "O/r"}, clear=True):
+      self.assertEqual(rpg.page_url("h1"), "https://o.github.io/r/heroes/h1.html")  # サイトの勇者の詳細
+    with mock.patch.dict("os.environ", {}, clear=True):
+      self.assertEqual(rpg.page_url("h1"), "heroes/h1.html")
 
   def test_daily_is_idempotent_and_catches_up(self):
     self.new_game("アリス")
@@ -329,7 +326,7 @@ class HeroesTest(unittest.TestCase):
     self.assertIn("■ ボブ", board)  # 進められた勇者だけでランキングを作る
     self.assertNotIn("■ アリス", board)
 
-  def test_hero_that_failed_stays_on_the_map(self):
+  def test_hero_that_failed_stays_on_the_site_map(self):
     self.new_game("アリス")
     self.new_game("ボブ")
     self.daily("2026-12-01")
@@ -342,9 +339,22 @@ class HeroesTest(unittest.TestCase):
 
     with mock.patch.object(game, "advance", side_effect=fail_alice), mock.patch.object(common, "warn"):
       self.assertEqual(self.daily("2026-12-02"), 1)
-    text = (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8")
-    self.assertIn("🧙 アリス Lv.", text)  # 保存してある状態で載せる
-    self.assertIn("🧙 ボブ Lv.", text)
+    world = rpg.load_world()
+    html = website.build_map(world, rpg.current_entries(world), date(2026, 12, 2))
+    self.assertIn("🧙 アリス Lv.", html)  # 進められなかった勇者も、保存してある状態でサイトの地図に載る
+    self.assertIn("🧙 ボブ Lv.", html)
+
+  def test_retired_heroes_keep_their_site_page(self):
+    self.new_game("アリス")
+    self.new_game("ボブ")
+    self.run_main(["--retire", "h2"])
+    world = rpg.load_world()
+    self.assertEqual([h["id"] for h, _ in rpg.current_entries(world)], ["h1"])
+    self.assertEqual([h["id"] for h, _ in rpg.current_entries(world, retired=True)], ["h2"])
+    out = self.dir / "site"
+    website.write_site(world, rpg.current_entries(world), DAY, game.new_guild(), out, rpg.current_entries(world, True))
+    self.assertTrue((out / "heroes" / "h2.html").exists())  # 引退した勇者の詳細も残る
+    self.assertNotIn("ボブ", (out / "heroes.html").read_text(encoding="utf-8"))  # 一覧には出さない
 
   def test_failed_heros_changes_to_the_guild_are_undone(self):
     guild = game.new_guild()
@@ -369,14 +379,6 @@ class HeroesTest(unittest.TestCase):
     rpg.GUILD_PATH.write_text("{", encoding="utf-8")
     with self.assertRaises(SystemExit):
       rpg.load_guild()
-
-  def test_map_failure_does_not_stop_the_board(self):
-    self.new_game("アリス")
-    with mock.patch.object(rpg, "save_map", side_effect=KeyError("pos")), mock.patch.object(common, "warn") as warn:
-      self.assertEqual(self.daily(), 1)
-    warn.assert_called_once()
-    self.create_board.assert_called_once()  # ランキングは更新する
-    self.assertEqual(load("h1")["day"], 1)
 
   def test_quests_are_first_come_first_served(self):
     for name in ("アリス", "ボブ", "キャロル", "デイブ", "イブ", "フランク"):
@@ -451,7 +453,6 @@ class HeroesTest(unittest.TestCase):
       self.assertEqual(self.daily(), 1)
     warn.assert_called_once()
     self.assertEqual(load("h1")["day"], 1)
-    self.assertTrue(rpg.page_path("h1").exists())
     self.assertIsNone(rpg.load_board())
 
   def test_daily_needs_pat(self):
@@ -479,20 +480,9 @@ class HeroesTest(unittest.TestCase):
     self.assertEqual(self.daily(), 0)
     self.create_board.assert_not_called()
 
-  def test_daily_writes_the_map_with_positions(self):
-    self.new_game("アリス")
-    self.daily()
-    text = (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8")
-    self.assertIn("🧙 アリス Lv.", text)
-    self.assertIn(f"![世界の MAP]({rpg.MAP_IMAGE})", text)  # 地図の画像を貼る
-    self.assertIn("🧙 アリス Lv.", (rpg.PAGE_DIR / rpg.MAP_IMAGE).read_text(encoding="utf-8"))
-
-  def test_map_option_writes_only_the_map(self):
-    self.new_game("アリス")
-    self.assertEqual(self.run_main(["--map"]), 0)
-    self.assertIn("🧙 アリス Lv.1", (rpg.PAGE_DIR / rpg.MAP_NAME).read_text(encoding="utf-8"))
-    self.assertEqual(load("h1")["day"], 0)  # 冒険は進めない
-    self.create_board.assert_not_called()
+  def test_map_option_is_gone(self):
+    with self.assertRaises(SystemExit), mock.patch("sys.stderr"):  # 地図はサイト（website.py）で書き出す
+      self.run_main(["--map"])
 
   def test_map_grid_writes_a_file_without_advancing(self):
     self.new_game("アリス")
@@ -500,18 +490,14 @@ class HeroesTest(unittest.TestCase):
     self.assertEqual(self.run_main(["--map-grid", str(out)]), 0)
     self.assertIn("aurea (850, 495)", out.read_text(encoding="utf-8"))  # 確認用: 場所の ID と座標
     self.assertEqual(load("h1")["day"], 0)
-    self.assertFalse((rpg.PAGE_DIR / rpg.MAP_IMAGE).exists())  # 毎日の地図は書き換えない
 
   def test_dry_run_writes_nothing(self):
     self.new_game("アリス")
-    page = rpg.page_path("h1").read_text(encoding="utf-8")
     self.run_main(["--dry-run", "--actions", "1"])
     self.create_board.assert_not_called()
     self.update_gist.assert_not_called()
     self.assertEqual(load("h1")["day"], 0)
-    self.assertEqual(rpg.page_path("h1").read_text(encoding="utf-8"), page)
     self.assertIsNone(rpg.load_board())
-    self.assertFalse((rpg.PAGE_DIR / rpg.MAP_NAME).exists())
 
 
 if __name__ == "__main__":
