@@ -26,12 +26,12 @@
   }
  },
  "elements": {
-  "fire": {"name": "炎", "strong": "ice"},
-  "ice": {"name": "氷", "strong": "wind"},
-  "wind": {"name": "風", "strong": "earth"},
-  "earth": {"name": "土", "strong": "thunder"},
-  "thunder": {"name": "雷", "strong": "water"},
-  "water": {"name": "水", "strong": "fire"}
+  "fire": {"name": "炎", "emoji": "🔥", "strong": "ice"},
+  "ice": {"name": "氷", "emoji": "❄️", "strong": "wind"},
+  "wind": {"name": "風", "emoji": "🌪️", "strong": "earth"},
+  "earth": {"name": "土", "emoji": "🪨", "strong": "thunder"},
+  "thunder": {"name": "雷", "emoji": "⚡", "strong": "water"},
+  "water": {"name": "水", "emoji": "💧", "strong": "fire"}
  },
  "monsters": [
   {"id": "wild_dog", "name": "野犬", "level": 2, "hp": 20, "atk": 7, "def": 2, "spd": 8, "dex": 6, "exp": 9, "gold": 7, "terrain": "plain"},

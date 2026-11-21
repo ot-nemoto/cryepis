@@ -179,7 +179,7 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(html.count('class="chip" data-f='), 2)  # ★ と ★★
     knight = html.split("騎士の剣")[1].split("</tr>")[0]  # ★★騎士の剣
     self.assertIn('<span class="how">依頼の報酬</span><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a>', knight)
-    self.assertIn('<span class="tag">雷属性</span>', knight)  # 属性は名前の横に
+    self.assertIn('<td class="icon" title="雷属性"><span aria-label="雷属性">⚡</span></td>', knight)  # 属性の列
     head = '<th class="num">HP</th><th class="num">攻</th><th class="num">防</th><th class="num">速</th><th class="num">器</th>'
     self.assertIn(head + '<th class="num">値段</th><th>入手方法</th>', html)  # 能力ごとの列
     header = html.split("<th>名前</th>")[1].split("</tr>")[0]  # 表の見出しの行
@@ -189,9 +189,18 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<td class="num zero">0</td><td class="num">+7</td><td class="num zero">0</td>', steel)
     self.assertIn('<td class="num minus">-1</td>', steel)  # マイナスは赤字
     self.assertIn('<a class="pill" href="towns.html#muralis">🛡️ ムラリス</a><div class="note">', steel)  # 買える店
-    self.assertIn('騎兵の槍<span class="tag">特産</span>', html)
-    self.assertNotIn('鋼の剣<span class="tag">特産</span>', html)  # 開放していない町でも売っている
-    self.assertIn('<td class="mark">★★</td><td>騎士の剣<span', html)  # ★ は先頭の列
+    self.assertIn('<th class="icon">特産</th><th class="icon">属性</th><th class="num">HP</th>', html)
+    lance = html.split("騎兵の槍</td>")[1].split("</tr>")[0]  # エクエスの特産・風属性
+    self.assertTrue(
+      lance.startswith(
+        '<td class="icon"><a href="towns.html#eques" title="エクエスの特産" aria-label="エクエスの特産">🐎</a></td>'
+        '<td class="icon" title="風属性"><span aria-label="風属性">🌪️</span></td>'
+      ),
+      lance,
+    )
+    self.assertIn('鋼の剣</td><td class="icon"></td><td class="icon"></td>', html)  # 開放していない町でも売っている
+    self.assertNotIn('<span class="tag">', html)  # 特産・属性は名前の横の札にしない
+    self.assertIn('<td class="mark">★★</td><td>騎士の剣</td>', html)  # ★ は先頭の列
     for slot in ("weapon", "helmet", "shield", "accessory"):  # ★ の多い順
       marks = [len(game.rarity_mark(WORLD, r["item"]["rarity"])) for r in website.item_rows(WORLD)[slot]]
       self.assertEqual(marks, sorted(marks, reverse=True))
