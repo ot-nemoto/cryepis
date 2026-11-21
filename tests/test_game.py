@@ -527,6 +527,20 @@ class RoadTest(unittest.TestCase):
 
 
 class TraitTest(unittest.TestCase):
+  """魔物の性質の効き方（会心の運で結果がぶれないよう、会心は切って確かめる）。"""
+
+  def setUp(self):
+    patcher = mock.patch.dict(WORLD["season"], {"critical": {"rate": 0, "multiplier": 3}})
+    patcher.start()
+    self.addCleanup(patcher.stop)
+
+  def test_critical_hits(self):
+    day = day_of(G.new_state(WORLD))
+    with mock.patch.dict(WORLD["season"], {"critical": {"rate": 1, "multiplier": 3}}):
+      self.assertEqual(day.damage(10, 0) % 3, 0)  # 必ず会心: 3 倍
+      self.assertGreaterEqual(day.damage(10, 0), 24)
+    self.assertLessEqual(day.damage(10, 0), 12)  # 会心なし
+
   def fight(self, trait, hp=None, potions=3, seed="t"):
     state = G.new_state(WORLD)
     state["hero"]["potions"] = potions

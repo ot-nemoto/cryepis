@@ -128,6 +128,10 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"].update(hero_traits={}), ["hero_traits"])
     self.assertError(lambda r: r["season"]["hero"].pop("spd"), ["hero", "spd"])
 
+  def test_critical_is_checked(self):
+    self.assertError(lambda r: r["season"]["critical"].update(rate=2), ["critical"])
+    self.assertError(lambda r: r["season"].pop("critical"), ["critical"])
+
   def test_boss_needs_a_dungeon(self):
     self.assertError(lambda r: r["monsters"][-1].update(boss="salina"), ["den_lord", "boss"])
 

@@ -485,7 +485,13 @@ class Day:
 
   # 戦闘 ----------------------------------------------------------------------------
   def damage(self, attack: int, guard: int) -> int:
-    return max(1, attack - guard // 2 + self.rng.randint(-2, 2))
+    """1 回の攻撃のダメージ。ときどき会心の一撃（season.json の critical: rate の確率で multiplier 倍）になる。
+    勇者も魔物も同じ。会心があるので、能力の差が小さいと勝ち負けに幅が出る。"""
+    hit = max(1, attack - guard // 2 + self.rng.randint(-2, 2))
+    crit = self.cfg.get("critical") or {}
+    if crit.get("rate", 0) > 0 and self.rng.random() < crit["rate"]:  # 会心がなければ乱数を使わない
+      return hit * crit["multiplier"]
+    return hit
 
   def pick_weapon(self, monster: dict, guard: int) -> tuple[str | None, float, int]:
     """この魔物に、1 回の攻撃の番でいちばんダメージの大きい武器（持ち物から持ち替える）と、属性の倍率と、

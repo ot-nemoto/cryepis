@@ -14,6 +14,7 @@
   "balance_level": 20,
   "item_power_rate": 0.4,
   "element_rates": {"strong": 1.5, "weak": 0.7},
+  "critical": {"rate": 0.25, "multiplier": 3},
   "hero_traits": {
     "strong": {"name": "怪力", "text": "攻撃が伸びやすい（レベルアップで +2.4）", "grow": {"atk": 2.4}},
     "sturdy": {"name": "頑丈", "text": "最大 HP が伸びやすい（レベルアップで +11）", "grow": {"hp": 11}},

@@ -406,6 +406,19 @@ def validate(raw: dict) -> list[str]:
       err(
         f"monsters.json の elements の {eid}: name（文字列）と strong（自分以外の、強い相手の属性の ID）を書いてください"
       )
+  crit = season.get("critical")
+  if (
+    not isinstance(crit, dict)
+    or not (
+      isinstance(crit.get("rate"), (int, float)) and not isinstance(crit.get("rate"), bool) and 0 <= crit["rate"] <= 1
+    )
+    or not (
+      isinstance(crit.get("multiplier"), int)
+      and not isinstance(crit.get("multiplier"), bool)
+      and crit["multiplier"] >= 1
+    )
+  ):
+    err("season.json: critical には rate（会心の確率 0〜1）と multiplier（倍率。1 以上の整数）を書いてください")
   rates = season.get("element_rates")
   if not isinstance(rates, dict) or any(
     not isinstance(rates.get(k), (int, float)) or isinstance(rates.get(k), bool) or rates[k] <= 0
