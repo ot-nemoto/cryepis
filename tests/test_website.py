@@ -61,6 +61,7 @@ class SiteTest(unittest.TestCase):
         "guild.html",
         "items.html",
         "monsters.html",
+        "guide.html",
         "towns.html",
         "heroes/h1.html",
         "heroes/h2.html",
@@ -291,8 +292,10 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f"<td>{WORLD['monsters'][mid]['name']}</td>", south)
     self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の魔物は出さない
     self.assertIn("サリナ〜エクエス（", south)  # 出る道と割合
-    self.assertIn("<td>群れ<div", south)  # 性質
+    self.assertIn('<td class="icon"><span class="tag">群れ</span></td>', south)  # 性質は名前だけの枠の札
+    self.assertNotIn("数が多く", south)  # 性質の説明は出さない
     self.assertIn('<th class="icon">属性</th><th class="num">HP</th>', html)  # Lv の列は出さない
+    self.assertIn('<th class="num">速</th><th class="num">器</th><th class="num">EXP</th>', html)  # 器用さ
     self.assertNotIn(">Lv<", html)
     self.assertIn('<td class="icon"><span class="tag">水属性</span></td>', south)  # 沼ヒル（アイテムと同じ枠の札）
     roads, boss = south.split('<h3 class="sub">ボス</h3>')  # ボスは道の魔物とは別の表
@@ -301,18 +304,33 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<span class="tag">土属性</span>', boss)
     self.assertIn("<td>南壁の巣穴（ダンジョン・まだ挑めない）</td>", boss)
     self.assertIn("<th>いる場所</th>", boss)
-    self.assertIn("属性の相性（左が右に強い）: 炎→氷→風→土→雷→水→炎", html)
+    self.assertNotIn("属性の相性", html)  # 説明は手引きのページに
+    self.assertIn('<a href="guide.html">手引き</a>', html)
     self.assertNotIn("性質の効果がかかる前", website.build_towns(WORLD))  # 魔物の注記は町のページに出さない
     self.assertIn("性質の効果がかかる前", html)
     crown = html[html.index('id="panel-crownlands"') :]
     self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
     self.assertEqual(html.count('<h3 class="sub">ボス</h3>'), 1)  # ボスのいない地方・開放していない地方には出さない
 
-  def test_monsters_page_without_elements(self):
+  def test_guide_page(self):
+    html = website.build_guide(WORLD)
+    self.assertIn('<a href="guide.html" class="on">手引き</a>', html)
+    self.assertIn('<a href="monsters.html">魔物</a><a href="guide.html" class="on">手引き</a>', html)  # 魔物の次
+    for t in WORLD["season"]["hero_traits"].values():  # 勇者の特性
+      self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
+    for t in WORLD["traits"].values():  # 魔物の性質（説明はここだけに出す）
+      self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
+    self.assertIn("相性（左が右に強い）: 炎→氷→風→土→雷→水→炎", html)
+    self.assertIn('<td><span class="tag">風属性</span></td><td>土</td><td>氷</td>', html)  # 強い相手・苦手な相手
+    self.assertIn("器用さ ÷ 150 の確率で、ダメージが 3 倍", html)
+    self.assertIn("最大 HP の 50% まで回復", html)
+    self.assertIn("Lv20 で 182", html)
+
+  def test_guide_page_without_elements(self):
     world = copy.deepcopy(WORLD)
     world["elements"] = {}
-    html = website.build_monsters(world)  # 属性がなくても落ちない
-    self.assertNotIn("属性の相性", html)
+    html = website.build_guide(world)  # 属性がなくても落ちない
+    self.assertNotIn("属性と相性", html)
 
   def test_monsters_page_edge_cases(self):
     world = copy.deepcopy(WORLD)

@@ -8,7 +8,8 @@
   heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
-  monsters.html       開放した道に出る魔物（地方ごとのタブ。地形・性質・強さ・出る道）
+  monsters.html       開放した道に出る魔物とボス（地方ごとのタブ。地形・性質・属性・強さ・出る道）
+  guide.html          手引き（能力・勇者の特性・魔物の性質・属性と相性・戦いの決まりの説明）
   guild.html          町ごとのギルドの掲示板（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
 
@@ -48,6 +49,7 @@ PAGES = (
   ("guild.html", "ギルド"),
   ("items.html", "アイテム"),
   ("monsters.html", "魔物"),
+  ("guide.html", "手引き"),
 )
 
 CSS = """
@@ -78,7 +80,7 @@ table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--sub);font-weight:normal;font-size:13px;white-space:nowrap}
 .wide-table{min-width:640px;table-layout:fixed}
-.monsters{min-width:1000px}
+.monsters{min-width:900px}
 .num{text-align:right;white-space:nowrap}
 .scroll{overflow-x:auto}
 .mark{color:#b7791f;white-space:nowrap;width:5em}
@@ -106,6 +108,8 @@ padding:6px 12px;margin-bottom:-2px;cursor:pointer}
 h2.area{font-size:17px;margin:6px 0 10px;border-left:0;padding-left:0}
 .minus{color:var(--minus);font-weight:bold}
 h3.sub{font-size:15px;margin:18px 0 0}
+.guide th:first-child,.guide td:first-child{width:9em;white-space:nowrap}
+.card h3+p,.card h3+.scroll{margin-top:8px}
 .icon{text-align:center;white-space:nowrap}
 td.icon .tag{margin-left:0}
 .zero{color:var(--sub)}
@@ -691,8 +695,8 @@ def build_items(world: dict) -> str:
 
 
 # ---- 魔物 ---------------------------------------------------------------------------------
-MONSTER_STATS = ("hp", "atk", "def", "spd", "exp", "gold")  # 魔物のページの強さの列（Lv は出さない）
-MONSTER_STAT_NAMES = ("HP", "攻", "防", "速", "EXP", "G")
+MONSTER_STATS = ("hp", "atk", "def", "spd", "dex", "exp", "gold")  # 魔物のページの強さの列（Lv は出さない）
+MONSTER_STAT_NAMES = ("HP", "攻", "防", "速", "器", "EXP", "G")
 
 
 def build_monsters(world: dict) -> str:
@@ -737,9 +741,7 @@ def build_monsters(world: dict) -> str:
     return (
       f"<tr><td>{escape(m['name'])}</td><td>{escape(W.TERRAIN_NAMES.get(m['terrain'], m['terrain']))}</td>"
       + (
-        f'<td>{escape(trait["name"])}<div class="note">{escape(trait.get("text", ""))}</div></td>'
-        if trait
-        else "<td>-</td>"
+        f'<td class="icon"><span class="tag">{escape(trait["name"])}</span></td>' if trait else '<td class="icon"></td>'
       )
       + element_cell(world, m.get("element"))
       + "".join(f'<td class="num">{m[k]}</td>' for k in MONSTER_STATS)
@@ -749,9 +751,9 @@ def build_monsters(world: dict) -> str:
   def monster_table(rows: list[str], where: str) -> str:  # 魔物の表（カードを開いたまま返す。閉じるのは呼ぶ側）
     return (
       '<div class="card"><div class="scroll"><table class="wide-table monsters"><colgroup><col style="width:7em">'
-      '<col style="width:4em"><col style="width:12em"><col style="width:5em">'
+      '<col style="width:4em"><col style="width:5em"><col style="width:5em">'
       + '<col style="width:3.5em">' * len(MONSTER_STATS)
-      + '<col></colgroup><tr><th>名前</th><th>地形</th><th>性質</th><th class="icon">属性</th>'
+      + '<col></colgroup><tr><th>名前</th><th>地形</th><th class="icon">性質</th><th class="icon">属性</th>'
       + "".join(f'<th class="num">{name}</th>' for name in MONSTER_STAT_NAMES)
       + f"<th>{where}</th></tr>"
       + "".join(rows)
@@ -775,37 +777,116 @@ def build_monsters(world: dict) -> str:
       + '<p class="note">ボスは道には出ず、ダンジョンの奥にいます。HP・攻・防は、性質の効果がかかる前の値です。</p></div>'
     )
 
-  elements, rates = world["elements"], world["season"]["element_rates"]
-  chart, cur = [], next(iter(elements), None)  # 強い相手をたどって、輪にして出す（炎→氷→…→炎）
-  while cur in elements and cur not in chart:
-    chart.append(cur)
-    cur = elements[cur]["strong"]
-  if chart and len(chart) == len(elements) and cur == chart[0]:
-    chart = "→".join(escape(element_label(world, e)) for e in chart + [cur])
-  else:  # 輪になっていなければ、組ごとに出す
-    chart = "・".join(
-      f"{escape(element_label(world, eid))}→{escape(element_label(world, e['strong']))}"
-      for eid, e in elements.items()
-      if e["strong"] in elements
-    )
-  element_line = (  # 属性がなければ出さない
-    f"<li>属性の相性（左が右に強い）: {chart}。強い属性の武器で攻めるとダメージ {rates['strong']} 倍、"
-    f"弱い属性だと {rates['weak']} 倍。勇者は戦いのたびに、持ち物の中からいちばん効く武器に持ち替える</li>"
-    if elements
-    else ""
-  )
-  guide = (
-    '<div class="card"><h3>属性と素早さ</h3><ul class="plain">'
-    + element_line
-    + "<li>素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する。性質「先手」の魔物は、素早さに関係なく先に攻撃する</li>"
-    "</ul></div>"
-  )
-
   groups = area_groups(world, towns)
+  guide = '<p class="note">性質・属性・素早さなどの説明は、<a href="guide.html">手引き</a>にまとめています。</p>'
   body = ["<h2>魔物の情報</h2>", tab_bar([(aid, a["name"]) for aid, a, _ in groups]), guide]
   for aid, area, members in groups:
     body.append(tab_panel(aid, name_html(area["name"], area.get("en")), table(members) + boss_table(aid, members)))
   return page("魔物", "".join(body), "monsters.html", script=TABS_JS)
+
+
+# ---- 手引き -------------------------------------------------------------------------------
+def element_chart(world: dict) -> str:
+  """属性の相性の並び（炎→氷→…→炎。左が右に強い）。輪になっていなければ、組ごとに出す。"""
+  elements = world["elements"]
+  chart, cur = [], next(iter(elements), None)  # 強い相手をたどって、輪にする
+  while cur in elements and cur not in chart:
+    chart.append(cur)
+    cur = elements[cur]["strong"]
+  if chart and len(chart) == len(elements) and cur == chart[0]:
+    return "→".join(escape(element_label(world, e)) for e in chart + [cur])
+  return "・".join(
+    f"{escape(element_label(world, eid))}→{escape(element_label(world, e['strong']))}"
+    for eid, e in elements.items()
+    if e["strong"] in elements
+  )
+
+
+def build_guide(world: dict) -> str:
+  """手引き: 能力・勇者の特性・魔物の性質・属性と相性・戦いの決まりの説明（値は world/ から）。"""
+  cfg = world["season"]
+  growth, lv_max = cfg["growth"], cfg["max_level"]
+
+  def table(head: tuple[str, ...], rows: list[tuple[str, ...]]) -> str:  # rows は HTML（エスケープ済み）
+    return (
+      '<div class="scroll"><table class="guide"><tr>'
+      + "".join(f"<th>{h}</th>" for h in head)
+      + "</tr>"
+      + "".join("<tr>" + "".join(f"<td>{c}</td>" for c in r) + "</tr>" for r in rows)
+      + "</table></div>"
+    )
+
+  def tag(name: str) -> str:
+    return f'<span class="tag">{escape(name)}</span>'
+
+  first = {k: growth[k][0] for k in growth}
+  last = {k: growth[k][-1] for k in growth}
+  hp1, hp_up = cfg["hero"]["max_hp"], cfg["level_up"]["hp"]
+  crit = cfg["critical"]
+  stats = [
+    (
+      "HP",
+      f"体力。0 になると力尽きる。Lv1 で {hp1}、レベルが上がるごとに +{hp_up}（Lv{lv_max} で {hp1 + hp_up * (lv_max - 1)}）",
+    ),
+    ("攻", "攻撃。与えるダメージが増える"),
+    ("防", "防御。受けるダメージが減る（相手の攻撃から、防御の半分を引く）"),
+    ("速", "素早さ。先に攻撃できるか、2 回攻撃できるかが決まる"),
+    ("器", f"器用さ。会心の一撃の出やすさ（器用さ ÷ {crit['dex_divisor']} の確率）"),
+  ]
+  stat_note = (
+    f"攻・防・速・器は、Lv1 で {first.get('atk', '-')}、Lv{lv_max} で {last.get('atk', '-')}。"
+    "伸びる時期は能力ごとに違う（攻撃は早く、防御は遅く伸びる）。装備でも増える・減る"
+  )
+  hero_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in cfg["hero_traits"].values()]
+  monster_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in world["traits"].values()]
+  elements, rates = world["elements"], cfg["element_rates"]
+  weak_to = {e["strong"]: eid for eid, e in elements.items()}  # その属性に強い属性
+  element_rows = [
+    (
+      tag(f"{e['name']}属性"),
+      escape(element_label(world, e["strong"])),
+      escape(element_label(world, weak_to.get(eid))),
+    )
+    for eid, e in elements.items()
+  ]
+  potion = cfg["potion"]
+  rules = [
+    ("ダメージ", "攻撃 − 相手の防御 ÷ 2（少しだけ上下する。1 より小さくはならない）"),
+    (
+      "会心の一撃",
+      f"器用さ ÷ {crit['dex_divisor']} の確率で、ダメージが {crit['multiplier']} 倍になる。魔物にも器用さがある",
+    ),
+    ("先に攻撃", "素早いほうが先に攻撃する。性質「先手」の魔物は、素早さに関係なく先に攻撃する"),
+    ("2 回攻撃", "相手の 2 倍以上素早ければ、1 回の番に 2 回攻撃する（魔物も同じ）"),
+    ("回復薬", f"HP が 0 になりそうなとき、自動で使う。最大 HP の {potion['heal_rate']:.0%} まで回復する"),
+    ("武器の持ち替え", "勇者は戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える"),
+  ]
+  cards = [
+    ("能力", table(("能力", "説明"), stats) + f'<p class="note">{escape(stat_note)}</p>'),
+    (
+      "勇者の特性",
+      table(("特性", "効果"), hero_traits)
+      + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない</p>',
+    ),
+    (
+      "魔物の性質",
+      table(("性質", "効果"), monster_traits)
+      + '<p class="note">魔物のページの HP・攻・防は、性質の効果がかかる前の値</p>',
+    ),
+  ]
+  if elements:
+    cards.append(
+      (
+        "属性と相性",
+        f"<p>相性（左が右に強い）: {element_chart(world)}</p>"
+        + table(("属性", "強い相手", "苦手な相手"), element_rows)
+        + f'<p class="note">強い相手を攻めるとダメージ {rates["strong"]} 倍、苦手な相手だと {rates["weak"]} 倍。'
+        "属性は魔物と一部の武器にある（属性のない魔物・武器もある）</p>",
+      )
+    )
+  cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))
+  body = "<h2>手引き</h2>" + "".join(f'<div class="card"><h3>{escape(h)}</h3>{inner}</div>' for h, inner in cards)
+  return page("手引き", body, "guide.html")
 
 
 # ---- 勇者の詳細 ---------------------------------------------------------------------------
@@ -865,6 +946,7 @@ def write_site(
     "guild.html": build_guild(world, entries, today, guild),
     "items.html": build_items(world),
     "monsters.html": build_monsters(world),
+    "guide.html": build_guide(world),
     "towns.html": build_towns(world),
   }
   for hero, state in entries + (retired or []):
