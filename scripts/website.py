@@ -933,7 +933,7 @@ def build_guide(world: dict) -> str:
       "能力",
       table(("能力", "説明"), stats)
       + f'<p class="note">{escape(stat_note)}</p>'
-      + '<h4 class="sub">レベルごとの能力（ふつうの勇者。特性と装備で変わる）</h4>'
+      + '<h4 class="sub">レベルごとの能力（特性の倍率がかかる前の値。強運の勇者と同じ。ほかの特性と装備で変わる）</h4>'
       + level_table,
     ),
     (

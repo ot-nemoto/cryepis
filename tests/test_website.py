@@ -336,6 +336,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("最大 HP の 50% まで回復", html)
     self.assertIn("Lv20 で 182。特性で変わる", html)
     self.assertIn("<h3>魔物の経験値とお金</h3>", html)
+    self.assertIn("特性の倍率がかかる前の値。強運の勇者と同じ", html)  # 「ふつうの勇者」という特性はない
     levels = html.split('<table class="levels">')[1].split("</table>")[0]  # Lv1〜20 の能力の表
     self.assertEqual(levels.count('<td class="num">Lv'), 20)
     self.assertIn('<tr><td class="num">Lv1</td><td class="num">30</td><td class="num">6</td>', levels)
