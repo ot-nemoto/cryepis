@@ -267,6 +267,15 @@ def stats(world: dict, state: dict, held: dict[str, str | None] | None = None) -
   }
 
 
+def attack_element(world: dict, state: dict, weapon: str | None) -> str | None:
+  """武器 weapon（None は素手）で攻めるときの属性。武器に属性がなければ、装飾品の属性（なければ None）。"""
+  items = world["items"]
+  if weapon and items[weapon].get("element"):
+    return items[weapon]["element"]
+  accessory = equipment(world, state)["accessory"]
+  return items[accessory].get("element") if accessory else None
+
+
 def element_rate(world: dict, attack: str | None, guard: str | None) -> float:
   """属性の相性の倍率。攻める属性が守る属性に強ければ strong、守る属性が攻める属性に強ければ weak、ほかは 1。"""
   elements, rates = world["elements"], world["season"]["element_rates"]
@@ -574,13 +583,14 @@ class Day:
     """この魔物に、1 回の攻撃の番でいちばんダメージの大きい武器（持ち物から持ち替える）と、属性の倍率と、
     その武器を持ったときの能力（stats。攻撃・素早さだけでなく、武器の HP・防御・器用さも持ち替えたものになる）。
     ダメージは、魔物の守り（性質で変わったあと）・属性・2 回攻撃・会心の平均まで考える。
-    武器を持たない（None）ほうが効くとき（苦手な属性の武器しかないとき）は、武器を持たずに戦う。"""
+    武器を持たない（None）ほうが効くとき（苦手な属性の武器しかないとき）は、武器を持たずに戦う。
+    攻める属性は武器の属性。武器に属性がなければ（素手も）、装飾品の属性（attack_element）。"""
     items, crit = self.world["items"], self.cfg["critical"]
     worn = equipment(self.world, self.state)["weapon"]
     best = None
     for iid in [*sorted(i for i in self.state["inventory"] if items[i]["slot"] == "weapon"), None]:
       s = stats(self.world, self.state, {"weapon": iid})
-      rate = element_rate(self.world, (items[iid] if iid else {}).get("element"), monster.get("element"))
+      rate = element_rate(self.world, attack_element(self.world, self.state, iid), monster.get("element"))
       hits = 2 if s["spd"] >= 2 * monster.get("spd", s["spd"]) else 1
       crits = 1 + (crit["multiplier"] - 1) * s["dex"] / crit["dex_divisor"]
       key = (max(1, s["atk"] - guard // 2) * rate * hits * crits, iid == worn)  # 同じなら、いつもの武器
@@ -630,7 +640,7 @@ class Day:
     self.state["season_stats"]["kills"] += 1
     note = ""
     if rate > 1:
-      note = f"（{items[weapon]['name']}で弱点を突いた）" if weapon != worn else "（弱点を突いた）"
+      note = f"（{items[weapon]['name']}で弱点を突いた）" if weapon and weapon != worn else "（弱点を突いた）"
     self.log(f"{self.monster_name(monster)}を倒した{note} (+{exp}EXP)")
     if trait == "poison":  # 毒: 倒したあとも HP が減る（0 にはならない）
       lost = min(hero["hp"] - 1, max(1, s["max_hp"] // 10))

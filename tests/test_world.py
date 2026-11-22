@@ -221,7 +221,7 @@ class ValidateTest(unittest.TestCase):
     self.assertError(boss_quest, ["salina_1", "ボス以外"])
 
   def test_item_dex_is_checked(self):
-    self.assertError(lambda r: r["items"][-1].update(dex="2"), ["power_ring", "dex"])
+    self.assertError(lambda r: r["items"][-1].update(dex="2"), ["crimson_grass_charm", "dex"])
 
   def test_every_terrain_has_a_japanese_name(self):
     self.assertEqual(set(W.TERRAIN_NAMES), set(W.TERRAINS))
@@ -264,9 +264,9 @@ class ValidateTest(unittest.TestCase):
 
   def test_shop_item_needs_price(self):
     def change(r):
-      r["map"]["places"][0]["shop"].append("power_ring")
+      r["map"]["places"][0]["shop"].append("crimson_grass_charm")
 
-    self.assertError(change, ["power_ring", "price"])
+    self.assertError(change, ["crimson_grass_charm", "price"])
 
   def test_bad_drop_table(self):
     def change(r):
@@ -278,14 +278,14 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["items"][5].update(drop_level=5), ["drop_level"])
 
   def test_rare_items_need_quest_towns(self):
-    self.assertError(lambda r: r["items"][-1].pop("towns"), ["power_ring", "towns"])
+    self.assertError(lambda r: r["items"][-1].pop("towns"), ["crimson_grass_charm", "towns"])
     self.assertError(lambda r: r["items"][-1].update(towns=["jade_tomb"]), ["towns", "jade_tomb"])
     self.assertError(lambda r: r["items"][0].update(towns=["salina"]), ["iron_sword", "common"])
     self.assertError(
-      lambda r: r["items"][-1].update(towns=["aurea"]), ["power_ring", "aurea", "開放"]
+      lambda r: r["items"][-1].update(towns=["aurea"]), ["crimson_grass_charm", "aurea", "開放"]
     )  # 開放していない町
     for bad in (5, "salina", [["salina"]]):  # 型が違っても落ちずにエラーを返す
-      self.assertError(lambda r, bad=bad: r["items"][-1].update(towns=bad), ["power_ring", "towns"])
+      self.assertError(lambda r, bad=bad: r["items"][-1].update(towns=bad), ["crimson_grass_charm", "towns"])
 
   def test_every_town_needs_a_rare(self):
     def change(r):
@@ -297,7 +297,9 @@ class ValidateTest(unittest.TestCase):
 
   def test_treasure_cannot_hold_rares(self):
     self.assertError(lambda r: r["season"]["treasure"].append(["rare", 1]), ["treasure", "rare"])
-    self.assertError(lambda r: r["season"]["treasure"].append(["power_ring", 1]), ["treasure", "power_ring"])
+    self.assertError(
+      lambda r: r["season"]["treasure"].append(["crimson_grass_charm", 1]), ["treasure", "crimson_grass_charm"]
+    )
 
   def test_every_town_quest_has_some_rare(self):
     towns = {tid for i in RAW["items"] if i["rarity"] == "rare" for tid in i["towns"]}

@@ -24,6 +24,8 @@ import common
 
 WORLD_DIR = common.ROOT / "world"
 SLOTS = ("weapon", "helmet", "shield", "accessory")  # 鎧はない
+# 属性を書ける部位（武器の属性で攻める。装飾品の属性は、武器に属性がないとき攻撃に付く）
+ELEMENT_SLOTS = ("weapon", "accessory")
 SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "shield": "盾", "accessory": "装飾品"}
 PLACE_TYPES = ("town", "dungeon")
 # 道の種類: 陸路・航路は町どうしを結び、勇者が通る。ダンジョンへの道は地図に描くだけ（第 2 段階で使う）
@@ -543,9 +545,9 @@ def validate(raw: dict) -> list[str]:
     if "dex" in it and (not isinstance(it["dex"], int) or isinstance(it["dex"], bool) or it["dex"] < 0):
       err(f"{where}: dex（器用さ）は 0 以上の整数にしてください")
     if "element" in it and (
-      it.get("slot") != "weapon" or not isinstance(it["element"], str) or it["element"] not in elements
+      it.get("slot") not in ELEMENT_SLOTS or not isinstance(it["element"], str) or it["element"] not in elements
     ):
-      err(f"{where}: element は武器だけに、{'/'.join(elements)} のどれかで書いてください")
+      err(f"{where}: element は武器と装飾品だけに、{'/'.join(elements)} のどれかで書いてください")
     if "drop_level" in it:
       err(f"{where}: drop_level はもう使いません（出やすさはドロップ表の重みで決める）")
     towns = it.get("towns")

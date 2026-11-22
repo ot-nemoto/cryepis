@@ -951,7 +951,8 @@ def build_guide(world: dict) -> str:
         f"<p>相性（左が右に強い）: {element_chart(world)}</p>"
         + table(("属性", "強い相手", "苦手な相手", "鉱石"), element_rows)
         + f'<p class="note">強い相手を攻めるとダメージ {rates["strong"]} 倍、苦手な相手だと {rates["weak"]} 倍。'
-        "属性は魔物と一部の武器にある（属性のない魔物・武器もある）。属性の武器は、その属性の力を持つ鉱石から作られる</p>",
+        "属性は魔物と一部の武器・装飾品にある（属性のない魔物・武器もある）。装飾品の属性は、武器に属性がないとき攻撃に付く。"
+        "属性の武器は、その属性の力を持つ鉱石から作られる</p>",
       )
     )
   points = world["season"]["item_points"]
@@ -963,7 +964,7 @@ def build_guide(world: dict) -> str:
     (
       escape(game.rarity_mark(world, r)),
       escape(f"{points['max'][r]:g} 点まで"),
-      escape("なし" if r == W.COMMON else "付くことがある（武器）"),
+      escape("なし" if r == W.COMMON else "付くことがある（武器・装飾品）"),
     )
     for r in world["rarities"]
   ]
