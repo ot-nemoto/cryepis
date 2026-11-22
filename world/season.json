@@ -18,7 +18,7 @@
   "deliver_range": 6,
   "road_events": {"battle": 40, "treasure": 8, "nothing": 52},
   "element_rates": {"strong": 1.5, "weak": 0.7},
-  "item_points": {"weights": {"hp": 0.2, "atk": 1, "def": 0.5, "spd": 0.5, "dex": 0.2}, "max": {"common": 1, "rare": 2, "epic": 3, "legendary": 3}},
+  "item_points": {"weights": {"hp": 0.2, "atk": 1, "def": 0.5, "spd": 0.5, "dex": 0.2}, "max": {"common": 1, "rare": 2, "epic": 2, "legendary": 3}},
   "monster_reward": {"weights": {"hp": 1, "atk": 4, "def": 4, "spd": 2, "dex": 2}, "exp_divisor": 700, "gold_rate": 0.75},
   "critical": {"dex_divisor": 150, "multiplier": 3},
   "hero_traits": {
