@@ -167,7 +167,6 @@ class SiteTest(unittest.TestCase):
       it["name"] for it in WORLD["items"].values() if it["rarity"] != "common"
     }
     self.assertEqual(shown, expected)
-    self.assertNotIn("戦斧", html)  # 開放していない地域の特産は出さない
     self.assertNotIn('data-tab="armor"', html)  # 鎧の部位はない
     self.assertNotIn("data-slot=", html)  # 装備の種類の絞り込みはない
     self.assertNotIn("手に入る装備です", html)  # 説明文は出さない
@@ -186,24 +185,16 @@ class SiteTest(unittest.TestCase):
     header = html.split("<th>名前</th>")[1].split("</tr>")[0]  # 表の見出しの行
     self.assertNotIn("性能", header)
     self.assertNotIn("手に入れ方", header)
-    steel = html.split("鋼の剣")[1].split("</tr>")[0]  # 攻+3・速-1、鋼の剣を売る開放した町はムラリスだけ
-    self.assertIn('<td class="num zero">0</td><td class="num">+3</td><td class="num zero">0</td>', steel)
-    self.assertIn('<td class="num minus">-1</td>', steel)  # マイナスは赤字
-    self.assertIn('<td><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a></td>', steel)  # 買える店
+    axe = html.split("鉄製の斧")[1].split("</tr>")[0]  # 攻+2・速-2、開放した 4 町の店で売っている
+    self.assertIn('<td class="num zero">0</td><td class="num">+2</td><td class="num zero">0</td>', axe)
+    self.assertIn('<td class="num minus">-2</td>', axe)  # マイナスは赤字
+    self.assertEqual(axe.count('class="pill"'), 4)  # 買える店
     self.assertNotIn("依頼の報酬", html)  # 入手方法の補足の文は出さない
     self.assertNotIn("宝箱", html)
-    self.assertIn(
-      '<th>名前</th><th></th><th class="icon">属性</th><th class="num">HP</th>', html
-    )  # 特産の列は見出しなし
-    lance = html.split("騎兵の槍</td>")[1].split("</tr>")[0]  # エクエスの特産・属性なし（属性は ★★ から）
-    self.assertTrue(
-      lance.startswith(
-        '<td class="icon"><span class="tag" title="エクエスの特産">特産</span></td><td class="icon"></td>'
-      ),
-      lance,
-    )
-    self.assertIn('鋼の剣</td><td class="icon"></td><td class="icon"></td>', html)  # 開放していない町でも売っている
-    self.assertNotIn("🏷️", html)  # 特産・属性は絵文字にしない
+    self.assertIn('<th>名前</th><th class="icon">属性</th><th class="num">HP</th>', html)  # 特産の列はない
+    self.assertNotIn("特産", html)
+    self.assertIn('鉄製の剣</td><td class="icon"></td><td class="num zero">0</td>', html)  # ★ は属性なし
+    self.assertNotIn("🏷️", html)  # 属性は絵文字にしない
     self.assertNotIn("🌪️", html)
     self.assertIn('<td class="mark">★★</td><td>騎士の剣</td>', html)  # ★ は先頭の列
     for slot in ("weapon", "helmet", "shield", "accessory"):  # ★ の多い順
@@ -244,10 +235,9 @@ class SiteTest(unittest.TestCase):
     aurea = html[html.index('id="aurea"') : html.index('id="flumen"')]  # 開放していない町
     self.assertIn("未開放", aurea)
     self.assertIn("依頼の枠 6 件", aurea)
-    self.assertIn("<tr><th>特産品</th><td>-</td></tr>", aurea)
-    self.assertNotIn("王国の盾", aurea)
+    self.assertNotIn("特産品", html)  # 町ごとの特産はない
+    self.assertNotIn("鉄製の剣", aurea)
     muralis = html[html.index('id="muralis"') : html.index('id="karun"')]  # 南大陸の中は places の順
-    self.assertIn("城壁の大盾", muralis.split("依頼の報酬で出るレア")[0])  # 特産品
     self.assertIn("騎士の剣", muralis.split("店の品ぞろえ")[0])  # レア
     self.assertIn("南壁の巣穴（ダンジョン・まだ入れない）", muralis)
     self.assertIn("カルン（陸路 6）", muralis)
@@ -258,7 +248,7 @@ class SiteTest(unittest.TestCase):
     by_name = {it["name"]: it for it in WORLD["items"].values()}
     keys = [(W.SLOTS.index(by_name[n]["slot"]), -by_name[n]["price"]) for n in names]
     self.assertEqual(keys, sorted(keys))
-    self.assertEqual(set(names[:2]), {"鋼の剣", "鉄の剣"})  # どちらも 120G
+    self.assertEqual(names[:2], ["鉄製の斧", "鉄製の剣"])  # 武器が先、値段の高い順
 
   def test_story_page(self):
     entries, _, today = party(2, 2)
@@ -343,8 +333,10 @@ class SiteTest(unittest.TestCase):
     item = html.split("<h3>アイテムの強さ</h3>")[1].split("</div></div>")[0]  # 点数の重みと、珍しさごとの点数
     self.assertIn("<tr><td>HP</td><td>0.2 点</td><td>5</td></tr>", item)
     self.assertIn("<tr><td>防</td><td>0.5 点</td><td>2</td></tr>", item)
-    self.assertIn("<tr><td>★</td><td>1〜2 点</td><td>なし</td></tr>", item)
-    self.assertIn("<tr><td>★★★★</td><td>3 点</td><td>付くことがある（武器）</td></tr>", item)
+    self.assertIn("<tr><td>速</td><td>0.5 点</td><td>2</td></tr>", item)
+    self.assertIn("例: 鉄製の斧（攻 +2・速 -2）は 2 − 1 = 1 点", item)  # マイナスも同じ点数で引く
+    self.assertIn("<tr><td>★</td><td>1 点まで</td><td>なし</td></tr>", item)
+    self.assertIn("<tr><td>★★★★</td><td>3 点まで</td><td>付くことがある（武器）</td></tr>", item)
     self.assertIn("特性の倍率がかかる前の値。強運の勇者と同じ", html)  # 「ふつうの勇者」という特性はない
     levels = html.split('<table class="levels">')[1].split("</table>")[0]  # Lv1〜20 の能力の表
     self.assertEqual(levels.count('<td class="num">Lv'), 20)
@@ -457,7 +449,7 @@ class SiteTest(unittest.TestCase):
       item["name"] *= 3
     hero = {"id": "h1", "name": "勇者"}
     state = game.new_state(world, "h1", "勇者")
-    state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "iron_shield": 1, "lucky_charm": 1}
+    state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "iron_shield": 1, "power_ring": 1}
     gear = "装備: " + rpg.gear_text(world, state)
     self.assertNotIn(gear, rpg.build_text(world, state))  # Gist では幅に収まるように詰める
     self.assertIn(escape(gear), website.build_hero(world, hero, state))

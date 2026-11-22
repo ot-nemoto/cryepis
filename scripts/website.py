@@ -506,15 +506,11 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
 
 # ---- 町 ---------------------------------------------------------------------------------
 def build_towns(world: dict) -> str:
-  """町の情報（説明・ギルドの規模・特産品・店の品ぞろえ・依頼で出るレア・道）。全部の町を地方ごとに出し
-  （開放した町のある地方が先）、開放していない町は、特産品などを「-」にする。"""
+  """町の情報（説明・ギルドの規模・店の品ぞろえ・依頼で出るレア・道）。全部の町を地方ごとに出し
+  （開放した町のある地方が先）、開放していない町は、店の品ぞろえなどを「-」にする。"""
   places, items = world["places"], world["items"]
   opened = set(world["towns"])
   towns = [t for t, p in places.items() if p["type"] == "town"]
-  sellers: dict[str, int] = {}
-  for t in towns:
-    for iid in places[t].get("shop", []):
-      sellers[iid] = sellers.get(iid, 0) + 1
 
   def label(iid: str) -> str:
     it = items[iid]
@@ -533,7 +529,7 @@ def build_towns(world: dict) -> str:
     size = f"依頼の枠 {game.quests_per_day(world, town)} 件"
     if town not in opened:
       return [("ギルドの規模", size)] + [
-        (k, "-") for k in ("特産品", "依頼の報酬で出るレア", "店の品ぞろえ", "道（行き先と行動回数）")
+        (k, "-") for k in ("依頼の報酬で出るレア", "店の品ぞろえ", "道（行き先と行動回数）")
       ]
     # 店の品ぞろえは、アイテムの種類（武器・兜・盾・装飾品）の順に、同じ種類なら値段の高い順
     shop = sorted(
@@ -556,7 +552,6 @@ def build_towns(world: dict) -> str:
     ]
     return [
       ("ギルドの規模", f'{size}（<a href="guild.html#{escape(town)}">掲示板を見る</a>）'),
-      ("特産品", "<br>".join(label(i) for i in shop if sellers.get(i) == 1) or "-"),
       ("依頼の報酬で出るレア", "<br>".join(label(i) for i in rares) or "-"),
       ("店の品ぞろえ", "<br>".join([label(i) for i in shop] + [potion])),
       ("道（行き先と行動回数）", "・".join(roads) or "-"),
@@ -585,10 +580,8 @@ def build_towns(world: dict) -> str:
 # ---- アイテム ---------------------------------------------------------------------------
 def item_rows(world: dict) -> dict[str, list[dict]]:
   """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）:
-  {部位: [{id, item, shops, towns, specialty}]}。
-  shops は売っている町、towns は依頼の報酬で出る町（どちらも開放した町の ID）。
-  specialty は、その品を特産として売る町の ID（世界でその町だけが売る品。なければ None）。
-  開放していない町のこともある（町のページには全部の町があるので、リンクは切れない）。"""
+  {部位: [{id, item, shops, towns}]}。
+  shops は売っている町、towns は依頼の報酬で出る町（どちらも開放した町の ID）。"""
   places, items = world["places"], world["items"]
   shops: dict[str, list[str]] = {}
   for t in world["towns"]:
@@ -599,11 +592,7 @@ def item_rows(world: dict) -> dict[str, list[dict]]:
   for iid, it in items.items():
     towns = [t for t in it.get("towns", []) if t in world["towns"]]
     if iid in world["region_items"] or towns:
-      sellers = [t for t, p in places.items() if p["type"] == "town" and iid in p.get("shop", [])]
-      specialty = sellers[0] if len(sellers) == 1 else None  # 世界でその町だけが売る品（その町の ID）
-      rows[it["slot"]].append(
-        {"id": iid, "item": it, "shops": shops.get(iid, []), "towns": towns, "specialty": specialty}
-      )
+      rows[it["slot"]].append({"id": iid, "item": it, "shops": shops.get(iid, []), "towns": towns})
   for slot in rows:
     rows[slot].sort(
       key=lambda r: (-rank[r["item"]["rarity"]], -game.item_score(world, r["item"]), r["item"].get("price", 0))
@@ -631,14 +620,6 @@ def stat_cell(value: int) -> str:
   """能力の値の欄（装備で増える・減る値なので +7・-1 のように符号を付ける。マイナスは赤字、0 は薄く）。"""
   cls = "num minus" if value < 0 else "num zero" if value == 0 else "num"
   return f'<td class="{cls}">{value:+d}</td>' if value else f'<td class="{cls}">0</td>'
-
-
-def specialty_cell(world: dict, town: str | None) -> str:
-  """特産の欄（「特産」の枠の札。マウスを乗せると、どの町の特産かが出る）。特産でなければ空。"""
-  if not town:
-    return '<td class="icon"></td>'
-  label = f"{world['places'][town]['name']}の特産"
-  return f'<td class="icon"><span class="tag" title="{escape(label)}">特産</span></td>'
 
 
 def element_cell(world: dict, element: str | None) -> str:
@@ -672,17 +653,16 @@ def build_items(world: dict) -> str:
       trs.append(
         f'<tr data-f="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
         f"<td>{escape(it['name'])}</td>"
-        + specialty_cell(world, r["specialty"])
         + element_cell(world, it.get("element"))
         + "".join(stat_cell(it.get(k, 0)) for k, _ in ITEM_STATS)
         + f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>'
       )
     table = (
       '<div class="card board"><div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em">'
-      '<col style="width:13em"><col style="width:4em"><col style="width:5em">'
+      '<col style="width:13em"><col style="width:5em">'
       + '<col style="width:3em">' * len(ITEM_STATS)
       + '<col style="width:5.5em"><col></colgroup><tr><th></th><th>名前</th>'
-      + '<th></th><th class="icon">属性</th>'  # 特産の列は見出しを出さない
+      + '<th class="icon">属性</th>'
       + "".join(f'<th class="num">{name}</th>' for _, name in ITEM_STATS)
       + '<th class="num">値段</th><th>入手方法</th></tr>'
       + "".join(trs)
@@ -982,13 +962,14 @@ def build_guide(world: dict) -> str:
   rarity_rows = [
     (
       escape(game.rarity_mark(world, r)),
-      escape(f"{lo:g} 点" if lo == hi else f"{lo:g}〜{hi:g} 点"),
+      escape(f"{points['max'][r]:g} 点まで"),
       escape("なし" if r == W.COMMON else "付くことがある（武器）"),
     )
     for r in world["rarities"]
-    for lo, hi in [points["rarity"][r]]
   ]
-  sample = world["items"].get("steel_sword") or next(iter(world["items"].values()))
+  # 例には、マイナスの能力のあるアイテム（なければ最初のアイテム）を使う
+  items = list(world["items"].values())
+  sample = next((i for i in items if any(i.get(k, 0) < 0 for k, _ in ITEM_STATS)), items[0])
   parts = [(labels[k], sample[k], points["weights"][k] * sample[k]) for k, _ in ITEM_STATS if sample.get(k)]
   example = (
     f"例: {sample['name']}（{'・'.join(f'{n} {v:+d}' for n, v, _ in parts)}）は "
@@ -998,10 +979,10 @@ def build_guide(world: dict) -> str:
   cards.append(
     (
       "アイテムの強さ",
-      "<p>アイテムの強さは点数で決まる。能力の増減に、能力ごとの点数を掛けて足す（マイナスの能力は引く）</p>"
+      "<p>アイテムの強さは点数で決まる。能力の増減に、能力ごとの点数を掛けて足す（マイナスの能力も同じ点数で引く）</p>"
       + table(("能力", "+1 あたり", "1 点になる量"), weight_rows)
       + '<h4 class="sub">珍しさごとの点数</h4>'
-      + table(("珍しさ", "点数", "属性"), rarity_rows)
+      + table(("珍しさ", "点数の上限", "属性"), rarity_rows)
       + f'<p class="note">{escape(example)}。勇者は点数の高いアイテムを装備し、店でも点数の高いものを買う'
       "（同じ点数なら、マイナスの能力のないもの）</p>",
     )
