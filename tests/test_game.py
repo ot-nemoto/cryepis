@@ -1131,6 +1131,24 @@ class BattleDepthTest(unittest.TestCase):
       _, rate, _, acc = day.pick_weapon(self.monster(element=enemy), 0)
       self.assertEqual((acc, rate), ("silkvine_charm", 1.0), enemy)
 
+  def test_elemental_accessory_stays_on_against_neutral_foes(self):
+    state = self.hero_state(base_atk=20)
+    state["inventory"] = {"iron_sword": 1, "silkvine_charm": 1, "crimson_grass_charm": 1}  # 器 +5 の護符もある
+    day = day_of(state)
+    for enemy in (None, "flame"):  # 苦手でない相手なら、器 +5 のほうが少し効いても、ふだんの紅蓮草の護符のまま
+      self.assertEqual(day.pick_weapon(self.monster(element=enemy), 0)[3], "crimson_grass_charm", enemy)
+
+  def test_weak_spot_note_names_only_what_carried_the_element(self):
+    state = self.hero_state(base_atk=20)
+    state["inventory"] = {"x_lance": 1, "soaring_leaf_charm": 1, "crimson_grass_charm": 1}  # 雷の武器と炎の装飾品
+    day = day_of(state)
+    # 氷: 雷の槍で突く。炎の護符は氷に苦手なので、翔天葉の護符（速 +2 で 2 回攻撃になる）に着け替える
+    weapon, _, _, acc = day.pick_weapon(self.monster(element="ice", spd=4), 0)
+    self.assertEqual((weapon, acc), ("x_lance", "soaring_leaf_charm"))
+    day.battle(self.monster(element="ice", spd=4, hp=1))
+    self.assertNotIn("翔天葉の護符で弱点", day.events[-1])  # 属性のない護符の名前は出さない
+    self.assertIn("弱点を突いた", day.events[-1])
+
   def test_elemental_accessory_is_taken_off_against_a_strong_foe(self):
     state = self.hero_state(base_atk=20)
     state["inventory"] = {"crimson_grass_charm": 1}  # 装飾品は紅蓮草の護符だけ
