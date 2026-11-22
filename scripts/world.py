@@ -654,37 +654,34 @@ def validate(raw: dict) -> list[str]:
       else:
         err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
 
-  # 強さ: アイテムの点数（season.json の item_points）が、珍しさごとの範囲に入る
+  # 強さ: アイテムの点数（season.json の item_points）が、0 点から珍しさごとの上限（max）までに入る
   points = season.get("item_points")
   weights = points.get("weights") if isinstance(points, dict) else None
-  ranges = points.get("rarity") if isinstance(points, dict) else None
+  caps = points.get("max") if isinstance(points, dict) else None
   if (
     not isinstance(weights, dict)
     or set(weights) != set(REWARD_STATS)
     or any(not _num(v) or v <= 0 for v in weights.values())  # 0 だと、その能力をいくら足しても点数が増えない
-    or not isinstance(ranges, dict)
-    or set(ranges) != set(rarities)
-    or any(
-      not isinstance(r, list) or len(r) != 2 or not all(_num(v) for v in r) or r[0] > r[1] for r in ranges.values()
-    )
+    or not isinstance(caps, dict)
+    or set(caps) != set(rarities)
+    or any(not _num(v) or v < 0 for v in caps.values())
   ):
     err(
       "season.json: item_points は {weights: {hp/atk/def/spd/dex: 能力 +1 の点数（0 より大きい数）}, "
-      f"rarity: {{{'/'.join(rarities)}: [最小, 最大]}}}} にしてください"
+      f"max: {{{'/'.join(rarities)}: 点数の上限（0 以上）}}}} にしてください"
     )
   elif not errors:
     for iid, it in items.items():
-      low, high = ranges[it["rarity"]]
-      pts = item_points(it, points)
-      if not low - 1e-9 <= pts <= high + 1e-9:
-        err(f"items.json の {iid}: 点数 {pts:g} が、{it['rarity']} の範囲（{low:g}〜{high:g} 点）に入っていません")
+      pts, cap = item_points(it, points), caps[it["rarity"]]
+      if not -1e-9 <= pts <= cap + 1e-9:
+        err(f"items.json の {iid}: 点数 {pts:g} が、{it['rarity']} の範囲（0〜{cap:g} 点）に入っていません")
       if "element" in it and it["rarity"] == COMMON:
         err(f"items.json の {iid}: 属性は common には付けられません（rare から）")
   return errors
 
 
 def item_points(item: dict, cfg: dict) -> float:
-  """アイテムの点数（能力の増減 × season.json の item_points.weights の合計。マイナスの能力は引く）。"""
+  """アイテムの点数（能力の増減 × season.json の item_points.weights の合計。マイナスの能力も同じ重みで引く）。"""
   return sum(cfg["weights"].get(k, 0) * item.get(k, 0) for k in REWARD_STATS)
 
 

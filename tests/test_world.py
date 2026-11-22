@@ -280,7 +280,7 @@ class ValidateTest(unittest.TestCase):
   def test_rare_items_need_quest_towns(self):
     self.assertError(lambda r: r["items"][-1].pop("towns"), ["power_ring", "towns"])
     self.assertError(lambda r: r["items"][-1].update(towns=["jade_tomb"]), ["towns", "jade_tomb"])
-    self.assertError(lambda r: r["items"][0].update(towns=["salina"]), ["wooden_sword", "common"])
+    self.assertError(lambda r: r["items"][0].update(towns=["salina"]), ["iron_sword", "common"])
     self.assertError(
       lambda r: r["items"][-1].update(towns=["aurea"]), ["power_ring", "aurea", "開放"]
     )  # 開放していない町
@@ -299,12 +299,6 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"]["treasure"].append(["rare", 1]), ["treasure", "rare"])
     self.assertError(lambda r: r["season"]["treasure"].append(["power_ring", 1]), ["treasure", "power_ring"])
 
-  def test_every_town_has_its_own_specialty(self):
-    shops = {p["id"]: set(p["shop"]) for p in RAW["map"]["places"] if p["type"] == "town"}
-    for town, items in shops.items():
-      only_here = {i for i in items if all(i not in other for t, other in shops.items() if t != town)}
-      self.assertTrue(only_here, town)
-
   def test_every_town_quest_has_some_rare(self):
     towns = {tid for i in RAW["items"] if i["rarity"] == "rare" for tid in i["towns"]}
     self.assertEqual(towns, set(RAW["map"]["open"]))
@@ -312,7 +306,7 @@ class ValidateTest(unittest.TestCase):
   def test_every_slot_has_items_in_a_shop(self):
     sold = {sid for p in RAW["map"]["places"] for sid in p.get("shop", [])}
     items = {i["id"]: i for i in RAW["items"]}
-    self.assertEqual({items[i]["slot"] for i in sold}, set(W.SLOTS))
+    self.assertEqual({items[i]["slot"] for i in sold}, {"weapon", "helmet", "shield"})  # 装飾品（★）はまだ決めていない
 
   def test_town_quests_are_checked(self):
     def town_quest(**change):
@@ -360,16 +354,21 @@ class ValidateTest(unittest.TestCase):
 
   def test_item_points_follow_the_rarity(self):
     cfg = RAW["season"]["item_points"]
+    self.assertEqual(cfg["max"], {"common": 1, "rare": 2, "epic": 3, "legendary": 3})  # 珍しさごとの上限
     for iid, it in WORLD["items"].items():
-      low, high = cfg["rarity"][it["rarity"]]
-      self.assertTrue(low <= W.item_points(it, cfg) <= high + 1e-9, iid)
-    self.assertAlmostEqual(W.item_points({"atk": 3, "spd": -1}, cfg), 2)  # マイナスは引く
-    self.assertAlmostEqual(W.item_points({"hp": 5, "def": 2, "dex": 5}, cfg), 3)  # HP 5・防 2・器 5 がそれぞれ 1 点
+      self.assertTrue(0 <= W.item_points(it, cfg) <= cfg["max"][it["rarity"]] + 1e-9, iid)
+    self.assertAlmostEqual(W.item_points({"atk": 2, "spd": -2}, cfg), 1)  # マイナスも同じ点数で引く（速 0.5）
+    self.assertAlmostEqual(W.item_points({"hp": 5, "def": 2, "spd": 2, "dex": 5}, cfg), 4)  # どれも 1 点ぶん
 
-    def weak_common(r):
-      next(i for i in r["items"] if i["id"] == "wooden_sword")["atk"] = 0  # 0 点
+    def strong_common(r):
+      next(i for i in r["items"] if i["id"] == "iron_sword")["atk"] = 2  # 2 点
 
-    self.assertError(weak_common, ["wooden_sword", "点数 0", "common"])
+    self.assertError(strong_common, ["iron_sword", "点数 2", "common", "0〜1"])
+
+    def minus_common(r):
+      next(i for i in r["items"] if i["id"] == "iron_axe")["atk"] = 0  # 速 -2 だけで -1 点
+
+    self.assertError(minus_common, ["iron_axe", "点数 -1"])
 
     def common_element(r):
       next(i for i in r["items"] if i["id"] == "iron_sword")["element"] = "flame"
@@ -377,7 +376,7 @@ class ValidateTest(unittest.TestCase):
     self.assertError(common_element, ["iron_sword", "属性", "common"])
 
     def bad_cfg(r):
-      del r["season"]["item_points"]["rarity"]["epic"]
+      del r["season"]["item_points"]["max"]["epic"]
 
     self.assertError(bad_cfg, ["item_points"])
     self.assertError(

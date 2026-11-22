@@ -38,64 +38,35 @@ TERRAIN = {
   "lava": "volcano",
 }
 
-# 呼び名 → (ID, 絵文字, 地域, 店)
-BASIC = ["wooden_sword", "copper_sword", "leather_cap", "wooden_shield"]
-MID = ["iron_sword", "iron_helm", "iron_shield", "lucky_charm", "travel_bangle"]
-SMITH = ["steel_sword", "steel_helm", "steel_shield"]
+# 呼び名 → (ID, 絵文字, 地域)
+# 店の品ぞろえは、どの町も同じ（町ごとの特産はない。町の違いは、その町でしか受けられない依頼）
+SHOP = ["iron_sword", "iron_axe", "wooden_helm", "iron_helm", "wooden_shield", "iron_shield"]
 TOWN_INFO = {
-  "王都": ("aurea", "🏰", "黄金平原", BASIC + MID + SMITH),
-  "河港": ("flumen", "⚓", "大河の三角州", BASIC + MID),
-  "天門の町": ("caelum", "🗻", "竜骨山脈・天の頂のふもと", MID + SMITH),
-  "古木の町": ("silwen", "🌳", "古の大森林", BASIC),
-  "北の漁村": ("vike", "🐟", "中央大陸の北の海岸", BASIC),
-  "霧沼の村": ("morna", "🛖", "霧の大湿原", BASIC + MID),
-  "鋼山の町": ("durgan", "⚒️", "竜骨山脈の西のふもと", MID + SMITH),
-  "椰子の港": ("cocora", "🌴", "熱帯の半島", BASIC + MID),
-  "風巻きの宿": ("kazal", "🏕️", "風の草原", BASIC + MID),
-  "湖畔の村": ("linde", "🛶", "湖沼地帯", BASIC),
-  "氷牙の砦": ("isval", "🧊", "氷牙山地", MID + SMITH),
-  "凍土の集落": ("yarka", "❄️", "中央大陸の北の凍土", BASIC + MID),
-  "オアシスの町": ("zafra", "🏺", "灼熱の大砂漠", MID),
-  "暁の港": ("fajil", "🌅", "東の草原の海岸", BASIC),
-  "雨林の村": ("yashum", "🌿", "東の雨林", BASIC + MID),
-  "霧氷の修道院": ("astol", "🔭", "霧氷の半島", MID),
-  "蔦の集落": ("urka", "🍃", "西の密林", BASIC + MID),
-  "赤岩の鉱山町": ("rubela", "💎", "赤い荒野", MID + SMITH),
-  "西の港": ("novaris", "⛵", "西大陸の東の海岸", BASIC + MID),
-  "南の森の村": ("rowen", "🏹", "南の森", BASIC),
-  "干潟の港": ("salina", "🐚", "南の干潟", BASIC + MID),
-  "大草原の町": ("eques", "🐎", "南の大草原", BASIC),
-  "南壁の砦": ("muralis", "🛡️", "南壁山脈", MID + SMITH),
-  "焔の湯治場": ("homura", "♨️", "炎の列島", MID + SMITH),
-  "凍原の村": ("karun", "🦌", "南の凍原", BASIC),
-}
-# 町の特産（その町でしか買えない common）
-SPECIALTY = {
-  "古木の町": "bark_shield",
-  "北の漁村": "fur_hat",
-  "湖畔の村": "waterweed_bangle",
-  "暁の港": "trader_dagger",
-  "南の森の村": "hunter_bow",
-  "大草原の町": "cavalry_lance",
-  "王都": "royal_shield",
-  "河港": "sailor_hat",
-  "天門の町": "mountain_helm",
-  "霧沼の村": "reed_shield",
-  "鋼山の町": "battle_axe",
-  "椰子の港": "coral_necklace",
-  "風巻きの宿": "nomad_bow",
-  "氷牙の砦": "wolf_fang_necklace",
-  "凍土の集落": "polar_fur",
-  "オアシスの町": "sand_hood",
-  "雨林の村": "jade_ring",
-  "霧氷の修道院": "stargazer_amulet",
-  "蔦の集落": "blowgun",
-  "赤岩の鉱山町": "ruby_ring",
-  "西の港": "settler_shield",
-  "干潟の港": "shell_shield",
-  "南壁の砦": "wall_shield",
-  "焔の湯治場": "volcanic_blade",
-  "凍原の村": "reindeer_charm",
+  "王都": ("aurea", "🏰", "黄金平原"),
+  "河港": ("flumen", "⚓", "大河の三角州"),
+  "天門の町": ("caelum", "🗻", "竜骨山脈・天の頂のふもと"),
+  "古木の町": ("silwen", "🌳", "古の大森林"),
+  "北の漁村": ("vike", "🐟", "中央大陸の北の海岸"),
+  "霧沼の村": ("morna", "🛖", "霧の大湿原"),
+  "鋼山の町": ("durgan", "⚒️", "竜骨山脈の西のふもと"),
+  "椰子の港": ("cocora", "🌴", "熱帯の半島"),
+  "風巻きの宿": ("kazal", "🏕️", "風の草原"),
+  "湖畔の村": ("linde", "🛶", "湖沼地帯"),
+  "氷牙の砦": ("isval", "🧊", "氷牙山地"),
+  "凍土の集落": ("yarka", "❄️", "中央大陸の北の凍土"),
+  "オアシスの町": ("zafra", "🏺", "灼熱の大砂漠"),
+  "暁の港": ("fajil", "🌅", "東の草原の海岸"),
+  "雨林の村": ("yashum", "🌿", "東の雨林"),
+  "霧氷の修道院": ("astol", "🔭", "霧氷の半島"),
+  "蔦の集落": ("urka", "🍃", "西の密林"),
+  "赤岩の鉱山町": ("rubela", "💎", "赤い荒野"),
+  "西の港": ("novaris", "⛵", "西大陸の東の海岸"),
+  "南の森の村": ("rowen", "🏹", "南の森"),
+  "干潟の港": ("salina", "🐚", "南の干潟"),
+  "大草原の町": ("eques", "🐎", "南の大草原"),
+  "南壁の砦": ("muralis", "🛡️", "南壁山脈"),
+  "焔の湯治場": ("homura", "♨️", "炎の列島"),
+  "凍原の村": ("karun", "🦌", "南の凍原"),
 }
 # ギルドの規模（掲示板の依頼の枠の数）。どの町にも書く（王都 6、港や大きな町 5、ふつうの町 4、小さな村や砦 3）
 QUESTS_PER_DAY = {
@@ -137,7 +108,7 @@ DUNGEON_INFO = {
 # 開放した町（勇者が行ける範囲）。ほかの町は地図に出すが、道（陸路・航路・ダンジョンへの道）は出さず、行けない。
 # 少しずつ開放していく（今は南大陸だけ）
 OPEN = ["干潟の港", "大草原の町", "南壁の砦", "凍原の村"]
-STARTS = ["干潟の港", "大草原の町", "凍原の村"]  # 安い装備を売る町から始める（南壁の砦は高い装備だけ）
+STARTS = ["干潟の港", "大草原の町", "凍原の村"]  # 始まりの町（南壁の砦からは始めない）
 
 
 def pid(name):
@@ -174,7 +145,7 @@ def main():
   area_of = {member: aid for aid, _, _, members in AREAS for member in members}
   places = []
   for name, x, y in TOWNS:
-    tid, emoji, region, shop = TOWN_INFO[name]
+    tid, emoji, region = TOWN_INFO[name]
     places.append(
       {
         "id": tid,
@@ -186,7 +157,7 @@ def main():
         "region": region,
         "emoji": emoji,
         "text": TEXT[name],
-        "shop": shop + [SPECIALTY[name]],
+        "shop": list(SHOP),
         "pos": [x, y],
       }
       | {"quests_per_day": QUESTS_PER_DAY[name]}
