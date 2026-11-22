@@ -3,18 +3,19 @@
   "name": "GOLD HILDR",
   "trait": "strong",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-21",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-22",
   "hero": {
-    "level": 2,
-    "exp": 9,
-    "max_hp": 38,
-    "hp": 21,
-    "base_atk": 8,
-    "base_def": 3,
-    "base_spd": 6,
-    "gold": 23,
+    "level": 3,
+    "exp": 3,
+    "max_hp": 41,
+    "hp": 41,
+    "base_atk": 11,
+    "base_def": 7,
+    "base_spd": 7,
+    "base_dex": 9,
+    "gold": 65,
     "potions": 3
   },
   "inventory": {
@@ -23,33 +24,84 @@
   "place": "salina",
   "home_town": "salina",
   "road": null,
-  "quest": null,
+  "quest": {
+    "type": "hunt",
+    "place": "eques",
+    "report": "salina",
+    "monster": "marsh_leech",
+    "count": 3,
+    "template": "salina_1",
+    "name": "干潟のヒル",
+    "rank": 1,
+    "text": "貝を採る干潟にわく沼ヒルを駆除してほしい",
+    "steps": [
+      [
+        "hunt",
+        1
+      ],
+      [
+        "back",
+        1
+      ]
+    ],
+    "away": 1,
+    "town": "salina",
+    "progress": 2,
+    "level": [
+      2,
+      2
+    ],
+    "deadline": null,
+    "cost": 5,
+    "reward": {
+      "exp": 25,
+      "gold": 40,
+      "item": [
+        [
+          "none",
+          88
+        ],
+        [
+          "common",
+          10
+        ],
+        [
+          "rare",
+          2
+        ]
+      ]
+    },
+    "id": "2026-11-21-salina-4"
+  },
   "taken": [
-    "2026-11-21-eques-0"
+    "2026-11-21-salina-4"
   ],
   "season_stats": {
     "quests_done": 1,
     "quests_failed": 0,
-    "kills": 1,
+    "kills": 3,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-21",
+    "date": "2026-11-22",
     "actions": 3,
     "events": [
-      "エクエスで木の剣を買った",
-      "エクエスのギルドで依頼を受けた: ★ 馬の受け渡し（サリナへ荷物を届ける）（行動力 2）",
-      "草原を風が吹き抜けていく",
-      "遠くで羊の群れが草を食んでいる",
-      "サリナに着いた",
-      "依頼達成！★ 馬の受け渡し（サリナへ荷物を届ける）（+10EXP +16G）",
-      "レベルが上がった！ Lv.2",
-      "サリナの周りを散策した",
-      "大ネズミ〔群れ〕を倒した (+9EXP)"
+      "サリナのギルドで依頼を受けた: ★ 干潟のヒル（サリナとエクエスの間の道で沼ヒルを3体討伐）（行動力 5）",
+      "宝箱から26Gを見つけた",
+      "沼ヒル〔毒〕を倒した (+11EXP)",
+      "毒で HP が 3 減った",
+      "沼ヒル〔毒〕を倒した (+11EXP)",
+      "毒で HP が 3 減った",
+      "レベルが上がった！ Lv.3"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-22",
+      "actions": 3,
+      "text": "サリナのギルドで依頼を受けた: ★ 干潟のヒル（サリナとエクエスの間の道で沼ヒルを3体討伐）（行動力 5） / 宝箱から26Gを見つけた / 沼ヒル〔毒〕を倒した (+11EXP) / 毒で HP が 3 減った / 沼ヒル〔毒〕を倒した (+11EXP) / 毒で HP が 3 減った / レベルが上がった！ Lv.3"
+    },
     {
       "date": "2026-11-21",
       "actions": 3,

@@ -3,90 +3,62 @@
   "name": "BERENICE",
   "trait": "swift",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-21",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-22",
   "hero": {
-    "level": 1,
-    "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
-    "base_def": 2,
+    "level": 2,
+    "exp": 25,
+    "max_hp": 38,
+    "hp": 50,
+    "base_atk": 8,
+    "base_def": 6,
     "base_spd": 6,
-    "gold": 0,
+    "base_dex": 7,
+    "gold": 52,
     "potions": 3
   },
   "inventory": {
-    "wooden_sword": 1
+    "wooden_sword": 1,
+    "steel_helm": 1,
+    "wall_shield": 1
   },
   "place": "eques",
   "home_town": "eques",
-  "road": {
-    "to": "karun",
-    "left": 1
-  },
-  "quest": {
-    "type": "deliver",
-    "place": "karun",
-    "report": "karun",
-    "monster": null,
-    "count": 1,
-    "template": "salina_2",
-    "name": "塩の積み出し",
-    "rank": 1,
-    "text": "塩田で作った塩を、冬の保存食にする凍原の村へ届けてほしい",
-    "town": "salina",
-    "progress": 0,
-    "level": [
-      2,
-      2
-    ],
-    "deadline": null,
-    "cost": 4,
-    "reward": {
-      "exp": 20,
-      "gold": 32,
-      "item": [
-        [
-          "none",
-          88
-        ],
-        [
-          "common",
-          10
-        ],
-        [
-          "rare",
-          2
-        ]
-      ]
-    },
-    "id": "2026-11-21-salina-0"
-  },
+  "road": null,
+  "quest": null,
   "taken": [
-    "2026-11-21-salina-0"
+    "2026-11-21-karun-0"
   ],
   "season_stats": {
-    "quests_done": 0,
+    "quests_done": 2,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 1,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-21",
+    "date": "2026-11-22",
     "actions": 3,
     "events": [
-      "サリナで木の剣を買った",
-      "サリナのギルドで依頼を受けた: ★ 塩の積み出し（カルンへ荷物を届ける）（行動力 4）",
-      "葦の間を小舟がすべっていった",
-      "草原を風が吹き抜けていく",
+      "雪原に獣の足跡が続いている",
+      "カルンに着いた",
+      "依頼達成！★ 塩の積み出し（カルンへ荷物を届ける）（+20EXP +32G）",
+      "報酬で★「鋼の兜」を手に入れた（装備した）",
+      "レベルが上がった！ Lv.2",
+      "カルンのギルドで依頼を受けた: ★ 毛皮の交易（エクエスへ荷物を届ける）（行動力 2）",
+      "宝箱から★「城壁の大盾」を手に入れた（装備した）",
+      "大ネズミ〔群れ〕を倒した (+5EXP)",
       "エクエスに着いた",
-      "遠くで雪崩の音がした"
+      "依頼達成！★ 毛皮の交易（エクエスへ荷物を届ける）（+10EXP +16G）"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-22",
+      "actions": 3,
+      "text": "雪原に獣の足跡が続いている / カルンに着いた / 依頼達成！★ 塩の積み出し（カルンへ荷物を届ける）（+20EXP +32G） / 報酬で★「鋼の兜」を手に入れた（装備した） / レベルが上がった！ Lv.2 / カルンのギルドで依頼を受けた: ★ 毛皮の交易（エクエスへ荷物を届ける）（行動力 2） / 宝箱から★「城壁の大盾」を手に入れた（装備した） / 大ネズミ〔群れ〕を倒した (+5EXP) / エクエスに着いた / 依頼達成！★ 毛皮の交易（エクエスへ荷物を届ける）（+10EXP +16G）"
+    },
     {
       "date": "2026-11-21",
       "actions": 3,

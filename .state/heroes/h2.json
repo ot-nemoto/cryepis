@@ -3,18 +3,19 @@
   "name": "CASSIA",
   "trait": "swift",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-21",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-22",
   "hero": {
-    "level": 2,
-    "exp": 8,
-    "max_hp": 38,
-    "hp": 38,
-    "base_atk": 8,
-    "base_def": 3,
-    "base_spd": 6,
-    "gold": 14,
+    "level": 3,
+    "exp": 10,
+    "max_hp": 46,
+    "hp": 37,
+    "base_atk": 10,
+    "base_def": 7,
+    "base_spd": 7,
+    "base_dex": 9,
+    "gold": 38,
     "potions": 2
   },
   "inventory": {
@@ -35,17 +36,13 @@
     "text": "夜の干潟に出て、貝採りを迷わせる鬼火を追い払ってほしい",
     "steps": [
       [
-        "hunt",
-        3
-      ],
-      [
         "back",
         2
       ]
     ],
     "away": 2,
     "town": "salina",
-    "progress": 1,
+    "progress": 4,
     "level": [
       2,
       2
@@ -76,29 +73,31 @@
     },
     "id": "2026-11-21-salina-1"
   },
-  "taken": [
-    "2026-11-21-salina-1"
-  ],
+  "taken": [],
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 2,
+    "kills": 5,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-21",
+    "date": "2026-11-22",
     "actions": 3,
     "events": [
-      "サリナで木の剣を買った",
-      "サリナのギルドで依頼を受けた: ★★ 干潟の鬼火（サリナとムラリスの間の道で鬼火を4体討伐）（行動力 8）",
-      "眼下に雲海が広がっている",
-      "野犬を倒した (+9EXP)",
-      "鬼火〔先手〕を倒した (+9EXP)",
-      "レベルが上がった！ Lv.2"
+      "鬼火を倒した (+10EXP)",
+      "鬼火を倒した (+10EXP)",
+      "レベルが上がった！ Lv.3",
+      "鬼火を倒した (+10EXP)",
+      "討伐の目標を果たした（4体）"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-22",
+      "actions": 3,
+      "text": "鬼火を倒した (+10EXP) / 鬼火を倒した (+10EXP) / レベルが上がった！ Lv.3 / 鬼火を倒した (+10EXP) / 討伐の目標を果たした（4体）"
+    },
     {
       "date": "2026-11-21",
       "actions": 3,
