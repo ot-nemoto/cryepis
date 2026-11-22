@@ -586,7 +586,8 @@ class Day:
     武器を持たない（None）ほうが効くとき（苦手な属性の武器しかないとき）は、武器を持たずに戦う。
     攻める属性は武器の属性。武器に属性がなければ（素手も）、装飾品の属性（attack_element）。
     装飾品は、ふだんの装飾品（equipment）のまま戦う。ただし、魔物の弱点を突ける属性の装飾品を持っていれば、
-    その戦いだけ着け替える。ふだんの装飾品の属性が魔物に苦手なら、外して戦うこともある。"""
+    その戦いだけ着け替える。ふだんの装飾品に属性があれば、属性のない装飾品（いちばん点数の高いもの）に
+    着け替えたり、外したりすることもある（属性が魔物に苦手なとき）。どれにするかは、与えるダメージで決める。"""
     items, crit = self.world["items"], self.cfg["critical"]
     worn = equipment(self.world, self.state)
     usual, enemy = worn["accessory"], monster.get("element")
@@ -596,8 +597,12 @@ class Day:
       for i in sorted(self.state["inventory"])
       if items[i]["slot"] == "accessory" and i != usual and element_rate(self.world, items[i].get("element"), enemy) > 1
     ]
-    if usual and items[usual].get("element"):
-      accessories.append(None)  # 属性の装飾品が苦手な相手なら、外して戦う
+    if usual and items[usual].get("element"):  # 属性の装飾品が苦手な相手なら、属性のない装飾品に着け替えるか外す
+      rank = {r: n for n, r in enumerate(self.world["rarities"])}
+      plain = [i for i in self.state["inventory"] if items[i]["slot"] == "accessory" and not items[i].get("element")]
+      if plain:
+        accessories.append(max(sorted(plain), key=lambda i: equip_key(self.world, items[i], rank)))
+      accessories.append(None)
     best = None
     for acc in accessories:
       for iid in [*sorted(i for i in self.state["inventory"] if items[i]["slot"] == "weapon"), None]:

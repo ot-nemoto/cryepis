@@ -960,7 +960,7 @@ def build_guide(world: dict) -> str:
   labels = dict(ITEM_STATS)
   weight_rows = [
     (escape(labels[k]), escape(f"{v:g} 点"), escape(f"{1 / v:g}" if v else "—")) for k, v in points["weights"].items()
-  ]
+  ] + [("属性", escape(f"{points.get('element', 0):g} 点"), "属性 1 つ")]
   rarity_rows = [
     (
       escape(game.rarity_mark(world, r)),

@@ -664,13 +664,15 @@ def validate(raw: dict) -> list[str]:
     not isinstance(weights, dict)
     or set(weights) != set(REWARD_STATS)
     or any(not _num(v) or v <= 0 for v in weights.values())  # 0 だと、その能力をいくら足しても点数が増えない
+    or not _num(points.get("element"))
+    or points["element"] < 0
     or not isinstance(caps, dict)
     or set(caps) != set(rarities)
     or any(not _num(v) or v < 0 for v in caps.values())
   ):
     err(
       "season.json: item_points は {weights: {hp/atk/def/spd/dex: 能力 +1 の点数（0 より大きい数）}, "
-      f"max: {{{'/'.join(rarities)}: 点数の上限（0 以上）}}}} にしてください"
+      f"element: 属性の点数（0 以上）, max: {{{'/'.join(rarities)}: 点数の上限（0 以上）}}}} にしてください"
     )
   elif not errors:
     for iid, it in items.items():
@@ -683,8 +685,10 @@ def validate(raw: dict) -> list[str]:
 
 
 def item_points(item: dict, cfg: dict) -> float:
-  """アイテムの点数（能力の増減 × season.json の item_points.weights の合計。マイナスの能力も同じ重みで引く）。"""
-  return sum(cfg["weights"].get(k, 0) * item.get(k, 0) for k in REWARD_STATS)
+  """アイテムの点数（能力の増減 × season.json の item_points.weights の合計。マイナスの能力も同じ重みで引く）。
+  属性があれば item_points.element を足す。"""
+  stats = sum(cfg["weights"].get(k, 0) * item.get(k, 0) for k in REWARD_STATS)
+  return stats + (cfg.get("element", 0) if item.get("element") else 0)
 
 
 # ---- 組み立て -------------------------------------------------------------------------

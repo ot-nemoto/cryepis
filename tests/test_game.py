@@ -974,7 +974,9 @@ class BattleDepthTest(unittest.TestCase):
       "x_flame": {"name": "試しの炎の剣", "atk": 2, "element": "flame", "rarity": "rare"},
       "x_flame_charm": {"name": "試しの炎の護符", "slot": "accessory", "element": "flame", "rarity": "rare"},
     }
-    items = {k: {"id": k, "slot": "weapon", "rarity": "common", "price": 100} | v for k, v in test_items.items()}
+    items = {
+      k: {"id": k, "slot": "weapon", "rarity": "common", "price": 100} | v for k, v in test_items.items()
+    }  # 毎回作り直す
     eques = WORLD["places"]["eques"]
     for target, values in ((WORLD["items"], items), (eques, {"shop": eques["shop"] + ["x_lance"]})):
       patch = mock.patch.dict(target, values)
@@ -1086,11 +1088,11 @@ class BattleDepthTest(unittest.TestCase):
 
   def test_accessory_element_goes_to_attacks_without_one(self):
     state = self.hero_state(base_atk=20)
-    state["inventory"] = {"iron_sword": 1, "x_flame_charm": 1}  # 試しの炎の護符（炎）
+    state["inventory"] = {"iron_sword": 1, "crimson_grass_charm": 1}  # 紅蓮草の護符（炎）
     day = day_of(state)
-    self.assertEqual(G.attack_element(WORLD, "iron_sword", "x_flame_charm"), "flame")  # 属性のない武器にも炎が付く
-    self.assertEqual(G.attack_element(WORLD, None, "x_flame_charm"), "flame")  # 素手でも
-    self.assertEqual(G.attack_element(WORLD, "x_lance", "x_flame_charm"), "thunder")  # 属性の武器なら、武器の属性
+    self.assertEqual(G.attack_element(WORLD, "iron_sword", "crimson_grass_charm"), "flame")  # 属性のない武器にも炎
+    self.assertEqual(G.attack_element(WORLD, None, "crimson_grass_charm"), "flame")  # 素手でも
+    self.assertEqual(G.attack_element(WORLD, "x_lance", "crimson_grass_charm"), "thunder")  # 属性の武器なら、武器の属性
     _, rate, _, _ = day.pick_weapon(self.monster(element="thunder"), 0)
     self.assertEqual(rate, WORLD["season"]["element_rates"]["strong"])  # 炎は雷に強い
     day.battle(self.monster(element="thunder", hp=1))
@@ -1100,30 +1102,43 @@ class BattleDepthTest(unittest.TestCase):
     day.battle(self.monster(element="thunder", hp=1))
     self.assertIn("（弱点を突いた）", day.events[-1])
 
-  def test_elemental_accessory_is_worn_only_against_its_weak_foe(self):
+  def test_elemental_accessory_is_worn_unless_the_foe_resists(self):
     state = self.hero_state(base_atk=20)
-    state["inventory"] = {"iron_sword": 1, "soaring_leaf_charm": 1, "x_flame_charm": 1}
-    self.assertEqual(G.equipment(WORLD, state)["accessory"], "soaring_leaf_charm")  # ふだんは点数の高い翔天葉の護符
+    state["inventory"] = {"iron_sword": 1, "soaring_leaf_charm": 1, "crimson_grass_charm": 1}
+    # どちらも 1 点（紅蓮草の護符は炎属性の 1 点）。珍しい紅蓮草の護符がふだんの装飾品
+    self.assertEqual(G.equipment(WORLD, state)["accessory"], "crimson_grass_charm")
     day = day_of(state)
-    _, rate, held, acc = day.pick_weapon(
-      self.monster(element="thunder", spd=1), 0
-    )  # 雷の相手: 試しの炎の護符に着け替える
+    _, rate, _, acc = day.pick_weapon(self.monster(element="thunder"), 0)  # 雷の相手: 着けたまま弱点を突く
+    self.assertEqual((acc, rate), ("crimson_grass_charm", WORLD["season"]["element_rates"]["strong"]))
+    _, rate, held, acc = day.pick_weapon(self.monster(element="ice"), 0)  # 氷には炎が苦手 → 翔天葉の護符に着け替える
+    self.assertEqual((acc, rate), ("soaring_leaf_charm", 1.0))
+    self.assertEqual(held["spd"], state["hero"]["base_spd"] + 2)
+    _, rate, _, acc = day.pick_weapon(self.monster(), 0)  # 属性のない相手は、ふだんの装飾品のまま
+    self.assertEqual((acc, rate), ("crimson_grass_charm", 1.0))
+
+  def test_elemental_accessory_is_swapped_in_against_its_weak_foe(self):
+    state = self.hero_state(base_atk=20)
+    state["inventory"] = {"iron_sword": 1, "silkvine_charm": 1, "x_flame_charm": 1}  # 試しの炎の護符は 1 点の ★
+    WORLD["items"]["x_flame_charm"].update(rarity="common", price=10)  # setUp で毎回作り直す仮の品
+    self.assertEqual(G.equipment(WORLD, state)["accessory"], "silkvine_charm")  # 同じ 1 点・同じ ★ なら値段の高いほう
+    day = day_of(state)
+    _, rate, held, acc = day.pick_weapon(self.monster(element="thunder"), 0)  # 雷の相手: その戦いだけ着け替える
     self.assertEqual((acc, rate), ("x_flame_charm", WORLD["season"]["element_rates"]["strong"]))
-    self.assertEqual(held["spd"], state["hero"]["base_spd"])  # その戦いは翔天葉の護符の速 +2 がない
+    self.assertEqual(held["dex"], state["hero"]["base_dex"])  # その戦いは糸紡蔓の護符の器 +5 がない
     day.battle(self.monster(element="thunder", hp=1))
     self.assertIn("（試しの炎の護符で弱点を突いた）", day.events[-1])
     for enemy in ("ice", "flame", None):  # 弱点を突けない相手では、ふだんの装飾品のまま
       _, rate, _, acc = day.pick_weapon(self.monster(element=enemy), 0)
-      self.assertEqual((acc, rate), ("soaring_leaf_charm", 1.0), enemy)
+      self.assertEqual((acc, rate), ("silkvine_charm", 1.0), enemy)
 
   def test_elemental_accessory_is_taken_off_against_a_strong_foe(self):
     state = self.hero_state(base_atk=20)
-    state["inventory"] = {"x_flame_charm": 1}  # 装飾品は試しの炎の護符だけ（ふだんも着けている）
+    state["inventory"] = {"crimson_grass_charm": 1}  # 装飾品は紅蓮草の護符だけ
     day = day_of(state)
     _, rate, _, acc = day.pick_weapon(self.monster(element="ice"), 0)  # 氷には炎が苦手 → 外して戦う
     self.assertEqual((acc, rate), (None, 1.0))
     _, rate, _, acc = day.pick_weapon(self.monster(), 0)
-    self.assertEqual((acc, rate), ("x_flame_charm", 1.0))  # 属性のない相手は、着けたまま
+    self.assertEqual((acc, rate), ("crimson_grass_charm", 1.0))  # 属性のない相手は、着けたまま
 
   def test_shop_buys_weapons_with_new_elements(self):
     state = self.hero_state(gold=10000)

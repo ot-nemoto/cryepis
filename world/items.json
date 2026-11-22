@@ -13,6 +13,6 @@
   {"id": "steel_sword", "name": "鋼鉄の剣", "slot": "weapon", "rarity": "rare", "atk": 2, "towns": ["salina"]},
   {"id": "steel_helm", "name": "鋼鉄の兜", "slot": "helmet", "rarity": "rare", "def": 4, "towns": ["eques"]},
   {"id": "steel_shield", "name": "鋼鉄の盾", "slot": "shield", "rarity": "rare", "hp": 5, "def": 4, "spd": -2, "towns": ["karun"]},
-  {"id": "lifevein_charm", "name": "命脈根の護符", "slot": "accessory", "rarity": "rare", "hp": 10, "towns": ["muralis"]}
+  {"id": "crimson_grass_charm", "name": "紅蓮草の護符", "slot": "accessory", "rarity": "rare", "element": "flame", "towns": ["muralis"]}
  ]
 }
