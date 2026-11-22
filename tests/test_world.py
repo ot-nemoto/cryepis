@@ -306,7 +306,7 @@ class ValidateTest(unittest.TestCase):
   def test_every_slot_has_items_in_a_shop(self):
     sold = {sid for p in RAW["map"]["places"] for sid in p.get("shop", [])}
     items = {i["id"]: i for i in RAW["items"]}
-    self.assertEqual({items[i]["slot"] for i in sold}, {"weapon", "helmet", "shield"})  # 装飾品（★）はまだ決めていない
+    self.assertEqual({items[i]["slot"] for i in sold}, set(W.SLOTS))
 
   def test_town_quests_are_checked(self):
     def town_quest(**change):
