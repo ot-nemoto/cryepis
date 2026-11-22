@@ -780,9 +780,12 @@ class Day:
     potion = self.cfg["potion"]
     reserve = potion["price"] * max(0, potion["keep"] - hero["potions"])  # 回復薬の分は残して装備を買う
     worn = equipment(self.world, self.state)
-    for iid in self.world["places"][town].get("shop", []):
+    rank = {r: n for n, r in enumerate(self.world["rarities"])}
+    key = lambda i: equip_key(self.world, items[i], rank)  # noqa: E731  装備を選ぶときと同じ比べ方
+    # 強い品から順に見る（買える中でいちばん強い品を買い、それより弱い品は買わない）
+    for iid in sorted(self.world["places"][town].get("shop", []), key=key, reverse=True):
       item, cur = items[iid], worn[items[iid]["slot"]]
-      better = cur is None or item_score(self.world, item) > item_score(self.world, items[cur])
+      better = cur is None or key(iid) > key(cur)
       # まだ持っていない属性の武器も買う（属性の弱点を突くために、戦いのたびに持ち替える）
       owned = {items[i].get("element") for i in self.state["inventory"] if items[i]["slot"] == "weapon"}
       better = better or (item["slot"] == "weapon" and item.get("element") and item["element"] not in owned)

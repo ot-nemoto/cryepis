@@ -403,11 +403,11 @@ class BattleAndItemTest(unittest.TestCase):
 
   def test_best_item_is_equipped(self):
     state = G.new_state(WORLD)
-    state["inventory"] = {"wooden_helm": 1, "iron_helm": 1, "steel_sword": 1}  # 木の兜 0.5 点、鉄の兜 0 点
+    state["inventory"] = {"wooden_helm": 1, "iron_helm": 1, "steel_sword": 1}  # 兜はどちらも 1 点、鉄の兜のほうが高い
     worn = G.equipment(WORLD, state)
-    self.assertEqual((worn["weapon"], worn["helmet"], worn["accessory"]), ("steel_sword", "wooden_helm", None))
+    self.assertEqual((worn["weapon"], worn["helmet"], worn["accessory"]), ("steel_sword", "iron_helm", None))
     s = G.stats(WORLD, state)
-    self.assertEqual(s["def"], state["hero"]["base_def"] + 1)
+    self.assertEqual(s["def"], state["hero"]["base_def"] + 2)
     self.assertEqual(s["atk"], state["hero"]["base_atk"] + 2)  # 鋼鉄の剣は攻 +2
 
   def test_rare_item_is_recorded(self):
@@ -473,8 +473,8 @@ class BattleAndItemTest(unittest.TestCase):
     worn = G.equipment(WORLD, state)
     self.assertEqual(list(worn.values()), ["iron_sword", "iron_helm", "wooden_shield", "lifeblood_charm"])
     s = G.stats(WORLD, state)
-    self.assertEqual(s["def"], state["hero"]["base_def"] + 2 + 1)  # 鉄の兜 +2・木の盾 +1（鉄の盾は 0 点で使わない）
-    self.assertEqual(s["spd"], state["hero"]["base_spd"] - 2)  # 鉄の兜の速 -2
+    self.assertEqual(s["def"], state["hero"]["base_def"] + 2 + 2)  # 鉄の兜 +2・木の盾 +2（鉄の盾は同じ 1 点で速 -1）
+    self.assertEqual(s["spd"], state["hero"]["base_spd"])
     self.assertEqual(s["atk"], state["hero"]["base_atk"] + 1)
     self.assertEqual(s["max_hp"], state["hero"]["max_hp"] + 5)  # 活血樹の護符は HP +5
 
@@ -485,9 +485,10 @@ class BattleAndItemTest(unittest.TestCase):
 
   def test_equipment_follows_the_item_points(self):
     state = G.new_state(WORLD)
-    state["inventory"] = {"wooden_shield": 1, "iron_shield": 1}  # 木の盾 0.5 点、鉄の盾 0 点（防 +2・速 -2）
+    state["inventory"] = {"wooden_shield": 1, "iron_shield": 1}  # どちらも 1 点。速 -1 のない木の盾
     self.assertEqual(G.equipment(WORLD, state)["shield"], "wooden_shield")
-    self.assertEqual(G.item_score(WORLD, WORLD["items"]["iron_shield"]), 0)
+    for iid in ("wooden_helm", "iron_helm", "wooden_shield", "iron_shield"):  # 兜と盾はどれも 1 点
+      self.assertEqual(G.item_score(WORLD, WORLD["items"][iid]), 1, iid)
     self.assertEqual(G.item_score(WORLD, WORLD["items"]["iron_axe"]), 1)  # 攻 +2・速 -2 は 2 − 1
 
 
@@ -1157,6 +1158,27 @@ class BattleDepthTest(unittest.TestCase):
     self.assertEqual((acc, rate), (None, 1.0))
     _, rate, _, acc = day.pick_weapon(self.monster(), 0)
     self.assertEqual((acc, rate), ("crimson_grass_charm", 1.0))  # 属性のない相手は、着けたまま
+
+  def test_shop_buys_the_best_item_it_can_afford(self):
+    state = self.hero_state(gold=10000)
+    state["hero"]["potions"] = 3
+    day_of(state).shop("salina")  # 兜はどちらも 1 点。値段の高い鉄の兜だけを買い、木の兜は買わない
+    self.assertIn("iron_helm", state["inventory"])
+    self.assertNotIn("wooden_helm", state["inventory"])
+    state = self.hero_state(gold=10000)
+    state["hero"]["potions"] = 3
+    state["inventory"] = {"wooden_helm": 1}  # 木の兜を持っていても、鉄の兜に買い替える
+    day_of(state).shop("salina")
+    self.assertEqual(G.equipment(WORLD, state)["helmet"], "iron_helm")
+    poor = self.hero_state(gold=40)
+    poor["hero"]["potions"] = 3
+    day_of(poor).shop("salina")  # 50G の鉄の兜は買えないので、30G の木の兜
+    self.assertIn("wooden_helm", poor["inventory"])
+    rich = self.hero_state(gold=10000)
+    rich["hero"]["potions"] = 3
+    day_of(rich).shop("salina")
+    charms = [i for i in rich["inventory"] if WORLD["items"][i]["slot"] == "accessory"]
+    self.assertEqual(len(charms), 1)  # 同じ点数・同じ値段の護符は 1 つだけ買う
 
   def test_shop_buys_weapons_with_new_elements(self):
     state = self.hero_state(gold=10000)
