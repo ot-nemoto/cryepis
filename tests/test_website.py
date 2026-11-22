@@ -328,6 +328,8 @@ class SiteTest(unittest.TestCase):
     )  # 強い相手・苦手な相手・鉱石
     self.assertIn("器用さ ÷ 150 の確率で、ダメージが 3 倍", html)
     self.assertIn("最大 HP の 50% まで回復", html)
+    self.assertIn("<h3>依頼の進め方</h3>", html)
+    self.assertIn("HP が最大 HP の 30% 未満で回復薬もなければ", html)  # season.json の retreat_hp_rate
     self.assertIn("Lv20 で 182。特性で変わる", html)
     self.assertIn("<h3>魔物の経験値とお金</h3>", html)
     item = html.split("<h3>アイテムの強さ</h3>")[1].split("</div></div>")[0]  # 点数の重みと、珍しさごとの点数
@@ -369,6 +371,8 @@ class SiteTest(unittest.TestCase):
     self.assertIn("攻は Lv1 で 6、Lv20 で 30", html)
     self.assertIn('<td><span class="tag">雷属性</span></td><td>氷</td><td>炎・氷</td>', html)
     self.assertIn('<td><span class="tag">炎属性</span></td><td>雷</td><td>-</td>', html)
+    world["season"]["retreat_hp_rate"] = 0.5
+    self.assertIn("HP が最大 HP の 50% 未満", website.build_guide(world))
 
   def test_boss_without_an_area_is_in_the_other_group(self):
     world = copy.deepcopy(WORLD)
