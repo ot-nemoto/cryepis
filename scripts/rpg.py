@@ -226,7 +226,7 @@ def build_text(world: dict, state: dict, fold: bool = True) -> str:
   rank = {r: i for i, r in enumerate(world["rarities"])}
   inv = sorted(
     state["inventory"].items(),
-    key=lambda kv: (-rank[world["items"][kv[0]]["rarity"]], -game.item_score(world["items"][kv[0]]), kv[0]),
+    key=lambda kv: (-rank[world["items"][kv[0]]["rarity"]], -game.item_score(world, world["items"][kv[0]]), kv[0]),
   )
   detail += ["", "── 持ち物（シーズンをまたいで持ち越す）──"]
   detail += [f"{item_label(world, iid)}" + (f" ×{n}" if n > 1 else "") for iid, n in inv] or ["なし"]

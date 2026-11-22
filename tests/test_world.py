@@ -354,7 +354,33 @@ class ValidateTest(unittest.TestCase):
         {"id": "god_sword", "name": "神の剣", "slot": "weapon", "rarity": "legendary", "atk": 99, "towns": ["salina"]}
       )
 
-    self.assertError(change, ["強すぎ"])
+    self.assertError(change, ["god_sword", "点数 99", "legendary"])
+
+  def test_item_points_follow_the_rarity(self):
+    cfg = RAW["season"]["item_points"]
+    for iid, it in WORLD["items"].items():
+      low, high = cfg["rarity"][it["rarity"]]
+      self.assertTrue(low <= W.item_points(it, cfg) <= high + 1e-9, iid)
+    self.assertAlmostEqual(W.item_points({"atk": 3, "spd": -1}, cfg), 2)  # マイナスは引く
+    self.assertAlmostEqual(W.item_points({"hp": 5, "def": 2, "dex": 5}, cfg), 3)  # HP 5・防 2・器 5 がそれぞれ 1 点
+
+    def weak_common(r):
+      next(i for i in r["items"] if i["id"] == "wooden_sword")["atk"] = 0  # 0 点
+
+    self.assertError(weak_common, ["wooden_sword", "点数 0", "common"])
+
+    def common_element(r):
+      next(i for i in r["items"] if i["id"] == "iron_sword")["element"] = "fire"
+
+    self.assertError(common_element, ["iron_sword", "属性", "common"])
+
+    def bad_cfg(r):
+      del r["season"]["item_points"]["rarity"]["epic"]
+
+    self.assertError(bad_cfg, ["item_points"])
+    self.assertError(
+      lambda r: r["season"]["item_points"]["weights"].update({"def": 0}), ["item_points"]
+    )  # 0 は使えない
 
   def test_season_start_day_must_exist_in_every_month(self):
     def change(r):

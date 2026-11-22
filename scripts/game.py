@@ -222,18 +222,29 @@ def save_state(state: dict, path: Path) -> None:
 
 
 # ---- 装備と能力値 ----------------------------------------------------------------------
-def item_score(item: dict) -> float:
-  return item.get("atk", 0) + item.get("def", 0) + item.get("hp", 0) / 4
+def item_score(world: dict, item: dict) -> float:
+  """アイテムの強さ（点数。season.json の item_points）。装備を選ぶ・買うときに比べる。"""
+  return W.item_points(item, world["season"]["item_points"])
+
+
+def minus_points(world: dict, item: dict) -> float:
+  """アイテムのマイナスの能力の点数（0 以上。損のないアイテムは 0）。"""
+  weights = world["season"]["item_points"]["weights"]
+  return -sum(weights.get(k, 0) * v for k, v in item.items() if k in W.REWARD_STATS and isinstance(v, int) and v < 0)
+
+
+def equip_key(world: dict, item: dict, rank: dict[str, int]) -> tuple:
+  """装備を比べる順: 点数 → 珍しさ → マイナスの少なさ（同じ点数なら、損のないものを選ぶ） → 値段の高さ。"""
+  return (item_score(world, item), rank[item["rarity"]], -minus_points(world, item), item.get("price", 0))
 
 
 def equipment(world: dict, state: dict) -> dict[str, str | None]:
-  """部位ごとに、持ち物の中でいちばん強いアイテムの ID（なければ None）。"""
+  """部位ごとに、持ち物の中でいちばん強いアイテムの ID（なければ None）。比べ方は equip_key（すべて同じなら ID の順）。"""
   rank = {r: i for i, r in enumerate(world["rarities"])}
   best: dict[str, str | None] = {slot: None for slot in W.SLOTS}
   for iid in sorted(state["inventory"]):
     item, cur = world["items"][iid], best[world["items"][iid]["slot"]]
-    key = (item_score(item), rank[item["rarity"]])
-    if cur is None or key > (item_score(world["items"][cur]), rank[world["items"][cur]["rarity"]]):
+    if cur is None or equip_key(world, item, rank) > equip_key(world, world["items"][cur], rank):
       best[item["slot"]] = iid
   return best
 
@@ -242,10 +253,11 @@ def hero_trait(world: dict, state: dict) -> dict:
   return world["season"]["hero_traits"].get(state.get("trait"), {})
 
 
-def stats(world: dict, state: dict) -> dict[str, int]:
-  """装備を足した能力値（素早さは 1 より下にはならない）。特性は、レベルで決まる基本の能力に効く（base_stats）。"""
+def stats(world: dict, state: dict, held: dict[str, str | None] | None = None) -> dict[str, int]:
+  """装備を足した能力値（素早さは 1 より下にはならない）。特性は、レベルで決まる基本の能力に効く（base_stats）。
+  held を渡すと、その部位だけ持ち替えた能力（{"weapon": ID か None}。戦いで武器を持ち替えたとき）。"""
   hero = state["hero"]
-  worn = [world["items"][i] for i in equipment(world, state).values() if i]
+  worn = [world["items"][i] for i in (equipment(world, state) | (held or {})).values() if i]
   return {
     "atk": hero["base_atk"] + sum(i.get("atk", 0) for i in worn),
     "def": hero["base_def"] + sum(i.get("def", 0) for i in worn),
@@ -558,36 +570,35 @@ class Day:
       return hit * crit["multiplier"]
     return hit
 
-  def pick_weapon(self, monster: dict, guard: int) -> tuple[str | None, float, int]:
+  def pick_weapon(self, monster: dict, guard: int) -> tuple[str | None, float, dict[str, int]]:
     """この魔物に、1 回の攻撃の番でいちばんダメージの大きい武器（持ち物から持ち替える）と、属性の倍率と、
-    その武器を持ったときの素早さ。ダメージは、魔物の守り（性質で変わったあと）・属性・2 回攻撃まで考える。"""
-    items, s = self.world["items"], self.stats
+    その武器を持ったときの能力（stats。攻撃・素早さだけでなく、武器の HP・防御・器用さも持ち替えたものになる）。
+    ダメージは、魔物の守り（性質で変わったあと）・属性・2 回攻撃・会心の平均まで考える。
+    武器を持たない（None）ほうが効くとき（苦手な属性の武器しかないとき）は、武器を持たずに戦う。"""
+    items, crit = self.world["items"], self.cfg["critical"]
     worn = equipment(self.world, self.state)["weapon"]
-    base_atk = s["atk"] - (items[worn].get("atk", 0) if worn else 0)
-    base_spd = s["spd"] - (items[worn].get("spd", 0) if worn else 0)
-    mspd = monster.get("spd", s["spd"])
     best = None
-    for iid in sorted(i for i in self.state["inventory"] if items[i]["slot"] == "weapon") or [None]:
-      w = items[iid] if iid else {}
-      rate = element_rate(self.world, w.get("element"), monster.get("element"))
-      spd = max(1, base_spd + w.get("spd", 0))
-      hits = 2 if spd >= 2 * mspd else 1
-      key = (max(1, base_atk + w.get("atk", 0) - guard // 2) * rate * hits, iid == worn)  # 同じなら、いつもの武器
+    for iid in [*sorted(i for i in self.state["inventory"] if items[i]["slot"] == "weapon"), None]:
+      s = stats(self.world, self.state, {"weapon": iid})
+      rate = element_rate(self.world, (items[iid] if iid else {}).get("element"), monster.get("element"))
+      hits = 2 if s["spd"] >= 2 * monster.get("spd", s["spd"]) else 1
+      crits = 1 + (crit["multiplier"] - 1) * s["dex"] / crit["dex_divisor"]
+      key = (max(1, s["atk"] - guard // 2) * rate * hits * crits, iid == worn)  # 同じなら、いつもの武器
       if best is None or key > best[0]:
-        best = (key, iid, rate, spd)
+        best = (key, iid, rate, s)
     return best[1], best[2], best[3]
 
   def battle(self, monster: dict) -> bool:
     """勝てば True。回復薬が尽きて HP が 0 になったら False。
     魔物の性質（trait）・属性の相性（武器の属性と魔物の属性）・素早さで戦い方が変わる。
     素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する（性質「先手」は、素早さに関係なく魔物が先）。
-    勇者は戦いのたびに、持ち物の中からいちばん効く武器に持ち替える（攻撃と素早さは、持ち替えた武器のもの）。"""
-    hero, s, trait = self.hero, self.stats, monster.get("trait")
+    勇者は戦いのたびに、持ち物の中からいちばん効く武器に持ち替える（能力は、持ち替えた武器のもの）。"""
+    hero, trait = self.hero, monster.get("trait")
     e = W.trait_effect(monster)  # 凶暴・硬い・群れで変わる値
     hp, atk, guard, hits = e["hp"], e["atk"], e["guard"], e["hits"]
-    weapon, rate, spd = self.pick_weapon(monster, guard)
+    weapon, rate, s = self.pick_weapon(monster, guard)
     items, worn = self.world["items"], equipment(self.world, self.state)["weapon"]
-    hero_atk = s["atk"] - (items[worn].get("atk", 0) if worn else 0) + (items[weapon].get("atk", 0) if weapon else 0)
+    hero_atk, spd = s["atk"], s["spd"]
     mspd = monster.get("spd", spd)
     hero_hits = 2 if spd >= 2 * mspd else 1
     hits *= 2 if mspd >= 2 * spd else 1
@@ -738,7 +749,7 @@ class Day:
     worn = equipment(self.world, self.state)
     for iid in self.world["places"][town].get("shop", []):
       item, cur = items[iid], worn[items[iid]["slot"]]
-      better = cur is None or item_score(item) > item_score(items[cur])
+      better = cur is None or item_score(self.world, item) > item_score(self.world, items[cur])
       # まだ持っていない属性の武器も買う（属性の弱点を突くために、戦いのたびに持ち替える）
       owned = {items[i].get("element") for i in self.state["inventory"] if items[i]["slot"] == "weapon"}
       better = better or (item["slot"] == "weapon" and item.get("element") and item["element"] not in owned)
