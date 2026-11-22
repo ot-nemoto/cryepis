@@ -378,6 +378,9 @@ class ValidateTest(unittest.TestCase):
       del r["season"]["item_points"]["rarity"]["epic"]
 
     self.assertError(bad_cfg, ["item_points"])
+    self.assertError(
+      lambda r: r["season"]["item_points"]["weights"].update({"def": 0}), ["item_points"]
+    )  # 0 は使えない
 
   def test_season_start_day_must_exist_in_every_month(self):
     def change(r):

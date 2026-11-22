@@ -659,7 +659,7 @@ def validate(raw: dict) -> list[str]:
   if (
     not isinstance(weights, dict)
     or set(weights) != set(REWARD_STATS)
-    or any(not _num(v) or v < 0 for v in weights.values())
+    or any(not _num(v) or v <= 0 for v in weights.values())  # 0 だと、その能力をいくら足しても点数が増えない
     or not isinstance(ranges, dict)
     or set(ranges) != set(rarities)
     or any(
@@ -667,7 +667,7 @@ def validate(raw: dict) -> list[str]:
     )
   ):
     err(
-      "season.json: item_points は {weights: {hp/atk/def/spd/dex: 能力 +1 の点数（0 以上）}, "
+      "season.json: item_points は {weights: {hp/atk/def/spd/dex: 能力 +1 の点数（0 より大きい数）}, "
       f"rarity: {{{'/'.join(rarities)}: [最小, 最大]}}}} にしてください"
     )
   elif not errors:
