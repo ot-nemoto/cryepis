@@ -66,9 +66,7 @@ SEASON_KEYS = {
   "retreat_hp_rate": (float, 0, 1),
   "quest_open_days": (int, 1, 30),
   "deliver_range": (int, 1, BIG),
-  "balance_level": (int, 1, BIG),
   "max_level": (int, 1, BIG),
-  "item_power_rate": (float, 0.01, BIG),
 }
 HERO_KEYS = {
   "max_hp": (int, 1, BIG),
@@ -654,18 +652,38 @@ def validate(raw: dict) -> list[str]:
       else:
         err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
 
-  # 釣り合い: 部位ごとに最も強い装備を足しても、典型的なレベルの基本能力値の一定割合を超えない
-  if not errors:
-    level, rate = season["balance_level"], season["item_power_rate"]
-    for stat in STATS:
-      best = sum(max((it.get(stat, 0) for it in items.values() if it["slot"] == slot), default=0) for slot in SLOTS)
-      limit = stat_at(season, stat, level) * rate
-      if best > limit:
-        err(
-          f"items.json: 部位ごとの最強装備の {stat} の合計 {best} が、Lv.{level} の基本値の "
-          f"{rate:.0%}（{limit:.1f}）を超えています（アイテムが強すぎます）"
-        )
+  # 強さ: アイテムの点数（season.json の item_points）が、珍しさごとの範囲に入る
+  points = season.get("item_points")
+  weights = points.get("weights") if isinstance(points, dict) else None
+  ranges = points.get("rarity") if isinstance(points, dict) else None
+  if (
+    not isinstance(weights, dict)
+    or set(weights) != set(REWARD_STATS)
+    or any(not _num(v) or v < 0 for v in weights.values())
+    or not isinstance(ranges, dict)
+    or set(ranges) != set(rarities)
+    or any(
+      not isinstance(r, list) or len(r) != 2 or not all(_num(v) for v in r) or r[0] > r[1] for r in ranges.values()
+    )
+  ):
+    err(
+      "season.json: item_points は {weights: {hp/atk/def/spd/dex: 能力 +1 の点数（0 以上）}, "
+      f"rarity: {{{'/'.join(rarities)}: [最小, 最大]}}}} にしてください"
+    )
+  elif not errors:
+    for iid, it in items.items():
+      low, high = ranges[it["rarity"]]
+      pts = item_points(it, points)
+      if not low - 1e-9 <= pts <= high + 1e-9:
+        err(f"items.json の {iid}: 点数 {pts:g} が、{it['rarity']} の範囲（{low:g}〜{high:g} 点）に入っていません")
+      if "element" in it and it["rarity"] == COMMON:
+        err(f"items.json の {iid}: 属性は common には付けられません（rare から）")
   return errors
+
+
+def item_points(item: dict, cfg: dict) -> float:
+  """アイテムの点数（能力の増減 × season.json の item_points.weights の合計。マイナスの能力は引く）。"""
+  return sum(cfg["weights"].get(k, 0) * item.get(k, 0) for k in REWARD_STATS)
 
 
 # ---- 組み立て -------------------------------------------------------------------------

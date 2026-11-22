@@ -186,8 +186,8 @@ class SiteTest(unittest.TestCase):
     header = html.split("<th>名前</th>")[1].split("</tr>")[0]  # 表の見出しの行
     self.assertNotIn("性能", header)
     self.assertNotIn("手に入れ方", header)
-    steel = html.split("鋼の剣")[1].split("</tr>")[0]  # 攻+7・速-1、鋼の剣を売る開放した町はムラリスだけ
-    self.assertIn('<td class="num zero">0</td><td class="num">+7</td><td class="num zero">0</td>', steel)
+    steel = html.split("鋼の剣")[1].split("</tr>")[0]  # 攻+3・速-1、鋼の剣を売る開放した町はムラリスだけ
+    self.assertIn('<td class="num zero">0</td><td class="num">+3</td><td class="num zero">0</td>', steel)
     self.assertIn('<td class="num minus">-1</td>', steel)  # マイナスは赤字
     self.assertIn('<td><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a></td>', steel)  # 買える店
     self.assertNotIn("依頼の報酬", html)  # 入手方法の補足の文は出さない
@@ -195,11 +195,10 @@ class SiteTest(unittest.TestCase):
     self.assertIn(
       '<th>名前</th><th></th><th class="icon">属性</th><th class="num">HP</th>', html
     )  # 特産の列は見出しなし
-    lance = html.split("騎兵の槍</td>")[1].split("</tr>")[0]  # エクエスの特産・木属性
+    lance = html.split("騎兵の槍</td>")[1].split("</tr>")[0]  # エクエスの特産・属性なし（属性は ★★ から）
     self.assertTrue(
       lance.startswith(
-        '<td class="icon"><span class="tag" title="エクエスの特産">特産</span></td>'
-        '<td class="icon"><span class="tag">木属性</span></td>'
+        '<td class="icon"><span class="tag" title="エクエスの特産">特産</span></td><td class="icon"></td>'
       ),
       lance,
     )
@@ -259,7 +258,7 @@ class SiteTest(unittest.TestCase):
     by_name = {it["name"]: it for it in WORLD["items"].values()}
     keys = [(W.SLOTS.index(by_name[n]["slot"]), -by_name[n]["price"]) for n in names]
     self.assertEqual(keys, sorted(keys))
-    self.assertEqual(names[:2], ["鋼の剣", "鉄の剣"])
+    self.assertEqual(set(names[:2]), {"鋼の剣", "鉄の剣"})  # どちらも 120G
 
   def test_story_page(self):
     entries, _, today = party(2, 2)
@@ -337,6 +336,11 @@ class SiteTest(unittest.TestCase):
     self.assertIn("最大 HP の 50% まで回復", html)
     self.assertIn("Lv20 で 182。特性で変わる", html)
     self.assertIn("<h3>魔物の経験値とお金</h3>", html)
+    item = html.split("<h3>アイテムの強さ</h3>")[1].split("</div></div>")[0]  # 点数の重みと、珍しさごとの点数
+    self.assertIn("<tr><td>HP</td><td>0.2 点</td><td>5</td></tr>", item)
+    self.assertIn("<tr><td>防</td><td>0.5 点</td><td>2</td></tr>", item)
+    self.assertIn("<tr><td>★</td><td>1〜2 点</td><td>なし</td></tr>", item)
+    self.assertIn("<tr><td>★★★★</td><td>3 点</td><td>付くことがある（武器）</td></tr>", item)
     self.assertIn("特性の倍率がかかる前の値。強運の勇者と同じ", html)  # 「ふつうの勇者」という特性はない
     levels = html.split('<table class="levels">')[1].split("</table>")[0]  # Lv1〜20 の能力の表
     self.assertEqual(levels.count('<td class="num">Lv'), 20)

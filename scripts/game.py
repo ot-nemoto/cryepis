@@ -222,8 +222,9 @@ def save_state(state: dict, path: Path) -> None:
 
 
 # ---- 装備と能力値 ----------------------------------------------------------------------
-def item_score(item: dict) -> float:
-  return item.get("atk", 0) + item.get("def", 0) + item.get("hp", 0) / 4
+def item_score(world: dict, item: dict) -> float:
+  """アイテムの強さ（点数。season.json の item_points）。装備を選ぶ・買うときに比べる。"""
+  return W.item_points(item, world["season"]["item_points"])
 
 
 def equipment(world: dict, state: dict) -> dict[str, str | None]:
@@ -232,8 +233,8 @@ def equipment(world: dict, state: dict) -> dict[str, str | None]:
   best: dict[str, str | None] = {slot: None for slot in W.SLOTS}
   for iid in sorted(state["inventory"]):
     item, cur = world["items"][iid], best[world["items"][iid]["slot"]]
-    key = (item_score(item), rank[item["rarity"]])
-    if cur is None or key > (item_score(world["items"][cur]), rank[world["items"][cur]["rarity"]]):
+    key = (item_score(world, item), rank[item["rarity"]])
+    if cur is None or key > (item_score(world, world["items"][cur]), rank[world["items"][cur]["rarity"]]):
       best[item["slot"]] = iid
   return best
 
@@ -560,14 +561,15 @@ class Day:
 
   def pick_weapon(self, monster: dict, guard: int) -> tuple[str | None, float, int]:
     """この魔物に、1 回の攻撃の番でいちばんダメージの大きい武器（持ち物から持ち替える）と、属性の倍率と、
-    その武器を持ったときの素早さ。ダメージは、魔物の守り（性質で変わったあと）・属性・2 回攻撃まで考える。"""
+    その武器を持ったときの素早さ。ダメージは、魔物の守り（性質で変わったあと）・属性・2 回攻撃まで考える。
+    武器を持たない（None）ほうが効くとき（苦手な属性の武器しかないとき）は、武器を持たずに戦う。"""
     items, s = self.world["items"], self.stats
     worn = equipment(self.world, self.state)["weapon"]
     base_atk = s["atk"] - (items[worn].get("atk", 0) if worn else 0)
     base_spd = s["spd"] - (items[worn].get("spd", 0) if worn else 0)
     mspd = monster.get("spd", s["spd"])
     best = None
-    for iid in sorted(i for i in self.state["inventory"] if items[i]["slot"] == "weapon") or [None]:
+    for iid in [*sorted(i for i in self.state["inventory"] if items[i]["slot"] == "weapon"), None]:
       w = items[iid] if iid else {}
       rate = element_rate(self.world, w.get("element"), monster.get("element"))
       spd = max(1, base_spd + w.get("spd", 0))
@@ -738,7 +740,7 @@ class Day:
     worn = equipment(self.world, self.state)
     for iid in self.world["places"][town].get("shop", []):
       item, cur = items[iid], worn[items[iid]["slot"]]
-      better = cur is None or item_score(item) > item_score(items[cur])
+      better = cur is None or item_score(self.world, item) > item_score(self.world, items[cur])
       # まだ持っていない属性の武器も買う（属性の弱点を突くために、戦いのたびに持ち替える）
       owned = {items[i].get("element") for i in self.state["inventory"] if items[i]["slot"] == "weapon"}
       better = better or (item["slot"] == "weapon" and item.get("element") and item["element"] not in owned)

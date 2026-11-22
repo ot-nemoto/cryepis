@@ -605,7 +605,9 @@ def item_rows(world: dict) -> dict[str, list[dict]]:
         {"id": iid, "item": it, "shops": shops.get(iid, []), "towns": towns, "specialty": specialty}
       )
   for slot in rows:
-    rows[slot].sort(key=lambda r: (-rank[r["item"]["rarity"]], -game.item_score(r["item"]), r["item"].get("price", 0)))
+    rows[slot].sort(
+      key=lambda r: (-rank[r["item"]["rarity"]], -game.item_score(world, r["item"]), r["item"].get("price", 0))
+    )
   return rows
 
 
@@ -890,7 +892,11 @@ def build_guide(world: dict) -> str:
     ("先に攻撃", "素早いほうが先に攻撃する。性質「先手」の魔物は、素早さに関係なく先に攻撃する"),
     ("2 回攻撃", "相手の 2 倍以上素早ければ、1 回の番に 2 回攻撃する（魔物も同じ）"),
     ("回復薬", f"HP が 0 になりそうなとき、自動で使う。最大 HP の {potion['heal_rate']:.0%} まで回復する"),
-    ("武器の持ち替え", "勇者は戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える"),
+    (
+      "武器の持ち替え",
+      "勇者は戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える。"
+      "苦手な属性の武器しかなく、持たないほうが効くときは、武器を持たずに戦う",
+    ),
     ("強敵", "道では出会わない。町の討伐の依頼で狙って戦う。依頼は、魔物のレベル以上の勇者だけが受けられる"),
     ("ボス", "道では出会わない。ダンジョンの奥にいる"),
   ]
@@ -967,6 +973,29 @@ def build_guide(world: dict) -> str:
         "属性は魔物と一部の武器にある（属性のない魔物・武器もある）</p>",
       )
     )
+  points = world["season"]["item_points"]
+  labels = dict(ITEM_STATS)
+  weight_rows = [
+    (escape(labels[k]), escape(f"{v:g} 点"), escape(f"{1 / v:g}" if v else "—")) for k, v in points["weights"].items()
+  ]
+  rarity_rows = [
+    (
+      escape(game.rarity_mark(world, r)),
+      escape(f"{lo:g} 点" if lo == hi else f"{lo:g}〜{hi:g} 点"),
+      escape("なし" if r == W.COMMON else "付くことがある（武器）"),
+    )
+    for r, (lo, hi) in points["rarity"].items()
+  ]
+  cards.append(
+    (
+      "アイテムの強さ",
+      "<p>アイテムの強さは点数で決まる。能力の増減に、能力ごとの点数を掛けて足す（マイナスの能力は引く）</p>"
+      + table(("能力", "+1 あたり", "1 点になる量"), weight_rows)
+      + '<h4 class="sub">珍しさごとの点数</h4>'
+      + table(("珍しさ", "点数", "属性"), rarity_rows)
+      + '<p class="note">例: 鋼の剣（攻 +3・速 -1）は 3 − 1 = 2 点。勇者は点数の高いアイテムを装備し、店でも点数の高いものを買う</p>',
+    )
+  )
   cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))
   cards.append(("魔物の経験値とお金", table(("項目", "決め方"), reward_rows)))
   body = "<h2>手引き</h2>" + "".join(f'<div class="card"><h3>{escape(h)}</h3>{inner}</div>' for h, inner in cards)

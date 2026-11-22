@@ -403,12 +403,12 @@ class BattleAndItemTest(unittest.TestCase):
 
   def test_best_item_is_equipped(self):
     state = G.new_state(WORLD)
-    state["inventory"] = {"wooden_sword": 1, "iron_sword": 1, "lucky_charm": 1}
+    state["inventory"] = {"wooden_sword": 1, "iron_sword": 1, "lucky_charm": 1}  # 木の剣は攻 +1、鉄の剣は攻 +2
     worn = G.equipment(WORLD, state)
     self.assertEqual((worn["weapon"], worn["helmet"], worn["accessory"]), ("iron_sword", None, "lucky_charm"))
     s = G.stats(WORLD, state)
-    self.assertEqual(s["atk"], state["hero"]["base_atk"] + 5)
-    self.assertEqual(s["max_hp"], state["hero"]["max_hp"] + 5)
+    self.assertEqual(s["atk"], state["hero"]["base_atk"] + 2)
+    self.assertEqual(s["dex"], state["hero"]["base_dex"] + 5)  # 幸運のお守りは器 +5
 
   def test_rare_item_is_recorded(self):
     state = G.new_state(WORLD)
@@ -465,8 +465,17 @@ class BattleAndItemTest(unittest.TestCase):
     worn = G.equipment(WORLD, state)
     self.assertEqual(list(worn.values()), ["iron_sword", "iron_helm", "iron_shield", "lucky_charm"])
     s = G.stats(WORLD, state)
-    self.assertEqual(s["def"], state["hero"]["base_def"] + 1 + 1)
-    self.assertEqual(s["max_hp"], state["hero"]["max_hp"] + 5 + 5)
+    self.assertEqual(s["def"], state["hero"]["base_def"] + 2 + 4)  # 鉄の兜 +2・鉄の盾 +4（木の盾 +2 は使わない）
+    self.assertEqual(s["dex"], state["hero"]["base_dex"] + 5)
+
+  def test_equipment_follows_the_item_points(self):
+    state = G.new_state(WORLD)
+    state["inventory"] = {
+      "wooden_shield": 1,
+      "settler_shield": 1,
+    }  # 木の盾 1 点、開拓者の盾 1.5 点（防 3・HP 5・速 -1）
+    self.assertEqual(G.equipment(WORLD, state)["shield"], "settler_shield")
+    self.assertEqual(G.item_score(WORLD, WORLD["items"]["settler_shield"]), 1.5)
 
 
 class RoadTest(unittest.TestCase):
@@ -771,7 +780,7 @@ class BalanceTest(unittest.TestCase):
 
   def test_rare_items_are_rare_but_not_absent(self):
     rares = [len(s["season_stats"]["rares"]) for s in self.results]
-    self.assertTrue(1 <= self.median(rares) <= 6, sorted(rares))
+    self.assertTrue(1 <= self.median(rares) <= 8, sorted(rares))  # 1 シーズンに数個（中央値 6〜7）
 
   def test_heroes_drift_apart(self):
     self.assertGreater(len({s["place"] for s in self.results}), 2)
@@ -943,6 +952,20 @@ class GuildBoardTest(unittest.TestCase):
 class BattleDepthTest(unittest.TestCase):
   """属性・素早さ・特性。"""
 
+  def setUp(self):
+    # 持ち替えの仕組みを確かめるための仮の武器（いつもの武器は鋼の剣、持ち替える先は木の武器の騎兵の槍）
+    items = WORLD["items"]
+    patch = mock.patch.dict(
+      items,
+      {
+        "steel_sword": items["steel_sword"] | {"atk": 7, "spd": -1, "hp": 5},  # HP で点数を上げて、いつもの武器にする
+        "cavalry_lance": {k: v for k, v in items["cavalry_lance"].items() if k not in ("def", "spd")}
+        | {"atk": 6, "element": "wood"},
+      },
+    )
+    patch.start()
+    self.addCleanup(patch.stop)
+
   def hero_state(self, **hero):
     state = G.new_state(WORLD)
     state["hero"].update(hp=999, max_hp=999, potions=0, **hero)
@@ -1026,6 +1049,14 @@ class BattleDepthTest(unittest.TestCase):
     # 守りが高い水の魔物: 鋼の剣 (10 - 8) = 2、騎兵の槍 (9 - 8) × 1.5 = 1.5 → 鋼の剣のほうが効く
     self.assertEqual(day.pick_weapon(self.monster(element="water"), 16)[0], "steel_sword")
     self.assertEqual(day.pick_weapon(self.monster(element="water"), 0)[0], "cavalry_lance")
+
+  def test_hero_fights_barehanded_rather_than_with_a_weak_element(self):
+    state = self.hero_state(base_atk=20)
+    state["inventory"] = {"knight_sword": 1}  # 騎士の剣（攻 +2・火）は、水の魔物には 0.7 倍
+    day = day_of(state)
+    self.assertEqual(day.pick_weapon(self.monster(element="water"), 0)[:2], (None, 1.0))  # 22×0.7 < 20
+    self.assertEqual(day.pick_weapon(self.monster(element="wood"), 0)[0], "knight_sword")
+    self.assertEqual(day.pick_weapon(self.monster(), 0)[0], "knight_sword")
 
   def test_shop_buys_weapons_with_new_elements(self):
     state = self.hero_state(gold=10000)
