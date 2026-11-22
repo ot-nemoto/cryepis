@@ -403,7 +403,7 @@ class BattleAndItemTest(unittest.TestCase):
 
   def test_best_item_is_equipped(self):
     state = G.new_state(WORLD)
-    state["inventory"] = {"wooden_helm": 1, "iron_helm": 1, "power_ring": 1}  # 木製の兜 0.5 点、鉄製の兜 0 点
+    state["inventory"] = {"wooden_helm": 1, "iron_helm": 1, "power_ring": 1}  # 木の兜 0.5 点、鉄の兜 0 点
     worn = G.equipment(WORLD, state)
     self.assertEqual((worn["weapon"], worn["helmet"], worn["accessory"]), (None, "wooden_helm", "power_ring"))
     s = G.stats(WORLD, state)
@@ -417,7 +417,7 @@ class BattleAndItemTest(unittest.TestCase):
     self.assertEqual(state["season_stats"]["rares"], ["power_ring"])
     self.assertIn("★★「力の指輪」", day.events[0])
     day.obtain("iron_sword", "宝箱から")
-    self.assertIn("宝箱から★「鉄製の剣」を手に入れた", day.events[1])  # ふつうの装備も ★
+    self.assertIn("宝箱から★「鉄の剣」を手に入れた", day.events[1])  # ふつうの装備も ★
     self.assertFalse(day.events[1].endswith("！"))  # ！はレアだけ
     self.assertIn("装備した", day.events[0])
 
@@ -473,20 +473,18 @@ class BattleAndItemTest(unittest.TestCase):
     worn = G.equipment(WORLD, state)
     self.assertEqual(list(worn.values()), ["iron_sword", "iron_helm", "wooden_shield", "power_ring"])
     s = G.stats(WORLD, state)
-    self.assertEqual(
-      s["def"], state["hero"]["base_def"] + 2 + 1
-    )  # 鉄製の兜 +2・木製の盾 +1（鉄製の盾は 0 点で使わない）
-    self.assertEqual(s["spd"], state["hero"]["base_spd"] - 2)  # 鉄製の兜の速 -2
+    self.assertEqual(s["def"], state["hero"]["base_def"] + 2 + 1)  # 鉄の兜 +2・木の盾 +1（鉄の盾は 0 点で使わない）
+    self.assertEqual(s["spd"], state["hero"]["base_spd"] - 2)  # 鉄の兜の速 -2
     self.assertEqual(s["atk"], state["hero"]["base_atk"] + 1 + 2)
 
   def test_equal_points_prefer_items_without_minus(self):
     state = G.new_state(WORLD)
     state["inventory"] = {"iron_axe": 1, "iron_sword": 1}  # どちらも 1 点
-    self.assertEqual(G.equipment(WORLD, state)["weapon"], "iron_sword")  # 速 -2 のない鉄製の剣
+    self.assertEqual(G.equipment(WORLD, state)["weapon"], "iron_sword")  # 速 -2 のない鉄の剣
 
   def test_equipment_follows_the_item_points(self):
     state = G.new_state(WORLD)
-    state["inventory"] = {"wooden_shield": 1, "iron_shield": 1}  # 木製の盾 0.5 点、鉄製の盾 0 点（防 +2・速 -2）
+    state["inventory"] = {"wooden_shield": 1, "iron_shield": 1}  # 木の盾 0.5 点、鉄の盾 0 点（防 +2・速 -2）
     self.assertEqual(G.equipment(WORLD, state)["shield"], "wooden_shield")
     self.assertEqual(G.item_score(WORLD, WORLD["items"]["iron_shield"]), 0)
     self.assertEqual(G.item_score(WORLD, WORLD["items"]["iron_axe"]), 1)  # 攻 +2・速 -2 は 2 − 1

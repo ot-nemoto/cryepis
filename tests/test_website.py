@@ -185,7 +185,7 @@ class SiteTest(unittest.TestCase):
     header = html.split("<th>名前</th>")[1].split("</tr>")[0]  # 表の見出しの行
     self.assertNotIn("性能", header)
     self.assertNotIn("手に入れ方", header)
-    axe = html.split("鉄製の斧")[1].split("</tr>")[0]  # 攻+2・速-2、開放した 4 町の店で売っている
+    axe = html.split("鉄の斧")[1].split("</tr>")[0]  # 攻+2・速-2、開放した 4 町の店で売っている
     self.assertIn('<td class="num zero">0</td><td class="num">+2</td><td class="num zero">0</td>', axe)
     self.assertIn('<td class="num minus">-2</td>', axe)  # マイナスは赤字
     self.assertEqual(axe.count('class="pill"'), 4)  # 買える店
@@ -193,7 +193,7 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("宝箱", html)
     self.assertIn('<th>名前</th><th class="icon">属性</th><th class="num">HP</th>', html)  # 特産の列はない
     self.assertNotIn("特産", html)
-    self.assertIn('鉄製の剣</td><td class="icon"></td><td class="num zero">0</td>', html)  # ★ は属性なし
+    self.assertIn('鉄の剣</td><td class="icon"></td><td class="num zero">0</td>', html)  # ★ は属性なし
     self.assertNotIn("🏷️", html)  # 属性は絵文字にしない
     self.assertNotIn("🌪️", html)
     self.assertIn('<td class="mark">★★</td><td>騎士の剣</td>', html)  # ★ は先頭の列
@@ -236,7 +236,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("未開放", aurea)
     self.assertIn("依頼の枠 6 件", aurea)
     self.assertNotIn("特産品", html)  # 町ごとの特産はない
-    self.assertNotIn("鉄製の剣", aurea)
+    self.assertNotIn("鉄の剣", aurea)
     muralis = html[html.index('id="muralis"') : html.index('id="karun"')]  # 南大陸の中は places の順
     self.assertIn("騎士の剣", muralis.split("店の品ぞろえ")[0])  # レア
     self.assertIn("南壁の巣穴（ダンジョン・まだ入れない）", muralis)
@@ -248,7 +248,7 @@ class SiteTest(unittest.TestCase):
     by_name = {it["name"]: it for it in WORLD["items"].values()}
     keys = [(W.SLOTS.index(by_name[n]["slot"]), -by_name[n]["price"]) for n in names]
     self.assertEqual(keys, sorted(keys))
-    self.assertEqual(names[:2], ["鉄製の斧", "鉄製の剣"])  # 武器が先、値段の高い順
+    self.assertEqual(names[:2], ["鉄の斧", "鉄の剣"])  # 武器が先、値段の高い順
 
   def test_story_page(self):
     entries, _, today = party(2, 2)
@@ -334,7 +334,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("<tr><td>HP</td><td>0.2 点</td><td>5</td></tr>", item)
     self.assertIn("<tr><td>防</td><td>0.5 点</td><td>2</td></tr>", item)
     self.assertIn("<tr><td>速</td><td>0.5 点</td><td>2</td></tr>", item)
-    self.assertIn("例: 鉄製の斧（攻 +2・速 -2）は 2 − 1 = 1 点", item)  # マイナスも同じ点数で引く
+    self.assertIn("例: 鉄の斧（攻 +2・速 -2）は 2 − 1 = 1 点", item)  # マイナスも同じ点数で引く
     self.assertIn("<tr><td>★</td><td>1 点まで</td><td>なし</td></tr>", item)
     self.assertIn("<tr><td>★★★★</td><td>3 点まで</td><td>付くことがある（武器）</td></tr>", item)
     self.assertIn("特性の倍率がかかる前の値。強運の勇者と同じ", html)  # 「ふつうの勇者」という特性はない

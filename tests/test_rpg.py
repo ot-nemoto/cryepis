@@ -58,7 +58,7 @@ class DisplayTest(unittest.TestCase):
     }
     state = game.new_state(world)
     state["inventory"] = {"iron_sword": 1, "wooden_helm": 1, "x_epic": 1, "turtle_shield": 1}
-    self.assertEqual(rpg.gear_text(world, state), "★★★試しの兜/★★亀甲の盾/★鉄製の剣")
+    self.assertEqual(rpg.gear_text(world, state), "★★★試しの兜/★★亀甲の盾/★鉄の剣")
 
   def test_quest_marks_are_not_rare_items(self):
     events = [
