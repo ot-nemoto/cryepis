@@ -24,7 +24,7 @@
   {"id": "polar_fur", "name": "白熊の毛皮帽", "slot": "helmet", "rarity": "common", "hp": 7, "def": 1, "price": 110},
   {"id": "reindeer_charm", "name": "トナカイの角のお守り", "slot": "accessory", "rarity": "common", "hp": 5, "def": 2, "price": 120},
   {"id": "wolf_fang_necklace", "name": "氷狼の牙の首飾り", "slot": "accessory", "rarity": "common", "atk": 1, "dex": 5, "price": 120},
-  {"id": "knight_sword", "name": "騎士の剣", "slot": "weapon", "rarity": "rare", "atk": 2, "element": "fire", "towns": ["muralis"]},
+  {"id": "knight_sword", "name": "騎士の剣", "slot": "weapon", "rarity": "rare", "atk": 2, "element": "flame", "towns": ["muralis"]},
   {"id": "wooden_shield", "name": "木の盾", "slot": "shield", "rarity": "common", "def": 2, "price": 30},
   {"id": "reed_shield", "name": "葦の盾", "slot": "shield", "rarity": "common", "hp": 3, "def": 1, "price": 40},
   {"id": "bark_shield", "name": "樹皮の盾", "slot": "shield", "rarity": "common", "hp": 3, "def": 2, "price": 80},

@@ -180,7 +180,7 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(html.count('class="chip" data-f='), 2)  # ★ と ★★
     knight = html.split("騎士の剣")[1].split("</tr>")[0]  # ★★騎士の剣
     self.assertIn('<td><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a></td>', knight)  # 依頼を出す町
-    self.assertIn('<td class="icon"><span class="tag">火属性</span></td>', knight)  # 属性の列（枠の札）
+    self.assertIn('<td class="icon"><span class="tag">炎属性</span></td>', knight)  # 属性の列（枠の札）
     head = '<th class="num">HP</th><th class="num">攻</th><th class="num">防</th><th class="num">速</th><th class="num">器</th>'
     self.assertIn(head + '<th class="num">値段</th><th>入手方法</th>', html)  # 能力ごとの列
     header = html.split("<th>名前</th>")[1].split("</tr>")[0]  # 表の見出しの行
@@ -268,6 +268,8 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<h2 class="story-title">クリエピス戦記</h2>', html)  # world/story.md の物語
     self.assertIn("始祖竜", html)
     self.assertIn("<th>時代</th>", html)  # 歴史の表
+    self.assertIn('<h2 class="area">鉱石</h2>', html)  # 物語の背景の鉱石
+    self.assertIn("<strong>熾焔鋼（しえんこう）</strong>【炎属性】", html)
     self.assertIn("旅をしている勇者</th><td>2 人", html)  # いまの冒険の状況
     self.assertIn('南大陸 <span class="en">Austral Land</span>', html)
     self.assertIn('href="towns.html#salina"', html)
@@ -300,7 +302,7 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn(">Lv<", html)
     self.assertIn('<th>名前</th><th class="icon">性質</th>', html)  # 地形の列は出さない
     self.assertNotIn("<th>地形</th>", html)
-    self.assertIn('<td class="icon"><span class="tag">水属性</span></td>', south)  # 沼ヒル（アイテムと同じ枠の札）
+    self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 氷狼（アイテムと同じ枠の札）
     roads, boss = south.split('<h3 class="sub">ボス</h3>')  # ボスは道の魔物とは別の表
     self.assertNotIn("巣穴の主", roads)
     self.assertIn("<td>巣穴の主</td>", boss)
@@ -330,8 +332,10 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
     for t in WORLD["traits"].values():  # 魔物の性質（説明はここだけに出す）
       self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
-    self.assertIn("相性（左が右に強い）: 火→木→水→火", html)
-    self.assertIn('<td><span class="tag">木属性</span></td><td>水</td><td>火</td>', html)  # 強い相手・苦手な相手
+    self.assertIn("相性（左が右に強い）: 炎→雷→氷→炎", html)
+    self.assertIn(
+      '<td><span class="tag">雷属性</span></td><td>氷</td><td>炎</td><td>紫電鉄</td>', html
+    )  # 強い相手・苦手な相手・鉱石
     self.assertIn("器用さ ÷ 150 の確率で、ダメージが 3 倍", html)
     self.assertIn("最大 HP の 50% まで回復", html)
     self.assertIn("Lv20 で 182。特性で変わる", html)
@@ -365,12 +369,12 @@ class SiteTest(unittest.TestCase):
   def test_guide_page_follows_the_data(self):
     world = copy.deepcopy(WORLD)
     world["season"]["growth"]["def"][-1] = 40  # 防御だけ Lv20 の値を変える
-    world["elements"]["water"]["strong"] = "wood"  # 木に強い属性が 2 つ、火に強い属性はなし
+    world["elements"]["ice"]["strong"] = "thunder"  # 雷に強い属性が 2 つ、炎に強い属性はなし
     html = website.build_guide(world)
     self.assertIn("防は Lv1 で 6、Lv20 で 40", html)
     self.assertIn("攻は Lv1 で 6、Lv20 で 30", html)
-    self.assertIn('<td><span class="tag">木属性</span></td><td>水</td><td>火・水</td>', html)
-    self.assertIn('<td><span class="tag">火属性</span></td><td>木</td><td>-</td>', html)
+    self.assertIn('<td><span class="tag">雷属性</span></td><td>氷</td><td>炎・氷</td>', html)
+    self.assertIn('<td><span class="tag">炎属性</span></td><td>雷</td><td>-</td>', html)
 
   def test_boss_without_an_area_is_in_the_other_group(self):
     world = copy.deepcopy(WORLD)
