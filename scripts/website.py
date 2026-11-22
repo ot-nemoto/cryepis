@@ -642,7 +642,7 @@ def specialty_cell(world: dict, town: str | None) -> str:
 
 
 def element_cell(world: dict, element: str | None) -> str:
-  """属性の欄（「火属性」などの枠の札）。属性がなければ空。"""
+  """属性の欄（「炎属性」などの枠の札）。属性がなければ空。"""
   e = world["elements"].get(element)
   return f'<td class="icon"><span class="tag">{escape(e["name"])}属性</span></td>' if e else '<td class="icon"></td>'
 
@@ -879,6 +879,7 @@ def build_guide(world: dict) -> str:
       tag(f"{e['name']}属性"),
       escape(element_label(world, e["strong"])),
       escape("・".join(element_label(world, w) for w in weak_to.get(eid, [])) or "-"),
+      escape(e.get("ore", "-")),
     )
     for eid, e in elements.items()
   ]
@@ -968,9 +969,9 @@ def build_guide(world: dict) -> str:
       (
         "属性と相性",
         f"<p>相性（左が右に強い）: {element_chart(world)}</p>"
-        + table(("属性", "強い相手", "苦手な相手"), element_rows)
+        + table(("属性", "強い相手", "苦手な相手", "鉱石"), element_rows)
         + f'<p class="note">強い相手を攻めるとダメージ {rates["strong"]} 倍、苦手な相手だと {rates["weak"]} 倍。'
-        "属性は魔物と一部の武器にある（属性のない魔物・武器もある）</p>",
+        "属性は魔物と一部の武器にある（属性のない魔物・武器もある）。属性の武器は、その属性の力を持つ鉱石から作られる</p>",
       )
     )
   points = world["season"]["item_points"]

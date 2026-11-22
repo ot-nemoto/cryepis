@@ -160,12 +160,14 @@ class ValidateTest(unittest.TestCase):
   def test_elements_speed_and_personas_are_checked(self):
     self.assertError(lambda r: r["monsters"][0].update(element="light"), ["wild_dog", "element"])
     self.assertError(lambda r: r["monsters"][0].pop("spd"), ["wild_dog", "spd"])
-    self.assertError(lambda r: r["items"][0].update(element="fire", slot="helmet"), ["element", "武器"])
+    self.assertError(lambda r: r["items"][0].update(element="flame", slot="helmet"), ["element", "武器"])
     self.assertError(lambda r: r["items"][0].update(spd="速い"), ["spd"])
-    self.assertError(lambda r: r["elements"]["fire"].update(strong="light"), ["elements", "fire"])
-    self.assertError(lambda r: r["elements"]["fire"].update(strong="fire"), ["elements", "fire"])  # 自分には強くない
-    self.assertError(lambda r: r["elements"]["fire"].update(strong=["ice"]), ["elements", "fire"])  # 落ちずに返す
-    self.assertError(lambda r: r["monsters"][0].update(element=["fire"]), ["wild_dog", "element"])
+    self.assertError(lambda r: r["elements"]["flame"].update(strong="light"), ["elements", "flame"])
+    self.assertError(lambda r: r["elements"]["flame"].update(ore=3), ["elements", "flame", "ore"])
+    self.assertEqual({e["ore"] for e in RAW["elements"].values()}, {"熾焔鋼", "霧氷石", "紫電鉄"})  # 属性の鉱石
+    self.assertError(lambda r: r["elements"]["flame"].update(strong="flame"), ["elements", "flame"])  # 自分には強くない
+    self.assertError(lambda r: r["elements"]["flame"].update(strong=["ice"]), ["elements", "flame"])  # 落ちずに返す
+    self.assertError(lambda r: r["monsters"][0].update(element=["flame"]), ["wild_dog", "element"])
     self.assertError(lambda r: r["season"]["element_rates"].pop("weak"), ["element_rates"])
     self.assertError(lambda r: r["season"]["hero_traits"]["strong"].update(growth={"atk": "2"}), ["strong", "growth"])
     self.assertError(lambda r: r["season"]["hero_traits"]["strong"].update(growth={"luck": 1}), ["strong", "growth"])
@@ -370,7 +372,7 @@ class ValidateTest(unittest.TestCase):
     self.assertError(weak_common, ["wooden_sword", "点数 0", "common"])
 
     def common_element(r):
-      next(i for i in r["items"] if i["id"] == "iron_sword")["element"] = "fire"
+      next(i for i in r["items"] if i["id"] == "iron_sword")["element"] = "flame"
 
     self.assertError(common_element, ["iron_sword", "属性", "common"])
 
