@@ -1159,6 +1159,27 @@ class BattleDepthTest(unittest.TestCase):
     _, rate, _, acc = day.pick_weapon(self.monster(), 0)
     self.assertEqual((acc, rate), ("crimson_grass_charm", 1.0))  # 属性のない相手は、着けたまま
 
+  def test_shop_buys_the_best_item_it_can_afford(self):
+    state = self.hero_state(gold=10000)
+    state["hero"]["potions"] = 3
+    day_of(state).shop("salina")  # 兜はどちらも 1 点。値段の高い鉄の兜だけを買い、木の兜は買わない
+    self.assertIn("iron_helm", state["inventory"])
+    self.assertNotIn("wooden_helm", state["inventory"])
+    state = self.hero_state(gold=10000)
+    state["hero"]["potions"] = 3
+    state["inventory"] = {"wooden_helm": 1}  # 木の兜を持っていても、鉄の兜に買い替える
+    day_of(state).shop("salina")
+    self.assertEqual(G.equipment(WORLD, state)["helmet"], "iron_helm")
+    poor = self.hero_state(gold=40)
+    poor["hero"]["potions"] = 3
+    day_of(poor).shop("salina")  # 50G の鉄の兜は買えないので、30G の木の兜
+    self.assertIn("wooden_helm", poor["inventory"])
+    rich = self.hero_state(gold=10000)
+    rich["hero"]["potions"] = 3
+    day_of(rich).shop("salina")
+    charms = [i for i in rich["inventory"] if WORLD["items"][i]["slot"] == "accessory"]
+    self.assertEqual(len(charms), 1)  # 同じ点数・同じ値段の護符は 1 つだけ買う
+
   def test_shop_buys_weapons_with_new_elements(self):
     state = self.hero_state(gold=10000)
     state["inventory"] = {"x_heavy": 1}
