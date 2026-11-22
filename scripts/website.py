@@ -985,8 +985,16 @@ def build_guide(world: dict) -> str:
       escape(f"{lo:g} 点" if lo == hi else f"{lo:g}〜{hi:g} 点"),
       escape("なし" if r == W.COMMON else "付くことがある（武器）"),
     )
-    for r, (lo, hi) in points["rarity"].items()
+    for r in world["rarities"]
+    for lo, hi in [points["rarity"][r]]
   ]
+  sample = world["items"].get("steel_sword") or next(iter(world["items"].values()))
+  parts = [(labels[k], sample[k], points["weights"][k] * sample[k]) for k, _ in ITEM_STATS if sample.get(k)]
+  example = (
+    f"例: {sample['name']}（{'・'.join(f'{n} {v:+d}' for n, v, _ in parts)}）は "
+    + " ".join(f"{'−' if p < 0 else '+'} {abs(p):g}" for _, _, p in parts).lstrip("+ ")
+    + f" = {W.item_points(sample, points):g} 点"
+  )
   cards.append(
     (
       "アイテムの強さ",
@@ -994,7 +1002,8 @@ def build_guide(world: dict) -> str:
       + table(("能力", "+1 あたり", "1 点になる量"), weight_rows)
       + '<h4 class="sub">珍しさごとの点数</h4>'
       + table(("珍しさ", "点数", "属性"), rarity_rows)
-      + '<p class="note">例: 鋼の剣（攻 +3・速 -1）は 3 − 1 = 2 点。勇者は点数の高いアイテムを装備し、店でも点数の高いものを買う</p>',
+      + f'<p class="note">{escape(example)}。勇者は点数の高いアイテムを装備し、店でも点数の高いものを買う'
+      "（同じ点数なら、マイナスの能力のないもの）</p>",
     )
   )
   cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))

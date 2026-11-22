@@ -468,6 +468,13 @@ class BattleAndItemTest(unittest.TestCase):
     self.assertEqual(s["def"], state["hero"]["base_def"] + 2 + 4)  # 鉄の兜 +2・鉄の盾 +4（木の盾 +2 は使わない）
     self.assertEqual(s["dex"], state["hero"]["base_dex"] + 5)
 
+  def test_equal_points_prefer_items_without_minus(self):
+    state = G.new_state(WORLD)
+    state["inventory"] = {"battle_axe": 1, "iron_sword": 1, "steel_sword": 1}  # どれも 2 点
+    self.assertEqual(G.equipment(WORLD, state)["weapon"], "iron_sword")  # 速 -1・-2 のない鉄の剣
+    state["inventory"] = {"wall_shield": 1, "iron_shield": 1}
+    self.assertEqual(G.equipment(WORLD, state)["shield"], "iron_shield")
+
   def test_equipment_follows_the_item_points(self):
     state = G.new_state(WORLD)
     state["inventory"] = {
@@ -1038,8 +1045,8 @@ class BattleDepthTest(unittest.TestCase):
     state["hero"]["base_spd"] = 6
     day = day_of(state)
     self.assertEqual(day.stats["spd"], 5)
-    weapon, rate, spd = day.pick_weapon(self.monster(element="ice"), 0)  # 騎兵の槍に持ち替えると素早さ 6
-    self.assertEqual((weapon, spd), ("cavalry_lance", 6))
+    weapon, rate, held = day.pick_weapon(self.monster(element="ice"), 0)  # 騎兵の槍に持ち替えると素早さ 6
+    self.assertEqual((weapon, held["spd"]), ("cavalry_lance", 6))
     self.assertEqual(self.count_first(self.monster(spd=6, element="ice"), 6, inventory=state["inventory"])[:1], "h")
 
   def test_weapon_choice_counts_the_real_guard(self):
@@ -1057,6 +1064,17 @@ class BattleDepthTest(unittest.TestCase):
     self.assertEqual(day.pick_weapon(self.monster(element="ice"), 0)[:2], (None, 1.0))  # 22×0.7 < 20
     self.assertEqual(day.pick_weapon(self.monster(element="thunder"), 0)[0], "knight_sword")
     self.assertEqual(day.pick_weapon(self.monster(), 0)[0], "knight_sword")
+
+  def test_swapped_weapon_brings_all_its_stats(self):
+    state = self.hero_state(base_dex=0)
+    state["inventory"] = {"hunter_bow": 1, "knight_sword": 1}  # 狩人の弓（攻 +1・器 +5）、騎士の剣（攻 +2・火）
+    day = day_of(state)
+    self.assertEqual(G.equipment(WORLD, state)["weapon"], "knight_sword")  # どちらも 2 点。珍しいほう
+    weapon, _, held = day.pick_weapon(self.monster(element="ice"), 0)  # 氷には炎が苦手 → 狩人の弓に持ち替える
+    self.assertEqual(weapon, "hunter_bow")
+    self.assertEqual((held["atk"], held["dex"]), (state["hero"]["base_atk"] + 1, 5))  # 器用さも狩人の弓のもの
+    _, _, held = day.pick_weapon(self.monster(element="thunder"), 0)
+    self.assertEqual(held["dex"], 0)  # 騎士の剣のときは器用さ +0
 
   def test_shop_buys_weapons_with_new_elements(self):
     state = self.hero_state(gold=10000)

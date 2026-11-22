@@ -41,7 +41,7 @@ def strength(world: dict, hero: dict, monster: dict) -> float:
   e = W.trait_effect(monster)
   dealt = max(1, hero["atk"] - e["guard"] / 2) * (1 + bonus * hero["dex"] / crit["dex_divisor"])
   dealt *= 2 if hero["spd"] >= 2 * monster["spd"] else 1
-  taken = max(1, e["atk"] - hero["def"] / 2) * (1 + bonus * monster.get("dex", 0) / crit["dex_divisor"]) * e["hits"]
+  taken = max(1, e["atk"] - hero["def"] / 2) * (1 + bonus * monster.get("dex", 6) / crit["dex_divisor"]) * e["hits"]
   taken *= 2 if monster["spd"] >= 2 * hero["spd"] else 1
   return hero["hp"] / taken * dealt / e["hp"]
 
@@ -60,6 +60,9 @@ def main() -> int:
   print("能力 +1 で強さが何 % 上がるか（かっこの中は、攻撃 +1 を 1 としたときの比）")
   for mid, lv in CASES:
     g = gains(world, world["monsters"][mid], lv)
+    if g["atk"] <= 0:  # 守りが固すぎて、攻撃 +1 でも与えるダメージ（最低 1）が変わらない
+      print(f"  Lv{lv:2d} {world['monsters'][mid]['name']:6s} 攻撃 +1 が効かない（比べられない）")
+      continue
     cells = "  ".join(f"{k}+1 {v:6.2%}（{v / g['atk']:.2f}）" for k, v in g.items())
     print(f"  Lv{lv:2d} {world['monsters'][mid]['name']:6s} {cells}")
   print("今の重み（season.json の item_points.weights）: " + "  ".join(f"{k} {v:g}" for k, v in weights.items()))
