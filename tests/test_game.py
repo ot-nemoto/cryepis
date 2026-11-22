@@ -437,6 +437,16 @@ class BattleAndItemTest(unittest.TestCase):
     self.assertIsNone(day.draw([["x_legend", 1]], "karun"))  # ID を直接書いても、その町のものだけ
     self.assertEqual(day.draw([["iron_sword", 1]], "karun"), "iron_sword")
 
+  def test_items_sold_only_in_closed_towns_do_not_drop(self):
+    raw = W.load_raw()
+    raw["items"].append({"id": "x_far", "name": "遠くの剣", "slot": "weapon", "rarity": "common", "atk": 1, "price": 1})
+    next(p for p in raw["map"]["places"] if p["id"] == "aurea")["shop"].append("x_far")  # 開放していない王都だけで売る
+    world = W.build(raw)
+    day = G.Day(world, G.new_state(world), START, random.Random("t"))
+    self.assertNotIn("x_far", world["region_items"])
+    self.assertNotIn("x_far", {day.draw([["common", 1]]) for _ in range(300)})
+    self.assertIsNone(day.draw([["x_far", 1]], "salina"))  # ID を直接書いても出ない
+
   def test_every_town_gives_something_for_every_rarity(self):
     day = day_of(G.new_state(WORLD))
     for town in WORLD["towns"]:
@@ -1064,7 +1074,7 @@ class BattleDepthTest(unittest.TestCase):
 
   def test_swapped_weapon_brings_all_its_stats(self):
     state = self.hero_state(base_dex=0)
-    state["inventory"] = {"x_bow": 1, "knight_sword": 1}  # 狩人の弓（攻 +1・器 +5）、騎士の剣（攻 +2・火）
+    state["inventory"] = {"x_bow": 1, "knight_sword": 1}  # 試しの弓（攻 +1・器 +5）、騎士の剣（攻 +2・炎）
     day = day_of(state)
     self.assertEqual(G.equipment(WORLD, state)["weapon"], "knight_sword")  # どちらも 2 点。珍しいほう
     weapon, _, held = day.pick_weapon(self.monster(element="ice"), 0)  # 氷には炎が苦手 → 試しの弓に持ち替える
