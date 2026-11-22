@@ -876,7 +876,8 @@ def build_guide(world: dict) -> str:
     (
       "武器の持ち替え",
       "勇者は戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える。"
-      "苦手な属性の武器しかなく、持たないほうが効くときは、武器を持たずに戦う",
+      "苦手な属性の武器しかなく、持たないほうが効くときは、武器を持たずに戦う。"
+      "装飾品は、弱点を突ける属性のものを持っていれば、その戦いだけ着け替える（苦手な属性なら外す）",
     ),
     ("強敵", "道では出会わない。町の討伐の依頼で狙って戦う。依頼は、魔物のレベル以上の勇者だけが受けられる"),
     ("ボス", "道では出会わない。ダンジョンの奥にいる"),
@@ -951,19 +952,20 @@ def build_guide(world: dict) -> str:
         f"<p>相性（左が右に強い）: {element_chart(world)}</p>"
         + table(("属性", "強い相手", "苦手な相手", "鉱石"), element_rows)
         + f'<p class="note">強い相手を攻めるとダメージ {rates["strong"]} 倍、苦手な相手だと {rates["weak"]} 倍。'
-        "属性は魔物と一部の武器にある（属性のない魔物・武器もある）。属性の武器は、その属性の力を持つ鉱石から作られる</p>",
+        "属性は魔物と一部の武器・装飾品にある（属性のない魔物・武器もある）。装飾品の属性は、武器に属性がないとき攻撃に付く。"
+        "属性の武器は、その属性の力を持つ鉱石から作られる</p>",
       )
     )
   points = world["season"]["item_points"]
   labels = dict(ITEM_STATS)
   weight_rows = [
     (escape(labels[k]), escape(f"{v:g} 点"), escape(f"{1 / v:g}" if v else "—")) for k, v in points["weights"].items()
-  ]
+  ] + [("属性", escape(f"{points.get('element', 0):g} 点"), "属性 1 つ")]
   rarity_rows = [
     (
       escape(game.rarity_mark(world, r)),
       escape(f"{points['max'][r]:g} 点まで"),
-      escape("なし" if r == W.COMMON else "付くことがある（武器）"),
+      escape("なし" if r == W.COMMON else "付くことがある（武器・装飾品）"),
     )
     for r in world["rarities"]
   ]

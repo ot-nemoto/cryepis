@@ -40,7 +40,17 @@ TERRAIN = {
 
 # 呼び名 → (ID, 絵文字, 地域)
 # 店の品ぞろえは、どの町も同じ（町ごとの特産はない。町の違いは、その町でしか受けられない依頼）
-SHOP = ["iron_sword", "iron_axe", "wooden_helm", "iron_helm", "wooden_shield", "iron_shield"]
+SHOP = [
+  "iron_sword",
+  "iron_axe",
+  "wooden_helm",
+  "iron_helm",
+  "wooden_shield",
+  "iron_shield",
+  "soaring_leaf_charm",
+  "silkvine_charm",
+  "lifeblood_charm",
+]
 TOWN_INFO = {
   "王都": ("aurea", "🏰", "黄金平原"),
   "河港": ("flumen", "⚓", "大河の三角州"),

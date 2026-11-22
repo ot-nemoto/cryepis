@@ -24,6 +24,8 @@ import common
 
 WORLD_DIR = common.ROOT / "world"
 SLOTS = ("weapon", "helmet", "shield", "accessory")  # 鎧はない
+# 属性を書ける部位（武器の属性で攻める。装飾品の属性は、武器に属性がないとき攻撃に付く）
+ELEMENT_SLOTS = ("weapon", "accessory")
 SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "shield": "盾", "accessory": "装飾品"}
 PLACE_TYPES = ("town", "dungeon")
 # 道の種類: 陸路・航路は町どうしを結び、勇者が通る。ダンジョンへの道は地図に描くだけ（第 2 段階で使う）
@@ -543,9 +545,9 @@ def validate(raw: dict) -> list[str]:
     if "dex" in it and (not isinstance(it["dex"], int) or isinstance(it["dex"], bool) or it["dex"] < 0):
       err(f"{where}: dex（器用さ）は 0 以上の整数にしてください")
     if "element" in it and (
-      it.get("slot") != "weapon" or not isinstance(it["element"], str) or it["element"] not in elements
+      it.get("slot") not in ELEMENT_SLOTS or not isinstance(it["element"], str) or it["element"] not in elements
     ):
-      err(f"{where}: element は武器だけに、{'/'.join(elements)} のどれかで書いてください")
+      err(f"{where}: element は武器と装飾品だけに、{'/'.join(elements)} のどれかで書いてください")
     if "drop_level" in it:
       err(f"{where}: drop_level はもう使いません（出やすさはドロップ表の重みで決める）")
     towns = it.get("towns")
@@ -662,13 +664,15 @@ def validate(raw: dict) -> list[str]:
     not isinstance(weights, dict)
     or set(weights) != set(REWARD_STATS)
     or any(not _num(v) or v <= 0 for v in weights.values())  # 0 だと、その能力をいくら足しても点数が増えない
+    or not _num(points.get("element"))
+    or points["element"] < 0
     or not isinstance(caps, dict)
     or set(caps) != set(rarities)
     or any(not _num(v) or v < 0 for v in caps.values())
   ):
     err(
       "season.json: item_points は {weights: {hp/atk/def/spd/dex: 能力 +1 の点数（0 より大きい数）}, "
-      f"max: {{{'/'.join(rarities)}: 点数の上限（0 以上）}}}} にしてください"
+      f"element: 属性の点数（0 以上）, max: {{{'/'.join(rarities)}: 点数の上限（0 以上）}}}} にしてください"
     )
   elif not errors:
     for iid, it in items.items():
@@ -681,8 +685,10 @@ def validate(raw: dict) -> list[str]:
 
 
 def item_points(item: dict, cfg: dict) -> float:
-  """アイテムの点数（能力の増減 × season.json の item_points.weights の合計。マイナスの能力も同じ重みで引く）。"""
-  return sum(cfg["weights"].get(k, 0) * item.get(k, 0) for k in REWARD_STATS)
+  """アイテムの点数（能力の増減 × season.json の item_points.weights の合計。マイナスの能力も同じ重みで引く）。
+  属性があれば item_points.element を足す。"""
+  stats = sum(cfg["weights"].get(k, 0) * item.get(k, 0) for k in REWARD_STATS)
+  return stats + (cfg.get("element", 0) if item.get("element") else 0)
 
 
 # ---- 組み立て -------------------------------------------------------------------------

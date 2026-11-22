@@ -57,8 +57,8 @@ class DisplayTest(unittest.TestCase):
       },
     }
     state = game.new_state(world)
-    state["inventory"] = {"iron_sword": 1, "wooden_helm": 1, "x_epic": 1, "turtle_shield": 1}
-    self.assertEqual(rpg.gear_text(world, state), "★★★試しの兜/★★亀甲の盾/★鉄製の剣")
+    state["inventory"] = {"iron_sword": 1, "wooden_helm": 1, "x_epic": 1, "steel_shield": 1}
+    self.assertEqual(rpg.gear_text(world, state), "★★★試しの兜/★★鋼鉄の盾/★鉄の剣")
 
   def test_quest_marks_are_not_rare_items(self):
     events = [
@@ -84,7 +84,7 @@ class DisplayTest(unittest.TestCase):
 
   def test_detail_lists_items_and_past_seasons(self):
     state = play(3)
-    state["inventory"]["power_ring"] = 1
+    state["inventory"]["steel_sword"] = 1
     state["seasons"].append(
       {
         "season": 0,
@@ -94,12 +94,12 @@ class DisplayTest(unittest.TestCase):
         "quests_failed": 2,
         "kills": 140,
         "deaths": 1,
-        "rares": ["power_ring"],
+        "rares": ["steel_sword"],
         "ended_on": "2026-11-30",
       }
     )
     text = rpg.build_text(WORLD, state)
-    self.assertIn("★★力の指輪", text)
+    self.assertIn("★★鋼鉄の剣", text)
     self.assertIn("シーズン0: Lv.20", text)
 
   def test_board_links_to_the_site(self):
