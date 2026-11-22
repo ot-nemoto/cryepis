@@ -1052,7 +1052,7 @@ class BattleDepthTest(unittest.TestCase):
     state["hero"]["base_spd"] = 6
     day = day_of(state)
     self.assertEqual(day.stats["spd"], 5)
-    weapon, rate, held = day.pick_weapon(self.monster(element="ice"), 0)  # 騎兵の槍に持ち替えると素早さ 6
+    weapon, rate, held, _ = day.pick_weapon(self.monster(element="ice"), 0)  # 騎兵の槍に持ち替えると素早さ 6
     self.assertEqual((weapon, held["spd"]), ("x_lance", 6))
     self.assertEqual(self.count_first(self.monster(spd=6, element="ice"), 6, inventory=state["inventory"])[:1], "h")
 
@@ -1077,20 +1077,22 @@ class BattleDepthTest(unittest.TestCase):
     state["inventory"] = {"x_bow": 1, "x_flame": 1}  # 試しの弓（攻 +1・器 +5）、試しの炎の剣（攻 +2・炎・★★）
     day = day_of(state)
     self.assertEqual(G.equipment(WORLD, state)["weapon"], "x_flame")  # どちらも 2 点。珍しいほう
-    weapon, _, held = day.pick_weapon(self.monster(element="ice"), 0)  # 氷には炎が苦手 → 試しの弓に持ち替える
+    weapon, _, held, _ = day.pick_weapon(self.monster(element="ice"), 0)  # 氷には炎が苦手 → 試しの弓に持ち替える
     self.assertEqual(weapon, "x_bow")
     self.assertEqual((held["atk"], held["dex"]), (state["hero"]["base_atk"] + 1, 5))  # 器用さも試しの弓のもの
-    _, _, held = day.pick_weapon(self.monster(element="thunder"), 0)
+    _, _, held, _ = day.pick_weapon(self.monster(element="thunder"), 0)
     self.assertEqual(held["dex"], 0)  # 炎の剣のときは器用さ +0
 
   def test_accessory_element_goes_to_attacks_without_one(self):
     state = self.hero_state(base_atk=20)
     state["inventory"] = {"iron_sword": 1, "crimson_grass_charm": 1}  # 紅蓮草の護符（炎）
     day = day_of(state)
-    self.assertEqual(G.attack_element(WORLD, state, "iron_sword"), "flame")  # 属性のない武器にも炎が付く
-    self.assertEqual(G.attack_element(WORLD, state, None), "flame")  # 素手でも
-    self.assertEqual(G.attack_element(WORLD, state, "x_lance"), "thunder")  # 属性の武器なら、武器の属性
-    _, rate, _ = day.pick_weapon(self.monster(element="thunder"), 0)
+    self.assertEqual(
+      G.attack_element(WORLD, "iron_sword", "crimson_grass_charm"), "flame"
+    )  # 属性のない武器にも炎が付く
+    self.assertEqual(G.attack_element(WORLD, None, "crimson_grass_charm"), "flame")  # 素手でも
+    self.assertEqual(G.attack_element(WORLD, "x_lance", "crimson_grass_charm"), "thunder")  # 属性の武器なら、武器の属性
+    _, rate, _, _ = day.pick_weapon(self.monster(element="thunder"), 0)
     self.assertEqual(rate, WORLD["season"]["element_rates"]["strong"])  # 炎は雷に強い
     day.battle(self.monster(element="thunder", hp=1))
     self.assertIn("（弱点を突いた）", day.events[-1])
@@ -1098,6 +1100,31 @@ class BattleDepthTest(unittest.TestCase):
     day = day_of(state)
     day.battle(self.monster(element="thunder", hp=1))
     self.assertIn("（弱点を突いた）", day.events[-1])
+
+  def test_elemental_accessory_is_worn_only_against_its_weak_foe(self):
+    state = self.hero_state(base_atk=20)
+    state["inventory"] = {"iron_sword": 1, "soaring_leaf_charm": 1, "crimson_grass_charm": 1}
+    self.assertEqual(G.equipment(WORLD, state)["accessory"], "soaring_leaf_charm")  # ふだんは点数の高い翔天葉の護符
+    day = day_of(state)
+    _, rate, held, acc = day.pick_weapon(
+      self.monster(element="thunder", spd=1), 0
+    )  # 雷の相手: 紅蓮草の護符に着け替える
+    self.assertEqual((acc, rate), ("crimson_grass_charm", WORLD["season"]["element_rates"]["strong"]))
+    self.assertEqual(held["spd"], state["hero"]["base_spd"])  # その戦いは翔天葉の護符の速 +2 がない
+    day.battle(self.monster(element="thunder", hp=1))
+    self.assertIn("（紅蓮草の護符で弱点を突いた）", day.events[-1])
+    for enemy in ("ice", "flame", None):  # 弱点を突けない相手では、ふだんの装飾品のまま
+      _, rate, _, acc = day.pick_weapon(self.monster(element=enemy), 0)
+      self.assertEqual((acc, rate), ("soaring_leaf_charm", 1.0), enemy)
+
+  def test_elemental_accessory_is_taken_off_against_a_strong_foe(self):
+    state = self.hero_state(base_atk=20)
+    state["inventory"] = {"crimson_grass_charm": 1}  # 装飾品は紅蓮草の護符だけ（ふだんも着けている）
+    day = day_of(state)
+    _, rate, _, acc = day.pick_weapon(self.monster(element="ice"), 0)  # 氷には炎が苦手 → 外して戦う
+    self.assertEqual((acc, rate), (None, 1.0))
+    _, rate, _, acc = day.pick_weapon(self.monster(), 0)
+    self.assertEqual((acc, rate), ("crimson_grass_charm", 1.0))  # 属性のない相手は、着けたまま
 
   def test_shop_buys_weapons_with_new_elements(self):
     state = self.hero_state(gold=10000)
