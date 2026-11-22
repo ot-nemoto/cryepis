@@ -1063,15 +1063,15 @@ class BattleDepthTest(unittest.TestCase):
     state = self.hero_state(base_atk=3)
     state["inventory"] = {"x_heavy": 1, "x_lance": 1}  # 攻 3+7=10（属性なし）と 3+6=9（雷）
     day = day_of(state)
-    # 守りが高い氷の魔物: 大剣 (10 - 8) = 2、騎兵の槍 (9 - 8) × 1.5 = 1.5 → 大剣のほうが効く
+    # 守りが高い氷の魔物: 大剣 (10 - 8) = 2、騎兵の槍 (9 - 8) × 1.3 = 1.3 → 大剣のほうが効く
     self.assertEqual(day.pick_weapon(self.monster(element="ice"), 16)[0], "x_heavy")
     self.assertEqual(day.pick_weapon(self.monster(element="ice"), 0)[0], "x_lance")
 
   def test_hero_fights_barehanded_rather_than_with_a_weak_element(self):
     state = self.hero_state(base_atk=20)
-    state["inventory"] = {"x_flame": 1}  # 試しの炎の剣（攻 +2・炎・★★）は、氷の魔物には 0.7 倍
+    state["inventory"] = {"x_flame": 1}  # 試しの炎の剣（攻 +2・炎・★★）は、氷の魔物には 0.8 倍
     day = day_of(state)
-    self.assertEqual(day.pick_weapon(self.monster(element="ice"), 0)[:2], (None, 1.0))  # 22×0.7 < 20
+    self.assertEqual(day.pick_weapon(self.monster(element="ice"), 0)[:2], (None, 1.0))  # 22×0.8 < 20
     self.assertEqual(day.pick_weapon(self.monster(element="thunder"), 0)[0], "x_flame")
     self.assertEqual(day.pick_weapon(self.monster(), 0)[0], "x_flame")
 

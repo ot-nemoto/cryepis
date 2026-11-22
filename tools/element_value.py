@@ -1,7 +1,7 @@
 """属性が、点数でいうとどのくらい効くかを計算する（season.json の item_points.element を決めるのに使った）。
 
 属性が効くのは、弱点を突ける相手と戦ったときだけ（苦手な相手のときは、持ち替えたり外したりするので損はない）。
-1. 弱点を突けたとき: ダメージ 1.5 倍が、攻撃 +いくつに当たるか（tools/stat_value.py と同じ強さの見積もり）
+1. 弱点を突けたとき: ダメージ × element_rates.strong が、攻撃 +いくつに当たるか（tools/stat_value.py と同じ強さの見積もり）
 2. 道での平均: 開放した道で出会う割合で重みをつけ、Lv1〜最大 Lv で平均した効き目を、攻撃 +1 を 1 点として出す
 docs/BALANCE.md の「8. アイテムの強さ」の「属性の点数」を参照。
 
@@ -65,7 +65,9 @@ def road_points(world: dict, element: str) -> tuple[float, float, list[str]]:
 
 def main() -> int:
   world = W.load_world()
-  print("1. 弱点を突けたときの効き目（ダメージ 1.5 倍が、攻撃 +いくつに当たるか）")
+  print(
+    f"1. 弱点を突けたときの効き目（ダメージ {world['season']['element_rates']['strong']:g} 倍が、攻撃 +いくつに当たるか）"
+  )
   for mid, lv in CASES:
     m = world["monsters"][mid]
     print(f"  Lv{lv:2d} {m['name']}（{world['elements'][m['element']]['name']}）: 攻 +{atk_equivalent(world, m, lv)}")

@@ -59,7 +59,7 @@
 
 ## 3.7 属性
 
-炎・氷・雷の 3 つ。氷→炎→雷→氷（左が右に強い）。強い属性の武器で攻めるとダメージ 1.5 倍、弱い属性だと 0.7 倍。データは `world/monsters.json` の `elements`（魔物の `element`）と `world/items.json`（武器の `element`）。
+炎・氷・雷の 3 つ。氷→炎→雷→氷（左が右に強い）。強い属性で攻めるとダメージ 1.3 倍、弱い属性だと 0.8 倍（`season.json` の `element_rates`）。データは `world/monsters.json` の `elements`（魔物の `element`）と `world/items.json`（武器の `element`）。
 
 | 属性 | 強い相手 | 苦手な相手 | 鉱石 | 魔物 | 武器 |
 |---|---|---|---|---|---|
