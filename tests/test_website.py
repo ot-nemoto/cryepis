@@ -302,7 +302,7 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn(">Lv<", html)
     self.assertIn('<th>名前</th><th class="icon">性質</th>', html)  # 地形の列は出さない
     self.assertNotIn("<th>地形</th>", html)
-    self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 沼ヒル（アイテムと同じ枠の札）
+    self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 氷狼（アイテムと同じ枠の札）
     roads, boss = south.split('<h3 class="sub">ボス</h3>')  # ボスは道の魔物とは別の表
     self.assertNotIn("巣穴の主", roads)
     self.assertIn("<td>巣穴の主</td>", boss)
