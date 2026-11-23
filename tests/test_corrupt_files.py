@@ -1,15 +1,13 @@
 """壊れたファイル（マージ衝突など）・ないファイルを読んだときの動き。分かりやすいメッセージで止まる（ファイルは壊さない）。
-状態を保存できない勇者がいても、ほかの勇者は進む。"""
+（毎日の実行で、状態を保存できない勇者がいても、ほかの勇者が進むことは test_rpg.py の HeroesTest）"""
 
 import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import common  # noqa: E402
 import game  # noqa: E402
 import rpg  # noqa: E402
 import store  # noqa: E402
@@ -58,66 +56,6 @@ class LoadersTest(unittest.TestCase):
     with self.assertRaises(SystemExit) as cm:
       store.load_heroes(self.path)
     self.assertIn(str(self.path), str(cm.exception))
-
-
-class DailyRunTest(unittest.TestCase):
-  """毎日の実行（rpg.main）を一時ディレクトリに向けて動かす。"""
-
-  def setUp(self):
-    tmp = tempfile.TemporaryDirectory()
-    self.addCleanup(tmp.cleanup)
-    self.dir = Path(tmp.name)
-    for module, target, value in (
-      (store, "HEROES_PATH", self.dir / "heroes.json"),
-      (store, "HERO_DIR", self.dir / "heroes"),
-      (rpg, "BOARD_PATH", self.dir / "board.json"),
-      (store, "GUILD_PATH", self.dir / "guild.json"),
-    ):
-      patcher = mock.patch.object(module, target, value)
-      patcher.start()
-      self.addCleanup(patcher.stop)
-    patcher = mock.patch.object(common, "create_gist", return_value={"id": "board", "html_url": "https://g/board"})
-    self.create_board = patcher.start()
-    self.addCleanup(patcher.stop)
-    patcher = mock.patch.object(common, "update_gist")
-    patcher.start()
-    self.addCleanup(patcher.stop)
-
-  def run_main(self, argv, env=None):
-    with (
-      mock.patch.object(sys, "argv", ["rpg.py", *argv]),
-      mock.patch.dict("os.environ", env or {}, clear=True),
-      mock.patch("sys.stdout"),
-    ):
-      return rpg.main()
-
-  def test_a_hero_whose_state_cannot_be_saved_does_not_stop_the_others(self):
-    for name in ("アリス", "ボブ"):
-      self.run_main(["--new-game", name])
-    original = game.save_state
-
-    def save(state, path):
-      if state["id"] == "h1":
-        raise OSError("ディスクがいっぱい")
-      original(state, path)
-
-    with mock.patch.object(game, "save_state", side_effect=save), mock.patch.object(common, "warn") as warn:
-      self.assertEqual(self.run_main(["--date", "2026-12-01"], {"GIST_PAT": "p"}), 1)  # 失敗した勇者がいる
-    warn.assert_called_once()
-    self.assertIn("アリス", warn.call_args.args[0])
-    self.assertIn("ディスクがいっぱい", warn.call_args.args[0])
-    self.assertEqual(game.load_state(WORLD, store.hero_state_path("h2"))["day"], 1)  # ボブは進んで、保存された
-    self.assertEqual(
-      game.load_state(WORLD, store.hero_state_path("h1"))["day"], 0
-    )  # アリスは進んでいない（次の実行でやり直す）
-    board = self.create_board.call_args.args[2]
-    self.assertIn("■ ボブ", board)  # 進められた勇者だけでランキングを作る
-    self.assertNotIn("■ アリス", board)
-
-  def test_current_entries_skip_heroes_without_a_state_file(self):
-    self.run_main(["--new-game", "アリス"])
-    store.hero_state_path("h1").unlink()
-    self.assertEqual(store.current_entries(WORLD), [])  # サイトの書き出しは、状態のない勇者を飛ばす
 
 
 if __name__ == "__main__":
