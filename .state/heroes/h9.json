@@ -1,0 +1,37 @@
+{
+  "id": "h9",
+  "name": "MARCUS MARIUS AV",
+  "trait": "strong",
+  "season": null,
+  "season_day": 0,
+  "day": 0,
+  "last_date": null,
+  "hero": {
+    "level": 1,
+    "exp": 0,
+    "max_hp": 30,
+    "hp": 30,
+    "base_atk": 6,
+    "base_def": 6,
+    "base_spd": 6,
+    "base_dex": 6,
+    "gold": 60,
+    "potions": 1
+  },
+  "inventory": {},
+  "place": "karun",
+  "home_town": "karun",
+  "road": null,
+  "quest": null,
+  "taken": [],
+  "season_stats": {
+    "quests_done": 0,
+    "quests_failed": 0,
+    "kills": 0,
+    "deaths": 0,
+    "rares": []
+  },
+  "last": null,
+  "journal": [],
+  "seasons": []
+}
