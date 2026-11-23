@@ -279,10 +279,9 @@ def _check_season(c: _Check):
       err(f"season.json: terrain_scenery の {key!r} は地形（{'/'.join(TERRAINS)}）と文字列の一覧にしてください")
 
 
-def _check_areas(c: _Check) -> set:
-  """map.json の areas（地方）。地方の ID の集合を返す。"""
+def _check_areas(c: _Check) -> set | None:
+  """map.json の areas（地方）。地方の ID の集合を返す（areas がなければ None）。"""
   err, mp, places = c.err, c.mp, c.places
-  has_areas = "areas" in mp
   has_areas = "areas" in mp
   areas = mp.get("areas")
   area_ids = set()
@@ -306,7 +305,7 @@ def _check_areas(c: _Check) -> set:
       if "en" in a and (not isinstance(a["en"], str) or not a["en"]):
         err(f"map.json の areas[{i}]: en（英語名）は空でない文字列にしてください")
       area_ids.add(a["id"])
-  return area_ids
+  return area_ids if has_areas else None
 
 
 def _check_open_and_starts(c: _Check) -> str | None:
@@ -333,17 +332,16 @@ def _check_open_and_starts(c: _Check) -> str | None:
   return start
 
 
-def _check_places(c: _Check, area_ids: set):
-  """map.json の places（名前・地方・座標・ギルドの規模・店）。"""
-  err, mp, places, items = c.err, c.mp, c.places, c.items
-  has_areas = "areas" in mp
+def _check_places(c: _Check, area_ids: set | None):
+  """map.json の places（名前・地方・座標・ギルドの規模・店）。area_ids が None なら、地方は調べない。"""
+  err, places, items = c.err, c.places, c.items
   for pid, p in places.items():
     where = f"map.json の {pid}"
     if p.get("type") not in PLACE_TYPES:
       err(f"{where}: type は {'/'.join(PLACE_TYPES)} のどれかにしてください")
     if not p.get("name"):
       err(f"{where}: name がありません")
-    if has_areas and (not isinstance(p.get("area"), str) or p["area"] not in area_ids):
+    if area_ids is not None and (not isinstance(p.get("area"), str) or p["area"] not in area_ids):
       err(f"{where}: area（地方）は areas の ID にしてください")
     for key in ("alias", "region", "text", "en"):
       if key in p and (not isinstance(p[key], str) or not p[key]):
@@ -556,7 +554,6 @@ def _check_hero_traits(c: _Check):
 def _check_monster_reward(c: _Check):
   """season.json の monster_reward（魔物の経験値とお金の計算）。"""
   err, season = c.err, c.season
-  # monsters.json
   reward_cfg = season.get("monster_reward")
   weights = reward_cfg.get("weights") if isinstance(reward_cfg, dict) else None
   if (
