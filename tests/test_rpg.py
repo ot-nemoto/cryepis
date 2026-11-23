@@ -342,6 +342,32 @@ class HeroesTest(unittest.TestCase):
     self.assertIn("■ ボブ", board)  # 進められた勇者だけでランキングを作る
     self.assertNotIn("■ アリス", board)
 
+  def test_a_hero_whose_state_cannot_be_saved_does_not_stop_the_others(self):
+    self.new_game("アリス")
+    self.new_game("ボブ")
+    original = game.save_state
+
+    def save(state, path):
+      if state["id"] == "h1":
+        raise OSError("ディスクがいっぱい")
+      original(state, path)
+
+    with mock.patch.object(game, "save_state", side_effect=save), mock.patch.object(common, "warn") as warn:
+      self.assertEqual(self.daily(), 1)  # 失敗した勇者がいる
+    warn.assert_called_once()
+    self.assertIn("アリス", warn.call_args.args[0])
+    self.assertIn("ディスクがいっぱい", warn.call_args.args[0])
+    self.assertEqual(load("h2")["day"], 1)  # ボブは進んで、保存された
+    self.assertEqual(load("h1")["day"], 0)  # アリスは進んでいない（次の実行でやり直す）
+    board = self.create_board.call_args.args[2]
+    self.assertIn("■ ボブ", board)  # 進められた勇者だけでランキングを作る
+    self.assertNotIn("■ アリス", board)
+
+  def test_current_entries_skip_heroes_without_a_state_file(self):
+    self.new_game("アリス")
+    store.hero_state_path("h1").unlink()
+    self.assertEqual(store.current_entries(WORLD), [])  # サイトの書き出しは、状態のない勇者を飛ばす
+
   def test_hero_that_failed_stays_on_the_site_map(self):
     self.new_game("アリス")
     self.new_game("ボブ")
