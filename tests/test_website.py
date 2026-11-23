@@ -297,14 +297,18 @@ class SiteTest(unittest.TestCase):
     self.assertIn('data-f="world"', head)  # 強敵は WORLD、ボスは RAID で絞り込める
     self.assertIn('data-f="raid"', head)
     self.assertIn(
-      '<tr data-f="world"><td>雪男</td><td class="num">10</td><td><span class="habitat">WORLD</span></td>', south
+      '<tr data-f="world"><td>雪男</td><td class="num">N/A</td><td><span class="habitat">WORLD</span></td>', south
     )
     self.assertIn(
-      '<tr data-f="raid"><td>巣穴の主</td><td class="num">15</td><td><span class="habitat">RAID</span></td>', south
+      '<tr data-f="raid"><td>巣穴の主</td><td class="num">N/A</td><td><span class="habitat">RAID</span></td>', south
     )
     self.assertIn('<span class="f-label">生息地</span>', head)
     self.assertIn('id="f-none"', html)
-    self.assertEqual(south.count('<div class="card board">'), 3)  # 道の魔物・強敵・ボス（絞り込みで隠す単位）
+    self.assertEqual(south.count('<div class="card board">'), 1)  # 強敵・ボスも道の魔物と同じ表（別の枠は作らない）
+    self.assertNotIn('<h3 class="sub">', south)
+    rows = south[south.index("<table") :]
+    self.assertLess(rows.index("<td>ワイバーン</td>"), rows.index("<td>雪男</td>"))  # 道の魔物 → 強敵 → ボス
+    self.assertLess(rows.index("<td>雪男</td>"), rows.index("<td>巣穴の主</td>"))
     roads = south[: south.index("<table")]  # 魔物の表の上に、この地方の街道と地形の割合
     self.assertIn("<h3>街道</h3>", roads)
     self.assertEqual(roads.count('<div class="road">'), sum(1 for a, b in WORLD["road_info"] if a < b))
@@ -318,26 +322,15 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<th class="num">速</th><th class="num">器</th><th class="num">EXP</th>', html)  # 器用さ
     self.assertIn('<th>名前</th><th class="num">Lv</th><th>生息地</th><th class="icon">性質</th>', html)
     self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 氷狼（アイテムと同じ枠の札）
-    roads, boss = south.split('<h3 class="sub">ボス</h3>')  # ボスは道の魔物とは別の表
-    self.assertNotIn("巣穴の主", roads)
-    self.assertIn("<td>巣穴の主</td>", boss)
-    self.assertNotIn("属性</span>", boss)  # 巣穴の主は属性なし
-    self.assertIn("<td>南壁の巣穴（ダンジョン・まだ挑めない）</td>", boss)
-    self.assertIn("<th>いる場所</th>", boss)
-    roads, elite = roads.split('<h3 class="sub">強敵</h3>')  # 強敵も道の魔物とは別の表（ボスの前）
-    for name in ("雪男", "岩ゴーレム"):
-      self.assertNotIn(f"<td>{name}</td>", roads)
-      self.assertIn(f"<td>{name}</td>", elite)
-    self.assertIn("カルンの依頼「吹雪の雪男」（Lv10 から）", elite)
-    self.assertIn("ムラリスの依頼「南壁の大鷲」（Lv10 から）", elite)
-    self.assertIn("<th>戦える依頼</th>", elite)
+    for name in ("雪男", "岩ゴーレム", "大鷲"):  # 強敵（カルン・ムラリスの討伐の依頼）も 1 度ずつ
+      self.assertEqual(south.count(f"<td>{name}</td>"), 1)
     self.assertNotIn("属性の相性", html)  # 説明は手引きのページに
     self.assertIn('<a href="guide.html">手引き</a>', html)
     self.assertNotIn("性質の効果がかかる前", website.build_towns(WORLD))  # 魔物の注記は町のページに出さない
     self.assertIn("性質の効果がかかる前", html)
     crown = html[html.index('id="panel-crownlands"') :]
     self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
-    self.assertEqual(html.count('<h3 class="sub">ボス</h3>'), 1)  # ボスのいない地方・開放していない地方には出さない
+    self.assertEqual(html.count("<td>巣穴の主</td>"), 1)  # ボスのいない地方・開放していない地方には出さない
 
   def test_guide_page(self):
     html = website.build_guide(WORLD)
