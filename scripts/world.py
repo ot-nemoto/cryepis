@@ -65,7 +65,6 @@ SEASON_KEYS = {
   "months": (int, 1, 120),
   "actions_per_day": (int, 1, 50),
   "rest_heal_rate": (float, 0, 1),
-  "retreat_hp_rate": (float, 0, 1),
   "quest_open_days": (int, 1, 30),
   "deliver_range": (int, 1, BIG),
   "max_level": (int, 1, BIG),

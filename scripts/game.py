@@ -1040,15 +1040,6 @@ class Day:
       return self.step(self.state["road"])
     return self.go(self.world["next"][self.state["place"]][target])
 
-  def turn_back(self) -> None:
-    """道の途中で、引き返したほうが早く町に着くなら引き返す。"""
-    state, world = self.state, self.world
-    road, origin = state["road"], state["place"]
-    total = world["roads"][(origin, road["to"])]
-    if total - road["left"] < road["left"]:
-      state.update(place=road["to"], road={"to": origin, "left": total - road["left"]})
-      self.log(f"HP が心もとないので{world['places'][origin]['name']}へ引き返した")
-
   def hunt_step(self, quest: dict) -> bool:
     """討伐の依頼を 1 行動ぶん進める（行き・帰りは道の出来事。討伐は 1 行動で、残りの目的の魔物と 1 体ずつ連戦する。
     HP は減ったまま次の魔物へ。倒すたびに経験値・お金が入り、途中で力尽きても倒した分は残る）。"""
@@ -1088,11 +1079,9 @@ class Day:
 
   def act(self) -> bool:
     """1 行動。力尽きたら False。依頼を受けるのは 1 日 1 回で、受けるのに行動回数は使わない。"""
-    state, hero = self.state, self.hero
+    state = self.state
     for _ in range(5):  # 町での受注・報告は行動回数を使わない
-      if state["road"]:
-        if hero["hp"] < self.stats["max_hp"] * self.cfg["retreat_hp_rate"] and not hero["potions"]:
-          self.turn_back()
+      if state["road"]:  # 道の途中は、HP が減っても引き返さずに進む
         return self.step(state["road"])
       place, quest = state["place"], state["quest"]
       if quest is None:

@@ -400,20 +400,16 @@ class BattleAndItemTest(unittest.TestCase):
     state["hero"].update(hp=1, potions=0)
     return state
 
-  def test_turns_back_on_the_road_when_hp_is_low(self):
-    # ムラリス →（6 行動）→ カルン の 1 歩目。引き返せば 1、進めば 5
+  def test_keeps_going_on_the_road_when_hp_is_low(self):
+    # ムラリス →（6 行動）→ カルン の 1 歩目。HP 1・回復薬なしでも引き返さずに進む
     state = self.low_hp_on_road("muralis", "karun", 5)
+    state["quest"] = G.patrol(WORLD, {**state, "place": "muralis"}, random.Random(0)) | {"place": "karun"}
     day = day_of(state)
-    day.turn_back()
-    self.assertEqual((state["place"], state["road"]), ("karun", {"to": "muralis", "left": 1}))
-    self.assertIn("引き返した", day.events[0])
-
-  def test_keeps_going_when_turning_back_is_not_closer(self):
-    state = self.low_hp_on_road("muralis", "karun", 1)  # あと 1 行動で着く
-    day = day_of(state)
-    day.turn_back()
-    self.assertEqual((state["place"], state["road"]["to"]), ("muralis", "karun"))
-    self.assertEqual(day.events, [])
+    day.rng = random.Random(0)
+    day.road_event = lambda a, b: True  # 道の出来事は何も起きない
+    day.act()
+    self.assertEqual((state["place"], state["road"]), ("muralis", {"to": "karun", "left": 4}))
+    self.assertFalse(any("引き返" in e for e in day.events))
 
   def test_start_town_is_random_per_hero_and_season(self):
     towns = {G.start_town(WORLD, f"h{i}", None) for i in range(30)}
