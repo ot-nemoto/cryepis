@@ -286,9 +286,17 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の魔物は出さない
     self.assertNotIn("サリナ〜エクエス（", south[south.index("<table") :])  # 魔物の表には出る道と割合を出さない
     self.assertIn(
-      '<tr><td>野犬</td><td class="num">1</td><td><span class="tdot" style="background:var(--t-plain)"></span>草原</td>',
+      '<tr data-f="plain"><td>野犬</td><td class="num">1</td>'
+      '<td><span class="tdot" style="background:var(--t-plain)"></span>草原</td>',
       south,
     )  # 名前の右に Lv と地形（街道の円グラフと同じ色の丸）
+    head = html[: html.index('class="tabs"')]  # 地形の絞り込み（タブの上。開放した道と強敵・ボスにある地形だけ）
+    for t in ("plain", "wetland", "mountain", "forest", "snow"):
+      self.assertIn(f'class="chip" data-f="{t}"', head)
+    self.assertNotIn('data-f="sea"', head)
+    self.assertIn('<span class="f-label">地形</span>', head)
+    self.assertIn('id="f-none"', html)
+    self.assertEqual(south.count('<div class="card board">'), 3)  # 道の魔物・強敵・ボス（絞り込みで隠す単位）
     roads = south[: south.index("<table")]  # 魔物の表の上に、この地方の街道と地形の割合
     self.assertIn("<h3>街道</h3>", roads)
     self.assertEqual(roads.count('<div class="road">'), sum(1 for a, b in WORLD["road_info"] if a < b))

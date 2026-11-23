@@ -386,15 +386,17 @@ if(panel&&el!==panel)el.scrollIntoView();};
 window.addEventListener('hashchange',fromHash);fromHash();})();
 """
 
-# レアリティの絞り込み（複数選べて、何も選ばなければすべて）。表の行（tr[data-f]）を隠し、
-# 絞り込んで行のなくなったカードも隠す（絞り込んでいなければ、空のカードも出す）
+# 絞り込み（レアリティ・地形。複数選べて、何も選ばなければすべて）。表の行（tr[data-f]）を隠し、
+# 絞り込んで行のなくなったカード（.board）と、そのすぐ前の小見出し（h3.sub。強敵・ボスなど）も隠す
+# （絞り込んでいなければ、空のカードも出す）
 FILTER_JS = """
 (()=>{const chips=[...document.querySelectorAll('.chip[data-f]')],none=document.getElementById('f-none'),
 clear=document.getElementById('f-clear');if(!chips.length)return;
 const apply=()=>{const on=new Set(chips.filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>c.dataset.f));let shown=0;
 document.querySelectorAll('.board').forEach(card=>{let n=0;
 card.querySelectorAll('tr[data-f]').forEach(tr=>{const ok=!on.size||on.has(tr.dataset.f);tr.hidden=!ok;if(ok)n++;});
-card.hidden=on.size>0&&n===0;const panel=card.closest('.tab-panel');if(!card.hidden&&!(panel&&panel.hidden))shown++;});
+card.hidden=on.size>0&&n===0;const h=card.previousElementSibling;if(h&&h.matches('h3.sub'))h.hidden=card.hidden;
+const panel=card.closest('.tab-panel');if(!card.hidden&&!(panel&&panel.hidden))shown++;});
 none.hidden=!on.size||shown>0;clear.hidden=!on.size;};
 chips.forEach(c=>c.addEventListener('click',()=>{
 c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();}));
@@ -425,13 +427,18 @@ def tab_panel(tid: str, heading: str, inner: str) -> str:
 
 def rarity_filter(chips: list[tuple[str, str]], empty: str) -> str:
   """レアリティの絞り込みのボタン（[(値, ★ の印)]）と、合うものがないときの文。"""
+  return chip_filter("レアリティ", [(v, f'<span class="chip-mark">{escape(mark)}</span>') for v, mark in chips], empty)
+
+
+def chip_filter(label: str, chips: list[tuple[str, str]], empty: str) -> str:
+  """絞り込みのボタン（[(値, ボタンの中の HTML)]）と、合うものがないときの文（FILTER_JS で動かす。
+  表の行は tr[data-f]、隠す単位のカードは .board）。"""
   buttons = "".join(
-    f'<button type="button" class="chip" data-f="{escape(v)}" aria-pressed="false">'
-    f'<span class="chip-mark">{escape(mark)}</span></button>'
-    for v, mark in chips
+    f'<button type="button" class="chip" data-f="{escape(v)}" aria-pressed="false">{inner}</button>'
+    for v, inner in chips
   )
   return (
-    f'<div class="filters card"><div class="f-row"><span class="f-label">レアリティ</span>{buttons}</div>'
+    f'<div class="filters card"><div class="f-row"><span class="f-label">{escape(label)}</span>{buttons}</div>'
     '<div class="note">押して選ぶ（複数選べます。選ばなければすべて）'
     '<button type="button" id="f-clear" class="link" hidden>選択を解除</button></div></div>'
     f'<p id="f-none" class="note" hidden>{escape(empty)}</p>'
@@ -756,7 +763,7 @@ def build_monsters(world: dict) -> str:
     m = monsters[mid]
     trait = traits.get(m.get("trait"), {})
     return (
-      f"<tr><td>{escape(m['name'])}</td>"
+      f'<tr data-f="{escape(m["terrain"])}"><td>{escape(m["name"])}</td>'
       f'<td class="num">{m["level"]}</td><td>{terrain_label(m["terrain"])}</td>'
       + (
         f'<td class="icon"><span class="tag">{escape(trait["name"])}</span></td>' if trait else '<td class="icon"></td>'
@@ -769,7 +776,7 @@ def build_monsters(world: dict) -> str:
 
   def monster_table(rows: list[str], where: str | None = None) -> str:  # 魔物の表（カードを開いたまま返す）
     return (
-      '<div class="card"><div class="scroll"><table class="wide-table monsters"><colgroup><col style="width:7em">'
+      '<div class="card board"><div class="scroll"><table class="wide-table monsters"><colgroup><col style="width:7em">'
       '<col style="width:3em"><col style="width:4em"><col style="width:5em"><col style="width:5em">'
       + '<col style="width:3.5em">' * len(MONSTER_STATS)
       + ("<col>" if where is not None else "")
@@ -847,7 +854,17 @@ def build_monsters(world: dict) -> str:
 
   groups = area_groups(world, towns)
   guide = '<p class="note">性質・属性・素早さなどの説明は、<a href="guide.html">手引き</a>にまとめています。</p>'
-  body = ["<h2>魔物の情報</h2>", tab_bar([(aid, a["name"]) for aid, a, _ in groups]), guide]
+  on_roads = {m for info in world["road_info"].values() for m, _ in info["monsters"]}
+  used = {monsters[m]["terrain"] for m in on_roads} | {
+    m["terrain"] for m in monsters.values() if m.get("elite") or m.get("boss")
+  }
+  chips = [(t, terrain_label(t)) for t in W.TERRAINS if t in used]
+  body = [
+    "<h2>魔物の情報</h2>",
+    chip_filter("地形", chips, "条件に合う魔物はいません。"),
+    tab_bar([(aid, a["name"]) for aid, a, _ in groups]),
+    guide,
+  ]
   for aid, area, members in groups:
     body.append(
       tab_panel(
@@ -856,7 +873,7 @@ def build_monsters(world: dict) -> str:
         road_card(members) + table(members) + elite_table(aid, members) + boss_table(aid, members),
       )
     )
-  return page("魔物", "".join(body), "monsters.html", script=TABS_JS)
+  return page("魔物", "".join(body), "monsters.html", script=FILTER_JS + TABS_JS)
 
 
 # ---- 手引き -------------------------------------------------------------------------------
