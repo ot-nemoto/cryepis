@@ -405,6 +405,9 @@ class ValidateTest(unittest.TestCase):
 
     self.assertError(bad_events, ["road_events"])
 
+    for bad in ([], [[0, 1]], [[1, -1]], [[1, 0]], "x", [[1.5, 1]]):  # 空・0 体・重みが負・合計 0・数が整数でない
+      self.assertError(lambda r, bad=bad: r["season"].update(road_battle_size=bad), ["road_battle_size"])
+
     for bad in ([1, -3], [-3], "x", [-3, 1.5]):  # 下 > 上・2 つでない・整数でない
       self.assertError(lambda r, bad=bad: r["season"].update(encounter_levels=bad), ["encounter_levels"])
 

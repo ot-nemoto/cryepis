@@ -493,6 +493,18 @@ class BattleAndItemTest(unittest.TestCase):
 
 
 class RoadTest(unittest.TestCase):
+  def test_road_battles_can_have_several_monsters(self):
+    state = play(1, actions=0)
+    state["hero"].update(max_hp=999, hp=999)
+    world = copy.deepcopy(WORLD)
+    world["season"]["road_events"] = {"battle": 1}
+    world["season"]["road_battle_size"] = [[3, 1]]  # いつも 3 体
+    day = G.Day(world, state, START, random.Random(0))
+    town = state["place"]
+    self.assertTrue(day.road_event(town, world["neighbors"][town][0]))
+    self.assertEqual(sum("を倒した" in e for e in day.events), 3)  # 1 行動で 3 体と連戦
+    self.assertIn("3体で現れた", day.events[0])
+
   def test_encounters_follow_the_hero_level(self):
     road = WORLD["road_info"][("karun", "muralis")]["monsters"]
     lv = WORLD["monsters"]
@@ -577,8 +589,8 @@ class RoadTest(unittest.TestCase):
     quest = a_hunt(state["place"])
     town, road = quest["report"], WORLD["roads"][(quest["report"], quest["place"])]
     trip = min(G.HUNT_TRIP_MAX, -(-road // 2))
-    self.assertEqual(quest["steps"], [["go", trip], ["hunt", quest["count"]], ["back", trip]])
-    self.assertEqual(quest["cost"], 2 * trip + quest["count"])
+    self.assertEqual(quest["steps"], [["go", trip], ["hunt", 1], ["back", trip]])  # 何体いても討伐は 1 行動
+    self.assertEqual(quest["cost"], 2 * trip + 1)
     state["quest"] = quest
     day = day_of(state)
     target = WORLD["monsters"][quest["monster"]]["name"]
@@ -838,7 +850,8 @@ class BalanceTest(unittest.TestCase):
 
   def test_rare_items_are_rare_but_not_absent(self):
     rares = [len(s["season_stats"]["rares"]) for s in self.results]
-    self.assertTrue(1 <= self.median(rares) <= 8, sorted(rares))  # 1 シーズンに数個（中央値 6〜7）
+    # 1 シーズンに数個（中央値 9 ほど。討伐が 1 行動になって、こなす依頼が増えた #165）
+    self.assertTrue(1 <= self.median(rares) <= 12, sorted(rares))
 
   def test_heroes_drift_apart(self):
     self.assertGreater(len({s["place"] for s in self.results}), 2)
@@ -958,12 +971,13 @@ class GuildBoardTest(unittest.TestCase):
   def test_broken_hunt_quest_is_dropped_on_load(self):
     state = play(1, "h1", actions=0)
     quest = next(e for e in self.board if e["type"] == "hunt")
-    ok = dict(quest, steps=[["hunt", quest["count"] - 1], ["back", 1]], progress=1)
+    ok = dict(quest, steps=[["hunt", 1], ["back", 1]], progress=1)
     self.assertTrue(G.quest_ok(WORLD, ok))
+    self.assertTrue(G.quest_ok(WORLD, dict(ok, steps=[["hunt", quest["count"] - 1], ["back", 1]])))  # 前の形式も読める
     for broken in (
       dict(quest, steps=[], progress=0),  # 段取りが空なのに倒していない
       dict(quest, steps=[["back", 1]], progress=0),  # 討伐が残っていない
-      dict(quest, steps=[["hunt", 1], ["back", 1]], progress=0),  # 残りの数が合わない
+      dict(quest, steps=[["hunt", 1], ["back", 1]], progress=quest["count"]),  # 倒し終えたのに討伐が残っている
     ):
       self.assertFalse(G.quest_ok(WORLD, broken), broken["steps"])
       self.assertTrue(G.quest_ok(WORLD, broken, steps=False))  # 掲示板では段取りを見ない
@@ -973,6 +987,38 @@ class GuildBoardTest(unittest.TestCase):
         G.save_state(state, path)
         self.assertIsNone(G.load_state(WORLD, path, "h1")["quest"])
     self.assertTrue(G.quest_ok(WORLD, dict(quest, steps=[["back", 1]], progress=quest["count"])))  # 倒し終えて帰り道
+
+  def test_hunt_fights_all_targets_in_one_action(self):
+    state = play(1, "h1", actions=0)
+    state["hero"].update(max_hp=999, hp=999)
+    quest = dict(next(e for e in self.board if e["type"] == "hunt"), steps=[["hunt", 5], ["back", 1]], progress=1)
+    state["quest"] = quest
+    day = G.Day(WORLD, state, START, random.Random(0), self.guild)
+    self.assertTrue(day.hunt_step(quest))  # 前の形式の段取りでも、1 行動で残りを全部倒す
+    self.assertEqual(quest["progress"], quest["count"])
+    self.assertEqual(quest["steps"], [["back", 1]])
+    name = WORLD["monsters"][quest["monster"]]["name"]
+    self.assertEqual(sum(f"{name}" in e and "を倒した" in e for e in day.events), quest["count"] - 1)
+
+  def test_hunt_keeps_rewards_of_defeated_targets_when_falling(self):
+    state = play(1, "h1", actions=0)
+    quest = dict(next(e for e in self.board if e["type"] == "hunt"), steps=[["hunt", 1], ["back", 1]], progress=0)
+    quest["count"] = 3
+    state["quest"] = quest
+    day = G.Day(WORLD, state, START, random.Random(0), self.guild)
+    wins = iter([True, False])
+    gold = state["hero"]["gold"]
+
+    def battle(monster):  # 1 体目は倒して（お金が入る）、2 体目で負ける
+      won = next(wins)
+      if won:
+        day.hero["gold"] += 10
+      return won
+
+    day.battle = battle
+    self.assertFalse(day.hunt_step(quest))
+    self.assertEqual(quest["progress"], 1)
+    self.assertEqual(state["hero"]["gold"], gold + 10)
 
   def test_hunt_step_with_no_steps_fails_the_quest(self):
     state = play(1, "h1", actions=0)
