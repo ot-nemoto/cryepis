@@ -1,5 +1,9 @@
 import copy
+import json
+import random
+import shutil
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -494,6 +498,109 @@ class ValidateTest(unittest.TestCase):
       r["season"]["months"] = 0
 
     self.assertError(change, ["months"])
+
+
+class BrokenDataTest(unittest.TestCase):
+  """手で編集したデータの形が違っても、validate はスタックトレースではなく、読める誤りの一覧を返す。"""
+
+  def test_validate_never_raises(self):
+    """world/ の項目を 1 つずつ、削除・null・数・文字列・空・真偽値などに変えても、validate は例外を出さない。"""
+    paths = []
+
+    def walk(o, p=()):
+      if p and p[0] != "background":  # ベースの地図のバイト列は、ファイルから読んだ中身（JSON ではない）
+        paths.append(p)
+      for k, v in o.items() if isinstance(o, dict) else enumerate(o) if isinstance(o, list) else ():
+        walk(v, p + (k,))
+
+    walk(RAW)
+    values = [None, 0, -1, "x", "", [], {}, True, [1, 2], 10**6]
+    rng = random.Random(0)
+    shallow = [p for p in paths if len(p) <= 2]  # 浅いところは全部の項目
+    deep = rng.sample([p for p in paths if len(p) > 2], 150)  # 深いところは一部（毎回同じ。全部を試すには時間がかかる）
+    flagged = 0
+    for p in shallow + deep:
+      for value in rng.sample(values, 3):
+        for delete in (False, True):
+          raw = copy.deepcopy(RAW)
+          parent = raw
+          for key in p[:-1]:
+            parent = parent[key]
+          if delete:
+            parent.pop(p[-1])
+          else:
+            parent[p[-1]] = copy.deepcopy(value)
+          try:
+            errors = W.validate(raw)
+          except Exception as e:  # noqa: BLE001
+            self.fail(f"{p} を {'削除' if delete else repr(value)} にしたら {type(e).__name__}: {e}")
+          self.assertTrue(all(isinstance(e, str) and e for e in errors), (p, errors))
+          flagged += bool(errors)
+    self.assertGreater(flagged, 100)  # 壊したデータは、たいてい誤りとして見つかる（検査が空振りしていない）
+
+  def test_wrong_shapes_are_reported_in_readable_words(self):
+    self.assertEqual(
+      errors_after(lambda r: r["monsters"].__setitem__(33, None)),
+      ["monsters.json の monsters は、辞書の一覧にしてください"],
+    )
+    for change, words in (
+      (lambda r: r["map"]["places"][0]["shop"].append([]), ["places[0]", "shop", "文字列の一覧"]),
+      (lambda r: r["map"]["roads"][0].update({"from": []}), ["roads[0]", "from", "文字列"]),
+      (lambda r: r["map"]["roads"][0].update(terrain=[[["plain"], 5]]), ["roads[0]", "terrain"]),
+      (lambda r: r["monsters"][0].update(terrain=[]), ["monsters[0]", "terrain", "文字列"]),
+      (lambda r: r.update(rarities=[1, 2]), ["rarities", "文字列の一覧"]),
+      (lambda r: r.update(map=[]), ["map.json", "辞書"]),
+      (lambda r: r["town_quests"]["muralis"][0].update(to=[]), ["muralis", "to", "文字列"]),
+      (lambda r: r["map"].update(open=[[]]), ["open", "文字列の一覧"]),
+    ):
+      with self.subTest(words):
+        errors = errors_after(change)
+        self.assertTrue(any(all(w in e for w in words) for e in errors), errors)
+        self.assertFalse(any("調べきれませんでした" in e for e in errors), errors)  # 想定した形の誤りは、個別に知らせる
+
+  def test_unhashable_ids_and_tables_are_reported(self):
+    self.assertTrue(
+      any("ID は文字列" in e for e in errors_after(lambda r: r["map"]["places"][0].update(id=[]))),
+    )
+    for change in (
+      lambda r: r["season"]["treasure"].append([[], 1]),  # ドロップ表のキーが一覧
+      lambda r: r["season"].update(treasure=-1),
+      lambda r: r["map"].update(roads=None),
+      lambda r: r["map"]["places"][0].update(shop=None),
+      lambda r: r.update(traits=None),
+    ):
+      errors = errors_after(change)
+      self.assertFalse(any("調べきれませんでした" in e for e in errors), errors)
+
+  def test_unexpected_failures_become_errors(self):
+    """形の検査で拾えなかった想定外のデータで検査が落ちても、どの検査かを添えた誤りにする（残りの検査は続ける）。"""
+
+    def boom(c):
+      """テスト用の検査。"""
+      raise AttributeError("'NoneType' object has no attribute 'get'")
+
+    c = W._Check(copy.deepcopy(RAW))
+    self.assertIsNone(W._run(c, boom))
+    self.assertEqual(len(c.errors), 1)
+    self.assertIn("テスト用の検査", c.errors[0])
+    self.assertIn("AttributeError", c.errors[0])
+
+  def test_missing_keys_in_the_files_are_reported(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      d = Path(tmp)
+      shutil.copytree(W.WORLD_DIR, d, dirs_exist_ok=True)
+      for file, key in (("monsters.json", "monsters"), ("items.json", "rarities"), ("quests.json", "templates")):
+        data = json.loads((W.WORLD_DIR / file).read_text(encoding="utf-8"))
+        data.pop(key)
+        (d / file).write_text(json.dumps(data), encoding="utf-8")
+        with self.subTest(file), self.assertRaises(SystemExit) as cm:
+          W.load_raw(d)
+        self.assertIn(f"{file} に {key}", str(cm.exception))
+        shutil.copy(W.WORLD_DIR / file, d / file)
+      (d / "map.json").write_text("[]", encoding="utf-8")
+      with self.assertRaises(SystemExit) as cm:
+        W.load_raw(d)
+      self.assertIn("map.json", str(cm.exception))
 
 
 if __name__ == "__main__":
