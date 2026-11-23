@@ -16,6 +16,7 @@
   "actions_per_day": 3,
   "quest_open_days": 3,
   "deliver_range": 6,
+  "encounter_levels": [-3, 1],
   "road_events": {"battle": 40, "treasure": 8, "nothing": 52},
   "element_rates": {"strong": 1.3, "weak": 0.8},
   "item_points": {"weights": {"hp": 0.2, "atk": 1, "def": 0.5, "spd": 0.5, "dex": 0.2}, "element": 1, "max": {"common": 1, "rare": 2, "epic": 2, "legendary": 3}},

@@ -477,7 +477,11 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> 
   cfg, dist = world["season"], world["dist"][town]
   if t["type"] == "hunt":
     other = rng.choice(world["neighbors"][town])
-    mids, weights = zip(*world["road_info"][(town, other)]["monsters"])
+    road = world["road_info"][(town, other)]["monsters"]
+    # 掲示板は Lv のちがう勇者みんなで使うので、狙う魔物の Lv は、その道に出る Lv から均等に選ぶ
+    # （地形の重みのままだと、魔物の多い高い Lv にかたよる）。同じ Lv の中では地形の重みで選ぶ
+    level = rng.choice(sorted({world["monsters"][m]["level"] for m, _ in road}))
+    mids, weights = zip(*((m, w) for m, w in road if world["monsters"][m]["level"] == level))
     count = rng.randint(*t["count"])
     quest = {"type": "hunt", "place": other, "report": town, "monster": rng.choices(mids, weights)[0], "count": count}
   else:  # deliver
@@ -494,6 +498,27 @@ def suitable(quest: dict, level: int) -> bool:
   """受けられる依頼か（依頼のレベルが自分のレベル＋3 を超える、強すぎる依頼だけを避ける。弱すぎる依頼も受ける）。
   強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level）。"""
   return quest["level"][0] <= level + 3 and level >= quest.get("min_level", 0)
+
+
+def encounters(world: dict, monsters: list, level: int) -> list:
+  """道で出会う魔物（[ID, 重み], ...）のうち、勇者の Lv に合うもの。Lv が「勇者の Lv + encounter_levels」の範囲
+  （season.json。[-3, 1] なら Lv −3〜+1）の魔物だけにする。範囲に 1 体もいなければ、範囲にいちばん近い Lv の魔物。
+  地形ごとの割合は道のまま（残った魔物で、その地形の重みを分け直す。残った魔物のいない地形は出ない）。"""
+  low, high = (level + d for d in world["season"]["encounter_levels"])
+  lv = world["monsters"]
+
+  def gap(mid: str) -> int:
+    return max(low - lv[mid]["level"], lv[mid]["level"] - high, 0)
+
+  near = min(gap(mid) for mid, _ in monsters)
+  kept = [(mid, w) for mid, w in monsters if gap(mid) == near]
+  total: dict[str, float] = {}  # 地形ごとの重み（道のまま）と、残った魔物の重み
+  left: dict[str, float] = {}
+  for mid, w in monsters:
+    total[lv[mid]["terrain"]] = total.get(lv[mid]["terrain"], 0) + w
+  for mid, w in kept:
+    left[lv[mid]["terrain"]] = left.get(lv[mid]["terrain"], 0) + w
+  return [(mid, w * total[lv[mid]["terrain"]] / left[lv[mid]["terrain"]]) for mid, w in kept]
 
 
 def patrol(world: dict, state: dict, rng: random.Random) -> dict:
@@ -844,7 +869,7 @@ class Day:
     kinds, weights = zip(*self.cfg["road_events"].items())
     kind = self.rng.choices(kinds, weights)[0]
     if kind == "battle":
-      mids, mw = zip(*info["monsters"])
+      mids, mw = zip(*encounters(self.world, info["monsters"], self.hero["level"]))
       if not self.battle(self.world["monsters"][self.rng.choices(mids, mw)[0]]):
         return False
     elif kind == "treasure":
