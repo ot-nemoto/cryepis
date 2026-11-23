@@ -8,7 +8,7 @@
   heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
-  monsters.html       開放した道に出る魔物とボス（地方ごとのタブ。街道の地形の割合・Lv・地形・性質・属性・強さ）
+  monsters.html       開放した道に出る魔物とボス（地方ごとのタブ。街道の地形の割合・Lv・生息地・性質・属性・強さ。生息地で絞り込める）
   guide.html          手引き（能力・勇者の特性・魔物の性質・属性と相性・戦いの決まりの説明）
   guild.html          町ごとのギルドの掲示板（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
@@ -389,17 +389,17 @@ window.addEventListener('hashchange',fromHash);fromHash();})();
 """
 
 # 絞り込み（レアリティ・地形。複数選べて、何も選ばなければすべて）。表の行（tr[data-f]）を隠し、
-# 絞り込んで行のなくなったカード（.board）と、そのすぐ前の小見出し（h3.sub。強敵・ボスなど）も隠す
-# （絞り込んでいなければ、空のカードも出す）
+# 絞り込んで行のなくなったカード（.board）も隠す（絞り込んでいなければ、空のカードも出す）。
+# 合うものがないという文は、今のタブにカードがある（まだ開放されていない、などでない）ときだけ出す
 FILTER_JS = """
 (()=>{const chips=[...document.querySelectorAll('.chip[data-f]')],none=document.getElementById('f-none'),
 clear=document.getElementById('f-clear');if(!chips.length)return;
 const apply=()=>{const on=new Set(chips.filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>c.dataset.f));let shown=0;
 document.querySelectorAll('.board').forEach(card=>{let n=0;
 card.querySelectorAll('tr[data-f]').forEach(tr=>{const ok=!on.size||on.has(tr.dataset.f);tr.hidden=!ok;if(ok)n++;});
-card.hidden=on.size>0&&n===0;const h=card.previousElementSibling;if(h&&h.matches('h3.sub'))h.hidden=card.hidden;
-const panel=card.closest('.tab-panel');if(!card.hidden&&!(panel&&panel.hidden))shown++;});
-none.hidden=!on.size||shown>0;clear.hidden=!on.size;};
+card.hidden=on.size>0&&n===0;const panel=card.closest('.tab-panel');if(!card.hidden&&!(panel&&panel.hidden))shown++;});
+const vis=[...document.querySelectorAll('.tab-panel')].filter(p=>!p.hidden);
+const boards=!vis.length||vis.some(p=>p.querySelector('.board'));none.hidden=!on.size||shown>0||!boards;clear.hidden=!on.size;};
 chips.forEach(c=>c.addEventListener('click',()=>{
 c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true');apply();}));
 clear.addEventListener('click',()=>{chips.forEach(c=>c.setAttribute('aria-pressed','false'));apply();});
@@ -728,6 +728,11 @@ def terrain_shares(monsters: dict, pool: list) -> list[tuple[str, float]]:
   return sorted(((t, w / total) for t, w in out.items()), key=lambda x: (-x[1], W.TERRAINS.index(x[0])))
 
 
+def share_text(share: float) -> str:
+  """割合の表示（四捨五入で 0% にならないように、1% 未満は「1%未満」）。"""
+  return "1%未満" if share < 0.01 else f"{share:.0%}"
+
+
 def pie_svg(shares: list[tuple[str, float]]) -> str:
   """地形の割合の円グラフ（12 時から時計回り。色は地形の色）。"""
   name = lambda t: W.TERRAIN_NAMES.get(t, t)  # noqa: E731
@@ -743,20 +748,22 @@ def pie_svg(shares: list[tuple[str, float]]) -> str:
       large = 1 if share > 0.5 else 0
       body += (
         f'<path d="M0,0 L{x0:.4f},{y0:.4f} A1,1 0 {large} 1 {x1:.4f},{y1:.4f} Z" fill="var(--t-{escape(t)})" '
-        f'stroke="var(--card)" stroke-width="0.03"><title>{escape(name(t))} {share:.0%}</title></path>'
+        f'stroke="var(--card)" stroke-width="0.03"><title>{escape(name(t))} {share_text(share)}</title></path>'
       )
       start = end
   return f'<svg viewBox="-1.05 -1.05 2.1 2.1" role="img" aria-label="地形の割合">{body}</svg>'
 
 
 def build_monsters(world: dict) -> str:
-  """開放した道に出る魔物の一覧（地方ごとのタブ。Lv・地形・性質・属性・強さ）。並びは Lv の順（同じ Lv は地形の順）。
+  """開放した道に出る魔物の一覧（地方ごとのタブ。Lv・生息地・性質・属性・強さ）。並びは Lv の順（同じ Lv は地形の順）。
   道で出会う魔物は勇者の Lv でも変わるので、魔物ごとの「出る道と割合」は出さない。道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
   強敵（生息地 WORLD）とボス（RAID）も同じ表に、道の魔物のあとに出す（開放した町のある地方だけ。Lv は N/A）。"""
   places, monsters, traits = world["places"], world["monsters"], world["traits"]
   towns = [t for t, p in places.items() if p["type"] == "town"]
   order = {t: i for i, t in enumerate(W.TERRAINS)}
   place_order = {p: i for i, p in enumerate(places)}
+
+  shown: set[str] = set()  # 表に出した魔物の生息地（絞り込みのボタンは、表に出したものだけ）
 
   def boss_area(m: dict) -> str:  # ボスのいるダンジョンの地方（地方がない・知らない地方なら、その他のまとまり）
     area = places[m["boss"]].get("area")
@@ -782,6 +789,7 @@ def build_monsters(world: dict) -> str:
     bosses = [mid for mid, m in monsters.items() if m.get("boss") in places and boss_area(m) == aid]
     road = sorted(seen, key=lambda m: (monsters[m]["level"], order.get(monsters[m]["terrain"], 99), m))
     others = [m for m in list(dict.fromkeys(elites)) + bosses if m not in seen]
+    shown.update(habitat(monsters[m]) for m in road + others)
     rows = [monster_row(mid) for mid in road + others]
     return (
       monster_table(rows)
@@ -827,7 +835,7 @@ def build_monsters(world: dict) -> str:
       if place_order[a] > place_order[b] or not ({a, b} & set(members)):
         continue
       shares = terrain_shares(monsters, info["monsters"])
-      legend = "".join(f"<li>{terrain_label(t)} {share:.0%}</li>" for t, share in shares)
+      legend = "".join(f"<li>{terrain_label(t)} {share_text(share)}</li>" for t, share in shares)
       items.append(
         f'<div class="road">{pie_svg(shares)}<div><div class="name">{escape(places[a]["name"])}〜'
         f"{escape(places[b]['name'])}（{world['roads'][(a, b)]}）</div><ul>{legend}</ul></div></div>"
@@ -843,24 +851,23 @@ def build_monsters(world: dict) -> str:
 
   groups = area_groups(world, towns)
   guide = '<p class="note">性質・属性・素早さなどの説明は、<a href="guide.html">手引き</a>にまとめています。</p>'
-  on_roads = {m for info in world["road_info"].values() for m, _ in info["monsters"]}
-  used = {monsters[m]["terrain"] for m in on_roads}
-  chips = [(t, habitat_label(t)) for t in W.TERRAINS if t in used]
-  chips += [(h, habitat_label(h)) for h in HABITATS if any(habitat(m) == h for m in monsters.values())]
-  body = [
-    "<h2>魔物の情報</h2>",
-    chip_filter("生息地", chips, "条件に合う魔物はいません。"),
-    tab_bar([(aid, a["name"]) for aid, a, _ in groups]),
-    guide,
-  ]
+  panels = []
   for aid, area, members in groups:
-    body.append(
+    panels.append(
       tab_panel(
         aid,
         name_html(area["name"], area.get("en")),
         road_card(members) + table(aid, members),
       )
     )
+  chips = [(h, habitat_label(h)) for h in (*W.TERRAINS, *HABITATS) if h in shown]  # 表に出した生息地だけ
+  body = [
+    "<h2>魔物の情報</h2>",
+    chip_filter("生息地", chips, "条件に合う魔物はいません。"),
+    tab_bar([(aid, a["name"]) for aid, a, _ in groups]),
+    guide,
+    *panels,
+  ]
   return page("魔物", "".join(body), "monsters.html", script=FILTER_JS + TABS_JS)
 
 

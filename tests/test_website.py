@@ -311,7 +311,11 @@ class SiteTest(unittest.TestCase):
     self.assertLess(rows.index("<td>雪男</td>"), rows.index("<td>巣穴の主</td>"))
     roads = south[: south.index("<table")]  # 魔物の表の上に、この地方の街道と地形の割合
     self.assertIn("<h3>街道</h3>", roads)
-    self.assertEqual(roads.count('<div class="road">'), sum(1 for a, b in WORLD["road_info"] if a < b))
+    south_towns = {t for t, p in WORLD["places"].items() if p.get("area") == "austral_land"}
+    roads_here = {
+      frozenset(k) for k in WORLD["road_info"] if set(k) & south_towns
+    }  # 南大陸の町につながる道（向きは 1 つ）
+    self.assertEqual(roads.count('<div class="road">'), len(roads_here))
     self.assertIn("サリナ〜エクエス（2）", roads)  # 道の名前（行動回数）
     self.assertIn('<span class="tdot" style="background:var(--t-plain)"></span>草原 83%</li>', roads)
     self.assertIn('<span class="tdot" style="background:var(--t-wetland)"></span>湿地 17%</li>', roads)
@@ -406,6 +410,16 @@ class SiteTest(unittest.TestCase):
     world["elements"] = {}
     html = website.build_guide(world)  # 属性がなくても落ちない
     self.assertNotIn("属性と相性", html)
+
+  def test_monster_page_chips_follow_the_rows(self):
+    world = copy.deepcopy(WORLD)
+    for qs in world["town_quests"].values():  # 強敵の依頼がなければ、WORLD のボタンは出さない
+      qs[:] = [q for q in qs if not world["monsters"].get(q.get("monster"), {}).get("elite")]
+    html = website.build_monsters(world)
+    self.assertNotIn('data-f="world"', html)
+    self.assertIn('data-f="raid"', html)
+    self.assertEqual(website.share_text(0.003), "1%未満")  # ごく少ない地形も 0% にしない
+    self.assertEqual(website.share_text(0.126), "13%")
 
   def test_pie_and_terrain_shares(self):
     shares = website.terrain_shares(WORLD["monsters"], WORLD["road_info"][("karun", "muralis")]["monsters"])
