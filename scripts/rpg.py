@@ -48,7 +48,7 @@ BOARD_FILENAME = "hero-ranking.txt"
 MAX_HEROES = 30  # 同時に冒険できる（引退していない）勇者の数
 BOARD_NAME_WIDTH = 8  # ランキングのカードに出す名前の表示幅
 MEDALS = ("🥇", "🥈", "🥉")
-NAME_WIDTH_MAX = 16  # 勇者の名前の表示幅（全角 = 2）
+NAME_WIDTH_MAX = 32  # 勇者の名前の表示幅（全角 = 2。全角 16 文字・半角 32 文字）
 CATCH_UP_DAYS = 7  # 実行されなかった日をさかのぼって進める最大の日数
 # カードに優先して出す出来事（前ほど優先）
 HIGHLIGHTS = (

@@ -233,6 +233,8 @@ class HeroesTest(unittest.TestCase):
   def test_clean_name(self):
     self.assertEqual(rpg.clean_name("  アリス\n"), "アリス")
     self.assertLessEqual(common.width(rpg.clean_name("あ" * 30)), rpg.NAME_WIDTH_MAX)
+    self.assertEqual(rpg.clean_name("あ" * 20), "あ" * 16)  # 全角は 16 文字まで
+    self.assertEqual(rpg.clean_name("a" * 40), "a" * 32)  # 半角は 32 文字まで
     with self.assertRaises(SystemExit):
       rpg.clean_name(" \t ")
     with self.assertRaises(SystemExit):
