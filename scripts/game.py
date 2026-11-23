@@ -505,7 +505,23 @@ def rank_hunt(world: dict, t: dict, town: str, rank: int, rng: random.Random) ->
     pool = {c[1]: c[2] for c in here if world["monsters"][c[1]]["level"] == level}
     mid = rng.choices(sorted(pool), [pool[m] for m in sorted(pool)])[0]
     count = rng.choice([c[3] for c in here if c[1] == mid])
-    return {"type": "hunt", "place": other, "report": town, "monster": mid, "count": count, "rank": r}
+    hs = world.get("hunts") or {}
+    places = hs.get("places", {}).get(town, []) + hs.get("places", {}).get("_any", [])
+    texts = hs.get("texts", [])
+    name = world["monsters"][mid]["name"]
+    text = ""
+    if places and len(texts) >= r and texts[r - 1]:  # 町の困りごとと、★ ごとの頼み方から説明を作る
+      text = rng.choice(texts[r - 1]).format(place=rng.choice(places), monster=name, count=count)
+    return {
+      "type": "hunt",
+      "place": other,
+      "report": town,
+      "monster": mid,
+      "count": count,
+      "rank": r,
+      "name": f"{name}の討伐",
+      "text": text,
+    }
   return None
 
 
@@ -552,7 +568,7 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random, ran
     quest = rank_hunt(world, t, town, rank or 1, rng)
     if not quest:
       return None
-    quest.update(template=t["id"], name=t.get("name", t["type"]), text="")
+    quest["template"] = t["id"]
     return finish_quest(world, quest, town)
   if t["type"] == "deliver" and "rank" not in t:  # 距離と危なさで ★ を決め、町の荷物から作る
     quest = rank_deliver(world, town, rank or 1, rng)

@@ -11,6 +11,20 @@
   {"id": "hunt", "type": "hunt", "name": "討伐", "weight": 3, "count": [1, 5]},
   {"id": "deliver", "type": "deliver", "name": "配達", "weight": 2}
  ],
+ "hunts": {
+  "places": {
+   "salina": ["貝採りの干潟に", "塩田のそばに", "港へ向かう荷車の道に"],
+   "eques": ["放牧の馬のそばに", "競馬場の近くに", "街道の宿場に"],
+   "muralis": ["砦の見張り台の下に", "兵の通り道に", "山越えの峠に"],
+   "karun": ["トナカイの放牧地に", "凍った川の渡しに", "村の燻製小屋のそばに"],
+   "_any": ["旅人の通る道に", "畑のそばに"]
+  },
+  "texts": [
+   ["{place}{monster}が出る。{count}体追い払ってほしい", "{place}{monster}がうろついている。片付けてくれないか"],
+   ["{place}{monster}が{count}体居ついた。退治してほしい", "{place}現れる{monster}に手を焼いている。討ってくれ"],
+   ["{place}{monster}の群れが迫っている。{count}体、必ず討ち取ってほしい", "{monster}が{place}まで来ている。もう猶予がない"]
+  ]
+ },
  "deliveries": {
   "ranks": [4, 8],
   "dangers": [
@@ -27,22 +41,12 @@
   }
  },
  "towns": {
-  "salina": [
-   {"id": "salina_1", "rank": 1, "type": "hunt", "name": "干潟のヒル", "to": "eques", "monster": "marsh_leech", "count": 3, "text": "貝を採る干潟にわく沼ヒルを駆除してほしい"},
-   {"id": "salina_3", "rank": 2, "type": "hunt", "name": "干潟の鬼火", "to": "muralis", "monster": "will_o_wisp", "count": 4, "text": "夜の干潟に出て、貝採りを迷わせる鬼火を追い払ってほしい"},
-   {"id": "salina_4", "rank": 3, "type": "hunt", "name": "干潟から来る泥人形", "to": "muralis", "monster": "mud_golem", "count": 6, "text": "干潟から這い出してくる泥人形を食い止めてほしい"}
-  ],
-  "eques": [
-   {"id": "eques_1", "rank": 1, "type": "hunt", "name": "馬を狙う野犬", "to": "salina", "monster": "wild_dog", "count": 3, "text": "放牧の馬を襲う野犬を追い払ってほしい"},
-   {"id": "eques_3", "rank": 2, "type": "hunt", "name": "競馬祭の警備", "to": "salina", "monster": "goblin", "count": 5, "text": "競馬祭の賞金を狙うゴブリンを討ってほしい"}
-  ],
+  "salina": [],
+  "eques": [],
   "muralis": [
-   {"id": "muralis_1", "rank": 1, "type": "hunt", "name": "砦のまわりの見回り", "to": "salina", "monster": "wild_dog", "count": 3, "text": "砦のまわりをうろつく野犬を追い払ってほしい"},
-   {"id": "muralis_3", "rank": 2, "type": "hunt", "name": "山越えの山賊", "to": "salina", "monster": "mountain_bandit", "count": 5, "text": "山脈の切れ目から入り込む山賊を討ってほしい"},
    {"id": "muralis_4", "rank": 3, "type": "hunt", "name": "南壁の大鷲", "to": "salina", "monster": "great_eagle", "count": 1, "text": "砦の見張り台を襲う大鷲を追い払ってほしい"}
   ],
   "karun": [
-   {"id": "karun_1", "rank": 1, "type": "hunt", "name": "トナカイを襲う氷狼", "to": "eques", "monster": "ice_wolf", "count": 3, "text": "放牧のトナカイを狙う氷狼の群れを追い払ってほしい"},
    {"id": "karun_3", "rank": 2, "type": "hunt", "name": "吹雪の雪男", "to": "muralis", "monster": "yeti", "count": 1, "text": "吹雪とともに山から下りてくる雪男を食い止めてほしい"},
    {"id": "karun_4", "rank": 3, "type": "hunt", "name": "巣穴からあふれた岩ゴーレム", "to": "muralis", "monster": "rock_golem", "count": 1, "text": "南壁の巣穴からあふれ出た岩ゴーレムを討ってほしい"}
   ]

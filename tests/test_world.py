@@ -213,12 +213,12 @@ class ValidateTest(unittest.TestCase):
 
   def test_hunt_quest_cannot_target_the_boss(self):
     def boss_quest(r):
-      q = r["town_quests"]["salina"][0]
+      q = r["town_quests"]["karun"][0]
       boss = r["monsters"][-1]
       boss["terrain"] = next(m["terrain"] for m in r["monsters"] if m["id"] == q["monster"])  # 道の地形に合わせる
       q["monster"] = boss["id"]
 
-    self.assertError(boss_quest, ["salina_1", "ボス以外"])
+    self.assertError(boss_quest, ["karun_3", "ボス以外"])
 
   def test_item_dex_is_checked(self):
     self.assertError(lambda r: r["items"][-1].update(dex="2"), ["crimson_grass_charm", "dex"])
@@ -311,22 +311,36 @@ class ValidateTest(unittest.TestCase):
     self.assertEqual({items[i]["slot"] for i in sold}, set(W.SLOTS))
 
   def test_town_quests_are_checked(self):
+    base = {
+      "id": "karun_x",
+      "rank": 1,
+      "type": "hunt",
+      "name": "試し",
+      "to": "eques",
+      "monster": "ice_wolf",
+      "count": 3,
+    }
+
     def town_quest(**change):
       def apply(r):
-        r["town_quests"]["salina"][0].update(change)
+        r["town_quests"]["karun"].append(dict(base, **change))
 
       return apply
 
-    self.assertError(town_quest(to="karun"), ["salina_1", "直接つながる"])  # 道がない
-    self.assertError(town_quest(to="flumen"), ["salina_1", "直接つながる"])  # 開放していない航路
-    self.assertError(town_quest(monster="ice_wolf"), ["salina_1", "その道に出る"])  # その道にいない魔物
-    self.assertError(town_quest(rank=9), ["salina_1", "rank"])
-    self.assertError(town_quest(count=0), ["salina_1", "count"])
-    self.assertError(town_quest(type="deliver", to="salina"), ["salina_1", "別の町"])
-    self.assertError(town_quest(type="deliver", to="aurea"), ["salina_1", "開放した別の町"])
+    self.assertEqual(errors_after(town_quest()), [])  # 町の討伐も書ける（今は強敵だけ）
+    self.assertError(town_quest(to="salina"), ["karun_x", "直接つながる"])  # 道がない
+    self.assertError(town_quest(monster="mountain_bandit"), ["karun_x", "その道に出る"])  # その道にいない魔物
+    self.assertError(town_quest(rank=9), ["karun_x", "rank"])
+    self.assertError(town_quest(count=0), ["karun_x", "count"])
+    self.assertError(town_quest(type="deliver", to="karun"), ["karun_x", "別の町"])
+    self.assertError(town_quest(type="deliver", to="aurea"), ["karun_x", "開放した別の町"])
     self.assertError(town_quest(id="hunt"), ["重複"])  # 共通の依頼と同じ ID
     self.assertError(lambda r: r["town_quests"].update(jade_tomb=[]), ["jade_tomb", "町の ID"])
     self.assertError(lambda r: r["town_quests"].update(aurea=[]), ["aurea", "開放した町"])
+
+  def test_bad_hunt_texts(self):
+    self.assertError(lambda r: r["hunts"]["places"].update(nowhere=["x"]), ["nowhere"])
+    self.assertError(lambda r: r["hunts"].update(texts=[["{monster}を倒して"]]), ["hunts の texts"])
 
   def test_quest_reward_is_checked(self):
     self.assertError(lambda r: r["quest_reward"].pop("gold"), ["reward", "gold"])
@@ -341,10 +355,8 @@ class ValidateTest(unittest.TestCase):
 
     self.assertError(no_rank1, ["rank 1"])
 
-  def test_every_town_has_its_own_quests(self):
-    self.assertEqual(set(RAW["town_quests"]), set(RAW["map"]["open"]))
-    for tid, qs in RAW["town_quests"].items():
-      self.assertTrue(any(q["rank"] >= 2 for q in qs), tid)  # どの町にもレアな依頼がある
+  def test_every_town_has_a_quest_list(self):
+    self.assertEqual(set(RAW["town_quests"]), set(RAW["map"]["open"]))  # 町の依頼は強敵だけ（ない町もある）
 
   def test_too_strong_item(self):
     def change(r):

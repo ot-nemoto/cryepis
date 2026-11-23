@@ -117,6 +117,7 @@ def load_raw(directory: Path | None = None) -> dict:
     "quest_reward": quests.get("reward"),
     "hunt_ranks": quests.get("hunt_ranks", []),
     "deliveries": quests.get("deliveries"),
+    "hunts": quests.get("hunts"),
     "town_quests": quests.get("towns", {}),
   }
 
@@ -641,6 +642,23 @@ def validate(raw: dict) -> list[str]:
   # 配達（quests.json の deliveries）: ★ の区切り、危なさごとの魔物の Lv のずらし・受けられる Lv・説明の文、町ごとの荷物
   if any(q.get("type") == "deliver" and "rank" not in q for q in raw["quests"]):
     deliveries_ok(raw.get("deliveries"), len(ranks), places, err)
+  # 討伐の説明（quests.json の hunts）: 町ごとの困りごとと、★ ごとの頼み方
+  hs = raw.get("hunts")
+  if hs is not None:
+    hp, ht = (hs.get("places"), hs.get("texts")) if isinstance(hs, dict) else (None, None)
+    if not isinstance(hp, dict) or not all(
+      isinstance(v, list) and all(isinstance(x, str) and x for x in v) for v in hp.values()
+    ):
+      err("quests.json: hunts の places は {町の ID か _any: [困りごと, ...]} にしてください")
+    else:
+      for key in hp:
+        if key != "_any" and key not in places:
+          err(f"quests.json: hunts の places の {key!r} は map.json にない場所です")
+    if not isinstance(ht, list) or not all(
+      isinstance(x, list) and x and all(isinstance(t, str) and "{monster}" in t and "{place}" in t for t in x)
+      for x in ht
+    ):
+      err("quests.json: hunts の texts は ★ ごとに、{place} と {monster} を入れた文の一覧にしてください")
   # 町の依頼: 討伐は町から出る道（陸路・航路）と、その道に出る魔物。配達は別の町へ
   road_terrain = {}
   for r in mp.get("roads", []):
@@ -897,5 +915,6 @@ def build(raw: dict) -> dict:
     "quest_reward": raw["quest_reward"],
     "hunt_ranks": raw.get("hunt_ranks", []),
     "deliveries": raw.get("deliveries"),
+    "hunts": raw.get("hunts"),
     "town_quests": raw.get("town_quests", {}),
   }

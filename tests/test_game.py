@@ -34,6 +34,12 @@ def a_hunt(town=TOWN):
   return next(q for i in range(60) for q in G.board(WORLD, town, START + timedelta(days=i), 1) if q["type"] == "hunt")
 
 
+def common_hunt(town=TOWN, rank=1, seed=0):
+  """town の掲示板に出る共通の討伐を 1 つ（★ は rank）。"""
+  t = next(t for t in WORLD["quests"] if t["type"] == "hunt")
+  return G.make_quest(WORLD, t, town, START, random.Random(seed), rank)
+
+
 def with_rares():
   """南大陸の町に epic・legendary も置いた世界（今のデータには上のレアがないので、仕組みを確かめるため）。"""
   world = copy.deepcopy(WORLD)
@@ -219,15 +225,16 @@ class QuestTest(unittest.TestCase):
     self.assertGreater(seen, 0)
 
   def test_quest_rank_sets_reward_and_items(self):
-    town = "salina"
-    q3 = next(q for q in WORLD["town_quests"][town] if q["rank"] == 3)
-    q1 = next(q for q in WORLD["town_quests"][town] if q["rank"] == 1 and q["type"] == q3["type"])
-    a, b = G.make_town_quest(WORLD, q1, town, START), G.make_town_quest(WORLD, q3, town, START)
+    a, b = common_hunt("salina", 1), common_hunt("salina", 3)
     per = lambda q: q["reward"]["gold"] / q["cost"]  # noqa: E731  1 行動あたりの報酬（お金）
     self.assertEqual(per(b) / per(a), WORLD["quest_ranks"][2]["reward"] / WORLD["quest_ranks"][0]["reward"])
     self.assertEqual(b["reward"]["item"], WORLD["quest_ranks"][2]["item"])
-    self.assertTrue(G.quest_text(WORLD, b).startswith("★★★ " + q3["name"] + "（"))
-    self.assertEqual(b["text"], q3["text"])
+    name = WORLD["monsters"][b["monster"]]["name"]
+    self.assertEqual(b["name"], f"{name}の討伐")  # 名前は「{魔物}の討伐」
+    self.assertTrue(G.quest_text(WORLD, b).startswith(f"★★★ {name}の討伐（"))
+    self.assertIn(name, b["text"])  # 説明は町の困りごとと ★ ごとの頼み方から作る
+    hs = WORLD["hunts"]
+    self.assertTrue(any(p in b["text"] for p in hs["places"]["salina"] + hs["places"]["_any"]), b["text"])
 
   def test_reward_is_gold_by_cost_and_delivery_pays_more(self):
     base, mult = WORLD["quest_reward"], [r["reward"] for r in WORLD["quest_ranks"]]
@@ -626,9 +633,10 @@ class RoadTest(unittest.TestCase):
     state = play(1, actions=0)
     state["hero"].update(max_hp=999, hp=999)
     town = state["place"]
-    q = next(x for x in WORLD["town_quests"].get(town, []) if x["type"] == "hunt" and x["count"] <= 3)
-    quest = G.make_town_quest(WORLD, q, town, START)
-    state.update(quest=quest, taken=[quest["id"]] if "id" in quest else ["x"])
+    quest = next(
+      q for i in range(50) for q in [common_hunt(town, 1, i)] if WORLD["monsters"][q["monster"]]["level"] <= 2
+    )
+    state.update(quest=quest, taken=["x"])
     day = day_of(state)
     for _ in range(quest["cost"] + 3):
       self.assertTrue(day.act())
@@ -949,9 +957,8 @@ class GuildBoardTest(unittest.TestCase):
         if quest["type"] == "hunt":
           lv = WORLD["monsters"][quest["monster"]]["level"]
           self.assertEqual(G.make_town_quest(WORLD, quest, town, START)["level"], [lv, lv], quest["id"])
-    bandit = next(q for q in WORLD["town_quests"]["muralis"] if q.get("monster") == "mountain_bandit")
-    q = G.make_town_quest(WORLD, bandit, "muralis", START)  # 山賊は Lv5: Lv1 では受けない、Lv2 から受ける
-    self.assertFalse(G.suitable(q, 1))
+    q = next(q for i in range(200) for q in [common_hunt("muralis", 2, i)] if q["level"] == [5, 5])
+    self.assertFalse(G.suitable(q, 1))  # Lv5 の魔物の討伐: Lv1 では受けない、Lv2 から受ける
     self.assertTrue(G.suitable(q, 2))
     deliver = next(q for q in G.board(WORLD, self.TOWN, START, 1) if q["type"] == "deliver")
     self.assertEqual(deliver["level"], [G.monster_level(WORLD)] * 2)
@@ -1048,7 +1055,11 @@ class GuildBoardTest(unittest.TestCase):
   def test_hunt_fights_all_targets_in_one_action(self):
     state = play(1, "h1", actions=0)
     state["hero"].update(max_hp=999, hp=999)
-    quest = dict(next(e for e in self.board if e["type"] == "hunt"), steps=[["hunt", 5], ["back", 1]], progress=1)
+    quest = dict(
+      next(q for i in range(50) for q in [common_hunt(self.TOWN, 1, i)] if q["level"][0] <= 2 and q["count"] >= 2),
+      steps=[["hunt", 5], ["back", 1]],
+      progress=1,
+    )
     state["quest"] = quest
     day = G.Day(WORLD, state, START, random.Random(0), self.guild)
     self.assertTrue(day.hunt_step(quest))  # 前の形式の段取りでも、1 行動で残りを全部倒す

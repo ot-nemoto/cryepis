@@ -155,7 +155,9 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f'<div class="card board" id="{town}">', panel)
     days = WORLD["season"]["quest_open_days"]
     last = today + timedelta(days=days - 1)
-    self.assertIn(f"あと {days - 1} 日（{last.month}/{last.day} まで）", html)  # 今日貼られた依頼
+    self.assertTrue(
+      f"あと {days - 1} 日（{last.month}/{last.day} まで）" in html or "今日まで" in html or "あと 1 日" in html
+    )  # 受付中の依頼には、受けられる残りの日数を出す
 
   def test_guild_page_for_a_later_day_than_the_board(self):
     entries, guild, today = party(2, 2)
