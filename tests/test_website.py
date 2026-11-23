@@ -284,35 +284,57 @@ class SiteTest(unittest.TestCase):
     for mid in shown:  # 開放した道に出る魔物
       self.assertIn(f"<td>{WORLD['monsters'][mid]['name']}</td>", south)
     self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の魔物は出さない
-    self.assertIn("サリナ〜エクエス（", south)  # 出る道と割合
+    self.assertNotIn("サリナ〜エクエス（", south[south.index("<table") :])  # 魔物の表には出る道と割合を出さない
+    self.assertIn(
+      '<tr data-f="plain"><td>野犬</td><td class="num">1</td>'
+      '<td><span class="tdot" style="background:var(--t-plain)"></span>草原</td>',
+      south,
+    )  # 名前の右に Lv と地形（街道の円グラフと同じ色の丸）
+    head = html[: html.index('class="tabs"')]  # 地形の絞り込み（タブの上。開放した道と強敵・ボスにある地形だけ）
+    for t in ("plain", "wetland", "mountain", "forest", "snow"):
+      self.assertIn(f'class="chip" data-f="{t}"', head)
+    self.assertNotIn('data-f="sea"', head)
+    self.assertIn('data-f="world"', head)  # 強敵は WORLD、ボスは RAID で絞り込める
+    self.assertIn('data-f="raid"', head)
+    self.assertIn(
+      '<tr data-f="world"><td>雪男</td><td class="num">N/A</td><td><span class="habitat">WORLD</span></td>', south
+    )
+    self.assertIn(
+      '<tr data-f="raid"><td>巣穴の主</td><td class="num">N/A</td><td><span class="habitat">RAID</span></td>', south
+    )
+    self.assertIn('<span class="f-label">生息地</span>', head)
+    self.assertIn('id="f-none"', html)
+    self.assertEqual(south.count('<div class="card board">'), 1)  # 強敵・ボスも道の魔物と同じ表（別の枠は作らない）
+    self.assertNotIn('<h3 class="sub">', south)
+    rows = south[south.index("<table") :]
+    self.assertLess(rows.index("<td>ワイバーン</td>"), rows.index("<td>雪男</td>"))  # 道の魔物 → 強敵 → ボス
+    self.assertLess(rows.index("<td>雪男</td>"), rows.index("<td>巣穴の主</td>"))
+    roads = south[: south.index("<table")]  # 魔物の表の上に、この地方の街道と地形の割合
+    self.assertIn("<h3>街道</h3>", roads)
+    south_towns = {t for t, p in WORLD["places"].items() if p.get("area") == "austral_land"}
+    roads_here = {
+      frozenset(k) for k in WORLD["road_info"] if set(k) & south_towns
+    }  # 南大陸の町につながる道（向きは 1 つ）
+    self.assertEqual(roads.count('<div class="road">'), len(roads_here))
+    self.assertIn("サリナ〜エクエス（2）", roads)  # 道の名前（行動回数）
+    self.assertIn('<span class="tdot" style="background:var(--t-plain)"></span>草原 83%</li>', roads)
+    self.assertIn('<span class="tdot" style="background:var(--t-wetland)"></span>湿地 17%</li>', roads)
+    self.assertLess(south.index("<td>野犬</td>"), south.index("<td>暴れ猪</td>"))  # Lv の順
     self.assertIn('<td class="icon"><span class="tag">群れ</span></td>', south)  # 性質は名前だけの枠の札
     self.assertNotIn("数が多く", south)  # 性質の説明は出さない
-    self.assertIn('<th class="icon">属性</th><th class="num">HP</th>', html)  # Lv の列は出さない
+    self.assertIn('<th class="icon">属性</th><th class="num">HP</th>', html)
     self.assertIn('<th class="num">速</th><th class="num">器</th><th class="num">EXP</th>', html)  # 器用さ
-    self.assertNotIn(">Lv<", html)
-    self.assertIn('<th>名前</th><th class="icon">性質</th>', html)  # 地形の列は出さない
-    self.assertNotIn("<th>地形</th>", html)
+    self.assertIn('<th>名前</th><th class="num">Lv</th><th>生息地</th><th class="icon">性質</th>', html)
     self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 氷狼（アイテムと同じ枠の札）
-    roads, boss = south.split('<h3 class="sub">ボス</h3>')  # ボスは道の魔物とは別の表
-    self.assertNotIn("巣穴の主", roads)
-    self.assertIn("<td>巣穴の主</td>", boss)
-    self.assertNotIn("属性</span>", boss)  # 巣穴の主は属性なし
-    self.assertIn("<td>南壁の巣穴（ダンジョン・まだ挑めない）</td>", boss)
-    self.assertIn("<th>いる場所</th>", boss)
-    roads, elite = roads.split('<h3 class="sub">強敵</h3>')  # 強敵も道の魔物とは別の表（ボスの前）
-    for name in ("雪男", "岩ゴーレム"):
-      self.assertNotIn(f"<td>{name}</td>", roads)
-      self.assertIn(f"<td>{name}</td>", elite)
-    self.assertIn("カルンの依頼「吹雪の雪男」（Lv10 から）", elite)
-    self.assertIn("ムラリスの依頼「南壁の大鷲」（Lv10 から）", elite)
-    self.assertIn("<th>戦える依頼</th>", elite)
+    for name in ("雪男", "岩ゴーレム", "大鷲"):  # 強敵（カルン・ムラリスの討伐の依頼）も 1 度ずつ
+      self.assertEqual(south.count(f"<td>{name}</td>"), 1)
     self.assertNotIn("属性の相性", html)  # 説明は手引きのページに
     self.assertIn('<a href="guide.html">手引き</a>', html)
     self.assertNotIn("性質の効果がかかる前", website.build_towns(WORLD))  # 魔物の注記は町のページに出さない
     self.assertIn("性質の効果がかかる前", html)
     crown = html[html.index('id="panel-crownlands"') :]
     self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
-    self.assertEqual(html.count('<h3 class="sub">ボス</h3>'), 1)  # ボスのいない地方・開放していない地方には出さない
+    self.assertEqual(html.count("<td>巣穴の主</td>"), 1)  # ボスのいない地方・開放していない地方には出さない
 
   def test_guide_page(self):
     html = website.build_guide(WORLD)
@@ -389,16 +411,38 @@ class SiteTest(unittest.TestCase):
     html = website.build_guide(world)  # 属性がなくても落ちない
     self.assertNotIn("属性と相性", html)
 
+  def test_monster_page_chips_follow_the_rows(self):
+    world = copy.deepcopy(WORLD)
+    for qs in world["town_quests"].values():  # 強敵の依頼がなければ、WORLD のボタンは出さない
+      qs[:] = [q for q in qs if not world["monsters"].get(q.get("monster"), {}).get("elite")]
+    html = website.build_monsters(world)
+    self.assertNotIn('data-f="world"', html)
+    self.assertIn('data-f="raid"', html)
+    self.assertEqual(website.share_text(0.003), "1%未満")  # ごく少ない地形も 0% にしない
+    self.assertEqual(website.share_text(0.126), "13%")
+
+  def test_pie_and_terrain_shares(self):
+    shares = website.terrain_shares(WORLD["monsters"], WORLD["road_info"][("karun", "muralis")]["monsters"])
+    self.assertAlmostEqual(sum(x for _, x in shares), 1.0)
+    self.assertEqual([t for t, _ in shares], ["plain", "mountain", "forest", "snow"])  # 多い順
+    svg = website.pie_svg(shares)
+    self.assertEqual(svg.count("<path"), 4)
+    self.assertIn("<title>草原 57%</title>", svg)
+    one = website.pie_svg([("plain", 1.0)])  # 1 つだけなら円
+    self.assertIn("<circle", one)
+    self.assertNotIn("<path", one)
+
   def test_monsters_page_edge_cases(self):
     world = copy.deepcopy(WORLD)
     world["areas"] = {}  # 地方がなくても、その他のまとまりに魔物を出す
     self.assertNotIn("まだ開放されていません", website.build_monsters(world))
     world = copy.deepcopy(WORLD)
-    info = world["road_info"][("salina", "eques")]
-    info["monsters"] = [("wild_dog", 1.0), ("wild_dog", 1.0), ("yeti", 0.01)]  # 同じ魔物が 2 度・ごく少ない魔物
+    for key in (("salina", "eques"), ("eques", "salina")):
+      world["road_info"][key]["monsters"] = [("wild_dog", 1.0), ("wild_dog", 1.0)]  # 同じ魔物が 2 度出ても 1 行
+    for key in [k for k in world["road_info"] if k not in (("salina", "eques"), ("eques", "salina"))]:
+      del world["road_info"][key]
     html = website.build_monsters(world)
-    self.assertEqual(html.count("サリナ〜エクエス（"), 2)  # 野犬は 1 つにまとめる
-    self.assertIn("サリナ〜エクエス（1%未満）", html)
+    self.assertEqual(html.count("<td>野犬</td>"), 1)
 
   def test_story_markdown(self):
     blocks = website.md_html(
