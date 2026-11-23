@@ -168,15 +168,16 @@ QUEST_TYPES = ("hunt", "deliver", "patrol")
 
 
 def hunt_steps_ok(quest: dict) -> bool:
-  """討伐の段取りが、進み（progress）と合っているか。段取りが空なのに倒し終えていない、残りの討伐の数が
-  count - progress と違う、などは壊れている（前に掲示板と段取りを共有していたころに壊れた依頼）。"""
+  """討伐の段取りが、進み（progress）と合っているか。段取りが空なのに倒し終えていない、討伐の段取りが残っているのに
+  倒し終えている・残っていないのに倒し終えていない、などは壊れている（前に掲示板と段取りを共有していたころに壊れた依頼）。
+  討伐の段取りの行動力は問わない（前の形式の「1 体 1 行動」の段取りも、そのまま 1 行動で残りを連戦する）。"""
   steps, progress, count = quest.get("steps"), quest.get("progress", 0), quest.get("count")
   if not isinstance(steps, list) or not steps or not isinstance(count, int) or not isinstance(progress, int):
     return False
   if not all(isinstance(p, list) and len(p) == 2 and isinstance(p[1], int) and p[1] > 0 for p in steps):
     return False
-  left = sum(n for phase, n in steps if phase == "hunt")
-  return left == count - progress if left else progress >= count
+  hunting = any(phase == "hunt" for phase, _ in steps)
+  return progress < count if hunting else progress >= count
 
 
 def elite_ok(world: dict, quest: dict) -> bool:
@@ -324,7 +325,9 @@ def draw_quests(world: dict, town: str, d: date, season: int, n: int, exclude: s
     rank = rng.choices(range(1, len(ranks) + 1), [r["weight"] for r in ranks])[0]
     while True:
       mine = [q for q in own if q["rank"] == rank]
-      common = [t for t in world["quests"] if t["rank"] == rank]
+      common = [  # rank を書いていない討伐・配達は、区切りの数 + 1（★★★）までのどの ★ にもなれる
+        t for t in world["quests"] if t.get("rank") == rank or ("rank" not in t and rank <= computed_max(world, t))
+      ]
       if mine or common or rank == 1:
         break
       rank -= 1
@@ -333,7 +336,7 @@ def draw_quests(world: dict, town: str, d: date, season: int, n: int, exclude: s
       own.remove(q)
       quest = make_town_quest(world, q, town, d)
     else:
-      quest = make_quest(world, rng.choices(common, [t["weight"] for t in common])[0], town, d, rng)
+      quest = make_quest(world, rng.choices(common, [t["weight"] for t in common])[0], town, d, rng, rank)
     if quest:
       quest["id"] = f"{d.isoformat()}-{town}-{i}"
       quests.append(quest)
@@ -427,10 +430,10 @@ def release_orphans(guild: dict, states: dict[str, dict], keep: set | frozenset 
 HUNT_TRIP_MAX = 2  # 討伐の狩り場までの行動力の上限（狩り場は町の近く。道の長さの半分、最大 2）
 
 
-def hunt_steps(world: dict, town: str, to: str, count: int) -> list[list]:
-  """討伐の段取り: 行き（狩り場まで）→ 討伐（1 行動で 1 体）→ 帰り。[[段取り, 残りの行動力], ...]。"""
+def hunt_steps(world: dict, town: str, to: str) -> list[list]:
+  """討伐の段取り: 行き（狩り場まで）→ 討伐（何体いても 1 行動で連戦）→ 帰り。[[段取り, 残りの行動力], ...]。"""
   trip = min(HUNT_TRIP_MAX, -(-world["roads"][(town, to)] // 2))
-  return [["go", trip], ["hunt", count], ["back", trip]]
+  return [["go", trip], ["hunt", 1], ["back", trip]]
 
 
 def finish_quest(world: dict, quest: dict, town: str) -> dict:
@@ -439,7 +442,7 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
   lvl, rank = quest_level(world, quest), quest["rank"]
   base, cfg = world["quest_reward"], world["quest_ranks"][rank - 1]
   if quest["type"] == "hunt":
-    quest["steps"] = hunt_steps(world, town, quest["place"], quest["count"])
+    quest["steps"] = hunt_steps(world, town, quest["place"])
     target = world["monsters"].get(quest["monster"], {})
     if target.get("elite"):  # 強敵は、魔物のレベル以上の勇者だけが受ける
       quest["min_level"] = lvl
@@ -455,7 +458,9 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
     cost=cost,
     reward={
       "exp": round(base["exp"] * cost * cfg["reward"]),
-      "gold": round(base["gold"] * cost * cfg["reward"]),
+      "gold": round(
+        base["gold"] * cost * cfg["reward"] * (base.get("deliver_rate", 1) if quest["type"] == "deliver" else 1)
+      ),
       "item": cfg["item"],
     },
   )
@@ -472,9 +477,107 @@ def make_town_quest(world: dict, q: dict, town: str, d: date) -> dict:
   return finish_quest(world, quest, town)
 
 
-def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> dict | None:
-  """共通の依頼。討伐: 町から出る道の 1 本で、その道に出る魔物を倒す。配達: 近くの町へ荷物を届ける。"""
+def hunt_rank(world: dict, level: int, count: int) -> int:
+  """共通の討伐の ★ の数。点数 = 魔物の Lv ×（数 + 1）を、quests.json の hunt_ranks の区切りと比べる
+  （[15, 40] なら 15 以下は ★、40 以下は ★★、それより上は ★★★）。"""
+  score = level * (count + 1)
+  return 1 + sum(1 for limit in world["hunt_ranks"] if score > limit)
+
+
+def rank_hunt(world: dict, t: dict, town: str, rank: int, rng: random.Random) -> dict | None:
+  """★ が rank になる共通の討伐（町から出る道の 1 本で、その道に出る魔物を数体）。道を均等に選び、
+  その道で rank になる魔物の Lv を均等に選び、同じ Lv の中は地形の重みで魔物を選び、数は rank になるものから均等に選ぶ。
+  どの道でも作れなければ、★ を 1 つずつ下げて探し、それでもなければ上げて探す（どの ★ でも作れなければ None）。"""
+  low, high = t["count"]
+  top = len(world["hunt_ranks"]) + 1
+  for r in [*range(rank, 0, -1), *range(rank + 1, top + 1)]:  # ★ を下げて探し、なければ上げて探す
+    combos = [
+      (other, mid, w, n)
+      for other in world["neighbors"][town]
+      for mid, w in world["road_info"][(town, other)]["monsters"]
+      for n in range(low, high + 1)
+      if hunt_rank(world, world["monsters"][mid]["level"], n) == r
+    ]
+    if not combos:
+      continue
+    other = rng.choice(sorted({c[0] for c in combos}))
+    here = [c for c in combos if c[0] == other]
+    level = rng.choice(sorted({world["monsters"][c[1]]["level"] for c in here}))
+    pool = {c[1]: c[2] for c in here if world["monsters"][c[1]]["level"] == level}
+    mid = rng.choices(sorted(pool), [pool[m] for m in sorted(pool)])[0]
+    count = rng.choice([c[3] for c in here if c[1] == mid])
+    hs = world.get("hunts") or {}
+    places = hs.get("places", {}).get(town, []) + hs.get("places", {}).get("_any", [])
+    texts = hs.get("texts", [])
+    name = world["monsters"][mid]["name"]
+    text = ""
+    if places and len(texts) >= r and texts[r - 1]:  # 町の困りごとと、★ ごとの頼み方から説明を作る
+      text = rng.choice(texts[r - 1]).format(place=rng.choice(places), monster=name, count=count)
+    return {
+      "type": "hunt",
+      "place": other,
+      "report": town,
+      "monster": mid,
+      "count": count,
+      "rank": r,
+      "name": f"{name}の討伐",
+      "text": text,
+    }
+  return None
+
+
+def computed_max(world: dict, t: dict) -> int:
+  """★ を計算で決める依頼（rank を書いていない共通の依頼）の、いちばん多い ★ の数。"""
+  limits = world["hunt_ranks"] if t["type"] == "hunt" else (world.get("deliveries") or {}).get("ranks", [])
+  return len(limits) + 1
+
+
+def deliver_rank(world: dict, distance: int, danger: int) -> int:
+  """配達の ★ の数。点数 = 距離 ×（危なさ + 1）を、quests.json の deliveries の ranks の区切りと比べる
+  （[4, 8] なら 4 以下は ★、8 以下は ★★、それより上は ★★★）。"""
+  score = distance * (danger + 1)
+  return 1 + sum(1 for limit in world["deliveries"]["ranks"] if score > limit)
+
+
+def rank_deliver(world: dict, town: str, rank: int, rng: random.Random) -> dict | None:
+  """★ が rank になる配達（届け先は season.json の deliver_range 以内の町）。届け先を均等に選び、危なさは
+  rank になるものから均等に選ぶ。荷物は、町の荷物とどの町でも使う荷物（_any）のうち、危なさに合うものから選ぶ。
+  作れなければ ★ を 1 つずつ下げて探し、それでもなければ上げて探す（どの ★ でも作れなければ None）。"""
+  cfg, dist, dv = world["season"], world["dist"][town], world["deliveries"]
+  towns = [p for p in world["towns"] if p != town and dist.get(p, cfg["deliver_range"] + 1) <= cfg["deliver_range"]]
+  top = len(dv["ranks"]) + 1
+  for r in [*range(rank, 0, -1), *range(rank + 1, top + 1)]:  # ★ を下げて探し、なければ上げて探す
+    combos = [(to, d) for to in towns for d in range(len(dv["dangers"])) if deliver_rank(world, dist[to], d) == r]
+    if not combos:
+      continue
+    to = rng.choice(sorted({c[0] for c in combos}))
+    danger = rng.choice([d for t, d in combos if t == to])
+    cargo = rng.choice(dv["cargo"].get(town, [[]] * len(dv["dangers"]))[danger] + dv["cargo"]["_any"][danger])
+    text = rng.choice(dv["dangers"][danger]["texts"]).format(cargo=cargo, to=world["places"][to]["name"])
+    quest = {"type": "deliver", "place": to, "report": to, "monster": None, "count": 1, "rank": r}
+    quest.update(danger=danger, cargo=cargo, name=f"{cargo}の配達", text=text)
+    if dv["dangers"][danger]["min_level"]:
+      quest["min_level"] = dv["dangers"][danger]["min_level"]  # 危ない配達は、この Lv から受けられる
+    return quest
+  return None
+
+
+def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random, rank: int | None = None) -> dict | None:
+  """共通の依頼。討伐: 町から出る道の 1 本で、その道に出る魔物を倒す（rank を書いていない討伐は、★ を魔物の Lv と数で
+  決める。rank はほしい ★）。配達: 近くの町へ荷物を届ける。"""
   cfg, dist = world["season"], world["dist"][town]
+  if t["type"] == "hunt" and "rank" not in t:
+    quest = rank_hunt(world, t, town, rank or 1, rng)
+    if not quest:
+      return None
+    quest["template"] = t["id"]
+    return finish_quest(world, quest, town)
+  if t["type"] == "deliver" and "rank" not in t:  # 距離と危なさで ★ を決め、町の荷物から作る
+    quest = rank_deliver(world, town, rank or 1, rng)
+    if not quest:
+      return None
+    quest["template"] = t["id"]
+    return finish_quest(world, quest, town)
   if t["type"] == "hunt":
     other = rng.choice(world["neighbors"][town])
     road = world["road_info"][(town, other)]["monsters"]
@@ -550,7 +653,7 @@ def quest_detail(world: dict, quest: dict) -> str:
       f"{world['monsters'][quest['monster']]['name']}を{quest['count']}体討伐"
     )
   if quest["type"] == "deliver":
-    return f"{place}へ荷物を届ける"
+    return f"{place}へ{quest.get('cargo', '荷物')}を届ける"
   return f"{place}へ旅をする"
 
 
@@ -733,6 +836,7 @@ class Day:
     """ドロップ表から抽選する。珍しさが当たったら、その珍しさのアイテムから均等に選ぶ。
     common は、開放した地域のもの（開放した町の店で売っている品）だけ。
     レア（common 以外）は、その町（town。依頼を出した町）の依頼で出るもの（items.json の towns）だけ。
+    season.json の rare_drops が false なら、レアが当たっても何も出ない（配布を止めている）。
     その町にない珍しさが当たったら、1 つ下の珍しさに落として選び直す（どの町にも rare は必ずある）。"""
     if not table:
       return None
@@ -741,6 +845,8 @@ class Day:
     if key == W.NONE:
       return None
     items, region = self.world["items"], self.world["region_items"]
+    if not self.cfg.get("rare_drops", True) and (items[key]["rarity"] if key in items else key) != W.COMMON:
+      return None  # レアの配布は止めている（season.json の rare_drops）。当たっても何も出ない
 
     def here(iid: str) -> bool:  # 出せるアイテムか（common は開放した地域のもの、レアはその町のもの）
       item = items[iid]
@@ -794,7 +900,8 @@ class Day:
     self.hero["gold"] += reward["gold"]
     self.state["season_stats"]["quests_done"] += 1
     self.state["quest"] = None
-    self.log(f"依頼達成！{quest_text(self.world, quest)}（+{reward['exp']}EXP +{reward['gold']}G）")
+    gain = ([f"+{reward['exp']}EXP"] if reward["exp"] else []) + [f"+{reward['gold']}G"]
+    self.log(f"依頼達成！{quest_text(self.world, quest)}（{' '.join(gain)}）")
     iid = self.draw(reward.get("item"), quest["town"])
     if iid:
       self.obtain(iid, "報酬で")
@@ -863,13 +970,22 @@ class Day:
       self.log(f"依頼失敗（{why}）: {quest_text(self.world, quest)}")
 
   # 道 --------------------------------------------------------------------------------
+  def danger_shift(self) -> int:
+    """配達を運んでいる途中なら、その配達の危なさで、道で出会う魔物の Lv を上げる量（quests.json の deliveries）。"""
+    quest = self.state["quest"]
+    if not quest or quest.get("type") != "deliver" or quest.get("progress", 0) >= quest.get("count", 1):
+      return 0
+    dangers = (self.world.get("deliveries") or {}).get("dangers", [])
+    danger = quest.get("danger", 0)
+    return dangers[danger]["shift"] if 0 <= danger < len(dangers) else 0
+
   def road_event(self, a: str, b: str) -> bool:
     """道を 1 行動進んだときの出来事。力尽きたら False。"""
     info = self.world["road_info"][(a, b)]
     kinds, weights = zip(*self.cfg["road_events"].items())
     kind = self.rng.choices(kinds, weights)[0]
-    if kind == "battle":
-      mids, mw = zip(*encounters(self.world, info["monsters"], self.hero["level"]))
+    if kind == "battle":  # 道の戦いは 1 体だけ（何体かと戦うのは討伐の依頼だけ）
+      mids, mw = zip(*encounters(self.world, info["monsters"], self.hero["level"] + self.danger_shift()))
       if not self.battle(self.world["monsters"][self.rng.choices(mids, mw)[0]]):
         return False
     elif kind == "treasure":
@@ -934,17 +1050,22 @@ class Day:
       self.log(f"HP が心もとないので{world['places'][origin]['name']}へ引き返した")
 
   def hunt_step(self, quest: dict) -> bool:
-    """討伐の依頼を 1 行動ぶん進める（行き・帰りは道の出来事、討伐は目的の魔物と 1 回戦う）。"""
+    """討伐の依頼を 1 行動ぶん進める（行き・帰りは道の出来事。討伐は 1 行動で、残りの目的の魔物と 1 体ずつ連戦する。
+    HP は減ったまま次の魔物へ。倒すたびに経験値・お金が入り、途中で力尽きても倒した分は残る）。"""
     if not quest.get("steps"):  # 段取りが壊れている（読み込みで捨てるので、ふつうは起きない）。止まらずに失敗にする
       self.fail_quest("段取りが壊れていた")
       return True
     phase = quest["steps"][0]
     if phase[0] == "hunt":
-      if not self.battle(self.world["monsters"][quest["monster"]]):
-        return False
-      quest["progress"] += 1
-      if quest["progress"] >= quest["count"]:
-        self.log(f"討伐の目標を果たした（{quest['count']}体）")
+      left = quest["count"] - quest["progress"]
+      if left > 1:
+        self.log(f"{self.world['monsters'][quest['monster']]['name']}が{left}体現れた")
+      while quest["progress"] < quest["count"]:
+        if not self.battle(self.world["monsters"][quest["monster"]]):
+          return False
+        quest["progress"] += 1
+      self.log(f"討伐の目標を果たした（{quest['count']}体）")
+      phase[1] = 1  # 何体いても 1 行動（前の形式の段取りも、ここで終わる）
     else:
       if not self.road_event(quest["report"], quest["place"]):
         return False

@@ -486,11 +486,12 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
       notes = ([f"「{escape(e['text'])}」"] if e.get("text") else []) + (
         ["前の勇者が失敗した依頼"] if e.get("returned") else []
       )
+      exp_text = f"{e['reward']['exp']}EXP<br>" if e["reward"]["exp"] else ""  # 依頼の経験値は 0（お金だけ）
       rows.append(
         f'<tr data-f="{e["rank"]}"><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
         + "".join(f'<div class="note">{n}</div>' for n in notes)
         + f'</td><td class="num">{e["cost"]}</td>'
-        f'<td class="num">{e["reward"]["exp"]}EXP<br>{e["reward"]["gold"]}G</td>'
+        f'<td class="num">{exp_text}{e["reward"]["gold"]}G</td>'
         f"<td>{guild_status(world, e, today)}</td></tr>"
       )
     return (
@@ -560,7 +561,11 @@ def build_towns(world: dict) -> str:
     ]
     return [
       ("ギルドの規模", f'{size}（<a href="guild.html#{escape(town)}">掲示板を見る</a>）'),
-      ("依頼の報酬で出るレア", "<br>".join(label(i) for i in rares) or "-"),
+      (
+        "依頼の報酬で出るレア",
+        ("<br>".join(label(i) for i in rares) or "-")
+        + ("" if world["season"].get("rare_drops", True) else '<div class="note">今はレアの配布を止めています</div>'),
+      ),
       ("店の品ぞろえ", "<br>".join([label(i) for i in shop] + [potion])),
       ("道（行き先と行動回数）", "・".join(roads) or "-"),
     ]
@@ -650,6 +655,7 @@ def build_items(world: dict) -> str:
   slots = [slot for slot in W.SLOTS if rows[slot]]  # 開放した地域で手に入る装備のない種類は、タブを出さない
   body = [
     "<h2>アイテム一覧</h2>",
+    "" if world["season"].get("rare_drops", True) else '<p class="note">今はレア（★★ 以上）の配布を止めています。</p>',
     tab_bar([(slot, slot_label(slot)) for slot in slots]),
     rarity_filter([(r, game.rarity_mark(world, r)) for r in used], "条件に合うアイテムはありません。"),
   ]
@@ -927,6 +933,11 @@ def build_guide(world: dict) -> str:
     for eid, e in elements.items()
   ]
   potion = cfg["potion"]
+  shifts = "・".join(  # 危ない配達で上がる魔物の Lv（配達の設定がない世界では、行を出さない）
+    f"危なさ {n} は +{d['shift']}"
+    for n, d in enumerate((world.get("deliveries") or {}).get("dangers", []))
+    if d.get("shift")
+  )
   rules = [
     ("ダメージ", "攻撃 − 相手の防御 ÷ 2（少しだけ上下する。1 より小さくはならない）"),
     (
@@ -935,12 +946,27 @@ def build_guide(world: dict) -> str:
     ),
     ("先に攻撃", "素早いほうが先に攻撃する。性質「先手」の魔物は、素早さに関係なく先に攻撃する"),
     ("2 回攻撃", "相手の 2 倍以上素早ければ、1 回の番に 2 回攻撃する（魔物も同じ）"),
+    (
+      "何体かと戦う",
+      "討伐の依頼で魔物が何体かいたら、1 行動のなかで 1 体ずつ続けて戦う（HP は減ったまま次へ。道の戦いは 1 体だけ）。"
+      "倒すたびに経験値とお金が入り、途中で力尽きても倒した分は残る",
+    ),
     ("回復薬", f"HP が 0 になりそうなとき、自動で使う。最大 HP の {potion['heal_rate']:.0%} まで回復する"),
     (
       "武器の持ち替え",
       "勇者は戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える。"
       "苦手な属性の武器しかなく、持たないほうが効くときは、武器を持たずに戦う。"
       "装飾品は、弱点を突ける属性のものを持っていれば、その戦いだけ着け替える（苦手な属性なら外す）",
+    ),
+    *(
+      [
+        (
+          "危ない配達",
+          f"危なさのある配達（高価な品・狙われる品）を運んでいる間は、道で出会う魔物の Lv が上がる（{shifts}）",
+        )
+      ]
+      if shifts
+      else []
     ),
     (
       "道で出会う魔物",

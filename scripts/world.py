@@ -115,6 +115,9 @@ def load_raw(directory: Path | None = None) -> dict:
     "quests": quests["templates"],
     "quest_ranks": quests.get("ranks"),
     "quest_reward": quests.get("reward"),
+    "hunt_ranks": quests.get("hunt_ranks", []),
+    "deliveries": quests.get("deliveries"),
+    "hunts": quests.get("hunts"),
     "town_quests": quests.get("towns", {}),
   }
 
@@ -226,6 +229,8 @@ def validate(raw: dict) -> list[str]:
   for key, _ in season.get("treasure") or []:  # レアは依頼の報酬だけで出る
     if (key in rarities and key != COMMON) or items.get(key, {}).get("rarity", COMMON) != COMMON:
       err(f"season.json の treasure: {key!r} は宝箱からは出せません（レアは町の依頼の報酬だけで出る）")
+  if not isinstance(season.get("rare_drops", True), bool):
+    err("season.json: rare_drops は true か false にしてください（false ならレアのアイテムを出さない）")
   levels = season.get("encounter_levels")
   if (
     not isinstance(levels, list)
@@ -606,6 +611,17 @@ def validate(raw: dict) -> list[str]:
     not isinstance(base.get(k), (int, float)) or isinstance(base.get(k), bool) or base[k] < 0 for k in ("exp", "gold")
   ):
     err("quests.json: reward には、1 行動あたりの exp と gold（0 以上の数）を書いてください")
+  elif "deliver_rate" in base and (not _num(base["deliver_rate"]) or base["deliver_rate"] <= 0):
+    err("quests.json: reward の deliver_rate（配達のお金の倍率）は正の数にしてください")
+  # 共通の討伐の ★: 点数 = 魔物の Lv ×（数 + 1）が hunt_ranks[0] 以下なら ★、hunt_ranks[1] 以下なら ★★ …
+  hunt_ranks = raw.get("hunt_ranks")
+  if (
+    not isinstance(hunt_ranks, list)
+    or not all(_num(v) and v > 0 for v in hunt_ranks)
+    or hunt_ranks != sorted(hunt_ranks)
+    or len(hunt_ranks) >= max(len(ranks), 1)
+  ):
+    err(f"quests.json: hunt_ranks は小さい順の正の数の一覧（{max(len(ranks) - 1, 0)} 個まで）にしてください")
 
   def rank_ok(where: str, rank) -> None:
     if not isinstance(rank, int) or isinstance(rank, bool) or not 1 <= rank <= max(len(ranks), 1):
@@ -615,13 +631,42 @@ def validate(raw: dict) -> list[str]:
     where = f"quests.json の {q.get('id')}"
     if q.get("type") not in QUEST_TYPES:
       err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
-    rank_ok(where, q.get("rank"))
+    if "rank" in q:  # 討伐・配達は rank を書かなければ、計算で決める（討伐は魔物の Lv と数、配達は距離と危なさ）
+      rank_ok(where, q.get("rank"))
     if not isinstance(q.get("weight"), (int, float)) or q["weight"] <= 0:
       err(f"{where}: weight は正の数にしてください")
     if q.get("type") == "hunt" and not _range_ok(q.get("count")):
       err(f"{where}: count は [最小, 最大]（1 以上）にしてください")
-  if not any(q.get("rank") == 1 for q in raw["quests"]):
+  if not any(q.get("rank") == 1 or "rank" not in q for q in raw["quests"]):
     err("quests.json: rank 1 の共通の依頼（templates）を 1 つ以上書いてください（掲示板の空いた枠に入る）")
+  # 配達（quests.json の deliveries）: ★ の区切り、危なさごとの魔物の Lv のずらし・受けられる Lv・説明の文、町ごとの荷物
+  if any(q.get("type") == "deliver" and "rank" not in q for q in raw["quests"]):
+    deliveries_ok(raw.get("deliveries"), len(ranks), places, err)
+  # 討伐の説明（quests.json の hunts）: 町ごとの困りごとと、★ ごとの頼み方
+  hs = raw.get("hunts")
+  if hs is not None:
+    hp, ht = (hs.get("places"), hs.get("texts")) if isinstance(hs, dict) else (None, None)
+    if not isinstance(hp, dict) or not all(
+      isinstance(v, list) and all(isinstance(x, str) and x for x in v) for v in hp.values()
+    ):
+      err("quests.json: hunts の places は {町の ID か _any: [困りごと, ...]} にしてください")
+    else:
+      for key in hp:
+        if key != "_any" and key not in places:
+          err(f"quests.json: hunts の places の {key!r} は map.json にない場所です")
+    if not isinstance(ht, list) or not all(
+      isinstance(x, list)
+      and x
+      and all(
+        isinstance(t, str) and "{monster}" in t and "{place}" in t and format_ok(t, place="x", monster="x", count=1)
+        for t in x
+      )
+      for x in ht
+    ):
+      err(
+        "quests.json: hunts の texts は ★ ごとに、{place} と {monster} を入れた文の一覧にしてください"
+        "（ほかに使えるのは {count} だけ）"
+      )
   # 町の依頼: 討伐は町から出る道（陸路・航路）と、その道に出る魔物。配達は別の町へ
   road_terrain = {}
   for r in mp.get("roads", []):
@@ -720,6 +765,63 @@ def road_monsters(terrain: list, monsters: list[dict]) -> list[tuple[str, float]
 def on_road(monster: dict) -> bool:
   """道で出会う魔物か（ボスと強敵は道に出ない。強敵は町の討伐の依頼で狙って戦う）。"""
   return not monster.get("boss") and not monster.get("elite")
+
+
+def format_ok(text: str, **values) -> bool:
+  """説明の文に、values のほかの {…} がなく、{ } の書き方が正しいか（依頼を作るときに落ちないように）。"""
+  try:
+    text.format(**values)
+  except (KeyError, IndexError, ValueError):
+    return False
+  return True
+
+
+def deliveries_ok(dv, n_ranks: int, places: dict, err) -> None:
+  """quests.json の deliveries を確かめる（誤りは err に渡す）。"""
+  if not isinstance(dv, dict):
+    err("quests.json: deliveries（配達の ★・危なさ・荷物）を書いてください")
+    return
+  dr = dv.get("ranks")
+  if (
+    not isinstance(dr, list) or not all(_num(v) and v > 0 for v in dr) or dr != sorted(dr) or len(dr) >= max(n_ranks, 1)
+  ):
+    err(f"quests.json: deliveries の ranks は小さい順の正の数の一覧（{max(n_ranks - 1, 0)} 個まで）にしてください")
+  dangers = dv.get("dangers")
+  if not isinstance(dangers, list) or not dangers:
+    err("quests.json: deliveries の dangers（危なさの段階）を 1 つ以上書いてください")
+    dangers = []
+  for n, dg in enumerate(dangers):
+    where = f"quests.json の deliveries の dangers[{n}]"
+    ints = isinstance(dg, dict) and all(
+      isinstance(dg.get(k), int) and not isinstance(dg.get(k), bool) for k in ("shift", "min_level")
+    )
+    if not ints or dg["min_level"] < 0:
+      err(f"{where}: shift（魔物の Lv のずらし。整数）と min_level（受けられる Lv。0 以上の整数）を書いてください")
+    texts = dg.get("texts") if isinstance(dg, dict) else None
+    if (
+      not isinstance(texts, list)
+      or not texts
+      or not all(
+        isinstance(t, str) and "{cargo}" in t and "{to}" in t and format_ok(t, cargo="x", to="x") for t in texts
+      )
+    ):
+      err(f"{where}: texts は {{cargo}} と {{to}} を入れた文の一覧にしてください（ほかの {{…}} は使えない）")
+  cargo = dv.get("cargo")
+  if not isinstance(cargo, dict) or "_any" not in cargo:
+    err("quests.json: deliveries の cargo に、どの町でも使う荷物（_any）を書いてください")
+    return
+  for key, lists in cargo.items():
+    where = f"quests.json の deliveries の cargo の {key}"
+    if key != "_any" and key not in places:
+      err(f"{where}: {key!r} は map.json にない場所です")
+    if (
+      not isinstance(lists, list)
+      or len(lists) != len(dangers)
+      or not all(isinstance(x, list) and all(isinstance(c, str) and c for c in x) for x in lists)
+    ):
+      err(f"{where}: 危なさの段階ごと（{len(dangers)} 個）に、荷物の名前の一覧を書いてください")
+    elif key == "_any" and not all(lists):
+      err(f"{where}: どの危なさにも、荷物を 1 つ以上書いてください")
 
 
 def _num(v) -> bool:
@@ -830,5 +932,8 @@ def build(raw: dict) -> dict:
     "quests": raw["quests"],
     "quest_ranks": raw["quest_ranks"],
     "quest_reward": raw["quest_reward"],
+    "hunt_ranks": raw.get("hunt_ranks", []),
+    "deliveries": raw.get("deliveries"),
+    "hunts": raw.get("hunts"),
     "town_quests": raw.get("town_quests", {}),
   }

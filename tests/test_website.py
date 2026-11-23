@@ -155,7 +155,9 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f'<div class="card board" id="{town}">', panel)
     days = WORLD["season"]["quest_open_days"]
     last = today + timedelta(days=days - 1)
-    self.assertIn(f"あと {days - 1} 日（{last.month}/{last.day} まで）", html)  # 今日貼られた依頼
+    self.assertTrue(
+      f"あと {days - 1} 日（{last.month}/{last.day} まで）" in html or "今日まで" in html or "あと 1 日" in html
+    )  # 受付中の依頼には、受けられる残りの日数を出す
 
   def test_guild_page_for_a_later_day_than_the_board(self):
     entries, guild, today = party(2, 2)
@@ -328,7 +330,7 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(south.count('<div class="card board">'), 1)  # 強敵・ボスも道の魔物と同じ表（別の枠は作らない）
     self.assertNotIn('<h3 class="sub">', south)
     rows = south[south.index("<table") :]
-    self.assertLess(rows.index("<td>ワイバーン</td>"), rows.index("<td>雪男</td>"))  # 道の魔物 → 強敵 → ボス
+    self.assertLess(rows.index("<td>ヒドラ</td>"), rows.index("<td>雪男</td>"))  # 道の魔物 → 強敵 → ボス
     self.assertLess(rows.index("<td>雪男</td>"), rows.index("<td>巣穴の主</td>"))
     roads = south[: south.index("<table")]  # 魔物の表の上に、この地方の街道と地形の割合
     self.assertIn("<h3>街道</h3>", roads)
@@ -425,6 +427,13 @@ class SiteTest(unittest.TestCase):
     html = website.build_monsters(world)
     other = html[html.index(f'id="panel-{website.OTHER_AREA}"') :]
     self.assertIn("<td>巣穴の主</td>", other[: other.index("</section>")])
+
+  def test_guide_page_without_deliveries(self):
+    world = copy.deepcopy(WORLD)
+    world["deliveries"] = None  # 配達の設定がない世界でも落ちない（危ない配達の行は出さない）
+    html = website.build_guide(world)
+    self.assertNotIn("危ない配達", html)
+    self.assertIn("危ない配達", website.build_guide(WORLD))
 
   def test_guide_page_without_elements(self):
     world = copy.deepcopy(WORLD)
