@@ -117,14 +117,16 @@ class SiteTest(unittest.TestCase):
     html = website.build_ranking(WORLD, entries, DAY)
     level = html[html.index("<h3>レベル</h3>") :]
     level = level[: level.index("</table>")]
-    self.assertEqual(level.count("<tr>"), 11)  # 10 位まで（同じ 10 位の勇者は 2 人とも）
+    self.assertEqual(level.count("<tr>"), 10)  # 10 人で切る（同じ 10 位が 2 人でも、登録の早い 1 人だけ）
     self.assertIn("勇者10<", level)
-    self.assertIn("勇者11<", level)
+    self.assertNotIn("勇者11<", level)
     self.assertNotIn("勇者12<", level)
+    kills = html[html.index("<h3>討伐数</h3>") :]
+    self.assertEqual(kills[: kills.index("</table>")].count("<tr>"), 10)  # 全員 0 体（同率 1 位）でも 10 人
     board = rpg.build_board(WORLD, entries, DAY)
     part = board[board.index("── レベル ──") :]
     part = part[: part.index("\n\n")]
-    self.assertEqual(len(part.splitlines()) - 1, 11)  # Gist の本文も 10 位まで
+    self.assertEqual(len(part.splitlines()) - 1, 10)  # Gist の本文も 10 人まで
 
   def test_guild_shows_who_took_todays_quests(self):
     entries, guild, today = party(4, 3)

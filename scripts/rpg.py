@@ -47,7 +47,7 @@ GUILD_PATH = common.ROOT / ".state" / "guild.json"  # 全員で共有する、�
 BOARD_FILENAME = "hero-ranking.txt"
 MAX_HEROES = 30  # 同時に冒険できる（引退していない）勇者の数
 BOARD_NAME_WIDTH = 8  # ランキングのカードに出す名前の表示幅
-RANKING_TOP = 10  # ランキングの順位表に出す順位（10 位まで。同じ順位の勇者は全員出す）
+RANKING_TOP = 10  # ランキングの順位表に出す人数（同じ順位でも 10 人で切る。並びは登録の早い順）
 CARD_NAME_WIDTH = 16  # 勇者のカード（Gist）の 1 行目に出す名前の表示幅（Lv・シーズン・日が切れないように）
 MEDALS = ("🥇", "🥈", "🥉")
 NAME_WIDTH_MAX = 32  # 勇者の名前の表示幅（全角 = 2。全角 16 文字・半角 32 文字）
@@ -384,8 +384,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
     detail += ["", f"── {title} ──"]
     detail += [
       f"{r:>2}. {h['name']}  " + (f"Lv.{value(s)}" if title == "レベル" else f"{value(s)}{unit}")
-      for r, h, s in ranked(views, key)
-      if r <= RANKING_TOP
+      for r, h, s in ranked(views, key)[:RANKING_TOP]
     ]
   detail += ["", "── 今日の出来事 ──"] + (today_news or ["まだない"])
   detail += ["", "── 勇者たち ──"]
