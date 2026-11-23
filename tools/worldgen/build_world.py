@@ -151,7 +151,8 @@ def terrain_mix(path):
   return [[k, v] for k, v in mix if v >= 10] or [["plain", 100]]
 
 
-def main():
+def build_places():
+  """町とダンジョン（world/map.json の places）。表（places.py・names.py・lore.py と、このファイルの表）から作る。"""
   area_of = {member: aid for aid, _, _, members in AREAS for member in members}
   places = []
   for name, x, y in TOWNS:
@@ -187,7 +188,11 @@ def main():
       }
       | ({"label": LABEL[name]} if name in LABEL else {})
     )
+  return places
 
+
+def main():
+  places = build_places()
   roads = []
   for r in json.load(open(paths.ROADS, encoding="utf-8")):
     kind_ = "land" if r["kind"] == "road" else "trail"
