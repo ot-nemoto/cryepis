@@ -71,7 +71,7 @@ class DisplayTest(unittest.TestCase):
 
   def test_detail_shows_the_current_quest(self):
     state = play(1)
-    q = next(x for x in WORLD["town_quests"]["salina"] if x["type"] == "deliver")
+    q = next(x for x in WORLD["town_quests"]["salina"] if x["type"] == "hunt")
     state["quest"] = game.make_town_quest(WORLD, q, "salina", DAY)
     text = rpg.build_text(WORLD, state)
     self.assertIn("── 受けている依頼 ──", text)

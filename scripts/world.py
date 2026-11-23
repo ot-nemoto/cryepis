@@ -116,6 +116,7 @@ def load_raw(directory: Path | None = None) -> dict:
     "quest_ranks": quests.get("ranks"),
     "quest_reward": quests.get("reward"),
     "hunt_ranks": quests.get("hunt_ranks", []),
+    "deliveries": quests.get("deliveries"),
     "town_quests": quests.get("towns", {}),
   }
 
@@ -629,14 +630,17 @@ def validate(raw: dict) -> list[str]:
     where = f"quests.json の {q.get('id')}"
     if q.get("type") not in QUEST_TYPES:
       err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
-    if "rank" in q or q.get("type") != "hunt":  # 討伐は rank を書かなければ、魔物の Lv と数で決める
+    if "rank" in q:  # 討伐・配達は rank を書かなければ、計算で決める（討伐は魔物の Lv と数、配達は距離と危なさ）
       rank_ok(where, q.get("rank"))
     if not isinstance(q.get("weight"), (int, float)) or q["weight"] <= 0:
       err(f"{where}: weight は正の数にしてください")
     if q.get("type") == "hunt" and not _range_ok(q.get("count")):
       err(f"{where}: count は [最小, 最大]（1 以上）にしてください")
-  if not any(q.get("rank") == 1 or (q.get("type") == "hunt" and "rank" not in q) for q in raw["quests"]):
+  if not any(q.get("rank") == 1 or "rank" not in q for q in raw["quests"]):
     err("quests.json: rank 1 の共通の依頼（templates）を 1 つ以上書いてください（掲示板の空いた枠に入る）")
+  # 配達（quests.json の deliveries）: ★ の区切り、危なさごとの魔物の Lv のずらし・受けられる Lv・説明の文、町ごとの荷物
+  if any(q.get("type") == "deliver" and "rank" not in q for q in raw["quests"]):
+    deliveries_ok(raw.get("deliveries"), len(ranks), places, err)
   # 町の依頼: 討伐は町から出る道（陸路・航路）と、その道に出る魔物。配達は別の町へ
   road_terrain = {}
   for r in mp.get("roads", []):
@@ -735,6 +739,52 @@ def road_monsters(terrain: list, monsters: list[dict]) -> list[tuple[str, float]
 def on_road(monster: dict) -> bool:
   """道で出会う魔物か（ボスと強敵は道に出ない。強敵は町の討伐の依頼で狙って戦う）。"""
   return not monster.get("boss") and not monster.get("elite")
+
+
+def deliveries_ok(dv, n_ranks: int, places: dict, err) -> None:
+  """quests.json の deliveries を確かめる（誤りは err に渡す）。"""
+  if not isinstance(dv, dict):
+    err("quests.json: deliveries（配達の ★・危なさ・荷物）を書いてください")
+    return
+  dr = dv.get("ranks")
+  if (
+    not isinstance(dr, list) or not all(_num(v) and v > 0 for v in dr) or dr != sorted(dr) or len(dr) >= max(n_ranks, 1)
+  ):
+    err(f"quests.json: deliveries の ranks は小さい順の正の数の一覧（{max(n_ranks - 1, 0)} 個まで）にしてください")
+  dangers = dv.get("dangers")
+  if not isinstance(dangers, list) or not dangers:
+    err("quests.json: deliveries の dangers（危なさの段階）を 1 つ以上書いてください")
+    dangers = []
+  for n, dg in enumerate(dangers):
+    where = f"quests.json の deliveries の dangers[{n}]"
+    ints = isinstance(dg, dict) and all(
+      isinstance(dg.get(k), int) and not isinstance(dg.get(k), bool) for k in ("shift", "min_level")
+    )
+    if not ints or dg["min_level"] < 0:
+      err(f"{where}: shift（魔物の Lv のずらし。整数）と min_level（受けられる Lv。0 以上の整数）を書いてください")
+    texts = dg.get("texts") if isinstance(dg, dict) else None
+    if (
+      not isinstance(texts, list)
+      or not texts
+      or not all(isinstance(t, str) and "{cargo}" in t and "{to}" in t for t in texts)
+    ):
+      err(f"{where}: texts は {{cargo}} と {{to}} を入れた文の一覧にしてください")
+  cargo = dv.get("cargo")
+  if not isinstance(cargo, dict) or "_any" not in cargo:
+    err("quests.json: deliveries の cargo に、どの町でも使う荷物（_any）を書いてください")
+    return
+  for key, lists in cargo.items():
+    where = f"quests.json の deliveries の cargo の {key}"
+    if key != "_any" and key not in places:
+      err(f"{where}: {key!r} は map.json にない場所です")
+    if (
+      not isinstance(lists, list)
+      or len(lists) != len(dangers)
+      or not all(isinstance(x, list) and all(isinstance(c, str) and c for c in x) for x in lists)
+    ):
+      err(f"{where}: 危なさの段階ごと（{len(dangers)} 個）に、荷物の名前の一覧を書いてください")
+    elif key == "_any" and not all(lists):
+      err(f"{where}: どの危なさにも、荷物を 1 つ以上書いてください")
 
 
 def _num(v) -> bool:
@@ -846,5 +896,6 @@ def build(raw: dict) -> dict:
     "quest_ranks": raw["quest_ranks"],
     "quest_reward": raw["quest_reward"],
     "hunt_ranks": raw.get("hunt_ranks", []),
+    "deliveries": raw.get("deliveries"),
     "town_quests": raw.get("town_quests", {}),
   }

@@ -465,6 +465,16 @@ class ValidateTest(unittest.TestCase):
 
     self.assertError(bad_path, ["path"])
 
+  def test_bad_deliveries(self):
+    def no_any(r):
+      del r["deliveries"]["cargo"]["_any"]
+
+    self.assertError(no_any, ["_any"])
+    self.assertError(lambda r: r["deliveries"].update(ranks=[8, 4]), ["deliveries の ranks"])
+    self.assertError(lambda r: r["deliveries"]["dangers"][0].update(texts=["{cargo}を運ぶ"]), ["texts"])
+    self.assertError(lambda r: r["deliveries"]["cargo"].update(nowhere=[[], [], []]), ["nowhere"])
+    self.assertError(lambda r: r["deliveries"]["cargo"].update(salina=[["塩"]]), ["salina"])
+
   def test_bad_season(self):
     def change(r):
       r["season"]["months"] = 0

@@ -954,6 +954,13 @@ def build_guide(world: dict) -> str:
       "装飾品は、弱点を突ける属性のものを持っていれば、その戦いだけ着け替える（苦手な属性なら外す）",
     ),
     (
+      "危ない配達",
+      "危なさのある配達（高価な品・狙われる品）を運んでいる間は、道で出会う魔物の Lv が上がる"
+      + "（"
+      + "・".join(f"危なさ {n} は +{d['shift']}" for n, d in enumerate(world["deliveries"]["dangers"]) if d["shift"])
+      + "）",
+    ),
+    (
       "道で出会う魔物",
       "戦いになったら、まず道の地形（草原・森など。道ごとの割合は魔物のページの「街道」）を選び、その地形の魔物のうち、Lv が勇者の Lv "
       + "〜".join(f"{d:+d}" for d in cfg["encounter_levels"])

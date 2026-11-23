@@ -256,7 +256,7 @@ class QuestTest(unittest.TestCase):
   def test_rank_falls_back_to_what_the_town_has(self):
     for i in range(60):  # エクエスには ★★★★ の依頼がない
       for q in G.board(WORLD, "eques", START + timedelta(days=i), 1):
-        self.assertLessEqual(q["rank"], max(x["rank"] for x in WORLD["town_quests"]["eques"]))
+        self.assertLessEqual(q["rank"], 3)  # ★★★★ は作らない（WORLD・RAID 用）
 
   def test_hunt_report_gives_reward(self):
     state = play(1, actions=0)
@@ -636,10 +636,45 @@ class RoadTest(unittest.TestCase):
     self.assertTrue(any("の周りを散策した" in e for e in day.events))
 
   def test_deliver_cost_is_the_distance(self):
-    q = next(x for x in WORLD["town_quests"]["salina"] if x["type"] == "deliver" and x["to"] == "karun")
-    quest = G.make_town_quest(WORLD, q, "salina", START)
-    self.assertEqual(quest["cost"], WORLD["dist"]["salina"]["karun"])
-    self.assertGreater(quest["cost"], WORLD["roads"].get(("salina", "karun"), 0))  # 直接の道はなく、経由する
+    t = next(x for x in WORLD["quests"] if x["type"] == "deliver")
+    quests = [G.make_quest(WORLD, t, "salina", START, random.Random(i), r) for i in range(40) for r in (1, 2, 3)]
+    for q in quests:
+      self.assertEqual(q["cost"], WORLD["dist"]["salina"][q["place"]])
+    karun = next(q for q in quests if q["place"] == "karun")
+    self.assertGreater(karun["cost"], WORLD["roads"].get(("salina", "karun"), 0))  # 直接の道はなく、経由する
+
+  def test_delivery_rank_danger_and_cargo(self):
+    cases = {(2, 0): 1, (4, 0): 1, (2, 1): 1, (6, 0): 2, (4, 1): 2, (2, 2): 2, (6, 1): 3, (4, 2): 3, (6, 2): 3}
+    for (d, danger), rank in cases.items():  # 点数 = 距離 ×（危なさ + 1）。4 以下 ★、8 以下 ★★、それより上 ★★★
+      self.assertEqual(G.deliver_rank(WORLD, d, danger), rank, (d, danger))
+    t = next(x for x in WORLD["quests"] if x["type"] == "deliver")
+    dv = WORLD["deliveries"]
+    for rank in (1, 2, 3):
+      for i in range(30):
+        q = G.make_quest(WORLD, t, "salina", START, random.Random(i), rank)
+        self.assertEqual(q["rank"], rank)
+        self.assertEqual(G.deliver_rank(WORLD, q["cost"], q["danger"]), rank)
+        self.assertIn(q["cargo"], dv["cargo"]["salina"][q["danger"]] + dv["cargo"]["_any"][q["danger"]])
+        self.assertEqual(q["name"], f"{q['cargo']}の配達")
+        self.assertIn(q["cargo"], q["text"])
+        self.assertIn(WORLD["places"][q["place"]]["name"], q["text"])
+        self.assertEqual(q.get("min_level", 0), dv["dangers"][q["danger"]]["min_level"])  # 危なさ 2 は Lv5 から
+        self.assertEqual(q["reward"]["exp"], 0)
+
+  def test_delivery_danger_raises_monster_levels_on_the_way(self):
+    t = next(x for x in WORLD["quests"] if x["type"] == "deliver")
+    quest = next(
+      q for i in range(200) for q in [G.make_quest(WORLD, t, "salina", START, random.Random(i), 3)] if q["danger"] == 2
+    )
+    state = G.new_state(WORLD)
+    state.update(season=1, place="salina", quest=quest)
+    state["hero"]["level"] = 6
+    day = G.Day(WORLD, state, START, random.Random(0))
+    self.assertEqual(day.danger_shift(), 4)  # 運んでいる間は、出会う魔物の Lv を 4 上げる
+    quest["progress"] = 1
+    self.assertEqual(day.danger_shift(), 0)  # 届けたあとは上げない
+    state["quest"] = None
+    self.assertEqual(day.danger_shift(), 0)
 
   def test_sea_route_has_sea_monsters_and_scenery(self):
     world = everything_open()  # 今は航路を開放していない
