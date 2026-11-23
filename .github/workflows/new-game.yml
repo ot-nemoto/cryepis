@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       hero_name:
-        description: "勇者の名前（表示幅 16 まで（全角 8 文字ぶん）。超えた分は切り捨てる）"
+        description: "勇者の名前（表示幅 32 まで（全角 16 文字・半角 32 文字）。超えた分は切り捨てる）"
         type: string
         required: true
 
