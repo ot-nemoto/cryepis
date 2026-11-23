@@ -496,6 +496,20 @@ def suitable(quest: dict, level: int) -> bool:
   return quest["level"][0] <= level + 3 and level >= quest.get("min_level", 0)
 
 
+def encounters(world: dict, monsters: list, level: int) -> list:
+  """道で出会う魔物（[ID, 重み], ...）のうち、勇者の Lv に合うもの。Lv が「勇者の Lv + encounter_levels」の範囲
+  （season.json。[-3, 1] なら Lv −3〜+1）の魔物だけにする。範囲に 1 体もいなければ、範囲にいちばん近い Lv の魔物。
+  重みは道の地形のまま。"""
+  low, high = (level + d for d in world["season"]["encounter_levels"])
+  lv = world["monsters"]
+
+  def gap(mid: str) -> int:
+    return max(low - lv[mid]["level"], lv[mid]["level"] - high, 0)
+
+  near = min(gap(mid) for mid, _ in monsters)
+  return [(mid, w) for mid, w in monsters if gap(mid) == near]
+
+
 def patrol(world: dict, state: dict, rng: random.Random) -> dict:
   """合う依頼がないときの旅（報酬なし）。となりの町のどれかへ向かう。"""
   lvl, to = monster_level(world), rng.choice(world["neighbors"][state["place"]])
@@ -844,7 +858,7 @@ class Day:
     kinds, weights = zip(*self.cfg["road_events"].items())
     kind = self.rng.choices(kinds, weights)[0]
     if kind == "battle":
-      mids, mw = zip(*info["monsters"])
+      mids, mw = zip(*encounters(self.world, info["monsters"], self.hero["level"]))
       if not self.battle(self.world["monsters"][self.rng.choices(mids, mw)[0]]):
         return False
     elif kind == "treasure":

@@ -493,6 +493,25 @@ class BattleAndItemTest(unittest.TestCase):
 
 
 class RoadTest(unittest.TestCase):
+  def test_encounters_follow_the_hero_level(self):
+    road = WORLD["road_info"][("karun", "muralis")]["monsters"]
+    lv = WORLD["monsters"]
+    for level in (1, 5, 8, 15, 20):
+      got = G.encounters(WORLD, road, level)
+      levels = {lv[m]["level"] for m, _ in got}
+      if level < 20:
+        self.assertTrue(levels and all(level - 3 <= x <= level + 1 for x in levels), (level, levels))
+      else:  # Lv17〜21 の魔物はいないので、いちばん近い Lv15
+        self.assertEqual(levels, {15})
+      self.assertEqual(got, [(m, w) for m, w in road if (m, w) in got])  # 重みは地形のまま
+    self.assertEqual({lv[m]["level"] for m, _ in G.encounters(WORLD, road, 1)}, {1, 2})
+
+  def test_every_road_has_monsters_for_every_level(self):
+    for (a, b), info in WORLD["road_info"].items():  # 平原はどの道にもあるので、Lv1〜15 のどの勇者にも相手がいる
+      for level in range(1, 16):
+        levels = {WORLD["monsters"][m]["level"] for m, _ in G.encounters(WORLD, info["monsters"], level)}
+        self.assertTrue(all(level - 3 <= x <= level + 1 for x in levels), (a, b, level, levels))
+
   def test_every_step_on_a_road_has_an_event_and_arrival_visits_the_town(self):
     state = play(1, actions=0)
     to = WORLD["neighbors"][state["place"]][0]
