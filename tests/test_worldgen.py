@@ -145,6 +145,23 @@ class CommittedMapTest(unittest.TestCase):
     self.assertEqual(len(MAP["roads"]), len({frozenset((r["from"], r["to"])) for r in MAP["roads"]}))  # 重複なし
 
 
+class TownTextTest(unittest.TestCase):
+  """町の説明（lore.TEXT）は、サイトの町のページと docs/WORLD.md の町の一覧に出る。"""
+
+  def test_texts_are_short_single_lines(self):
+    for name, text in lore.TEXT.items():
+      self.assertTrue(text.strip() == text and "\n" not in text, name)
+      self.assertTrue(20 <= len(text) <= 120, (name, len(text)))  # 1〜2 文。町のカードに収まる長さ
+
+  def test_world_md_lists_the_same_texts(self):
+    """docs/WORLD.md の町の一覧の「特徴」が、lore.TEXT と同じ（直したら、両方を直す）。"""
+    doc = (ROOT / "docs" / "WORLD.md").read_text(encoding="utf-8")
+    for alias, text in lore.TEXT.items():
+      self.assertIn(f"（{alias}） |", doc, alias)
+      row = next(line for line in doc.splitlines() if f"（{alias}） |" in line)
+      self.assertTrue(row.rstrip().endswith(f"| {text} |"), alias)
+
+
 class ActionsTest(unittest.TestCase):
   def test_land_actions(self):
     self.assertEqual([actions.land(c) for c in (0, 1, 19, 20, 40, 60, 100)], [1, 1, 1, 1, 1, 2, 2])  # 最低 1 回
