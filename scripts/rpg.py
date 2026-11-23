@@ -47,6 +47,7 @@ GUILD_PATH = common.ROOT / ".state" / "guild.json"  # 全員で共有する、�
 BOARD_FILENAME = "hero-ranking.txt"
 MAX_HEROES = 30  # 同時に冒険できる（引退していない）勇者の数
 BOARD_NAME_WIDTH = 8  # ランキングのカードに出す名前の表示幅
+CARD_NAME_WIDTH = 16  # 勇者のカード（Gist）の 1 行目に出す名前の表示幅（Lv・シーズン・日が切れないように）
 MEDALS = ("🥇", "🥈", "🥉")
 NAME_WIDTH_MAX = 32  # 勇者の名前の表示幅（全角 = 2。全角 16 文字・半角 32 文字）
 CATCH_UP_DAYS = 7  # 実行されなかった日をさかのぼって進める最大の日数
@@ -193,7 +194,8 @@ def build_text(world: dict, state: dict, fold: bool = True) -> str:
   else:
     today = random.Random(f"teaser-{state['last_date']}").choice(TEASERS)
   lines = [
-    f"⚔️ {state['name']} Lv.{hero['level']}  {season} Day {state['season_day']}",
+    f"⚔️ {shorten(state['name'], CARD_NAME_WIDTH) if fold else state['name']} Lv.{hero['level']}  "
+    f"{season} Day {state['season_day']}",
     location(world, state),
     f"HP {hp_bar} {hero['hp']}/{s['max_hp']}  攻{s['atk']} 防{s['def']}  {hero['gold']}G",
     f"装備: {gear}",
@@ -339,15 +341,17 @@ def ranked(entries: list[tuple[dict, dict]], key) -> list[tuple[int, dict, dict]
   return out
 
 
-def news(entries: list[tuple[dict, dict]], today: date) -> list[str]:
-  """今日の出来事（勇者ごとに目立つものを 1 つ）。目立つ順。"""
+def news(entries: list[tuple[dict, dict]], today: date, name_width: int | None = None) -> list[str]:
+  """今日の出来事（勇者ごとに目立つものを 1 つ）。目立つ順。name_width を渡すと、名前をその表示幅に詰める
+  （ランキングのカードで、名前が長くても出来事が読めるように）。"""
   picks = []
   for hero, state in entries:
     last = state["last"]
     if last and last["date"] == today.isoformat() and last["events"]:
       (event,) = highlights(last["events"], 1)
       rank = next((r for r, key in enumerate(HIGHLIGHTS) if key in event), len(HIGHLIGHTS))
-      picks.append((rank, f"{hero['name']}: {event}"))
+      name = shorten(hero["name"], name_width) if name_width else hero["name"]
+      picks.append((rank, f"{name}: {event}"))
   return [text for _, text in sorted(picks, key=lambda p: p[0])]
 
 
@@ -368,7 +372,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
       f"{MEDALS[min(r, 3) - 1]}{shorten(h['name'], BOARD_NAME_WIDTH)} {value(s)}" for r, h, s in ranked(views, key)[:3]
     ]
     lines.append(f"{label} " + (" ".join(top) or "まだいない"))
-  today_news = news(views, today)
+  today_news = news(views, today, BOARD_NAME_WIDTH)
   lines.append("📰 " + (today_news[0] if today_news else "今日も勇者たちは冒険中…"))
   card = [fit(line) for line in lines]
 

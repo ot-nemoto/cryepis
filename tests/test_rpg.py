@@ -235,6 +235,20 @@ class HeroesTest(unittest.TestCase):
     self.assertLessEqual(common.width(rpg.clean_name("あ" * 30)), rpg.NAME_WIDTH_MAX)
     self.assertEqual(rpg.clean_name("あ" * 20), "あ" * 16)  # 全角は 16 文字まで
     self.assertEqual(rpg.clean_name("a" * 40), "a" * 32)  # 半角は 32 文字まで
+
+  def test_long_names_fit_the_cards(self):
+    # 表示幅 32 の名前でも、ランキングのカードの出来事と、勇者のカードの Lv・日が切れない
+    name = "あいうえおかきくけこさしすせそた"
+    world = WORLD
+    state = game.new_state(world, "h1", name)
+    game.advance(world, state, DAY)
+    head = rpg.build_text(world, state).splitlines()[0]
+    self.assertTrue(head.endswith(f"Day {state['season_day']}"), head)
+    self.assertIn(name, rpg.build_text(world, state, fold=False))  # サイトでは名前を詰めない
+    hero = {"id": "h1", "name": name}
+    news = rpg.news([(hero, state)], DAY, rpg.BOARD_NAME_WIDTH)
+    self.assertTrue(news[0].startswith(rpg.shorten(name, rpg.BOARD_NAME_WIDTH) + ": "), news)
+    self.assertLessEqual(common.width(news[0].split(": ")[0]), rpg.BOARD_NAME_WIDTH)
     with self.assertRaises(SystemExit):
       rpg.clean_name(" \t ")
     with self.assertRaises(SystemExit):
