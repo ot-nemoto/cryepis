@@ -89,6 +89,12 @@
       "name": "KASOS",
       "created": "2026-11-23",
       "active": true
+    },
+    {
+      "id": "h16",
+      "name": "THALES",
+      "created": "2026-11-23",
+      "active": true
     }
   ]
 }
