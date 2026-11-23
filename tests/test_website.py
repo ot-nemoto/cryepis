@@ -428,6 +428,31 @@ class SiteTest(unittest.TestCase):
     other = html[html.index(f'id="panel-{website.OTHER_AREA}"') :]
     self.assertIn("<td>巣穴の主</td>", other[: other.index("</section>")])
 
+  def test_guide_page_tells_the_myth(self):
+    html = website.build_guide(WORLD)
+    for h in ("はじまりの話", "星の巡りと加護", "三つの徳", "三つの教えと争い"):
+      self.assertIn(f"<h3>{h}</h3>", html)
+    self.assertIn(f"星の巡りは、{WORLD['season']['months']} か月ごとにやってくる", html)
+    # 三つの徳の表は、属性と鉱石を world/ から引く
+    self.assertIn('<td><span class="tag">炎属性</span></td><td>心臓</td><td>いのち</td><td>熾焔鋼</td>', html)
+    self.assertIn('<td><span class="tag">氷属性</span></td><td>牙</td><td>かぎり</td><td>霧氷石</td>', html)
+    self.assertIn('<td><span class="tag">雷属性</span></td><td>頭</td><td>こころざし</td><td>紫電鉄</td>', html)
+    # 作者だけの秘密と設定の言葉は、サイトに出さない
+    for word in ("創造主", "利用"):
+      self.assertNotIn(word, html)
+
+  def test_guide_myth_follows_the_elements(self):
+    world = copy.deepcopy(WORLD)
+    world["elements"]["flame"]["ore"] = "<b>火鋼</b>"
+    world["season"]["months"] = 4
+    html = website.build_guide(world)
+    self.assertIn("<td>&lt;b&gt;火鋼&lt;/b&gt;</td>", html)
+    self.assertIn("星の巡りは、4 か月ごとにやってくる", html)
+    world["elements"].pop("ice")  # 氷属性のない世界でも、残りの行だけ出る
+    html = website.build_guide(world)
+    self.assertNotIn("霧氷石", html)
+    self.assertIn("<td>いのち</td>", html)
+
   def test_guide_page_without_deliveries(self):
     world = copy.deepcopy(WORLD)
     world["deliveries"] = None  # 配達の設定がない世界でも落ちない（危ない配達の行は出さない）
