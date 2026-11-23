@@ -176,6 +176,8 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `scripts/mapsvg.py` | 地図の画像（SVG）を描く。ベースの地図（`layout.background`）があれば一番下に敷く。作り方は [docs/BASE_MAP.md](docs/BASE_MAP.md) |
 | `scripts/website.py` | GitHub Pages のサイト（ストーリー・地図・ランキング・勇者・町・ギルド・アイテム・魔物・手引き・勇者の詳細の HTML。引退した勇者の詳細も）を書き出す（冒険は進めない） |
 | `scripts/rpg.py` | 勇者を登録・引退させ、現役の勇者を 1 日分ずつ進めて、状態とランキングの Gist（`hero-ranking.txt`）を更新する（詳細と地図はサイト） |
+| `scripts/view.py` | 勇者の見た目（カードやページに出す文章・ランキングの並べ方）。状態を読むだけで、ファイルも API も触らない。`rpg.py` と `website.py` の両方から使う |
+| `scripts/store.py` | 勇者管理シート・勇者の状態・ギルドの掲示板（`.state/`）の読み書き。`rpg.py` と `website.py` の両方から使う |
 | `.state/heroes.json` | 勇者管理シート（勇者の一覧） |
 | `.state/board.json` | ランキングの Gist の ID と URL |
 | `.state/guild.json` | 町ごとのギルドの掲示板（日をまたいで残る。受付中・受注中・達成・失敗） |

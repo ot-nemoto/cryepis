@@ -36,7 +36,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import common  # noqa: E402
 import game  # noqa: E402
 import mapsvg  # noqa: E402
-import rpg  # noqa: E402
+import store  # noqa: E402
+import view  # noqa: E402
 import world as W  # noqa: E402
 
 TITLE = "クリエピス戦記"
@@ -308,20 +309,20 @@ def build_map(world: dict, entries: list[tuple[dict, dict]], today: date) -> str
 def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
   season = game.season_of(world, today)
   first, last = game.season_range(world, season)
-  views = [(h, rpg.season_view(world, s, season)) for h, s in entries]
+  views = [(h, view.season_view(world, s, season)) for h, s in entries]
   body = [f"<h2>シーズン{season}（{first}〜{last}）</h2>{updated(today)}"]
-  news = rpg.news(views, today)
+  news = view.news(views, today)
   body.append(
     '<div class="card"><h3>📰 今日の出来事</h3>'
     + ("".join(f"<div>{escape(n)}</div>" for n in news) or '<div class="note">まだない</div>')
     + "</div>"
   )
   cards = []
-  for title, _, key, value, unit in rpg.RANKINGS:
+  for title, _, key, value, unit in view.RANKINGS:
     rows = "".join(
       f'<tr><td class="num">{r}</td><td><a href="{hero_href(h["id"])}">{escape(h["name"])}</a></td>'
       f'<td class="num">{"Lv." if title == "レベル" else ""}{value(s)}{"" if title == "レベル" else unit}</td></tr>'
-      for r, h, s in rpg.ranked(views, key)[: rpg.RANKING_TOP]
+      for r, h, s in view.ranked(views, key)[: view.RANKING_TOP]
     )
     cards.append(
       f'<div class="card"><h3>{escape(title)}</h3>'
@@ -336,20 +337,22 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
 def build_heroes(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
   """旅をしている勇者の一覧（居場所・能力・装備・今日の出来事。名前から詳細のページへ）。"""
   season = game.season_of(world, today)
-  views = [(h, rpg.season_view(world, s, season)) for h, s in entries]
+  views = [(h, view.season_view(world, s, season)) for h, s in entries]
   body = [f"<h2>勇者たち</h2>{updated(today)}"]
   heroes = []
   for h, s in views:
     hero, st = s["hero"], game.stats(world, s)
     last_ = s["last"]
-    events = rpg.highlights(last_["events"]) if last_ and last_["date"] == today.isoformat() and last_["events"] else []
+    events = (
+      view.highlights(last_["events"]) if last_ and last_["date"] == today.isoformat() and last_["events"] else []
+    )
     heroes.append(
       f'<div class="card"><h3><a href="{hero_href(h["id"])}">{escape(h["name"])}</a> '
-      f"Lv.{hero['level']}</h3><div>{escape(rpg.location(world, s))}</div>"
+      f"Lv.{hero['level']}</h3><div>{escape(view.location(world, s))}</div>"
       f"<div>HP {hero['hp']}/{st['max_hp']}　攻{st['atk']} 防{st['def']} 速{st['spd']} 器{st['dex']}　{hero['gold']}G</div>"
       f"<div>"
       f"特性: {escape(game.hero_trait(world, s).get('name', '-'))}</div>"
-      f"<div>装備: {escape(rpg.gear_text(world, s))}</div>"
+      f"<div>装備: {escape(view.gear_text(world, s))}</div>"
       f'<div class="note">今日: {escape("、".join(events) or "—")}</div></div>'
     )
   body.append('<div class="grid">' + ("".join(heroes) or '<p class="note">まだ勇者がいません。</p>') + "</div>")
@@ -525,7 +528,7 @@ def build_towns(world: dict) -> str:
     it = items[iid]
     return (
       f'<span class="chip-mark">{escape(game.rarity_mark(world, it["rarity"]))}</span>{escape(it["name"])}'
-      f'<span class="note">（{escape(rpg.item_power(it, world))}）</span>'
+      f'<span class="note">（{escape(view.item_power(it, world))}）</span>'
     )
 
   p = world["season"]["potion"]  # 回復薬はどの町の店でも売る（装備のあとに出す）
@@ -1108,7 +1111,7 @@ def build_guide(world: dict) -> str:
 def build_hero(world: dict, hero: dict, state: dict) -> str:
   body = (
     f"<h2>{escape(hero['name'])}（{escape(hero['id'])}）</h2>"
-    f"<pre>{escape(rpg.build_text(world, state))}</pre>"
+    f"<pre>{escape(view.build_text(world, state))}</pre>"
     '<p><a href="../heroes.html">勇者の一覧へ戻る</a></p>'
   )
   return page(hero["name"], body, "", depth=1)
@@ -1185,11 +1188,11 @@ def main() -> int:
   ap.add_argument("out", help="書き出す先のディレクトリ（中身は作り直す）")
   ap.add_argument("--date", help="表示する日付（既定は勇者を最後に進めた日。まだ誰も進めていなければ今日の JST）")
   a = ap.parse_args()
-  world = rpg.load_world()
-  entries = rpg.current_entries(world)
+  world = W.load_world()
+  entries = store.current_entries(world)
   today = date.fromisoformat(a.date) if a.date else shown_day(entries)
-  retired = rpg.current_entries(world, retired=True)
-  written = write_site(world, entries, today, rpg.load_guild(), Path(a.out), retired)
+  retired = store.current_entries(world, retired=True)
+  written = write_site(world, entries, today, store.load_guild(), Path(a.out), retired)
   print(f"{a.out} に {len(written)} ファイルを書き出しました")
   return 0
 

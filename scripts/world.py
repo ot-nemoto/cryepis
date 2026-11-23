@@ -91,12 +91,22 @@ def read_json(path: Path) -> dict:
     raise SystemExit(f"{path} が JSON として読めません: {e}") from e
 
 
+def _need(data, key: str, file: str):
+  """data（ファイルの中身）の key を取る。なければ SystemExit（KeyError のスタックトレースにしない）。"""
+  if not isinstance(data, dict) or key not in data:
+    raise SystemExit(f"world/{file} に {key} がありません")
+  return data[key]
+
+
 def load_raw(directory: Path | None = None) -> dict:
   d = directory or WORLD_DIR
   items = read_json(d / "items.json")
   mp = read_json(d / "map.json")
   monsters = read_json(d / "monsters.json")
   quests = read_json(d / "quests.json")
+  for file, data in (("items.json", items), ("map.json", mp), ("monsters.json", monsters), ("quests.json", quests)):
+    if not isinstance(data, dict):
+      raise SystemExit(f"world/{file} は {{ ... }}（辞書）の形にしてください")
   background = None
   name = (mp.get("layout") or {}).get("background") if isinstance(mp.get("layout"), dict) else None
   if isinstance(name, str) and name and "/" not in name and "\\" not in name:
@@ -106,12 +116,12 @@ def load_raw(directory: Path | None = None) -> dict:
     "season": read_json(d / "season.json"),
     "map": mp,
     "background": background,
-    "monsters": monsters["monsters"],
+    "monsters": _need(monsters, "monsters", "monsters.json"),
     "traits": monsters.get("traits", {}),
     "elements": monsters.get("elements", {}),
-    "rarities": items["rarities"],
-    "items": items["items"],
-    "quests": quests["templates"],
+    "rarities": _need(items, "rarities", "items.json"),
+    "items": _need(items, "items", "items.json"),
+    "quests": _need(quests, "templates", "quests.json"),
     "quest_ranks": quests.get("ranks"),
     "quest_reward": quests.get("reward"),
     "hunt_ranks": quests.get("hunt_ranks", []),
@@ -162,8 +172,14 @@ def stat_at(season: dict, stat: str, level: int) -> int:
 
 def open_towns(mp: dict) -> set:
   """開放した町（勇者が行ける町）。map.json に open がなければ、全部の町。"""
-  towns = {p.get("id") for p in mp.get("places", []) if p.get("type") == "town"}
-  return set(mp["open"]) & towns if isinstance(mp.get("open"), list) else towns
+  towns = {
+    p.get("id")
+    for p in _rows(mp.get("places"))
+    if isinstance(p, dict) and p.get("type") == "town" and _hashable(p.get("id"))
+  }
+  if not isinstance(mp.get("open"), list):
+    return towns
+  return {t for t in mp["open"] if _hashable(t)} & towns
 
 
 def road_open(r: dict, opened: set, places: dict) -> bool:
@@ -171,34 +187,139 @@ def road_open(r: dict, opened: set, places: dict) -> bool:
   return all(r.get(e) in opened or places.get(r.get(e), {}).get("type") == "dungeon" for e in ("from", "to"))
 
 
-def validate(raw: dict) -> list[str]:
-  """データの誤りの一覧（空なら問題なし）。"""
-  errors: list[str] = []
-  err = errors.append
-  season, mp = raw["season"], raw["map"]
-  places = {p.get("id"): p for p in mp.get("places", [])}
-  monsters = {m.get("id"): m for m in raw["monsters"]}
-  items = {i.get("id"): i for i in raw["items"]}
-  rarities = raw["rarities"]
+def _rows(value) -> list:
+  """一覧ならそのまま、そうでなければ空（形の誤りは _check_shape が知らせる）。"""
+  return value if isinstance(value, list) else []
 
+
+def _hashable(value) -> bool:
+  try:
+    hash(value)
+  except TypeError:
+    return False
+  return True
+
+
+def _index(rows) -> dict:
+  """ID → 行。一覧でない・辞書でない行・辞書の鍵にできない ID は飛ばす（そのことは _check_shape が知らせる）。"""
+  return {row.get("id"): row for row in _rows(rows) if isinstance(row, dict) and _hashable(row.get("id"))}
+
+
+class _Check:
+  """validate の途中経過（データと、見つけた誤り）。検査の関数（_check_*）がこれを読んで、誤りを err で足す。
+  誤りの並びは、検査を呼ぶ順（validate の中）で決まる。"""
+
+  def __init__(self, raw: dict):
+    # 形が違うデータでも落ちない（形の誤りは _check_shape が知らせる）。一覧でなければ空、ID が辞書の鍵にできなければ飛ばす
+    self.raw = raw
+    self.errors: list[str] = []
+    season, mp = raw.get("season"), raw.get("map")
+    self.season = season if isinstance(season, dict) else {}
+    self.mp = mp if isinstance(mp, dict) else {}
+    self.places = _index(self.mp.get("places"))
+    self.roads = [r for r in _rows(self.mp.get("roads")) if isinstance(r, dict)]
+    self.monsters = _index(raw.get("monsters"))
+    self.items = _index(raw.get("items"))
+    rarities = raw.get("rarities")
+    self.rarities = rarities if isinstance(rarities, list) else []
+    self.opened: set = set()  # _check_open_and_starts が決める（開放した町）
+    self.elements: dict = {}  # _check_elements が決める（属性）
+
+  def err(self, msg: str) -> None:
+    self.errors.append(msg)
+
+  def table_ok(self, where: str, table) -> None:
+    """[キー, 正の重み] の一覧（ドロップ表）が正しいか。"""
+    if not _weights_ok(table):
+      self.err(f"{where}: [キー, 正の重み] の一覧にしてください")
+      return
+    for key, _ in table:
+      if not _hashable(key):
+        self.err(f"{where}: キーは文字列にしてください: {key!r}")
+      elif key != NONE and key not in self.rarities and key not in self.items:
+        self.err(f"{where}: {key!r} は none・珍しさ・アイテムの ID のどれでもありません")
+
+
+def _rank_ok(err, ranks: list, where: str, rank) -> None:
+  if not isinstance(rank, int) or isinstance(rank, bool) or not 1 <= rank <= max(len(ranks), 1):
+    err(f"{where}: rank は 1〜{len(ranks)} の整数にしてください")
+
+
+def _check_shape(c: _Check):
+  """各ファイルの形のうち、ほかの検査が前提にしているもの（辞書の一覧であること、辞書の鍵や集合に入れる ID・地形が
+  文字列などの鍵にできる値であること）。前提が崩れていたら、そのことを知らせて、ほかの検査はせずに止める
+  （形を直してから、続きを調べる）。それ以外の値の誤りは、ほかの検査が個別に知らせる。"""
+  err, raw, mp = c.err, c.raw, c.mp
+
+  def rows(where: str, value, required: bool = True) -> list:
+    """辞書の一覧。required でなければ、書かなくてよい（なければ空）。"""
+    if value is None and not required:
+      return []
+    if not isinstance(value, list):
+      err(f"{where} は、辞書の一覧にしてください")
+      return []
+    bad = [i for i, r in enumerate(value) if not isinstance(r, dict)]
+    if bad:  # どの行か分かるように、番号（0 から。先頭の数件）を添える
+      err(f"{where} は、辞書の一覧にしてください（辞書でないのは {', '.join(f'[{i}]' for i in bad[:5])}）")
+      return []
+    return value
+
+  def keys(where: str, values) -> None:
+    """一覧の中身が、辞書の鍵や集合に入れられる値（文字列・数など。一覧や辞書ではない）か。"""
+    if isinstance(values, list) and not all(_hashable(v) for v in values):
+      err(f"{where} は、文字列の一覧にしてください")
+
+  for name, data in (("season.json", raw.get("season")), ("map.json", raw.get("map"))):
+    if not isinstance(data, dict):
+      err(f"{name} は {{ ... }}（辞書）の形にしてください")
+  for i, p in enumerate(rows("map.json の places", mp.get("places"), False)):
+    keys(f"map.json の places[{i}] の shop", p.get("shop"))
+  for i, r in enumerate(rows("map.json の roads", mp.get("roads"), False)):
+    where = f"map.json の roads[{i}]"
+    for end in ("from", "to"):
+      if not _hashable(r.get(end)):
+        err(f"{where}: {end} は文字列にしてください")
+    terrain = r.get("terrain")
+    if isinstance(terrain, list) and not all(not isinstance(t, list) or not t or _hashable(t[0]) for t in terrain):
+      err(f"{where}: terrain は [地形（文字列）, 重み] の一覧にしてください")
+  keys("map.json の open", mp.get("open"))
+  keys("map.json の starts", mp.get("starts"))
+  for i, m in enumerate(rows("monsters.json の monsters", raw.get("monsters"))):
+    if not _hashable(m.get("terrain")):
+      err(f"monsters.json の monsters[{i}]: terrain は文字列にしてください")
+  rows("items.json の items", raw.get("items"))
+  rarities = raw.get("rarities")
+  if isinstance(rarities, list) and not all(isinstance(r, str) for r in rarities):  # 文章に並べるので、文字列だけ
+    err("items.json の rarities は、文字列の一覧にしてください")
+  rows("quests.json の templates", raw.get("quests"))
+  towns = raw.get("town_quests")
+  for tid, qs in (towns if isinstance(towns, dict) else {}).items():
+    for i, q in enumerate(rows(f"quests.json の towns の {tid}", qs, False)):
+      for key in ("monster", "to"):
+        if not _hashable(q.get(key)):
+          err(f"quests.json の towns の {tid}[{i}]: {key} は文字列にしてください")
+
+
+def _check_ids(c: _Check):
+  """ID の空・重複（places・monsters・items・quests）。"""
+  err, mp, raw = c.err, c.mp, c.raw
   for label, rows in (
-    ("map.json の places", mp.get("places", [])),
+    ("map.json の places", _rows(mp.get("places"))),
     ("monsters.json", raw["monsters"]),
     ("items.json", raw["items"]),
     ("quests.json", raw["quests"]),
   ):
-    ids = [r.get("id") for r in rows]
-    for i in sorted({i for i in ids if ids.count(i) > 1 or not i}, key=str):
+    ids = [r.get("id") for r in rows if isinstance(r, dict)]
+    for i in sorted({i for i in ids if _hashable(i) and (ids.count(i) > 1 or not i)}, key=str):
       err(f"{label}: ID が空か重複しています: {i!r}")
+    for i in ids:
+      if not _hashable(i):
+        err(f"{label}: ID は文字列にしてください: {i!r}")
 
-  def table_ok(where: str, table) -> None:
-    if not _weights_ok(table):
-      err(f"{where}: [キー, 正の重み] の一覧にしてください")
-      return
-    for key, _ in table:
-      if key != NONE and key not in rarities and key not in items:
-        err(f"{where}: {key!r} は none・珍しさ・アイテムの ID のどれでもありません")
 
+def _check_season(c: _Check):
+  """season.json の基本の項目（start・数値の範囲・文章・宝箱・道の出来事など）。"""
+  err, season, items, rarities = c.err, c.season, c.items, c.rarities
   # season.json
   try:
     if date.fromisoformat(season["start"]).day > 28:  # どの月にもある日でないと、シーズンの区切りが作れない
@@ -224,8 +345,11 @@ def validate(raw: dict) -> list[str]:
     texts = season.get(key)
     if not isinstance(texts, list) or not texts or not all(isinstance(t, str) and t for t in texts):
       err(f"season.json: {key} は文字列の一覧（1 つ以上）にしてください")
-  table_ok("season.json の treasure", season.get("treasure"))
-  for key, _ in season.get("treasure") or []:  # レアは依頼の報酬だけで出る
+  c.table_ok("season.json の treasure", season.get("treasure"))
+  treasure = season.get("treasure")
+  for key, _ in treasure if _weights_ok(treasure) else []:  # レアは依頼の報酬だけで出る
+    if not _hashable(key):  # キーが文字列でないことは、上の table_ok が知らせる
+      continue
     if (key in rarities and key != COMMON) or items.get(key, {}).get("rarity", COMMON) != COMMON:
       err(f"season.json の treasure: {key!r} は宝箱からは出せません（レアは町の依頼の報酬だけで出る）")
   if not isinstance(season.get("rare_drops", True), bool):
@@ -256,7 +380,10 @@ def validate(raw: dict) -> list[str]:
     if key not in TERRAINS or not isinstance(texts, list) or not all(isinstance(t, str) and t for t in texts):
       err(f"season.json: terrain_scenery の {key!r} は地形（{'/'.join(TERRAINS)}）と文字列の一覧にしてください")
 
-  # map.json
+
+def _check_areas(c: _Check) -> set | None:
+  """map.json の areas（地方）。地方の ID の集合を返す（areas がなければ None）。"""
+  err, mp, places = c.err, c.mp, c.places
   has_areas = "areas" in mp
   areas = mp.get("areas")
   area_ids = set()
@@ -280,7 +407,13 @@ def validate(raw: dict) -> list[str]:
       if "en" in a and (not isinstance(a["en"], str) or not a["en"]):
         err(f"map.json の areas[{i}]: en（英語名）は空でない文字列にしてください")
       area_ids.add(a["id"])
-  opened = open_towns(mp)
+  return area_ids if has_areas else None
+
+
+def _check_open_and_starts(c: _Check) -> str | None:
+  """map.json の open（開放した町）と starts（最初の町の候補）。開放した町を c.opened に決め、最初の町を返す。"""
+  err, mp, places = c.err, c.mp, c.places
+  c.opened = opened = open_towns(mp)
   if "open" in mp:
     if not isinstance(mp["open"], list) or not mp["open"]:
       err("map.json: open（開放した町）は町の ID の一覧（1 つ以上）にしてください")
@@ -298,13 +431,19 @@ def validate(raw: dict) -> list[str]:
     elif sid not in opened:
       err(f"map.json: starts の {sid!r} は開放した町（open）にしてください")
   start = starts[0] if starts else None
+  return start
+
+
+def _check_places(c: _Check, area_ids: set | None):
+  """map.json の places（名前・地方・座標・ギルドの規模・店）。area_ids が None なら、地方は調べない。"""
+  err, places, items = c.err, c.places, c.items
   for pid, p in places.items():
     where = f"map.json の {pid}"
     if p.get("type") not in PLACE_TYPES:
       err(f"{where}: type は {'/'.join(PLACE_TYPES)} のどれかにしてください")
     if not p.get("name"):
       err(f"{where}: name がありません")
-    if has_areas and (not isinstance(p.get("area"), str) or p["area"] not in area_ids):
+    if area_ids is not None and (not isinstance(p.get("area"), str) or p["area"] not in area_ids):
       err(f"{where}: area（地方）は areas の ID にしてください")
     for key in ("alias", "region", "text", "en"):
       if key in p and (not isinstance(p[key], str) or not p[key]):
@@ -322,11 +461,18 @@ def validate(raw: dict) -> list[str]:
     if p.get("type") == "town":
       if "quests_per_day" not in p:
         err(f"{where}: quests_per_day（ギルドの規模。掲示板の依頼の枠の数）を書いてください")
-      for iid in p.get("shop", []):
+      if "shop" in p and not isinstance(p["shop"], list):
+        err(f"{where}: shop は店で売るアイテムの ID の一覧にしてください")
+      for iid in _rows(p.get("shop")):
         if iid not in items:
           err(f"{where}: 店の {iid!r} が items.json にありません")
         elif not isinstance(items[iid].get("price"), int) or items[iid]["price"] <= 0:
           err(f"{where}: 店の {iid!r} に price（正の整数）がありません")
+
+
+def _check_layout(c: _Check):
+  """map.json の layout（地図の大きさとベースの地図）。"""
+  err, mp, places, raw = c.err, c.mp, c.places, c.raw
   layout = mp.get("layout")
   if layout is not None:
     for pid, p in places.items():  # 地図を描くなら、どの場所にも座標がいる（道の線がない道は、両端の座標を結ぶ）
@@ -350,8 +496,13 @@ def validate(raw: dict) -> list[str]:
             f"map.json: world/{name} が {len(bg['bytes']) // 1024}KB あります"
             f"（{BACKGROUND_MAX_BYTES // 1024}KB 以下にしてください。目安は 300KB 以下）"
           )
+
+
+def _check_roads(c: _Check):
+  """map.json の roads（種類・両端・距離・地形の割合・線）。"""
+  err, places, monsters = c.err, c.places, c.monsters
   monster_terrains = {m.get("terrain") for m in monsters.values() if on_road(m)}  # ボス・強敵は道に出ない
-  for i, r in enumerate(mp.get("roads", [])):
+  for i, r in enumerate(c.roads):
     where = f"map.json の roads[{i}]"
     kind = r.get("kind", "land")
     if kind not in ROAD_KINDS:
@@ -362,7 +513,7 @@ def validate(raw: dict) -> list[str]:
         err(f"{where}: {end} の {r.get(end)!r} が places にありません")
     if r.get("from") == r.get("to"):
       err(f"{where}: 同じ場所どうしをつないでいます")
-    ends = sorted(places.get(r.get(e), {}).get("type", "") for e in ("from", "to"))
+    ends = sorted(str(places.get(r.get(e), {}).get("type") or "") for e in ("from", "to"))
     if kind == "trail" and ends != ["dungeon", "town"]:
       err(f"{where}: ダンジョンへの道（trail）は町とダンジョンを結んでください")
     if kind != "trail" and ends != ["town", "town"]:
@@ -379,9 +530,14 @@ def validate(raw: dict) -> list[str]:
     path = r.get("path")
     if path is not None and (not isinstance(path, list) or len(path) < 2 or not all(_point_ok(p) for p in path)):
       err(f"{where}: path（地図に描く線）は [x, y] の一覧（2 点以上）にしてください")
+
+
+def _check_connectivity(c: _Check, start: str | None):
+  """最初の町から、開放した町すべてに陸路・航路で行けるか。"""
+  err, places, opened = c.err, c.places, c.opened
   if start in places:
     adj: dict = {pid: set() for pid in places}
-    for r in mp.get("roads", []):
+    for r in c.roads:
       if (
         r.get("kind", "land") != "trail"
         and r.get("from") in places
@@ -398,6 +554,10 @@ def validate(raw: dict) -> list[str]:
     for pid in sorted(opened - seen):
       err(f"map.json: {pid} に最初の町から行けません（開放した町どうしの陸路・航路がつながっていません）")
 
+
+def _check_elements(c: _Check):
+  """monsters.json の elements（属性と相性）。属性を c.elements に決める。"""
+  err, raw = c.err, c.raw
   # 属性（monsters.json の elements）と相性の倍率（season.json の element_rates）
   elements = raw.get("elements") or {}
   if not isinstance(elements, dict):
@@ -418,6 +578,12 @@ def validate(raw: dict) -> list[str]:
       )
     elif "ore" in e and (not isinstance(e["ore"], str) or not e["ore"]):
       err(f"monsters.json の elements の {eid}: ore（その属性の力を持つ鉱石の名前）は文字列にしてください")
+  c.elements = elements
+
+
+def _check_critical(c: _Check):
+  """season.json の critical（会心の一撃）。"""
+  err, season = c.err, c.season
   crit = season.get("critical")
   if (
     not isinstance(crit, dict)
@@ -432,6 +598,10 @@ def validate(raw: dict) -> list[str]:
       "season.json: critical には dex_divisor（器用さをこれで割った値が会心率。正の数）と multiplier（倍率。1 以上の整数）を書いてください"
     )
 
+
+def _check_growth(c: _Check):
+  """season.json の growth（能力の伸び）。"""
+  err, season = c.err, c.season
   # 能力の伸び（season.json の growth）: 攻撃・防御・素早さ・器用さの Lv1〜最大レベルの一覧（下がらない整数）
   growth = season.get("growth")
   levels = season.get("max_level") if isinstance(season.get("max_level"), int) else 0
@@ -444,6 +614,11 @@ def validate(raw: dict) -> list[str]:
       or any(b < a for a, b in zip(table, table[1:]))
     ):
       err(f"season.json: growth の {stat} は、Lv1〜{levels} の値（0 以上の整数・下がらない）の一覧にしてください")
+
+
+def _check_element_rates(c: _Check):
+  """season.json の element_rates（属性の相性の倍率）。"""
+  err, season = c.err, c.season
   rates = season.get("element_rates")
   if not isinstance(rates, dict) or any(
     not isinstance(rates.get(k), (int, float)) or isinstance(rates.get(k), bool) or rates[k] <= 0
@@ -451,6 +626,10 @@ def validate(raw: dict) -> list[str]:
   ):
     err("season.json: element_rates には strong と weak（正の数）を書いてください")
 
+
+def _check_hero_traits(c: _Check):
+  """season.json の hero_traits（勇者の特性）。"""
+  err, season = c.err, c.season
   # 勇者の特性（season.json の hero_traits）。growth は Lv1 からの伸びにかける倍率、luck は引き直し
   table = season.get("hero_traits")
   if not isinstance(table, dict) or not table:
@@ -475,8 +654,10 @@ def validate(raw: dict) -> list[str]:
     if "luck" in t and not isinstance(t["luck"], bool):
       err(f"{where}: luck は true か false にしてください")
 
-  # monsters.json
-  traits = raw.get("traits", {})
+
+def _check_monster_reward(c: _Check):
+  """season.json の monster_reward（魔物の経験値とお金の計算）。"""
+  err, season = c.err, c.season
   reward_cfg = season.get("monster_reward")
   weights = reward_cfg.get("weights") if isinstance(reward_cfg, dict) else None
   if (
@@ -492,6 +673,15 @@ def validate(raw: dict) -> list[str]:
       "season.json: monster_reward は {weights: {hp/atk/def/spd/dex: 重み（0 以上）}, exp_divisor: 正の数, "
       "gold_rate: 0 以上の数} にしてください"
     )
+
+
+def _check_monster_traits(c: _Check):
+  """monsters.json の traits（魔物の性質）。"""
+  err, raw = c.err, c.raw
+  traits = raw.get("traits") or {}
+  if not isinstance(traits, dict):
+    err("monsters.json の traits は {性質の ID: {name, ...}} にしてください")
+    return
   for key in TRAITS:
     if not isinstance(traits.get(key), dict) or not traits[key].get("name"):
       err(f"monsters.json: traits に {key}（name のある項目）を書いてください")
@@ -504,6 +694,11 @@ def validate(raw: dict) -> list[str]:
       "gold_rate" in traits[key] and (not _num(traits[key]["gold_rate"]) or traits[key]["gold_rate"] < 0)
     ):
       err(f"monsters.json の traits の {key}: gold_rate（倒したときのお金の倍率）は 0 以上の数にしてください")
+
+
+def _check_monsters(c: _Check):
+  """monsters.json の魔物（能力・地形・性質・属性・ボス・強敵）。"""
+  err, places, monsters, opened, elements, raw = c.err, c.places, c.monsters, c.opened, c.elements, c.raw
   for mid, m in monsters.items():
     if not m.get("name"):
       err(f"monsters.json の {mid}: name がありません")
@@ -523,7 +718,7 @@ def validate(raw: dict) -> list[str]:
       err(f"monsters.json の {mid}: elite（強敵。道に出ず、討伐の依頼で狙う）は true か false。ボスには付けない")
     elif m.get("elite") and not any(
       q.get("type") == "hunt" and q.get("monster") == mid
-      for town, qs in (raw.get("town_quests") or {}).items()
+      for town, qs in (raw["town_quests"] if isinstance(raw.get("town_quests"), dict) else {}).items()
       if town in opened and isinstance(qs, list)
       for q in qs
       if isinstance(q, dict)
@@ -536,6 +731,10 @@ def validate(raw: dict) -> list[str]:
     if "element" in m and (not isinstance(m["element"], str) or m["element"] not in elements):
       err(f"monsters.json の {mid}: element は {'/'.join(elements)} のどれかにしてください（属性なしなら書かない）")
 
+
+def _check_items(c: _Check):
+  """items.json の rarities とアイテム（スロット・能力・属性・町・値段）。"""
+  err, places, items, rarities, opened, elements = c.err, c.places, c.items, c.rarities, c.opened, c.elements
   # items.json
   if not rarities or len(set(rarities)) != len(rarities) or NONE in rarities or COMMON not in rarities:
     err(f"items.json: rarities は重複のない一覧にし、{COMMON} を入れてください（none は使えません）")
@@ -578,6 +777,10 @@ def validate(raw: dict) -> list[str]:
     if "price" in it and (not isinstance(it["price"], int) or it["price"] <= 0):
       err(f"{where}: price は正の整数にしてください")
 
+
+def _check_lowest_rare(c: _Check):
+  """開放したどの町にも、いちばん下のレアの報酬がある（上のレアがない町で 1 つ下に落とすため）。"""
+  err, items, rarities, opened = c.err, c.items, c.rarities, c.opened
   # どの町の依頼にも、いちばん下のレア（rare）がある（上のレアがない町では、当たったら 1 つ下に落とすため）
   if COMMON in rarities and rarities.index(COMMON) + 1 < len(rarities):
     lowest = rarities[rarities.index(COMMON) + 1]
@@ -591,6 +794,10 @@ def validate(raw: dict) -> list[str]:
     for pid in sorted(opened - have):
       err(f"items.json: {pid} の依頼で出る {lowest} がありません（開放したどの町にも 1 つ以上置いてください）")
 
+
+def _check_quest_ranks(c: _Check) -> list:
+  """quests.json の ranks（依頼のレアリティ）。ranks を返す。"""
+  err, raw = c.err, c.raw
   # quests.json
   ranks = raw.get("quest_ranks") or []
   if not isinstance(ranks, list) or not ranks:
@@ -604,7 +811,13 @@ def validate(raw: dict) -> list[str]:
     for key in ("weight", "reward"):
       if not isinstance(r.get(key), (int, float)) or isinstance(r.get(key), bool) or r[key] <= 0:
         err(f"{where}: {key} は正の数にしてください")
-    table_ok(f"{where} の item", r.get("item"))
+    c.table_ok(f"{where} の item", r.get("item"))
+  return ranks
+
+
+def _check_quest_reward(c: _Check):
+  """quests.json の reward（1 行動あたりの報酬）。"""
+  err, raw = c.err, c.raw
   base = raw.get("quest_reward")  # 1 行動あたりの報酬（× 必要な行動力 × レアリティの倍率）
   if not isinstance(base, dict) or any(
     not isinstance(base.get(k), (int, float)) or isinstance(base.get(k), bool) or base[k] < 0 for k in ("exp", "gold")
@@ -612,6 +825,11 @@ def validate(raw: dict) -> list[str]:
     err("quests.json: reward には、1 行動あたりの exp と gold（0 以上の数）を書いてください")
   elif "deliver_rate" in base and (not _num(base["deliver_rate"]) or base["deliver_rate"] <= 0):
     err("quests.json: reward の deliver_rate（配達のお金の倍率）は正の数にしてください")
+
+
+def _check_hunt_ranks(c: _Check, ranks: list):
+  """quests.json の hunt_ranks（共通の討伐の ★ の区切り）。"""
+  err, raw = c.err, c.raw
   # 共通の討伐の ★: 点数 = 魔物の Lv ×（数 + 1）が hunt_ranks[0] 以下なら ★、hunt_ranks[1] 以下なら ★★ …
   hunt_ranks = raw.get("hunt_ranks")
   if (
@@ -622,10 +840,10 @@ def validate(raw: dict) -> list[str]:
   ):
     err(f"quests.json: hunt_ranks は小さい順の正の数の一覧（{max(len(ranks) - 1, 0)} 個まで）にしてください")
 
-  def rank_ok(where: str, rank) -> None:
-    if not isinstance(rank, int) or isinstance(rank, bool) or not 1 <= rank <= max(len(ranks), 1):
-      err(f"{where}: rank は 1〜{len(ranks)} の整数にしてください")
 
+def _check_quest_templates(c: _Check):
+  """quests.json の共通の依頼（templates）。"""
+  err, raw = c.err, c.raw
   for q in raw["quests"]:
     where = f"quests.json の {q.get('id')}"
     if q.get("type") not in QUEST_TYPES:
@@ -638,9 +856,19 @@ def validate(raw: dict) -> list[str]:
       err(f"{where}: count は [最小, 最大]（1 以上）にしてください")
   if not raw["quests"]:
     err("quests.json: 共通の依頼（templates）を 1 つ以上書いてください（掲示板の空いた枠に入る）")
+
+
+def _check_deliveries(c: _Check, ranks: list):
+  """quests.json の deliveries（配達の ★・危なさ・荷物）。"""
+  err, places, raw = c.err, c.places, c.raw
   # 配達（quests.json の deliveries）: ★ の区切り、危なさごとの魔物の Lv のずらし・受けられる Lv・説明の文、町ごとの荷物
   if any(q.get("type") == "deliver" for q in raw["quests"]):
     deliveries_ok(raw.get("deliveries"), len(ranks), places, err)
+
+
+def _check_hunt_texts(c: _Check):
+  """quests.json の hunts（討伐の説明の文）。"""
+  err, places, raw = c.err, c.places, c.raw
   # 討伐の説明（quests.json の hunts）: 町ごとの困りごとと、★ ごとの頼み方
   hs = raw.get("hunts")
   if hs is not None:
@@ -666,9 +894,14 @@ def validate(raw: dict) -> list[str]:
         "quests.json: hunts の texts は ★ ごとに、{place} と {monster} を入れた文の一覧にしてください"
         "（ほかに使えるのは {count} だけ）"
       )
+
+
+def _check_town_quests(c: _Check, ranks: list):
+  """quests.json の towns（町の依頼）。"""
+  err, places, monsters, opened, raw = c.err, c.places, c.monsters, c.opened, c.raw
   # 町の依頼: 討伐は町から出る道（陸路・航路）と、その道に出る魔物。配達は別の町へ
   road_terrain = {}
-  for r in mp.get("roads", []):
+  for r in c.roads:
     if r.get("kind", "land") != "trail" and _weights_ok(r.get("terrain")) and road_open(r, opened, places):
       terr = {t for t, _ in r["terrain"]}
       road_terrain[(r.get("from"), r.get("to"))] = road_terrain[(r.get("to"), r.get("from"))] = terr
@@ -691,7 +924,7 @@ def validate(raw: dict) -> list[str]:
       seen_ids.append(q.get("id"))
       if not q.get("name"):
         err(f"{where}: name がありません")
-      rank_ok(where, q.get("rank"))
+      _rank_ok(err, ranks, where, q.get("rank"))
       to = q.get("to")
       if q.get("type") == "hunt":
         if (tid, to) not in road_terrain:
@@ -708,6 +941,10 @@ def validate(raw: dict) -> list[str]:
       else:
         err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
 
+
+def _check_item_points(c: _Check):
+  """season.json の item_points と、アイテムの点数が珍しさの範囲に入っているか。"""
+  err, errors, season, items, rarities = c.err, c.errors, c.season, c.items, c.rarities
   # 強さ: アイテムの点数（season.json の item_points）が、0 点から珍しさごとの上限（max）までに入る
   points = season.get("item_points")
   weights = points.get("weights") if isinstance(points, dict) else None
@@ -733,7 +970,52 @@ def validate(raw: dict) -> list[str]:
         err(f"items.json の {iid}: 点数 {pts:g} が、{it['rarity']} の範囲（0〜{cap:g} 点）に入っていません")
       if "element" in it and it["rarity"] == COMMON:
         err(f"items.json の {iid}: 属性は common には付けられません（rare から）")
-  return errors
+
+
+def _run(c: _Check, check, *args):
+  """検査を 1 つ動かす。形の検査で拾えなかった想定外のデータで落ちても、スタックトレースにせず、
+  どの検査かを添えた誤りとして知らせる（そのあとの検査は続ける）。落ちたときは None を返す。"""
+  try:
+    return check(c, *args)
+  except Exception as e:  # noqa: BLE001
+    label = (check.__doc__ or check.__name__).split("。")[0]
+    c.err(f"{label}: データの形が想定と違うため、調べきれませんでした（{type(e).__name__}: {e}）")
+    return None
+
+
+def validate(raw: dict) -> list[str]:
+  """データの誤りの一覧（空なら問題なし）。データがどんな形でも、例外ではなく誤りの一覧を返す。"""
+  c = _Check(raw)
+  _check_shape(c)
+  if c.errors:  # 形が違うと、ほかの検査は前提が崩れる。先に形を直してもらう
+    return c.errors
+  _run(c, _check_ids)
+  _run(c, _check_season)
+  area_ids = _run(c, _check_areas)
+  start = _run(c, _check_open_and_starts)
+  _run(c, _check_places, area_ids)
+  _run(c, _check_layout)
+  _run(c, _check_roads)
+  _run(c, _check_connectivity, start)
+  _run(c, _check_elements)
+  _run(c, _check_critical)
+  _run(c, _check_growth)
+  _run(c, _check_element_rates)
+  _run(c, _check_hero_traits)
+  _run(c, _check_monster_reward)
+  _run(c, _check_monster_traits)
+  _run(c, _check_monsters)
+  _run(c, _check_items)
+  _run(c, _check_lowest_rare)
+  ranks = _run(c, _check_quest_ranks) or []
+  _run(c, _check_quest_reward)
+  _run(c, _check_hunt_ranks, ranks)
+  _run(c, _check_quest_templates)
+  _run(c, _check_deliveries, ranks)
+  _run(c, _check_hunt_texts)
+  _run(c, _check_town_quests, ranks)
+  _run(c, _check_item_points)
+  return c.errors
 
 
 def item_points(item: dict, cfg: dict) -> float:
