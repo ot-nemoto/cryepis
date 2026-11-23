@@ -101,13 +101,15 @@ class SiteTest(unittest.TestCase):
     entries[0][1]["last_date"] = None  # まだ進めていない勇者がいても、最後に進めた日
     self.assertEqual(website.shown_day(entries), last)
 
-  def test_map_is_inline_svg_with_hero_links(self):
+  def test_map_is_inline_svg_with_hero_marks(self):
     entries, guild, today = party(1, 1)
     html = website.build_map(WORLD, entries, today)
     svg = html[html.index("<svg") : html.index("</svg>") + 6]
     root = ET.fromstring(svg)  # 正しい SVG として埋め込まれている
-    links = [a.get("href") for a in root.iter("{http://www.w3.org/2000/svg}a")]
-    self.assertEqual(links, ["heroes/h1.html"])
+    self.assertEqual(list(root.iter("{http://www.w3.org/2000/svg}a")), [])  # 地図に名札（リンク）は出さない
+    self.assertEqual(len([g for g in root.iter("{http://www.w3.org/2000/svg}g") if g.get("class") == "hero"]), 1)
+    rest = html[html.index("</svg>") :]  # 名前と詳細へのリンクは、地図の下の「勇者の居場所」
+    self.assertIn('<a href="heroes/h1.html">', rest)
 
   def test_guild_shows_who_took_todays_quests(self):
     entries, guild, today = party(4, 3)

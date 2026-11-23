@@ -3,7 +3,7 @@
 
 ページ:
   index.html          ストーリー（world/story.md の物語・世界・歴史と、いまの冒険の状況）
-  map.html            世界の地図（拡大・移動ができる。場所や勇者にマウスを乗せると説明が出る）
+  map.html            世界の地図（拡大・移動ができる。場所や勇者の印にマウスを乗せると説明が出る。勇者の名前は地図の下の一覧）
   ranking.html        今シーズンのランキングと、今日の出来事
   heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
@@ -289,14 +289,14 @@ def build_story(world: dict, entries: list[tuple[dict, dict]], today: date, stor
 
 # ---- 地図 -------------------------------------------------------------------------------
 def build_map(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
-  svg = mapsvg.render(world, entries, links={h["id"]: hero_href(h["id"]) for h, _ in entries})
+  svg = mapsvg.render(world, entries)
   body = [f"<h2>世界の地図</h2>{updated(today)}"]
   if svg:
     svg = svg[svg.index("<svg") :]
     body.append(
       '<div id="map">' + svg + '<div class="zoom"><button id="zin" title="拡大">＋</button>'
       '<button id="zout" title="縮小">－</button><button id="zhome" class="wide">全体</button></div></div>'
-      '<p class="note">ホイールやボタンで拡大、ドラッグで移動できます。町や勇者にマウスを乗せると説明が出ます。'
+      '<p class="note">ホイールやボタンで拡大、ドラッグで移動できます。町や勇者の印（赤い丸）にマウスを乗せると説明が出ます。'
       f"道の上の数字は移動にかかる行動回数です（勇者は 1 日に {world['season']['actions_per_day']} 回行動します）。</p>"
     )
   else:

@@ -357,8 +357,8 @@ class HeroesTest(unittest.TestCase):
       self.assertEqual(self.daily("2026-12-02"), 1)
     world = rpg.load_world()
     html = website.build_map(world, rpg.current_entries(world), date(2026, 12, 2))
-    self.assertIn("🧙 アリス Lv.", html)  # 進められなかった勇者も、保存してある状態でサイトの地図に載る
-    self.assertIn("🧙 ボブ Lv.", html)
+    self.assertIn("アリス Lv.", html)  # 進められなかった勇者も、保存してある状態でサイトの地図に載る
+    self.assertIn("ボブ Lv.", html)
 
   def test_retired_heroes_keep_their_site_page(self):
     self.new_game("アリス")

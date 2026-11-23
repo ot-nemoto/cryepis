@@ -19,7 +19,6 @@ FONT = (
   "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji'"
 )
 HALO = "paint-order:stroke;stroke:#fffdf5;stroke-width:3.5px;stroke-linejoin:round"
-MAX_NAMES = 4  # 1 か所に出す勇者の名前の数（超えた分は「ほか n 人」）
 ROAD_STYLE = {  # 道の種類ごとの線
   "land": 'stroke="#7a5530" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"',
   "sea": 'stroke="#2f4f6f" stroke-width="2.5" stroke-dasharray="9 6" stroke-linecap="round"',
@@ -149,11 +148,9 @@ def place_title(p: dict) -> str:
   return f"{p['name']}（ダンジョン・まだ入れない）{p.get('region', '')}"
 
 
-def render(
-  world: dict, entries: list[tuple[dict, dict]], grid: bool = False, links: dict[str, str] | None = None
-) -> str | None:
+def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) -> str | None:
   """SVG の文字列。map.json に layout がなければ None。entries は (heroes.json の行, 状態)。
-  links（勇者の ID → URL）を渡すと、勇者の札の名前がそのページへのリンクになる（サイトに載せるとき）。"""
+  勇者は、いる場所に赤い丸だけを出す（名前はマウスを乗せたときの説明）。"""
   layout = world.get("layout")
   if not layout:
     return None
@@ -223,38 +220,17 @@ def render(
       )
     out.append("</g>")
 
-  # 勇者（同じ位置ごとにまとめて札を出す）
-  here: dict[tuple[float, float], list[tuple[str | None, str]]] = {}
+  # 勇者のいる場所（同じ位置ごとに赤い丸を 1 つ。名前は出さず、マウスを乗せると名前と Lv が出る。
+  # 名前の一覧は、サイトの地図の下の「勇者の居場所」に出す）
+  here: dict[tuple[float, float], list[str]] = {}
   for hero, state in entries:
     spot = hero_spot(world, state)
     if spot:
-      here.setdefault((round(spot[0]), round(spot[1])), []).append(
-        (hero["id"], f"{hero['name']} Lv.{state['hero']['level']}")
-      )
-  placed: list[tuple[float, float, float, float]] = []
+      here.setdefault((round(spot[0]), round(spot[1])), []).append(f"{hero['name']} Lv.{state['hero']['level']}")
   for (sx, sy), names in here.items():
     x, y = at(sx, sy)
-    shown = names[:MAX_NAMES] + ([(None, f"ほか {len(names) - MAX_NAMES} 人")] if len(names) > MAX_NAMES else [])
-    lines_ = [f"🧙 {n}" for _, n in shown]
-    box_w = max(text_width(line, 12) for line in lines_) + 12
-    box_h = 16 * len(lines_) + 6
-    bx = x + 20 if x + 20 + box_w < canvas_w - 4 else x - 20 - box_w
-    by = max(4, y - box_h - 6)
-    for _ in range(6):  # 先に置いた札と重なるなら、上へずらす
-      if not any(bx < px + pw and px < bx + box_w and by < py + ph and py < by + box_h for px, py, pw, ph in placed):
-        break
-      by = max(4, by - box_h - 4)
-    placed.append((bx, by, box_w, box_h))
-    out.append(f'<g class="hero"><title>{escape("、".join(n for _, n in names))}</title>')
+    out.append(f'<g class="hero"><title>{escape("、".join(names))}</title>')
     out.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="18" fill="none" stroke="#dc2626" stroke-width="3"/>')
-    out.append(
-      f'<rect x="{bx:.0f}" y="{by:.0f}" width="{box_w:.0f}" height="{box_h}" rx="5" fill="#ffffff" '
-      'stroke="#dc2626" stroke-width="1.5" opacity="0.95"/>'
-    )
-    for i, ((hid, _), line) in enumerate(zip(shown, lines_)):
-      text = f'<text x="{bx + 6:.0f}" y="{by + 17 + 16 * i:.0f}" font-size="12" fill="#7f1d1d">{escape(line)}</text>'
-      href = (links or {}).get(hid)
-      out.append(f'<a href="{escape(href)}">{text}</a>' if href else text)
     out.append("</g>")
 
   if grid:
