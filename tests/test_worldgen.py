@@ -13,7 +13,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-sys.path.insert(0, str(ROOT / "tools" / "worldgen"))
+sys.path.append(
+  str(ROOT / "tools" / "worldgen")
+)  # 名前が一般的（names・paths・land など）なので、ほかより先には探さない
 import actions  # noqa: E402
 import land  # noqa: E402
 import lore  # noqa: E402
@@ -31,7 +33,7 @@ TOY_HEIGHT = [[0.5] * TOY_W for _ in range(TOY_H)]
 
 def import_with_toy_terrain():
   """地形のファイル（.cache/terrain.pkl）を読み込むモジュールを、小さな地形で読み込む（なければ、あとで .cache/ を探さない）。"""
-  original = paths.TERRAIN
+  original, recursion = paths.TERRAIN, sys.getrecursionlimit()
   with tempfile.TemporaryDirectory() as tmp:
     toy = Path(tmp) / "terrain.pkl"
     toy.write_bytes(pickle.dumps({"kind": TOY_KIND, "height": TOY_HEIGHT, "rivers": []}))
@@ -43,6 +45,7 @@ def import_with_toy_terrain():
       import vectorize
     finally:
       paths.TERRAIN = original
+      sys.setrecursionlimit(recursion)  # vectorize は、読み込むときに再帰の上限を上げる（ほかのテストに持ち込まない）
   return build_world, roads, sea, vectorize
 
 
@@ -329,6 +332,7 @@ class ToyTerrainTest(unittest.TestCase):
     self.assertTrue(all(math.isfinite(v) for row in vectorize.height for v in row))
     self.assertEqual(paths.TERRAIN.name, "terrain.pkl")  # 元に戻してある
     self.assertEqual(paths.TERRAIN.parent, paths.CACHE)
+    self.assertLess(sys.getrecursionlimit(), 100000)  # vectorize が上げた再帰の上限も、元に戻してある
 
 
 if __name__ == "__main__":
