@@ -31,7 +31,10 @@ actions, build_world, land, paths, roads, sea, terrain, vectorize = (
   T.terrain,
   T.vectorize,
 )
+_saved_path = list(sys.path)
 import make  # noqa: E402  tools/worldgen は、test_worldgen が sys.path に入れてある
+
+sys.path[:] = _saved_path  # make.py は、読み込むときに tools/worldgen を sys.path の先頭に入れる（持ち込まない）
 
 # 小さな世界: 100 x 60 マス（STEP 2 で 200 x 120 px）。左の 40 列は海、その右の 1 列は砂浜、残りは草原（右の中ほどに森）
 GW, GH, STEP = 100, 60, 2
@@ -248,7 +251,7 @@ class RoadsMainTest(unittest.TestCase):
       self.assertGreaterEqual(len(r["path"]), 2)
       for x, y in r["path"]:
         self.assertNotEqual(kind[y // STEP][x // STEP], "sea")  # 海は通らない
-      self.assertEqual({r["kind"]}, {"road"} if r["kind"] == "road" else {"trail"})
+      self.assertIn(r["kind"], ("road", "trail"))
 
   def test_relative_neighbourhood_drops_the_long_way_round(self):
     # 北の町・東の町・南の町は三角形。いちばん長い辺（東の町 - 南の町）は、北の町を経由するほうが近いので、つながない
