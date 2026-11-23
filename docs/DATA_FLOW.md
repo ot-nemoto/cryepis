@@ -9,7 +9,7 @@ flowchart LR
     subgraph daily["hero-adventure.yml（毎日 JST 7:17）"]
         direction TB
         test["Test<br/>（unittest）"]
-        rpg["rpg.py（world.py・game.py）<br/>現役の勇者を全員 1 日進める"]
+        rpg["rpg.py（world.py・game.py・store.py・view.py）<br/>現役の勇者を全員 1 日進める"]
         commit["Commit state<br/>（master に直接コミット）"]
         test ==> rpg ==> commit
     end
