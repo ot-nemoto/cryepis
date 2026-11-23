@@ -2,6 +2,7 @@ import json
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 from pathlib import Path
 from unittest import mock
@@ -15,6 +16,7 @@ import website  # noqa: E402
 
 WORLD = rpg.load_world()
 DAY = date.fromisoformat(WORLD["season"]["start"])
+NS = "{http://www.w3.org/2000/svg}"
 
 
 def play(days, hero_id="h1"):
@@ -29,13 +31,11 @@ def load(hero_id):
 
 
 class DisplayTest(unittest.TestCase):
-  def test_card_fits_and_has_five_lines(self):
+  def test_text_starts_with_five_summary_lines(self):
     states = [game.new_state(WORLD, "h1", "あ" * 8)] + [play(n, f"h{n}") for n in (1, 10, 40, 90)]
     for state in states:
       lines = rpg.build_text(WORLD, state).splitlines()
-      for line in lines[:5]:
-        self.assertLessEqual(common.width(line), common.LINE_MAX, line)
-      self.assertEqual(lines[5], "")  # カードの 5 行のあとに詳細が続く
+      self.assertEqual(lines[5], "")  # 概要の 5 行のあとに詳細が続く
       self.assertTrue(lines[0].startswith("⚔️ "))
       self.assertTrue(lines[1].startswith("📍 "))
       self.assertTrue(lines[3].startswith("装備: "))
@@ -236,15 +236,14 @@ class HeroesTest(unittest.TestCase):
     self.assertEqual(rpg.clean_name("あ" * 20), "あ" * 16)  # 全角は 16 文字まで
     self.assertEqual(rpg.clean_name("a" * 40), "a" * 32)  # 半角は 32 文字まで
 
-  def test_long_names_fit_the_cards(self):
-    # 表示幅 32 の名前でも、ランキングのカードの出来事と、勇者のカードの Lv・日が切れない
+  def test_long_names(self):
+    # 表示幅 32 の名前でも、ランキングのカードの出来事が読める。勇者の文章は詰めないので、名前も Lv・日も全部出る
     name = "あいうえおかきくけこさしすせそた"
     world = WORLD
     state = game.new_state(world, "h1", name)
     game.advance(world, state, DAY)
     head = rpg.build_text(world, state).splitlines()[0]
-    self.assertTrue(head.endswith(f"Day {state['season_day']}"), head)
-    self.assertIn(name, rpg.build_text(world, state, fold=False))  # サイトでは名前を詰めない
+    self.assertEqual(head, f"⚔️ {name} Lv.{state['hero']['level']}  S{state['season']} Day {state['season_day']}")
     hero = {"id": "h1", "name": name}
     news = rpg.news([(hero, state)], DAY, rpg.BOARD_NAME_WIDTH)
     self.assertTrue(news[0].startswith(rpg.shorten(name, rpg.BOARD_NAME_WIDTH) + ": "), news)
@@ -357,8 +356,12 @@ class HeroesTest(unittest.TestCase):
       self.assertEqual(self.daily("2026-12-02"), 1)
     world = rpg.load_world()
     html = website.build_map(world, rpg.current_entries(world), date(2026, 12, 2))
-    self.assertIn("🧙 アリス Lv.", html)  # 進められなかった勇者も、保存してある状態でサイトの地図に載る
-    self.assertIn("🧙 ボブ Lv.", html)
+    svg = ET.fromstring(html[html.index("<svg") : html.index("</svg>") + 6])
+    titles = "、".join(
+      g.find(f"{NS}title").text for g in svg.iter(f"{NS}g") if g.get("class") == "hero"
+    )  # 進められなかった勇者も、保存してある状態でサイトの地図の印（マウスを乗せたときの説明）に載る
+    self.assertIn("アリス Lv.", titles)
+    self.assertIn("ボブ Lv.", titles)
 
   def test_retired_heroes_keep_their_site_page(self):
     self.new_game("アリス")

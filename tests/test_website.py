@@ -80,7 +80,7 @@ class SiteTest(unittest.TestCase):
     (self.out / "old.html").write_text("x")
     website.write_site(WORLD, [], DAY, {}, self.out)
     self.assertFalse((self.out / "old.html").exists())
-    self.assertIn("まだ勇者がいません", (self.out / "map.html").read_text(encoding="utf-8"))
+    self.assertIn("まだ勇者がいません", (self.out / "heroes.html").read_text(encoding="utf-8"))
 
   def test_does_not_delete_other_directories(self):
     other = self.out.parent / "other"
@@ -101,13 +101,15 @@ class SiteTest(unittest.TestCase):
     entries[0][1]["last_date"] = None  # まだ進めていない勇者がいても、最後に進めた日
     self.assertEqual(website.shown_day(entries), last)
 
-  def test_map_is_inline_svg_with_hero_links(self):
+  def test_map_is_inline_svg_with_hero_marks(self):
     entries, guild, today = party(1, 1)
     html = website.build_map(WORLD, entries, today)
     svg = html[html.index("<svg") : html.index("</svg>") + 6]
     root = ET.fromstring(svg)  # 正しい SVG として埋め込まれている
-    links = [a.get("href") for a in root.iter("{http://www.w3.org/2000/svg}a")]
-    self.assertEqual(links, ["heroes/h1.html"])
+    self.assertEqual(list(root.iter("{http://www.w3.org/2000/svg}a")), [])  # 地図に名札（リンク）は出さない
+    self.assertEqual(len([g for g in root.iter("{http://www.w3.org/2000/svg}g") if g.get("class") == "hero"]), 1)
+    self.assertNotIn("勇者の居場所", html)  # 地図のページに勇者の一覧は出さない（勇者のページで見る）
+    self.assertNotIn('href="heroes/h1.html"', html)
 
   def test_ranking_shows_top_ten(self):
     entries = [({"id": f"h{i}", "name": f"勇者{i}"}, game.new_state(WORLD, f"h{i}", f"勇者{i}")) for i in range(1, 15)]
@@ -512,7 +514,7 @@ class SiteTest(unittest.TestCase):
       self.assertNotIn("<b>&悪", html)
       self.assertIn("&lt;b&gt;&amp;悪", html)
 
-  def test_hero_page_is_not_folded(self):
+  def test_hero_text_is_not_shortened(self):
     world = copy.deepcopy(WORLD)
     for item in world["items"].values():  # 名前を長くして、装備の行を長くする
       item["name"] *= 3
@@ -520,7 +522,8 @@ class SiteTest(unittest.TestCase):
     state = game.new_state(world, "h1", "勇者")
     state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "iron_shield": 1, "lifeblood_charm": 1}
     gear = "装備: " + rpg.gear_text(world, state)
-    self.assertNotIn(gear, rpg.build_text(world, state))  # Gist では幅に収まるように詰める
+    self.assertGreater(rpg.common.width(gear), rpg.common.LINE_MAX)  # Gist のカードの幅より長い行
+    self.assertIn(gear, rpg.build_text(world, state))  # 毎日の実行のログでも詰めない
     self.assertIn(escape(gear), website.build_hero(world, hero, state))
 
   def test_site_url_only_in_actions(self):

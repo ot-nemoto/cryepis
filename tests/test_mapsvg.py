@@ -73,14 +73,18 @@ class RenderTest(unittest.TestCase):
     svg = mapsvg.render(WORLD, [hero(1, "ア<&>リス", place)])
     root = ET.fromstring(svg)  # 名前の記号で壊れない
     texts = [t.text for t in root.iter(f"{NS}text")]
-    self.assertIn("🧙 ア<&>リス Lv.1", texts)
-    self.assertEqual(len([g for g in root.iter(f"{NS}g") if g.get("class") == "hero"]), 1)
+    self.assertFalse(any("ア<&>リス" in (t or "") for t in texts))  # 名前の札は出さない
+    marks = [g for g in root.iter(f"{NS}g") if g.get("class") == "hero"]
+    self.assertEqual(len(marks), 1)
+    self.assertEqual(marks[0].find(f"{NS}title").text, "ア<&>リス Lv.1")  # マウスを乗せると名前と Lv
+    self.assertEqual(marks[0].find(f"{NS}circle").get("pointer-events"), "all")  # 丸の中も当たり（町の印に負けない）
 
-  def test_many_heroes_in_one_place_are_summarized(self):
+  def test_heroes_in_one_place_share_one_mark(self):
     place = WORLD["starts"][0]
-    entries = [hero(i, f"勇者{i}", place) for i in range(mapsvg.MAX_NAMES + 2)]
-    texts = [t.text for t in ET.fromstring(mapsvg.render(WORLD, entries)).iter(f"{NS}text")]
-    self.assertIn("🧙 ほか 2 人", texts)
+    entries = [hero(i, f"勇者{i}", place) for i in range(6)]
+    marks = [g for g in ET.fromstring(mapsvg.render(WORLD, entries)).iter(f"{NS}g") if g.get("class") == "hero"]
+    self.assertEqual(len(marks), 1)
+    self.assertEqual(marks[0].find(f"{NS}title").text.count("勇者"), 6)
 
   def test_canvas_fits_the_map(self):
     root = ET.fromstring(mapsvg.render(WORLD, []))

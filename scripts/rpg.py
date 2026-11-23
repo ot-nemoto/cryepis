@@ -48,7 +48,6 @@ BOARD_FILENAME = "hero-ranking.txt"
 MAX_HEROES = 30  # 同時に冒険できる（引退していない）勇者の数
 BOARD_NAME_WIDTH = 8  # ランキングのカードに出す名前の表示幅
 RANKING_TOP = 10  # ランキングの順位表に出す人数（同じ順位でも 10 人で切る。並びは登録の早い順）
-CARD_NAME_WIDTH = 16  # 勇者のカード（Gist）の 1 行目に出す名前の表示幅（Lv・シーズン・日が切れないように）
 MEDALS = ("🥇", "🥈", "🥉")
 NAME_WIDTH_MAX = 32  # 勇者の名前の表示幅（全角 = 2。全角 16 文字・半角 32 文字）
 CATCH_UP_DAYS = 7  # 実行されなかった日をさかのぼって進める最大の日数
@@ -181,8 +180,9 @@ def gear_text(world: dict, state: dict) -> str:
   return "/".join(item_label(world, i) for i in worn) or "なし"
 
 
-def build_text(world: dict, state: dict, fold: bool = True) -> str:
-  """勇者の詳細の文章。最初の 5 行はカード（fold なら、Gist の幅に収まるように末尾を「…」で詰める）。"""
+def build_text(world: dict, state: dict) -> str:
+  """勇者の詳細の文章（サイトの勇者のページと、毎日の実行のログに出す。幅には詰めない）。
+  最初の 5 行は概要（名前と Lv・居場所・HP と能力・装備・今日の出来事）。"""
   hero, s = state["hero"], game.stats(world, state)
   hp_bar = common.bar(hero["hp"], s["max_hp"], 10).replace(" ", "░")
   worn = game.equipment(world, state)
@@ -195,14 +195,12 @@ def build_text(world: dict, state: dict, fold: bool = True) -> str:
   else:
     today = random.Random(f"teaser-{state['last_date']}").choice(TEASERS)
   lines = [
-    f"⚔️ {shorten(state['name'], CARD_NAME_WIDTH) if fold else state['name']} Lv.{hero['level']}  "
-    f"{season} Day {state['season_day']}",
+    f"⚔️ {state['name']} Lv.{hero['level']}  {season} Day {state['season_day']}",
     location(world, state),
     f"HP {hp_bar} {hero['hp']}/{s['max_hp']}  攻{s['atk']} 防{s['def']}  {hero['gold']}G",
     f"装備: {gear}",
     f"今日: {today}",
   ]
-  card = [fit(line) for line in lines] if fold else lines
   ss = state["season_stats"]
   detail = [
     "",
@@ -262,7 +260,7 @@ def build_text(world: dict, state: dict, fold: bool = True) -> str:
         f"シーズン{r['season']}: Lv.{r['level']}（{r['days']}日） 依頼達成 {r['quests_done']}  "
         f"倒した敵 {r['kills']}  力尽きた回数 {r['deaths']}  レア: {rares}"
       )
-  return "\n".join(card + detail) + "\n"
+  return "\n".join(lines + detail) + "\n"
 
 
 def page_url(hero_id: str) -> str:
