@@ -8,6 +8,7 @@ name: Publish site (GitHub Pages)
 # - 手動: 選んだブランチで CI を走らせ、master のときだけ公開する
 # 公開: 今の状態（.state/）と世界（world/）から、地図・ランキング・町・ギルド・アイテムのサイトを書き出して
 # GitHub Pages に公開する（scripts/website.py。冒険は進めない。書き出したファイルはコミットしない）。
+# 公開の deploy-pages が一時的に失敗したら、30 秒待って 1 回だけやり直す。
 # CI と公開は、最初に決めた同じコミット（resolve の sha）で行う（途中で master が進んでも、確かめていないものは公開しない）。
 # リポジトリの Settings → Pages の Source を「GitHub Actions」にしておくこと。
 # リンターとフォーマッターは Ruff（設定は pyproject.toml。インデントはスペース 2）。
@@ -115,7 +116,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy_retry.outputs.page_url || steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -132,5 +133,17 @@ jobs:
         with:
           path: _site
 
+      # deploy-pages は、アップロード直後のアーティファクトが API から見えず（Found 0 artifact(s)）、たまに失敗する。
+      # 一時的な問題なので、失敗したら少し待って 1 回だけやり直す（2 回とも失敗したときだけジョブを失敗にする）
+      # （待っても直らないとき、たとえばアップロードが登録されていないときは、Actions で Re-run failed jobs する）
       - id: deploy
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Wait before retrying the deploy
+        if: ${{ steps.deploy.outcome == 'failure' }}
+        run: sleep 30
+
+      - id: deploy_retry
+        if: ${{ steps.deploy.outcome == 'failure' }}
         uses: actions/deploy-pages@v5
