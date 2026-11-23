@@ -933,6 +933,11 @@ def build_guide(world: dict) -> str:
     for eid, e in elements.items()
   ]
   potion = cfg["potion"]
+  shifts = "・".join(  # 危ない配達で上がる魔物の Lv（配達の設定がない世界では、行を出さない）
+    f"危なさ {n} は +{d['shift']}"
+    for n, d in enumerate((world.get("deliveries") or {}).get("dangers", []))
+    if d.get("shift")
+  )
   rules = [
     ("ダメージ", "攻撃 − 相手の防御 ÷ 2（少しだけ上下する。1 より小さくはならない）"),
     (
@@ -953,12 +958,15 @@ def build_guide(world: dict) -> str:
       "苦手な属性の武器しかなく、持たないほうが効くときは、武器を持たずに戦う。"
       "装飾品は、弱点を突ける属性のものを持っていれば、その戦いだけ着け替える（苦手な属性なら外す）",
     ),
-    (
-      "危ない配達",
-      "危なさのある配達（高価な品・狙われる品）を運んでいる間は、道で出会う魔物の Lv が上がる"
-      + "（"
-      + "・".join(f"危なさ {n} は +{d['shift']}" for n, d in enumerate(world["deliveries"]["dangers"]) if d["shift"])
-      + "）",
+    *(
+      [
+        (
+          "危ない配達",
+          f"危なさのある配達（高価な品・狙われる品）を運んでいる間は、道で出会う魔物の Lv が上がる（{shifts}）",
+        )
+      ]
+      if shifts
+      else []
     ),
     (
       "道で出会う魔物",

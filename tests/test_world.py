@@ -341,6 +341,8 @@ class ValidateTest(unittest.TestCase):
   def test_bad_hunt_texts(self):
     self.assertError(lambda r: r["hunts"]["places"].update(nowhere=["x"]), ["nowhere"])
     self.assertError(lambda r: r["hunts"].update(texts=[["{monster}を倒して"]]), ["hunts の texts"])
+    self.assertError(lambda r: r["hunts"].update(texts=[["{place}{monster}を{num}体"]]), ["hunts の texts"])
+    self.assertError(lambda r: r["deliveries"]["dangers"][0].update(texts=["{to}へ{cargo}を{"]), ["texts"])
 
   def test_quest_reward_is_checked(self):
     self.assertError(lambda r: r["quest_reward"].pop("gold"), ["reward", "gold"])

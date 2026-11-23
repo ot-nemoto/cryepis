@@ -428,6 +428,13 @@ class SiteTest(unittest.TestCase):
     other = html[html.index(f'id="panel-{website.OTHER_AREA}"') :]
     self.assertIn("<td>巣穴の主</td>", other[: other.index("</section>")])
 
+  def test_guide_page_without_deliveries(self):
+    world = copy.deepcopy(WORLD)
+    world["deliveries"] = None  # 配達の設定がない世界でも落ちない（危ない配達の行は出さない）
+    html = website.build_guide(world)
+    self.assertNotIn("危ない配達", html)
+    self.assertIn("危ない配達", website.build_guide(WORLD))
+
   def test_guide_page_without_elements(self):
     world = copy.deepcopy(WORLD)
     world["elements"] = {}

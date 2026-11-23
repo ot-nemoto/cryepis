@@ -259,6 +259,10 @@ class QuestTest(unittest.TestCase):
         self.assertTrue(1 <= q["count"] <= 5)
     seen = {G.make_quest(WORLD, t, "salina", START, random.Random(i), 4)["rank"] for i in range(20)}
     self.assertEqual(seen, {3})  # ★★★★ は作れないので ★★★ に下げる（★★★★ は WORLD・RAID 用）
+    world = copy.deepcopy(WORLD)  # Lv8 以上の魔物しかいない道では ★ は作れないので、★★ に上げて作る
+    for info in world["road_info"].values():
+      info["monsters"] = [(m, w) for m, w in info["monsters"] if world["monsters"][m]["level"] >= 8]
+    self.assertEqual(G.make_quest(world, t, "salina", START, random.Random(0), 1)["rank"], 2)
 
   def test_rank_falls_back_to_what_the_town_has(self):
     for i in range(60):  # エクエスには ★★★★ の依頼がない

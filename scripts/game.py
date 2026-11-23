@@ -430,7 +430,7 @@ def release_orphans(guild: dict, states: dict[str, dict], keep: set | frozenset 
 HUNT_TRIP_MAX = 2  # 討伐の狩り場までの行動力の上限（狩り場は町の近く。道の長さの半分、最大 2）
 
 
-def hunt_steps(world: dict, town: str, to: str, count: int) -> list[list]:
+def hunt_steps(world: dict, town: str, to: str) -> list[list]:
   """討伐の段取り: 行き（狩り場まで）→ 討伐（何体いても 1 行動で連戦）→ 帰り。[[段取り, 残りの行動力], ...]。"""
   trip = min(HUNT_TRIP_MAX, -(-world["roads"][(town, to)] // 2))
   return [["go", trip], ["hunt", 1], ["back", trip]]
@@ -442,7 +442,7 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
   lvl, rank = quest_level(world, quest), quest["rank"]
   base, cfg = world["quest_reward"], world["quest_ranks"][rank - 1]
   if quest["type"] == "hunt":
-    quest["steps"] = hunt_steps(world, town, quest["place"], quest["count"])
+    quest["steps"] = hunt_steps(world, town, quest["place"])
     target = world["monsters"].get(quest["monster"], {})
     if target.get("elite"):  # 強敵は、魔物のレベル以上の勇者だけが受ける
       quest["min_level"] = lvl
@@ -487,9 +487,10 @@ def hunt_rank(world: dict, level: int, count: int) -> int:
 def rank_hunt(world: dict, t: dict, town: str, rank: int, rng: random.Random) -> dict | None:
   """★ が rank になる共通の討伐（町から出る道の 1 本で、その道に出る魔物を数体）。道を均等に選び、
   その道で rank になる魔物の Lv を均等に選び、同じ Lv の中は地形の重みで魔物を選び、数は rank になるものから均等に選ぶ。
-  どの道でも作れなければ、★ を 1 つずつ下げて探す（★ でも作れなければ None）。"""
+  どの道でも作れなければ、★ を 1 つずつ下げて探し、それでもなければ上げて探す（どの ★ でも作れなければ None）。"""
   low, high = t["count"]
-  for r in range(rank, 0, -1):
+  top = len(world["hunt_ranks"]) + 1
+  for r in [*range(rank, 0, -1), *range(rank + 1, top + 1)]:  # ★ を下げて探し、なければ上げて探す
     combos = [
       (other, mid, w, n)
       for other in world["neighbors"][town]
@@ -541,10 +542,11 @@ def deliver_rank(world: dict, distance: int, danger: int) -> int:
 def rank_deliver(world: dict, town: str, rank: int, rng: random.Random) -> dict | None:
   """★ が rank になる配達（届け先は season.json の deliver_range 以内の町）。届け先を均等に選び、危なさは
   rank になるものから均等に選ぶ。荷物は、町の荷物とどの町でも使う荷物（_any）のうち、危なさに合うものから選ぶ。
-  作れなければ ★ を 1 つずつ下げて探す（★ でも作れなければ None）。"""
+  作れなければ ★ を 1 つずつ下げて探し、それでもなければ上げて探す（どの ★ でも作れなければ None）。"""
   cfg, dist, dv = world["season"], world["dist"][town], world["deliveries"]
   towns = [p for p in world["towns"] if p != town and dist.get(p, cfg["deliver_range"] + 1) <= cfg["deliver_range"]]
-  for r in range(rank, 0, -1):
+  top = len(dv["ranks"]) + 1
+  for r in [*range(rank, 0, -1), *range(rank + 1, top + 1)]:  # ★ を下げて探し、なければ上げて探す
     combos = [(to, d) for to in towns for d in range(len(dv["dangers"])) if deliver_rank(world, dist[to], d) == r]
     if not combos:
       continue

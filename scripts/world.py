@@ -655,10 +655,18 @@ def validate(raw: dict) -> list[str]:
         if key != "_any" and key not in places:
           err(f"quests.json: hunts の places の {key!r} は map.json にない場所です")
     if not isinstance(ht, list) or not all(
-      isinstance(x, list) and x and all(isinstance(t, str) and "{monster}" in t and "{place}" in t for t in x)
+      isinstance(x, list)
+      and x
+      and all(
+        isinstance(t, str) and "{monster}" in t and "{place}" in t and format_ok(t, place="x", monster="x", count=1)
+        for t in x
+      )
       for x in ht
     ):
-      err("quests.json: hunts の texts は ★ ごとに、{place} と {monster} を入れた文の一覧にしてください")
+      err(
+        "quests.json: hunts の texts は ★ ごとに、{place} と {monster} を入れた文の一覧にしてください"
+        "（ほかに使えるのは {count} だけ）"
+      )
   # 町の依頼: 討伐は町から出る道（陸路・航路）と、その道に出る魔物。配達は別の町へ
   road_terrain = {}
   for r in mp.get("roads", []):
@@ -759,6 +767,15 @@ def on_road(monster: dict) -> bool:
   return not monster.get("boss") and not monster.get("elite")
 
 
+def format_ok(text: str, **values) -> bool:
+  """説明の文に、values のほかの {…} がなく、{ } の書き方が正しいか（依頼を作るときに落ちないように）。"""
+  try:
+    text.format(**values)
+  except (KeyError, IndexError, ValueError):
+    return False
+  return True
+
+
 def deliveries_ok(dv, n_ranks: int, places: dict, err) -> None:
   """quests.json の deliveries を確かめる（誤りは err に渡す）。"""
   if not isinstance(dv, dict):
@@ -784,9 +801,11 @@ def deliveries_ok(dv, n_ranks: int, places: dict, err) -> None:
     if (
       not isinstance(texts, list)
       or not texts
-      or not all(isinstance(t, str) and "{cargo}" in t and "{to}" in t for t in texts)
+      or not all(
+        isinstance(t, str) and "{cargo}" in t and "{to}" in t and format_ok(t, cargo="x", to="x") for t in texts
+      )
     ):
-      err(f"{where}: texts は {{cargo}} と {{to}} を入れた文の一覧にしてください")
+      err(f"{where}: texts は {{cargo}} と {{to}} を入れた文の一覧にしてください（ほかの {{…}} は使えない）")
   cargo = dv.get("cargo")
   if not isinstance(cargo, dict) or "_any" not in cargo:
     err("quests.json: deliveries の cargo に、どの町でも使う荷物（_any）を書いてください")
