@@ -109,6 +109,23 @@ class SiteTest(unittest.TestCase):
     links = [a.get("href") for a in root.iter("{http://www.w3.org/2000/svg}a")]
     self.assertEqual(links, ["heroes/h1.html"])
 
+  def test_ranking_shows_top_ten(self):
+    entries = [({"id": f"h{i}", "name": f"勇者{i}"}, game.new_state(WORLD, f"h{i}", f"勇者{i}")) for i in range(1, 15)]
+    for i, (_, state) in enumerate(entries):  # Lv が違う 14 人（1 人だけ 10 位と同じ Lv）
+      state["season"] = 1
+      state["hero"]["level"] = 20 - i if i != 10 else 11
+    html = website.build_ranking(WORLD, entries, DAY)
+    level = html[html.index("<h3>レベル</h3>") :]
+    level = level[: level.index("</table>")]
+    self.assertEqual(level.count("<tr>"), 11)  # 10 位まで（同じ 10 位の勇者は 2 人とも）
+    self.assertIn("勇者10<", level)
+    self.assertIn("勇者11<", level)
+    self.assertNotIn("勇者12<", level)
+    board = rpg.build_board(WORLD, entries, DAY)
+    part = board[board.index("── レベル ──") :]
+    part = part[: part.index("\n\n")]
+    self.assertEqual(len(part.splitlines()) - 1, 11)  # Gist の本文も 10 位まで
+
   def test_guild_shows_who_took_todays_quests(self):
     entries, guild, today = party(4, 3)
     html = website.build_guild(WORLD, entries, today, guild)
