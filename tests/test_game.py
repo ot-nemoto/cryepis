@@ -496,13 +496,13 @@ class RoadTest(unittest.TestCase):
   def test_encounters_follow_the_hero_level(self):
     road = WORLD["road_info"][("karun", "muralis")]["monsters"]
     lv = WORLD["monsters"]
-    for level in (1, 5, 8, 15, 20, 25):
+    for level in (1, 5, 8, 15, 18, 20):
       got = G.encounters(WORLD, road, level)
       levels = {lv[m]["level"] for m, _ in got}
-      if level <= 20:
+      if level <= 18:  # Lv18 なら Lv15〜19（Lv15 がいる）
         self.assertTrue(levels and all(level - 3 <= x <= level + 1 for x in levels), (level, levels))
-      else:  # Lv22〜26 の魔物はいないので、いちばん近い Lv20
-        self.assertEqual(levels, {20})
+      else:  # 道の魔物は Lv15 まで。Lv17〜21 にはいないので、いちばん近い Lv15
+        self.assertEqual(levels, {15})
       self.assertEqual([m for m, _ in got], [m for m, _ in road if m in dict(got)])  # 道の並びのまま
 
       def share(pairs, got=got):  # 地形ごとの割合（残った魔物のいる地形だけで比べる）
@@ -531,8 +531,9 @@ class RoadTest(unittest.TestCase):
     self.assertAlmostEqual(low, expect, delta=0.06)
 
   def test_every_road_has_monsters_for_every_level(self):
-    for (a, b), info in WORLD["road_info"].items():  # 平原はどの道にもあるので、Lv1〜20 のどの勇者にも相手がいる
-      for level in range(1, WORLD["season"]["max_level"] + 1):
+    top = max(WORLD["monsters"][m]["level"] for i in WORLD["road_info"].values() for m, _ in i["monsters"])
+    for (a, b), info in WORLD["road_info"].items():  # 平原はどの道にもあるので、Lv1〜15 のどの勇者にも相手がいる
+      for level in range(1, top + 1):
         levels = {WORLD["monsters"][m]["level"] for m, _ in G.encounters(WORLD, info["monsters"], level)}
         self.assertTrue(all(level - 3 <= x <= level + 1 for x in levels), (a, b, level, levels))
 

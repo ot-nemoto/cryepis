@@ -328,7 +328,7 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(south.count('<div class="card board">'), 1)  # 強敵・ボスも道の魔物と同じ表（別の枠は作らない）
     self.assertNotIn('<h3 class="sub">', south)
     rows = south[south.index("<table") :]
-    self.assertLess(rows.index("<td>ワイバーン</td>"), rows.index("<td>雪男</td>"))  # 道の魔物 → 強敵 → ボス
+    self.assertLess(rows.index("<td>ヒドラ</td>"), rows.index("<td>雪男</td>"))  # 道の魔物 → 強敵 → ボス
     self.assertLess(rows.index("<td>雪男</td>"), rows.index("<td>巣穴の主</td>"))
     roads = south[: south.index("<table")]  # 魔物の表の上に、この地方の街道と地形の割合
     self.assertIn("<h3>街道</h3>", roads)
