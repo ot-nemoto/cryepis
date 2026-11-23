@@ -21,10 +21,12 @@ def sea(cost):
 
 def main():
   for path, fn in ((paths.ROADS, land), (paths.SEA, sea)):
-    data = json.load(open(path, encoding="utf-8"))
+    with open(path, encoding="utf-8") as f:
+      data = json.load(f)
     for r in data:
       r["actions"] = fn(r["cost"])
-    json.dump(data, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    with open(path, "w", encoding="utf-8") as f:
+      json.dump(data, f, ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":

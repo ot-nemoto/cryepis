@@ -27,12 +27,14 @@ GitHub プロフィールに Pin した Gist の中身を、GitHub Actions の�
 
 ```sh
 python -m unittest discover -s tests   # テスト（標準ライブラリだけで動く）
+CRYEPIS_SLOW_TESTS=1 python -m unittest tests.test_worldgen_stages.RegenerationTest   # 遅いテスト（45 秒ほど）
 pip install ruff==0.17.4               # リンターとフォーマッター（開発と CI でだけ使う）
 ruff check .                           # リンター（--fix で直せるものは直す）
 ruff format .                          # フォーマッター（インデントはスペース 2。--check で確かめるだけ）
 ```
 
 - 設定は `pyproject.toml`（Ruff）と `.editorconfig`（エディタ。インデントはスペース 2）
+- 遅いテスト（`RegenerationTest`）は、地図の生成（`tools/worldgen/make.py`）を一時ディレクトリの中だけで通しで動かし、コミット済みの `world/map.json`・`world/map-base.svg` と完全に一致するかを確かめる（乱数の種が決まっているので、同じ地図になる）。`tools/worldgen/` を直したときや、`world/map.json` を手で直したときに動かす。ふだんのテストでは飛ばす
 - PR を作った・更新したとき（と master への push・毎日の実行のあと）に、サイト公開のワークフロー（`.github/workflows/pages.yml`）が CI としてリンター・フォーマット・テストを確かめる（PR では公開しない）
 
 ## ネタを追加するとき

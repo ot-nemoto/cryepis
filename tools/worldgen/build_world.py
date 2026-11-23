@@ -194,7 +194,9 @@ def build_places():
 def main():
   places = build_places()
   roads = []
-  for r in json.load(open(paths.ROADS, encoding="utf-8")):
+  with open(paths.ROADS, encoding="utf-8") as f:
+    land_roads = json.load(f)
+  for r in land_roads:
     kind_ = "land" if r["kind"] == "road" else "trail"
     roads.append(
       {
@@ -206,7 +208,9 @@ def main():
         "path": [[round(x), round(y)] for x, y in r["path"]],
       }
     )
-  for r in json.load(open(paths.SEA, encoding="utf-8")):
+  with open(paths.SEA, encoding="utf-8") as f:
+    sea_routes = json.load(f)
+  for r in sea_routes:
     roads.append(
       {
         "from": pid(r["from"]),
@@ -242,7 +246,8 @@ def main():
   text = json.dumps(mp, ensure_ascii=False, indent=1)
   for token, value in inline.items():
     text = text.replace(f'"{token}"', value)
-  open(paths.REPO / "world" / "map.json", "w", encoding="utf-8").write(text + "\n")
+  with open(paths.REPO / "world" / "map.json", "w", encoding="utf-8") as f:
+    f.write(text + "\n")
   shutil.copy(paths.BASE_SVG, paths.REPO / "world" / "map-base.svg")
   print(f"  町・ダンジョン {len(places)}、道 {len(roads)}")
 

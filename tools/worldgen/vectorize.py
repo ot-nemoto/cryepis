@@ -15,7 +15,8 @@ import terrain as gt  # noqa: E402
 
 STEP = 2
 sys.setrecursionlimit(100000)
-data = pickle.load(open(paths.TERRAIN, "rb"))
+with open(paths.TERRAIN, "rb") as f:
+  data = pickle.load(f)
 kind, height, rivers = data["kind"], data["height"], data["rivers"]
 GH, GW = len(kind), len(kind[0])
 COLOR = gt.COLOR
@@ -191,7 +192,8 @@ def main(out_path):
   parts.append(layer(mask_of(lambda i, j: kind[j][i] == "ice"), hexc(COLOR["ice"])))
   parts.append("</svg>")
   svg = "\n".join(p for p in parts if p)
-  open(out_path, "w", encoding="utf-8").write(svg)
+  with open(out_path, "w", encoding="utf-8") as f:
+    f.write(svg)
   print(out_path, len(svg.encode()) // 1024, "KB")
 
 

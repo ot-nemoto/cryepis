@@ -144,7 +144,8 @@ def main():
     pts = simplify(path(prev, cells[n], cells[best[1]]))
     roads.append({"from": n, "to": best[1], "cost": round(best[0]), "path": pts, "kind": "trail"})
 
-  json.dump(roads, open(paths.ROADS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+  with open(paths.ROADS, "w", encoding="utf-8") as f:
+    json.dump(roads, f, ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":
