@@ -679,8 +679,7 @@ MONSTER_STAT_NAMES = ("HP", "攻", "防", "速", "器", "EXP", "G")
 
 def build_monsters(world: dict) -> str:
   """開放した道に出る魔物の一覧（地方ごとのタブ。Lv・地形・性質・属性・強さ）。並びは Lv の順（同じ Lv は地形の順）。
-  どの道でどの地形の魔物が出やすいかは、地図に道ごとの地形の割合で出す（道で出会う魔物は勇者の Lv でも変わるので、
-  魔物ごとの「出る道と割合」は出さない）。道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
+  道で出会う魔物は勇者の Lv でも変わるので、魔物ごとの「出る道と割合」は出さない。道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
   ボスは、いるダンジョンの地方に、道の魔物とは別の表で出す（開放した町のある地方だけ）。"""
   places, monsters, traits = world["places"], world["monsters"], world["traits"]
   towns = [t for t, p in places.items() if p["type"] == "town"]
@@ -702,8 +701,7 @@ def build_monsters(world: dict) -> str:
     return (
       monster_table(rows)
       + '<p class="note">HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
-      '道で出会うのは、その道の地形の魔物のうち、勇者の Lv に近い魔物です（<a href="guide.html">手引き</a>）。'
-      '道ごとの地形の割合は<a href="map.html">地図</a>に出しています。</p></div>'
+      '道で出会うのは、その道の地形の魔物のうち、勇者の Lv に近い魔物です（<a href="guide.html">手引き</a>）。</p></div>'
     )
 
   def monster_row(mid: str, where: str | None = None) -> str:  # 魔物の 1 行（where は「いる場所」などの欄の HTML）
@@ -878,7 +876,7 @@ def build_guide(world: dict) -> str:
     ),
     (
       "道で出会う魔物",
-      "戦いになったら、まず道の地形を地図に出ている割合で決め、その地形の魔物のうち、Lv が勇者の Lv "
+      "戦いになったら、まず道の地形（草原・森など。道ごとに割合が決まっている）を選び、その地形の魔物のうち、Lv が勇者の Lv "
       + "〜".join(f"{d:+d}" for d in cfg["encounter_levels"])
       + " の魔物から出る（同じ地形の中では同じくらいずつ）。Lv の合う魔物のいない地形は出ず、その分ほかの地形が出る。"
       "範囲に合う魔物がどの地形にもいなければ、いちばん近い Lv の魔物",

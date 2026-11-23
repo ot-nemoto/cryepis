@@ -13,8 +13,6 @@ import math
 import unicodedata
 from xml.sax.saxutils import escape
 
-import world as W
-
 PAD_X, PAD_TOP, PAD_BOTTOM = 24, 76, 56  # 地図の周りの余白（見出し・凡例を置く）
 FONT = (
   "'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans CJK JP','Yu Gothic',Meiryo,sans-serif,"
@@ -114,49 +112,6 @@ def place_label(p: dict, x: float, y: float) -> list[str]:
   return out
 
 
-def place_boxes(p: dict, x: float, y: float) -> list[tuple[float, float, float, float]]:
-  """場所の印と名前（place_label と同じ置き方）が占める四角（左・上・右・下）。道の地形の割合を置く場所を探すのに使う。"""
-  town = p["type"] == "town"
-  side = p.get("label") or ("up" if town else "down")
-  alias = p.get("alias") if town else None
-  size = 15 if town else 13
-  out = [(x - 14, y - 14, x + 14, y + 14)]
-  for text, h, dy in [(p["name"], size, 0)] + ([(alias, 10.5, 13)] if alias else []):
-    w = text_width(text, h)
-    if side == "up":
-      nx, ny, anchor = x, y - (30 if alias else 18), "middle"
-    elif side == "down":
-      nx, ny, anchor = x, y + 31, "middle"
-    elif side == "left":
-      nx, ny, anchor = x - 18, y + (0 if alias else 5), "end"
-    else:
-      nx, ny, anchor = x + 18, y + (0 if alias else 5), "start"
-    left = nx - w / 2 if anchor == "middle" else (nx - w if anchor == "end" else nx)
-    out.append((left, ny + dy - h, left + w, ny + dy + 3))
-  return out
-
-
-def overlaps(a: tuple, b: tuple) -> bool:
-  return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
-
-
-def terrain_label_spot(x: float, y: float, width: float, taken: list) -> tuple[float, float, str]:
-  """行動回数の札（x, y）のまわりで、道の地形の割合（幅 width、高さ 11）を置く場所（x, y, text-anchor）。
-  右・左・下・上の順に試し、場所の名前・ほかの札・ほかの割合に重ならない最初の場所（どこも重なれば右）。"""
-  spots = [
-    (x + 14, y + 4, "start", (x + 13, y - 8, x + 15 + width, y + 6)),
-    (x - 14, y + 4, "end", (x - 15 - width, y - 8, x - 13, y + 6)),
-    (x, y + 25, "middle", (x - width / 2 - 1, y + 13, x + width / 2 + 1, y + 28)),
-    (x, y - 15, "middle", (x - width / 2 - 1, y - 27, x + width / 2 + 1, y - 12)),
-  ]
-  for sx, sy, anchor, box in spots:
-    if not any(overlaps(box, t) for t in taken):
-      taken.append(box)
-      return sx, sy, anchor
-  taken.append(spots[0][3])
-  return spots[0][:3]
-
-
 def road_lines(world: dict) -> list[dict]:
   """描く道（同じ道は 1 本だけ）: {kind, distance, pts}。"""
   places, out, seen = world["places"], [], set()
@@ -165,8 +120,7 @@ def road_lines(world: dict) -> list[dict]:
       continue
     seen.add((a, b))
     pts = info.get("path") or [places[a]["pos"], places[b]["pos"]]
-    shares = W.terrain_shares(world["monsters"], info.get("monsters", []))
-    out.append({"kind": info["kind"], "distance": world["roads"][(a, b)], "pts": pts, "terrain": shares})
+    out.append({"kind": info["kind"], "distance": world["roads"][(a, b)], "pts": pts})
   for r in world.get("trails", []):
     pts = r.get("path") or [places[r["from"]]["pos"], places[r["to"]]["pos"]]
     out.append({"kind": "trail", "distance": r["distance"], "pts": pts})
@@ -240,20 +194,8 @@ def render(
   for r in lines:
     out.append(f'<path class="road-{r["kind"]}" d="{smooth(r["pts"])}" {ROAD_STYLE[r["kind"]]}/>')
   out.append("</g>")
-  spots = [at(*point_along(r["pts"], 0.5)) for r in lines]
-  taken = [(x - 11, y - 11, x + 11, y + 11) for x, y in spots]  # 札と場所の名前には重ねない
-  for p in places.values():
-    if "pos" in p:
-      taken += place_boxes(p, *at(*p["pos"]))
-  for r, (x, y) in zip(lines, spots):
-    out.append(badge(x, y, r["distance"], r["kind"]))
-    if r.get("terrain"):  # 札のそばに、道の地形の印と割合（戦いになったとき、その地形の魔物が出る割合）
-      text = " ".join(f"{W.TERRAIN_EMOJI.get(t, '')}{share:.0%}" for t, share in r["terrain"])
-      tx, ty, anchor = terrain_label_spot(x, y, text_width(text, 11), taken)
-      out.append(
-        f'<text class="road-terrain" x="{tx:.0f}" y="{ty:.0f}" text-anchor="{anchor}" font-size="11" '
-        f'fill="#3f2f22" style="{HALO}">{escape(text)}</text>'
-      )
+  for r in lines:
+    out.append(badge(*at(*point_along(r["pts"], 0.5)), r["distance"], r["kind"]))
 
   # 場所
   for pid, p in places.items():
@@ -320,10 +262,7 @@ def render(
 
   # 見出しと凡例
   out.append('<text x="24" y="38" font-size="24" font-weight="bold" fill="#3f2f22">世界の MAP</text>')
-  out.append(
-    '<text x="24" y="60" font-size="13" fill="#6b5a48">道の上の数字は移動にかかる行動回数、'
-    "その横は道の地形の割合（戦いで、その地形の魔物が出る割合）です</text>"
-  )
+  out.append('<text x="24" y="60" font-size="13" fill="#6b5a48">道の上の数字は、移動にかかる行動回数です</text>')
   ly = canvas_h - 22
   legend = [
     (f'<circle cx="34" cy="{ly - 5}" r="9" fill="#fff3c4" stroke="#6b4a1f" stroke-width="2.5"/>', 50, "町"),

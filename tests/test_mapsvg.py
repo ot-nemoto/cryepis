@@ -40,17 +40,6 @@ class RenderTest(unittest.TestCase):
     shown = sorted(int(g.find(f"{NS}text").text) for g in costs)
     self.assertEqual(shown, sorted(expected))
 
-  def test_every_road_shows_its_terrain_shares(self):
-    root = ET.fromstring(mapsvg.render(WORLD, []))
-    shown = sorted(t.text for t in root.iter(f"{NS}text") if t.get("class") == "road-terrain")
-    self.assertEqual(
-      len(shown), sum(1 for a, b in WORLD["road_info"] if a < b)
-    )  # 道ごとに 1 つ（ダンジョンへの道はなし）
-    self.assertIn("🌾83% 🌿17%", shown)  # エクエス〜サリナ（草原と湿地。多い順）
-    shares = W.terrain_shares(WORLD["monsters"], WORLD["road_info"][("karun", "muralis")]["monsters"])
-    self.assertAlmostEqual(sum(x for _, x in shares), 1.0)
-    self.assertEqual([t for t, _ in shares], ["plain", "mountain", "forest", "snow"])
-
   def test_road_kinds_are_drawn(self):
     root = ET.fromstring(mapsvg.render(WORLD, []))
     kinds = [p.get("class") for p in root.iter(f"{NS}path") if (p.get("class") or "").startswith("road-")]
