@@ -520,17 +520,17 @@ class BattleAndItemTest(unittest.TestCase):
 
 
 class RoadTest(unittest.TestCase):
-  def test_road_battles_can_have_several_monsters(self):
+  def test_road_battles_have_one_monster(self):
     state = play(1, actions=0)
     state["hero"].update(max_hp=999, hp=999)
     world = copy.deepcopy(WORLD)
     world["season"]["road_events"] = {"battle": 1}
-    world["season"]["road_battle_size"] = [[3, 1]]  # いつも 3 体
     day = G.Day(world, state, START, random.Random(0))
     town = state["place"]
-    self.assertTrue(day.road_event(town, world["neighbors"][town][0]))
-    self.assertEqual(sum("を倒した" in e for e in day.events), 3)  # 1 行動で 3 体と連戦
-    self.assertIn("3体で現れた", day.events[0])
+    for _ in range(10):  # 道の戦いは 1 体だけ（何体かと戦うのは討伐の依頼だけ）
+      before = len(day.events)
+      self.assertTrue(day.road_event(town, world["neighbors"][town][0]))
+      self.assertEqual(sum("を倒した" in e for e in day.events[before:]), 1)
 
   def test_encounters_follow_the_hero_level(self):
     road = WORLD["road_info"][("karun", "muralis")]["monsters"]

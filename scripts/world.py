@@ -227,25 +227,6 @@ def validate(raw: dict) -> list[str]:
   for key, _ in season.get("treasure") or []:  # レアは依頼の報酬だけで出る
     if (key in rarities and key != COMMON) or items.get(key, {}).get("rarity", COMMON) != COMMON:
       err(f"season.json の treasure: {key!r} は宝箱からは出せません（レアは町の依頼の報酬だけで出る）")
-  size = season.get("road_battle_size")
-  if (
-    not isinstance(size, list)
-    or not size
-    or not all(
-      isinstance(p, list)
-      and len(p) == 2
-      and isinstance(p[0], int)
-      and not isinstance(p[0], bool)
-      and p[0] >= 1
-      and _num(p[1])
-      and p[1] >= 0
-      for p in size
-    )
-    or sum(p[1] for p in size) <= 0
-  ):
-    err(
-      "season.json: road_battle_size は [[一度に出る数（1 以上の整数）, 重み（0 以上）], ...] にしてください（重みの合計は正）"
-    )
   if not isinstance(season.get("rare_drops", True), bool):
     err("season.json: rare_drops は true か false にしてください（false ならレアのアイテムを出さない）")
   levels = season.get("encounter_levels")

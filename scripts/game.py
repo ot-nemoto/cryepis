@@ -918,15 +918,10 @@ class Day:
     info = self.world["road_info"][(a, b)]
     kinds, weights = zip(*self.cfg["road_events"].items())
     kind = self.rng.choices(kinds, weights)[0]
-    if kind == "battle":  # 何体か一度に出ることがある（season.json の road_battle_size）。1 体ずつ連戦する
+    if kind == "battle":  # 道の戦いは 1 体だけ（何体かと戦うのは討伐の依頼だけ）
       mids, mw = zip(*encounters(self.world, info["monsters"], self.hero["level"]))
-      sizes, sw = zip(*self.cfg["road_battle_size"])
-      group = [self.world["monsters"][m] for m in self.rng.choices(mids, mw, k=self.rng.choices(sizes, sw)[0])]
-      if len(group) > 1:
-        self.log("魔物が" + "・".join(m["name"] for m in group) + "の" + f"{len(group)}体で現れた")
-      for monster in group:
-        if not self.battle(monster):
-          return False
+      if not self.battle(self.world["monsters"][self.rng.choices(mids, mw)[0]]):
+        return False
     elif kind == "treasure":
       iid = self.draw(self.cfg["treasure"])
       if iid:
