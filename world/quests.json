@@ -5,10 +5,10 @@
   {"mark": "★★★", "weight": 12, "reward": 4, "item": [["none", 45], ["common", 10], ["rare", 30], ["epic", 13], ["legendary", 2]]},
   {"mark": "★★★★", "weight": 3, "reward": 8, "item": [["none", 20], ["rare", 30], ["epic", 35], ["legendary", 15]]}
  ],
- "reward": {"exp": 5, "gold": 8},
+ "reward": {"exp": 0, "gold": 8, "deliver_rate": 2},
+ "hunt_ranks": [15, 40],
  "templates": [
-  {"id": "hunt", "type": "hunt", "name": "討伐", "rank": 1, "weight": 3, "count": [2, 4]},
-  {"id": "hunt_big", "type": "hunt", "name": "大物討伐", "rank": 2, "weight": 1, "count": [5, 7]},
+  {"id": "hunt", "type": "hunt", "name": "討伐", "weight": 3, "count": [1, 5]},
   {"id": "deliver", "type": "deliver", "name": "配達", "rank": 1, "weight": 2}
  ],
  "towns": {

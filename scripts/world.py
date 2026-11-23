@@ -115,6 +115,7 @@ def load_raw(directory: Path | None = None) -> dict:
     "quests": quests["templates"],
     "quest_ranks": quests.get("ranks"),
     "quest_reward": quests.get("reward"),
+    "hunt_ranks": quests.get("hunt_ranks", []),
     "town_quests": quests.get("towns", {}),
   }
 
@@ -627,6 +628,17 @@ def validate(raw: dict) -> list[str]:
     not isinstance(base.get(k), (int, float)) or isinstance(base.get(k), bool) or base[k] < 0 for k in ("exp", "gold")
   ):
     err("quests.json: reward には、1 行動あたりの exp と gold（0 以上の数）を書いてください")
+  elif "deliver_rate" in base and (not _num(base["deliver_rate"]) or base["deliver_rate"] <= 0):
+    err("quests.json: reward の deliver_rate（配達のお金の倍率）は正の数にしてください")
+  # 共通の討伐の ★: 点数 = 魔物の Lv ×（数 + 1）が hunt_ranks[0] 以下なら ★、hunt_ranks[1] 以下なら ★★ …
+  hunt_ranks = raw.get("hunt_ranks")
+  if (
+    not isinstance(hunt_ranks, list)
+    or not all(_num(v) and v > 0 for v in hunt_ranks)
+    or hunt_ranks != sorted(hunt_ranks)
+    or len(hunt_ranks) >= max(len(ranks), 1)
+  ):
+    err(f"quests.json: hunt_ranks は小さい順の正の数の一覧（{max(len(ranks) - 1, 0)} 個まで）にしてください")
 
   def rank_ok(where: str, rank) -> None:
     if not isinstance(rank, int) or isinstance(rank, bool) or not 1 <= rank <= max(len(ranks), 1):
@@ -636,12 +648,13 @@ def validate(raw: dict) -> list[str]:
     where = f"quests.json の {q.get('id')}"
     if q.get("type") not in QUEST_TYPES:
       err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
-    rank_ok(where, q.get("rank"))
+    if "rank" in q or q.get("type") != "hunt":  # 討伐は rank を書かなければ、魔物の Lv と数で決める
+      rank_ok(where, q.get("rank"))
     if not isinstance(q.get("weight"), (int, float)) or q["weight"] <= 0:
       err(f"{where}: weight は正の数にしてください")
     if q.get("type") == "hunt" and not _range_ok(q.get("count")):
       err(f"{where}: count は [最小, 最大]（1 以上）にしてください")
-  if not any(q.get("rank") == 1 for q in raw["quests"]):
+  if not any(q.get("rank") == 1 or (q.get("type") == "hunt" and "rank" not in q) for q in raw["quests"]):
     err("quests.json: rank 1 の共通の依頼（templates）を 1 つ以上書いてください（掲示板の空いた枠に入る）")
   # 町の依頼: 討伐は町から出る道（陸路・航路）と、その道に出る魔物。配達は別の町へ
   road_terrain = {}
@@ -851,5 +864,6 @@ def build(raw: dict) -> dict:
     "quests": raw["quests"],
     "quest_ranks": raw["quest_ranks"],
     "quest_reward": raw["quest_reward"],
+    "hunt_ranks": raw.get("hunt_ranks", []),
     "town_quests": raw.get("town_quests", {}),
   }

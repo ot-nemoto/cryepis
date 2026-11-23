@@ -486,11 +486,12 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
       notes = ([f"「{escape(e['text'])}」"] if e.get("text") else []) + (
         ["前の勇者が失敗した依頼"] if e.get("returned") else []
       )
+      exp_text = f"{e['reward']['exp']}EXP<br>" if e["reward"]["exp"] else ""  # 依頼の経験値は 0（お金だけ）
       rows.append(
         f'<tr data-f="{e["rank"]}"><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
         + "".join(f'<div class="note">{n}</div>' for n in notes)
         + f'</td><td class="num">{e["cost"]}</td>'
-        f'<td class="num">{e["reward"]["exp"]}EXP<br>{e["reward"]["gold"]}G</td>'
+        f'<td class="num">{exp_text}{e["reward"]["gold"]}G</td>'
         f"<td>{guild_status(world, e, today)}</td></tr>"
       )
     return (

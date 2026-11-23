@@ -325,7 +325,11 @@ def draw_quests(world: dict, town: str, d: date, season: int, n: int, exclude: s
     rank = rng.choices(range(1, len(ranks) + 1), [r["weight"] for r in ranks])[0]
     while True:
       mine = [q for q in own if q["rank"] == rank]
-      common = [t for t in world["quests"] if t["rank"] == rank]
+      common = [  # rank を書いていない討伐は、★★★ まで（hunt_ranks の区切りの数 + 1）どの ★ にもなれる
+        t
+        for t in world["quests"]
+        if t.get("rank") == rank or ("rank" not in t and t["type"] == "hunt" and rank <= len(world["hunt_ranks"]) + 1)
+      ]
       if mine or common or rank == 1:
         break
       rank -= 1
@@ -334,7 +338,7 @@ def draw_quests(world: dict, town: str, d: date, season: int, n: int, exclude: s
       own.remove(q)
       quest = make_town_quest(world, q, town, d)
     else:
-      quest = make_quest(world, rng.choices(common, [t["weight"] for t in common])[0], town, d, rng)
+      quest = make_quest(world, rng.choices(common, [t["weight"] for t in common])[0], town, d, rng, rank)
     if quest:
       quest["id"] = f"{d.isoformat()}-{town}-{i}"
       quests.append(quest)
@@ -456,7 +460,9 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
     cost=cost,
     reward={
       "exp": round(base["exp"] * cost * cfg["reward"]),
-      "gold": round(base["gold"] * cost * cfg["reward"]),
+      "gold": round(
+        base["gold"] * cost * cfg["reward"] * (base.get("deliver_rate", 1) if quest["type"] == "deliver" else 1)
+      ),
       "item": cfg["item"],
     },
   )
@@ -473,9 +479,48 @@ def make_town_quest(world: dict, q: dict, town: str, d: date) -> dict:
   return finish_quest(world, quest, town)
 
 
-def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random) -> dict | None:
-  """共通の依頼。討伐: 町から出る道の 1 本で、その道に出る魔物を倒す。配達: 近くの町へ荷物を届ける。"""
+def hunt_rank(world: dict, level: int, count: int) -> int:
+  """共通の討伐の ★ の数。点数 = 魔物の Lv ×（数 + 1）を、quests.json の hunt_ranks の区切りと比べる
+  （[15, 40] なら 15 以下は ★、40 以下は ★★、それより上は ★★★）。"""
+  score = level * (count + 1)
+  return 1 + sum(1 for limit in world["hunt_ranks"] if score > limit)
+
+
+def rank_hunt(world: dict, t: dict, town: str, rank: int, rng: random.Random) -> dict | None:
+  """★ が rank になる共通の討伐（町から出る道の 1 本で、その道に出る魔物を数体）。道を均等に選び、
+  その道で rank になる魔物の Lv を均等に選び、同じ Lv の中は地形の重みで魔物を選び、数は rank になるものから均等に選ぶ。
+  どの道でも作れなければ、★ を 1 つずつ下げて探す（★ でも作れなければ None）。"""
+  low, high = t["count"]
+  for r in range(rank, 0, -1):
+    combos = [
+      (other, mid, w, n)
+      for other in world["neighbors"][town]
+      for mid, w in world["road_info"][(town, other)]["monsters"]
+      for n in range(low, high + 1)
+      if hunt_rank(world, world["monsters"][mid]["level"], n) == r
+    ]
+    if not combos:
+      continue
+    other = rng.choice(sorted({c[0] for c in combos}))
+    here = [c for c in combos if c[0] == other]
+    level = rng.choice(sorted({world["monsters"][c[1]]["level"] for c in here}))
+    pool = {c[1]: c[2] for c in here if world["monsters"][c[1]]["level"] == level}
+    mid = rng.choices(sorted(pool), [pool[m] for m in sorted(pool)])[0]
+    count = rng.choice([c[3] for c in here if c[1] == mid])
+    return {"type": "hunt", "place": other, "report": town, "monster": mid, "count": count, "rank": r}
+  return None
+
+
+def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random, rank: int | None = None) -> dict | None:
+  """共通の依頼。討伐: 町から出る道の 1 本で、その道に出る魔物を倒す（rank を書いていない討伐は、★ を魔物の Lv と数で
+  決める。rank はほしい ★）。配達: 近くの町へ荷物を届ける。"""
   cfg, dist = world["season"], world["dist"][town]
+  if t["type"] == "hunt" and "rank" not in t:
+    quest = rank_hunt(world, t, town, rank or 1, rng)
+    if not quest:
+      return None
+    quest.update(template=t["id"], name=t.get("name", t["type"]), text="")
+    return finish_quest(world, quest, town)
   if t["type"] == "hunt":
     other = rng.choice(world["neighbors"][town])
     road = world["road_info"][(town, other)]["monsters"]
@@ -798,7 +843,8 @@ class Day:
     self.hero["gold"] += reward["gold"]
     self.state["season_stats"]["quests_done"] += 1
     self.state["quest"] = None
-    self.log(f"依頼達成！{quest_text(self.world, quest)}（+{reward['exp']}EXP +{reward['gold']}G）")
+    gain = ([f"+{reward['exp']}EXP"] if reward["exp"] else []) + [f"+{reward['gold']}G"]
+    self.log(f"依頼達成！{quest_text(self.world, quest)}（{' '.join(gain)}）")
     iid = self.draw(reward.get("item"), quest["town"])
     if iid:
       self.obtain(iid, "報酬で")

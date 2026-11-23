@@ -223,19 +223,35 @@ class QuestTest(unittest.TestCase):
     q3 = next(q for q in WORLD["town_quests"][town] if q["rank"] == 3)
     q1 = next(q for q in WORLD["town_quests"][town] if q["rank"] == 1 and q["type"] == q3["type"])
     a, b = G.make_town_quest(WORLD, q1, town, START), G.make_town_quest(WORLD, q3, town, START)
-    per = lambda q: q["reward"]["exp"] / q["cost"]  # noqa: E731  1 行動あたりの報酬
+    per = lambda q: q["reward"]["gold"] / q["cost"]  # noqa: E731  1 行動あたりの報酬（お金）
     self.assertEqual(per(b) / per(a), WORLD["quest_ranks"][2]["reward"] / WORLD["quest_ranks"][0]["reward"])
     self.assertEqual(b["reward"]["item"], WORLD["quest_ranks"][2]["item"])
     self.assertTrue(G.quest_text(WORLD, b).startswith("★★★ " + q3["name"] + "（"))
     self.assertEqual(b["text"], q3["text"])
 
-  def test_reward_is_by_cost_not_by_kind(self):
+  def test_reward_is_gold_by_cost_and_delivery_pays_more(self):
     base, mult = WORLD["quest_reward"], [r["reward"] for r in WORLD["quest_ranks"]]
+    self.assertEqual(base["exp"], 0)  # 依頼の報酬はお金だけ（経験値は魔物を倒したときだけ）
     for town, qs in WORLD["town_quests"].items():
       for q in qs:
         x = G.make_town_quest(WORLD, q, town, START)
-        self.assertEqual(x["reward"]["exp"], round(base["exp"] * x["cost"] * mult[q["rank"] - 1]), q["id"])
-        self.assertEqual(x["reward"]["gold"], round(base["gold"] * x["cost"] * mult[q["rank"] - 1]), q["id"])
+        rate = base["deliver_rate"] if q["type"] == "deliver" else 1  # 配達は 1 行動あたりのお金が多い
+        self.assertEqual(x["reward"]["exp"], 0, q["id"])
+        self.assertEqual(x["reward"]["gold"], round(base["gold"] * x["cost"] * mult[q["rank"] - 1] * rate), q["id"])
+
+  def test_hunt_rank_by_level_and_count(self):
+    cases = {(7, 1): 1, (5, 2): 1, (2, 5): 1, (6, 2): 2, (3, 5): 2, (12, 1): 2, (10, 3): 2, (11, 3): 3, (15, 5): 3}
+    for (lv, n), rank in cases.items():  # 点数 = Lv ×（数 + 1）。15 以下 ★、40 以下 ★★、それより上 ★★★
+      self.assertEqual(G.hunt_rank(WORLD, lv, n), rank, (lv, n))
+    t = next(t for t in WORLD["quests"] if t["type"] == "hunt")
+    for rank in (1, 2, 3):
+      for i in range(40):
+        q = G.make_quest(WORLD, t, "salina", START, random.Random(i), rank)
+        self.assertEqual(q["rank"], rank)  # ほしい ★ の討伐を作る
+        self.assertEqual(G.hunt_rank(WORLD, WORLD["monsters"][q["monster"]]["level"], q["count"]), rank)
+        self.assertTrue(1 <= q["count"] <= 5)
+    seen = {G.make_quest(WORLD, t, "salina", START, random.Random(i), 4)["rank"] for i in range(20)}
+    self.assertEqual(seen, {3})  # ★★★★ は作れないので ★★★ に下げる（★★★★ は WORLD・RAID 用）
 
   def test_rank_falls_back_to_what_the_town_has(self):
     for i in range(60):  # エクエスには ★★★★ の依頼がない
@@ -540,18 +556,11 @@ class RoadTest(unittest.TestCase):
     self.assertEqual({lv[m]["level"] for m, _ in G.encounters(WORLD, road, 1)}, {1, 2})
 
   def test_hunt_targets_spread_over_levels(self):
-    # 共通の討伐の依頼で狙う魔物の Lv は、道に出る Lv から均等に選ぶ（平原に多い高い Lv にかたよらない）
+    # 共通の討伐の依頼で狙う魔物の Lv は、その ★ になる Lv から均等に選ぶ（平原に多い Lv にかたよらない）
     t = next(t for t in WORLD["quests"] if t["type"] == "hunt")
-    levels = []
-    for i in range(600):
-      q = G.make_quest(WORLD, t, "salina", START, random.Random(i))
-      levels.append(WORLD["monsters"][q["monster"]]["level"])
-    low = sum(1 for x in levels if x <= 6) / len(levels)
-    expect = 0.0  # 道ごとに、出る Lv のうち Lv6 以下の割合（道は均等に選ぶ）
-    for other in WORLD["neighbors"]["salina"]:
-      road = {WORLD["monsters"][m]["level"] for m, _ in WORLD["road_info"][("salina", other)]["monsters"]}
-      expect += sum(1 for x in road if x <= 6) / len(road) / len(WORLD["neighbors"]["salina"])
-    self.assertAlmostEqual(low, expect, delta=0.06)
+    levels = {G.make_quest(WORLD, t, "salina", START, random.Random(i), 2)["monster"] for i in range(300)}
+    lv = {WORLD["monsters"][m]["level"] for m in levels}
+    self.assertGreater(len(lv), 5)  # ★★ になる Lv（3〜20 の点数になる Lv）の魔物がいろいろ出る
 
   def test_every_road_has_monsters_for_every_level(self):
     top = max(WORLD["monsters"][m]["level"] for i in WORLD["road_info"].values() for m, _ in i["monsters"])
