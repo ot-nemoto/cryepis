@@ -841,28 +841,28 @@ def _check_hunt_ranks(c: _Check, ranks: list):
     err(f"quests.json: hunt_ranks は小さい順の正の数の一覧（{max(len(ranks) - 1, 0)} 個まで）にしてください")
 
 
-def _check_quest_templates(c: _Check, ranks: list):
+def _check_quest_templates(c: _Check):
   """quests.json の共通の依頼（templates）。"""
   err, raw = c.err, c.raw
   for q in raw["quests"]:
     where = f"quests.json の {q.get('id')}"
     if q.get("type") not in QUEST_TYPES:
       err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
-    if "rank" in q:  # 討伐・配達は rank を書かなければ、計算で決める（討伐は魔物の Lv と数、配達は距離と危なさ）
-      _rank_ok(err, ranks, where, q.get("rank"))
+    if "rank" in q:  # 共通の依頼の ★ は計算で決める（討伐は魔物の Lv と数、配達は距離と危なさ）
+      err(f"{where}: rank は書かないでください（★ は、討伐は魔物の Lv と数、配達は距離と危なさで決まる）")
     if not isinstance(q.get("weight"), (int, float)) or q["weight"] <= 0:
       err(f"{where}: weight は正の数にしてください")
     if q.get("type") == "hunt" and not _range_ok(q.get("count")):
       err(f"{where}: count は [最小, 最大]（1 以上）にしてください")
-  if not any(q.get("rank") == 1 or "rank" not in q for q in raw["quests"]):
-    err("quests.json: rank 1 の共通の依頼（templates）を 1 つ以上書いてください（掲示板の空いた枠に入る）")
+  if not raw["quests"]:
+    err("quests.json: 共通の依頼（templates）を 1 つ以上書いてください（掲示板の空いた枠に入る）")
 
 
 def _check_deliveries(c: _Check, ranks: list):
   """quests.json の deliveries（配達の ★・危なさ・荷物）。"""
   err, places, raw = c.err, c.places, c.raw
   # 配達（quests.json の deliveries）: ★ の区切り、危なさごとの魔物の Lv のずらし・受けられる Lv・説明の文、町ごとの荷物
-  if any(q.get("type") == "deliver" and "rank" not in q for q in raw["quests"]):
+  if any(q.get("type") == "deliver" for q in raw["quests"]):
     deliveries_ok(raw.get("deliveries"), len(ranks), places, err)
 
 
@@ -1010,7 +1010,7 @@ def validate(raw: dict) -> list[str]:
   ranks = _run(c, _check_quest_ranks) or []
   _run(c, _check_quest_reward)
   _run(c, _check_hunt_ranks, ranks)
-  _run(c, _check_quest_templates, ranks)
+  _run(c, _check_quest_templates)
   _run(c, _check_deliveries, ranks)
   _run(c, _check_hunt_texts)
   _run(c, _check_town_quests, ranks)

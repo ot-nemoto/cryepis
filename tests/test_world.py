@@ -355,11 +355,9 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["quest_ranks"][0].update(weight=0), ["ranks[1]", "weight"])
     self.assertError(lambda r: r["quest_ranks"].clear(), ["ranks"])
 
-    def no_rank1(r):
-      for t in r["quests"]:
-        t["rank"] = 2
-
-    self.assertError(no_rank1, ["rank 1"])
+    # 共通の依頼の ★ は計算で決まる（rank は書けない）。共通の依頼が 1 つもなくてもいけない
+    self.assertError(lambda r: r["quests"][0].update(rank=2), ["hunt", "rank は書かないでください"])
+    self.assertError(lambda r: r["quests"].clear(), ["共通の依頼"])
 
   def test_every_town_has_a_quest_list(self):
     self.assertEqual(set(RAW["town_quests"]), set(RAW["map"]["open"]))  # 町の依頼は強敵だけ（ない町もある）
