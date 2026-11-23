@@ -2,6 +2,7 @@ import json
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 from pathlib import Path
 from unittest import mock
@@ -15,6 +16,7 @@ import website  # noqa: E402
 
 WORLD = rpg.load_world()
 DAY = date.fromisoformat(WORLD["season"]["start"])
+NS = "{http://www.w3.org/2000/svg}"
 
 
 def play(days, hero_id="h1"):
@@ -357,8 +359,12 @@ class HeroesTest(unittest.TestCase):
       self.assertEqual(self.daily("2026-12-02"), 1)
     world = rpg.load_world()
     html = website.build_map(world, rpg.current_entries(world), date(2026, 12, 2))
-    self.assertIn("アリス Lv.", html)  # 進められなかった勇者も、保存してある状態でサイトの地図に載る
-    self.assertIn("ボブ Lv.", html)
+    svg = ET.fromstring(html[html.index("<svg") : html.index("</svg>") + 6])
+    titles = "、".join(
+      g.find(f"{NS}title").text for g in svg.iter(f"{NS}g") if g.get("class") == "hero"
+    )  # 進められなかった勇者も、保存してある状態でサイトの地図の印（マウスを乗せたときの説明）に載る
+    self.assertIn("アリス Lv.", titles)
+    self.assertIn("ボブ Lv.", titles)
 
   def test_retired_heroes_keep_their_site_page(self):
     self.new_game("アリス")

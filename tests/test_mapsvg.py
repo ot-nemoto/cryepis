@@ -77,6 +77,7 @@ class RenderTest(unittest.TestCase):
     marks = [g for g in root.iter(f"{NS}g") if g.get("class") == "hero"]
     self.assertEqual(len(marks), 1)
     self.assertEqual(marks[0].find(f"{NS}title").text, "ア<&>リス Lv.1")  # マウスを乗せると名前と Lv
+    self.assertEqual(marks[0].find(f"{NS}circle").get("pointer-events"), "all")  # 丸の中も当たり（町の印に負けない）
 
   def test_heroes_in_one_place_share_one_mark(self):
     place = WORLD["starts"][0]
