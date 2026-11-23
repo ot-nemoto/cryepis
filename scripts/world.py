@@ -630,16 +630,16 @@ def validate(raw: dict) -> list[str]:
     where = f"quests.json の {q.get('id')}"
     if q.get("type") not in QUEST_TYPES:
       err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
-    if "rank" in q:  # 討伐・配達は rank を書かなければ、計算で決める（討伐は魔物の Lv と数、配達は距離と危なさ）
-      rank_ok(where, q.get("rank"))
+    if "rank" in q:  # 共通の依頼の ★ は計算で決める（討伐は魔物の Lv と数、配達は距離と危なさ）
+      err(f"{where}: rank は書かないでください（★ は、討伐は魔物の Lv と数、配達は距離と危なさで決まる）")
     if not isinstance(q.get("weight"), (int, float)) or q["weight"] <= 0:
       err(f"{where}: weight は正の数にしてください")
     if q.get("type") == "hunt" and not _range_ok(q.get("count")):
       err(f"{where}: count は [最小, 最大]（1 以上）にしてください")
-  if not any(q.get("rank") == 1 or "rank" not in q for q in raw["quests"]):
-    err("quests.json: rank 1 の共通の依頼（templates）を 1 つ以上書いてください（掲示板の空いた枠に入る）")
+  if not raw["quests"]:
+    err("quests.json: 共通の依頼（templates）を 1 つ以上書いてください（掲示板の空いた枠に入る）")
   # 配達（quests.json の deliveries）: ★ の区切り、危なさごとの魔物の Lv のずらし・受けられる Lv・説明の文、町ごとの荷物
-  if any(q.get("type") == "deliver" and "rank" not in q for q in raw["quests"]):
+  if any(q.get("type") == "deliver" for q in raw["quests"]):
     deliveries_ok(raw.get("deliveries"), len(ranks), places, err)
   # 討伐の説明（quests.json の hunts）: 町ごとの困りごとと、★ ごとの頼み方
   hs = raw.get("hunts")

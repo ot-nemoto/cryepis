@@ -325,9 +325,9 @@ def draw_quests(world: dict, town: str, d: date, season: int, n: int, exclude: s
     rank = rng.choices(range(1, len(ranks) + 1), [r["weight"] for r in ranks])[0]
     while True:
       mine = [q for q in own if q["rank"] == rank]
-      common = [  # rank を書いていない討伐・配達は、区切りの数 + 1（★★★）までのどの ★ にもなれる
-        t for t in world["quests"] if t.get("rank") == rank or ("rank" not in t and rank <= computed_max(world, t))
-      ]
+      common = [
+        t for t in world["quests"] if rank <= computed_max(world, t)
+      ]  # 区切りの数 + 1（★★★）までのどの ★ にもなれる
       if mine or common or rank == 1:
         break
       rank -= 1
@@ -527,7 +527,7 @@ def rank_hunt(world: dict, t: dict, town: str, rank: int, rng: random.Random) ->
 
 
 def computed_max(world: dict, t: dict) -> int:
-  """★ を計算で決める依頼（rank を書いていない共通の依頼）の、いちばん多い ★ の数。"""
+  """共通の依頼の、いちばん多い ★ の数（★ は計算で決める）。"""
   limits = world["hunt_ranks"] if t["type"] == "hunt" else (world.get("deliveries") or {}).get("ranks", [])
   return len(limits) + 1
 
@@ -563,37 +563,15 @@ def rank_deliver(world: dict, town: str, rank: int, rng: random.Random) -> dict 
 
 
 def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random, rank: int | None = None) -> dict | None:
-  """共通の依頼。討伐: 町から出る道の 1 本で、その道に出る魔物を倒す（rank を書いていない討伐は、★ を魔物の Lv と数で
-  決める。rank はほしい ★）。配達: 近くの町へ荷物を届ける。"""
-  cfg, dist = world["season"], world["dist"][town]
-  if t["type"] == "hunt" and "rank" not in t:
-    quest = rank_hunt(world, t, town, rank or 1, rng)
-    if not quest:
-      return None
-    quest["template"] = t["id"]
-    return finish_quest(world, quest, town)
-  if t["type"] == "deliver" and "rank" not in t:  # 距離と危なさで ★ を決め、町の荷物から作る
-    quest = rank_deliver(world, town, rank or 1, rng)
-    if not quest:
-      return None
-    quest["template"] = t["id"]
-    return finish_quest(world, quest, town)
+  """共通の依頼。★ は計算で決める（rank はほしい ★）。討伐は魔物の Lv と数、配達は距離と危なさで決まり、
+  討伐は町から出る道の 1 本で、その道に出る魔物を倒す。配達は近くの町へ、町の荷物を届ける。"""
   if t["type"] == "hunt":
-    other = rng.choice(world["neighbors"][town])
-    road = world["road_info"][(town, other)]["monsters"]
-    # 掲示板は Lv のちがう勇者みんなで使うので、狙う魔物の Lv は、その道に出る Lv から均等に選ぶ
-    # （地形の重みのままだと、魔物の多い高い Lv にかたよる）。同じ Lv の中では地形の重みで選ぶ
-    level = rng.choice(sorted({world["monsters"][m]["level"] for m, _ in road}))
-    mids, weights = zip(*((m, w) for m, w in road if world["monsters"][m]["level"] == level))
-    count = rng.randint(*t["count"])
-    quest = {"type": "hunt", "place": other, "report": town, "monster": rng.choices(mids, weights)[0], "count": count}
-  else:  # deliver
-    towns = [p for p in world["towns"] if p != town and dist.get(p, cfg["deliver_range"] + 1) <= cfg["deliver_range"]]
-    if not towns:
-      return None
-    to = rng.choice(towns)
-    quest = {"type": "deliver", "place": to, "report": to, "monster": None, "count": 1}
-  quest.update(template=t["id"], name=t.get("name", t["type"]), rank=t["rank"], text="")
+    quest = rank_hunt(world, t, town, rank or 1, rng)
+  else:
+    quest = rank_deliver(world, town, rank or 1, rng)
+  if not quest:
+    return None
+  quest["template"] = t["id"]
   return finish_quest(world, quest, town)
 
 
@@ -666,14 +644,6 @@ def quest_text(world: dict, quest: dict) -> str:
   marks = world["quest_ranks"]
   mark = marks[rank - 1]["mark"] if 1 <= rank <= len(marks) else ""
   return f"{mark} {quest.get('name', '依頼')}（{detail}）"
-
-
-def route(world: dict, a: str, b: str) -> list[str]:
-  """a から b への最短経路（a と b を含む）。"""
-  path = [a]
-  while path[-1] != b:
-    path.append(world["next"][path[-1]][b])
-  return path
 
 
 # ---- 1 日分を進める -------------------------------------------------------------------
