@@ -79,6 +79,16 @@
   {"id": "frost_giant", "name": "霜の巨人", "level": 14, "hp": 67, "atk": 24, "def": 7, "spd": 13, "dex": 6, "terrain": "snow", "element": "ice"},
   {"id": "earth_drake", "name": "地竜", "level": 15, "hp": 67, "atk": 24, "def": 7, "spd": 14, "dex": 6, "terrain": "plain", "trait": "armored"},
   {"id": "hydra", "name": "ヒドラ", "level": 15, "hp": 55, "atk": 19, "def": 5, "spd": 14, "dex": 6, "terrain": "wetland", "trait": "poison"},
+  {"id": "minotaur", "name": "ミノタウロス", "level": 16, "hp": 61, "atk": 22, "def": 6, "spd": 14, "dex": 6, "terrain": "plain", "trait": "fierce"},
+  {"id": "manticore", "name": "マンティコア", "level": 16, "hp": 56, "atk": 20, "def": 6, "spd": 14, "dex": 6, "terrain": "mountain", "trait": "poison"},
+  {"id": "black_knight", "name": "黒騎士", "level": 17, "hp": 79, "atk": 27, "def": 8, "spd": 15, "dex": 6, "terrain": "plain", "trait": "armored"},
+  {"id": "troll", "name": "トロール", "level": 17, "hp": 76, "atk": 27, "def": 8, "spd": 15, "dex": 6, "terrain": "forest"},
+  {"id": "chimera", "name": "キマイラ", "level": 18, "hp": 79, "atk": 27, "def": 8, "spd": 15, "dex": 6, "terrain": "plain"},
+  {"id": "crystal_beast", "name": "氷晶の魔獣", "level": 18, "hp": 79, "atk": 27, "def": 8, "spd": 15, "dex": 6, "terrain": "snow", "element": "ice"},
+  {"id": "cyclops", "name": "サイクロプス", "level": 19, "hp": 84, "atk": 29, "def": 8, "spd": 16, "dex": 6, "terrain": "plain"},
+  {"id": "basilisk", "name": "バジリスク", "level": 19, "hp": 73, "atk": 25, "def": 7, "spd": 16, "dex": 6, "terrain": "wetland", "trait": "poison"},
+  {"id": "behemoth", "name": "ベヒーモス", "level": 20, "hp": 87, "atk": 30, "def": 9, "spd": 16, "dex": 6, "terrain": "plain", "trait": "armored"},
+  {"id": "wyvern", "name": "ワイバーン", "level": 20, "hp": 79, "atk": 27, "def": 8, "spd": 16, "dex": 6, "terrain": "mountain", "trait": "first_strike", "element": "thunder"},
   {"id": "den_lord", "name": "巣穴の主", "level": 15, "hp": 320, "atk": 37, "def": 12, "spd": 18, "dex": 15, "terrain": "mountain", "trait": "armored", "boss": "wall_den", "text": "南壁の巣穴の奥に棲む岩の大鬼。山を越えて南大陸へ魔物を送り出している"}
  ]
 }
