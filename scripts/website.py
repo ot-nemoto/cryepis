@@ -669,14 +669,16 @@ def build_items(world: dict) -> str:
       how = "".join(town_pill(world, t) for t in r["towns"] or r["shops"]) or "-"  # レアは依頼を出す町、ほかは店
       trs.append(
         f'<tr data-f="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
-        f"<td>{escape(it['name'])}</td>"
+        f"<td>{escape(it['name'])}"
+        + (f'<br><span class="note">{escape(it["text"])}</span>' if it.get("text") else "")
+        + "</td>"
         + element_cell(world, it.get("element"))
         + "".join(stat_cell(it.get(k, 0)) for k, _ in ITEM_STATS)
         + f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>'
       )
     table = (
       '<div class="card board"><div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em">'
-      '<col style="width:13em"><col style="width:5em">'
+      '<col style="width:20em"><col style="width:5em">'
       + '<col style="width:3em">' * len(ITEM_STATS)
       + '<col style="width:5.5em"><col></colgroup><tr><th></th><th>名前</th>'
       + '<th class="icon">属性</th>'
