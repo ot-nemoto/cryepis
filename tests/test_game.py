@@ -503,8 +503,32 @@ class RoadTest(unittest.TestCase):
         self.assertTrue(levels and all(level - 3 <= x <= level + 1 for x in levels), (level, levels))
       else:  # Lv17〜21 の魔物はいないので、いちばん近い Lv15
         self.assertEqual(levels, {15})
-      self.assertEqual(got, [(m, w) for m, w in road if (m, w) in got])  # 重みは地形のまま
+      self.assertEqual([m for m, _ in got], [m for m, _ in road if m in dict(got)])  # 道の並びのまま
+
+      def share(pairs, got=got):  # 地形ごとの割合（残った魔物のいる地形だけで比べる）
+        terrains = {lv[m]["terrain"] for m, _ in got}
+        out = {}
+        for m, w in pairs:
+          if lv[m]["terrain"] in terrains:
+            out[lv[m]["terrain"]] = out.get(lv[m]["terrain"], 0) + w
+        return {t: round(v / sum(out.values()), 6) for t, v in out.items()}
+
+      self.assertEqual(share(got), share(road), level)  # 地形ごとの割合は道のまま
     self.assertEqual({lv[m]["level"] for m, _ in G.encounters(WORLD, road, 1)}, {1, 2})
+
+  def test_hunt_targets_spread_over_levels(self):
+    # 共通の討伐の依頼で狙う魔物の Lv は、道に出る Lv から均等に選ぶ（平原に多い高い Lv にかたよらない）
+    t = next(t for t in WORLD["quests"] if t["type"] == "hunt")
+    levels = []
+    for i in range(600):
+      q = G.make_quest(WORLD, t, "salina", START, random.Random(i))
+      levels.append(WORLD["monsters"][q["monster"]]["level"])
+    low = sum(1 for x in levels if x <= 6) / len(levels)
+    expect = 0.0  # 道ごとに、出る Lv のうち Lv6 以下の割合（道は均等に選ぶ）
+    for other in WORLD["neighbors"]["salina"]:
+      road = {WORLD["monsters"][m]["level"] for m, _ in WORLD["road_info"][("salina", other)]["monsters"]}
+      expect += sum(1 for x in road if x <= 6) / len(road) / len(WORLD["neighbors"]["salina"])
+    self.assertAlmostEqual(low, expect, delta=0.06)
 
   def test_every_road_has_monsters_for_every_level(self):
     for (a, b), info in WORLD["road_info"].items():  # 平原はどの道にもあるので、Lv1〜15 のどの勇者にも相手がいる
