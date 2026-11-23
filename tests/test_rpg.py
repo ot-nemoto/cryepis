@@ -33,7 +33,7 @@ class DisplayTest(unittest.TestCase):
     states = [game.new_state(WORLD, "h1", "あ" * 8)] + [play(n, f"h{n}") for n in (1, 10, 40, 90)]
     for state in states:
       lines = rpg.build_text(WORLD, state).splitlines()
-      self.assertEqual(lines[5], "")  # カードの 5 行のあとに詳細が続く
+      self.assertEqual(lines[5], "")  # 概要の 5 行のあとに詳細が続く
       self.assertTrue(lines[0].startswith("⚔️ "))
       self.assertTrue(lines[1].startswith("📍 "))
       self.assertTrue(lines[3].startswith("装備: "))
@@ -234,8 +234,8 @@ class HeroesTest(unittest.TestCase):
     self.assertEqual(rpg.clean_name("あ" * 20), "あ" * 16)  # 全角は 16 文字まで
     self.assertEqual(rpg.clean_name("a" * 40), "a" * 32)  # 半角は 32 文字まで
 
-  def test_long_names_fit_the_cards(self):
-    # 表示幅 32 の名前でも、ランキングのカードの出来事が読める（勇者の文章は詰めないので、名前も Lv・日も全部出る）
+  def test_long_names(self):
+    # 表示幅 32 の名前でも、ランキングのカードの出来事が読める。勇者の文章は詰めないので、名前も Lv・日も全部出る
     name = "あいうえおかきくけこさしすせそた"
     world = WORLD
     state = game.new_state(world, "h1", name)
