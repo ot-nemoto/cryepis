@@ -3,7 +3,7 @@
 
 ページ:
   index.html          ストーリー（world/story.md の物語・世界・歴史と、いまの冒険の状況）
-  map.html            世界の地図（拡大・移動ができる。場所や勇者の印にマウスを乗せると説明が出る。勇者の名前は地図の下の一覧）
+  map.html            世界の地図（拡大・移動ができる。場所や勇者の印にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、今日の出来事
   heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
@@ -301,18 +301,6 @@ def build_map(world: dict, entries: list[tuple[dict, dict]], today: date) -> str
     )
   else:
     body.append('<p class="note">地図はありません（world/map.json に layout がありません）。</p>')
-  body.append("<h2>勇者の居場所</h2>")
-  if entries:
-    rows = "".join(
-      f'<tr><td><a href="{hero_href(h["id"])}">{escape(h["name"])}</a></td>'
-      f'<td class="num">Lv.{s["hero"]["level"]}</td><td>{escape(rpg.location(world, s))}</td></tr>'
-      for h, s in entries
-    )
-    body.append(
-      f'<div class="scroll"><table><tr><th>勇者</th><th class="num">レベル</th><th>居場所</th></tr>{rows}</table></div>'
-    )
-  else:
-    body.append('<p class="note">まだ勇者がいません。</p>')
   return page("地図", "".join(body), "map.html", script=MAP_JS if svg else "")
 
 

@@ -80,7 +80,7 @@ class SiteTest(unittest.TestCase):
     (self.out / "old.html").write_text("x")
     website.write_site(WORLD, [], DAY, {}, self.out)
     self.assertFalse((self.out / "old.html").exists())
-    self.assertIn("まだ勇者がいません", (self.out / "map.html").read_text(encoding="utf-8"))
+    self.assertIn("まだ勇者がいません", (self.out / "heroes.html").read_text(encoding="utf-8"))
 
   def test_does_not_delete_other_directories(self):
     other = self.out.parent / "other"
@@ -108,8 +108,8 @@ class SiteTest(unittest.TestCase):
     root = ET.fromstring(svg)  # 正しい SVG として埋め込まれている
     self.assertEqual(list(root.iter("{http://www.w3.org/2000/svg}a")), [])  # 地図に名札（リンク）は出さない
     self.assertEqual(len([g for g in root.iter("{http://www.w3.org/2000/svg}g") if g.get("class") == "hero"]), 1)
-    rest = html[html.index("</svg>") :]  # 名前と詳細へのリンクは、地図の下の「勇者の居場所」
-    self.assertIn('<a href="heroes/h1.html">', rest)
+    self.assertNotIn("勇者の居場所", html)  # 地図のページに勇者の一覧は出さない（勇者のページで見る）
+    self.assertNotIn('href="heroes/h1.html"', html)
 
   def test_guild_shows_who_took_todays_quests(self):
     entries, guild, today = party(4, 3)
