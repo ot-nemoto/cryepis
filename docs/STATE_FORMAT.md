@@ -107,7 +107,7 @@
   "home_town": "salina",
   "road": null,
   "quest": {"type": "hunt", "name": "討伐", "template": "hunt", "town": "salina", "place": "eques",
-            "report": "salina", "monster": "wild_dog", "count": 4, "progress": 1, "level": [7, 12],
+            "report": "salina", "monster": "wild_dog", "count": 4, "progress": 1, "level": [1, 1],
             "deadline": null, "reward": {"exp": 112, "gold": 140, "item": [["none", 85], ["common", 10], ["rare", 5]]}},
   "season_stats": {"quests_done": 12, "quests_failed": 1, "kills": 61, "deaths": 0, "rares": []},
   "last": {"date": "2027-04-09", "actions": 3, "events": ["野犬を倒した (+17EXP)", "…"]},
