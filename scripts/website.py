@@ -1099,7 +1099,7 @@ def build_guide(world: dict) -> str:
 def build_hero(world: dict, hero: dict, state: dict) -> str:
   body = (
     f"<h2>{escape(hero['name'])}（{escape(hero['id'])}）</h2>"
-    f"<pre>{escape(rpg.build_text(world, state, fold=False))}</pre>"
+    f"<pre>{escape(rpg.build_text(world, state))}</pre>"
     '<p><a href="../heroes.html">勇者の一覧へ戻る</a></p>'
   )
   return page(hero["name"], body, "", depth=1)

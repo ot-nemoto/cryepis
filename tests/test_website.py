@@ -493,7 +493,7 @@ class SiteTest(unittest.TestCase):
       self.assertNotIn("<b>&悪", html)
       self.assertIn("&lt;b&gt;&amp;悪", html)
 
-  def test_hero_page_is_not_folded(self):
+  def test_hero_text_is_not_shortened(self):
     world = copy.deepcopy(WORLD)
     for item in world["items"].values():  # 名前を長くして、装備の行を長くする
       item["name"] *= 3
@@ -501,7 +501,8 @@ class SiteTest(unittest.TestCase):
     state = game.new_state(world, "h1", "勇者")
     state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "iron_shield": 1, "lifeblood_charm": 1}
     gear = "装備: " + rpg.gear_text(world, state)
-    self.assertNotIn(gear, rpg.build_text(world, state))  # Gist では幅に収まるように詰める
+    self.assertGreater(rpg.common.width(gear), rpg.common.LINE_MAX)  # Gist のカードの幅より長い行
+    self.assertIn(gear, rpg.build_text(world, state))  # 毎日の実行のログでも詰めない
     self.assertIn(escape(gear), website.build_hero(world, hero, state))
 
   def test_site_url_only_in_actions(self):
