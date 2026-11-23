@@ -2,36 +2,105 @@
   "id": "h5",
   "name": "KRIMHARTH",
   "trait": "sturdy",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-23",
   "hero": {
-    "level": 1,
-    "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
+    "level": 2,
+    "exp": 10,
+    "max_hp": 41,
+    "hp": 37,
+    "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
-    "base_dex": 6,
-    "gold": 60,
-    "potions": 1
+    "base_dex": 7,
+    "gold": 16,
+    "potions": 3
   },
-  "inventory": {},
+  "inventory": {
+    "wooden_helm": 1
+  },
   "place": "karun",
   "home_town": "karun",
   "road": null,
-  "quest": null,
-  "taken": [],
+  "quest": {
+    "type": "hunt",
+    "place": "eques",
+    "report": "karun",
+    "monster": "wild_dog",
+    "count": 3,
+    "template": "hunt",
+    "name": "討伐",
+    "rank": 1,
+    "text": "",
+    "steps": [
+      [
+        "hunt",
+        1
+      ],
+      [
+        "back",
+        1
+      ]
+    ],
+    "away": 1,
+    "town": "karun",
+    "progress": 2,
+    "level": [
+      1,
+      1
+    ],
+    "deadline": null,
+    "cost": 5,
+    "reward": {
+      "exp": 25,
+      "gold": 40,
+      "item": [
+        [
+          "none",
+          88
+        ],
+        [
+          "common",
+          10
+        ],
+        [
+          "rare",
+          2
+        ]
+      ]
+    },
+    "id": "2026-11-21-karun-2"
+  },
+  "taken": [
+    "2026-11-21-karun-2"
+  ],
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 3,
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-23",
+    "actions": 3,
+    "events": [
+      "カルンで木の兜を買った",
+      "カルンのギルドで依頼を受けた: ★ 討伐（カルンとエクエスの間の道で野犬を3体討伐）（行動力 5）",
+      "ゴブリンを倒した (+8EXP)",
+      "野犬を倒した (+6EXP)",
+      "レベルが上がった！ Lv.2",
+      "野犬を倒した (+6EXP)"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-23",
+      "actions": 3,
+      "text": "カルンで木の兜を買った / カルンのギルドで依頼を受けた: ★ 討伐（カルンとエクエスの間の道で野犬を3体討伐）（行動力 5） / ゴブリンを倒した (+8EXP) / 野犬を倒した (+6EXP) / レベルが上がった！ Lv.2 / 野犬を倒した (+6EXP)"
+    }
+  ],
   "seasons": []
 }
