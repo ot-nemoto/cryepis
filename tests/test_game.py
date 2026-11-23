@@ -1431,6 +1431,119 @@ class BattleDepthTest(unittest.TestCase):
     with mock.patch.object(day, "draw_once", side_effect=[None, "iron_sword"]):
       self.assertIsNone(day.draw([["none", 1]]))
 
+  def test_nothing_drops_when_the_town_has_no_such_rare(self):
+    world = with_rares()
+    state = G.new_state(world)
+    day = G.Day(world, state, START, random.Random(0))
+    self.assertIsNone(day.draw_once([["rare", 1]], None))  # 町のない抽選（宝箱など）には、レアはない
+    self.assertIsNone(day.draw_once([["epic", 1]], None))  # 上のレアがなく、その下のレアもなければ、何も出ない
+    self.assertEqual(day.draw_once([["epic", 1]], "salina"), "x_epic")  # その町に置いてあれば出る
+
+
+class FallPathsTest(unittest.TestCase):
+  """力尽きる経路（道の途中・出発・討伐の行き帰り・旅）。力尽きたら依頼は失敗し、お金と持ち物は残り、
+  最後に寄った町で目を覚まして、その日はもう行動しない。"""
+
+  HOME = "salina"
+
+  def hero_state(self, quest, place, road=None):
+    state = G.new_state(WORLD)
+    state.update(season=1, season_day=5, day=5, place=place, home_town=self.HOME, road=road, quest=quest)
+    state["hero"].update(gold=123, potions=0)
+    state["inventory"] = {"iron_sword": 1}
+    return state
+
+  def deliver(self, town, to):
+    quest = {"type": "deliver", "place": to, "report": to, "monster": None, "count": 1}
+    quest.update(template="deliver", name="配達", rank=1, text="")
+    return G.finish_quest(WORLD, quest, town)
+
+  def advance_until_fall(self, state):
+    """1 日（3 行動）進める。最初の道の出来事で力尽きる。道の出来事が何回起きたかを返す。"""
+    with mock.patch.object(G.Day, "road_event", autospec=True, return_value=False) as event:
+      G.advance(WORLD, state, START, 3)
+    return event.call_count
+
+  def assert_fallen(self, state, failed=1):
+    self.assertEqual((state["place"], state["road"], state["quest"]), (self.HOME, None, None))
+    self.assertEqual(state["season_stats"]["deaths"], 1)
+    self.assertEqual(state["season_stats"]["quests_failed"], failed)
+    self.assertEqual(state["hero"]["gold"], 123)  # お金・持ち物は減らない
+    self.assertEqual(state["inventory"], {"iron_sword": 1})
+    self.assertEqual(state["hero"]["hp"], G.stats(WORLD, state)["max_hp"])
+    self.assertTrue(any("力尽きた" in e for e in state["last"]["events"]))
+
+  def test_fall_in_the_middle_of_a_long_road(self):
+    # ムラリス →（6 行動）→ カルン の途中で力尽きる
+    state = self.hero_state(self.deliver("muralis", "karun"), "muralis", {"to": "karun", "left": 5})
+    self.assertEqual(self.advance_until_fall(state), 1)  # 残りの行動回数があっても、その日はもう動かない
+    self.assert_fallen(state)
+
+  def test_fall_when_leaving_for_a_delivery(self):
+    state = self.hero_state(self.deliver("salina", "eques"), "salina")
+    self.assertEqual(self.advance_until_fall(state), 1)
+    self.assert_fallen(state)
+
+  def test_fall_on_the_way_to_a_hunt(self):
+    quest = copy.deepcopy(a_hunt())
+    self.assertEqual(quest["steps"][0][0], "go")
+    state = self.hero_state(quest, TOWN)
+    self.assertEqual(self.advance_until_fall(state), 1)
+    self.assert_fallen(state)
+
+  def test_fall_on_the_way_back_from_a_hunt(self):
+    quest = copy.deepcopy(a_hunt())
+    quest.update(steps=[["back", 1]], progress=quest["count"], away=1)  # 討伐は終わって、帰り道
+    state = self.hero_state(quest, TOWN)
+    self.assertEqual(self.advance_until_fall(state), 1)
+    self.assert_fallen(state)
+
+  def test_fall_on_a_trip_is_not_a_failed_quest(self):
+    state = self.hero_state(None, "salina")
+    state["quest"] = G.patrol(WORLD, state, random.Random(0))
+    self.assertEqual(state["quest"]["type"], "patrol")
+    self.assertEqual(self.advance_until_fall(state), 1)
+    self.assert_fallen(state, failed=0)  # 旅（報酬のない依頼）は、失敗に数えない
+
+  def test_delivers_when_already_in_the_destination_town(self):
+    # 地図が変わって、依頼の届け先の町に戻されたときなど
+    state = self.hero_state(self.deliver("salina", "eques"), "eques")
+    day = day_of(state)
+    day.road_event = lambda a, b: True
+    self.assertTrue(day.act())
+    self.assertEqual(state["season_stats"]["quests_done"], 1)
+    self.assertTrue(any("依頼達成" in e for e in day.events))
+
+  def test_reports_when_the_finished_quest_is_in_the_report_town(self):
+    # 進み終えた依頼が、報告先の町にいるとき（ふだんの配達は、着いたらその場で報告するので、念のための動き）
+    quest = self.deliver("salina", "eques")
+    quest["progress"] = quest["count"]
+    state = self.hero_state(quest, "eques")
+    day = day_of(state)
+    day.road_event = lambda a, b: True
+    self.assertTrue(day.act())
+    self.assertEqual(state["season_stats"]["quests_done"], 1)
+
+  def test_goes_to_the_report_town_when_the_quest_is_done_elsewhere(self):
+    # 進み終えた依頼が、報告先とは別の町にいるとき（ふだんの配達は届け先で報告するので、念のための動き）
+    quest = self.deliver("salina", "eques")
+    quest.update(place="salina", report="eques", progress=1)
+    state = self.hero_state(quest, "salina")
+    day = day_of(state)
+    day.road_event = lambda a, b: True
+    self.assertTrue(day.act())
+    self.assertEqual(state["road"]["to"], "eques")
+
+  def test_a_finished_trip_is_cleared_without_a_report(self):
+    state = self.hero_state(None, "eques")
+    quest = G.patrol(WORLD, state, random.Random(0))
+    quest.update(place="eques", progress=quest["count"])  # 旅は報告しない（着いたら終わり）
+    state.update(quest=quest, taken=["今日はもう受けた"])
+    day = day_of(state)
+    day.road_event = lambda a, b: True
+    self.assertTrue(day.act())
+    self.assertIsNone(state["quest"])
+
 
 if __name__ == "__main__":
   unittest.main()
