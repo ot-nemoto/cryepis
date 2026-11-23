@@ -541,7 +541,7 @@ class BrokenDataTest(unittest.TestCase):
   def test_wrong_shapes_are_reported_in_readable_words(self):
     self.assertEqual(
       errors_after(lambda r: r["monsters"].__setitem__(33, None)),
-      ["monsters.json の monsters は、辞書の一覧にしてください"],
+      ["monsters.json の monsters は、辞書の一覧にしてください（辞書でないのは [33]）"],  # どの行か分かる
     )
     for change, words in (
       (lambda r: r["map"]["places"][0]["shop"].append([]), ["places[0]", "shop", "文字列の一覧"]),

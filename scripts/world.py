@@ -255,8 +255,12 @@ def _check_shape(c: _Check):
     """辞書の一覧。required でなければ、書かなくてよい（なければ空）。"""
     if value is None and not required:
       return []
-    if not isinstance(value, list) or not all(isinstance(r, dict) for r in value):
+    if not isinstance(value, list):
       err(f"{where} は、辞書の一覧にしてください")
+      return []
+    bad = [i for i, r in enumerate(value) if not isinstance(r, dict)]
+    if bad:  # どの行か分かるように、番号（0 から。先頭の数件）を添える
+      err(f"{where} は、辞書の一覧にしてください（辞書でないのは {', '.join(f'[{i}]' for i in bad[:5])}）")
       return []
     return value
 
