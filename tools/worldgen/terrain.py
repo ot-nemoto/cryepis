@@ -235,18 +235,21 @@ def write_png(path, kind, height):
     + chunk(b"IDAT", zlib.compress(raw, 9))
     + chunk(b"IEND", b"")
   )
-  open(path, "wb").write(png)
+  with open(path, "wb") as f:
+    f.write(png)
   return len(png), len(palette)
 
 
 def write_labels(path, png_name):
   texts = "".join(f'<text x="{x}" y="{y}" font-size="{s}" text-anchor="middle">{n}</text>' for n, (x, y), s in LABELS)
-  open(path, "w", encoding="utf-8").write(
+  svg = (
     f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">'
     f'<image href="{png_name}" width="{W}" height="{H}"/>'
     f'<g font-family="sans-serif" font-weight="bold" fill="#2b2b2b" stroke="#fff" '
     f'stroke-width="3" paint-order="stroke">{texts}</g></svg>'
   )
+  with open(path, "w", encoding="utf-8") as f:
+    f.write(svg)
 
 
 if __name__ == "__main__":

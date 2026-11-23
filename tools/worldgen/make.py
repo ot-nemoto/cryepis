@@ -34,7 +34,8 @@ def make_terrain():
 
   kind, height = terrain.generate()
   paths.CACHE.mkdir(exist_ok=True)
-  pickle.dump({"kind": kind, "height": height, "rivers": terrain.generate.rivers}, open(paths.TERRAIN, "wb"))
+  with open(paths.TERRAIN, "wb") as f:
+    pickle.dump({"kind": kind, "height": height, "rivers": terrain.generate.rivers}, f)
 
 
 def main():

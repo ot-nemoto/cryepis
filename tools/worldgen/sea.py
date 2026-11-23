@@ -106,7 +106,8 @@ def main():
     pts, cost = sea_path(a, b)
     routes.append({"from": a, "to": b, "cost": cost, "path": pts})
     assert check(pts) == 0, f"航路 {a}-{b} が陸の上を通っています"
-  json.dump(routes, open(paths.SEA, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+  with open(paths.SEA, "w", encoding="utf-8") as f:
+    json.dump(routes, f, ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":

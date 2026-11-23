@@ -14,4 +14,5 @@ BASE_SVG = CACHE / "map-base.svg"  # ベースの地図（vectorize.py）
 
 def kind():
   """地形のマス目（2px 単位、[y][x] → 地形の名前）。"""
-  return pickle.load(open(TERRAIN, "rb"))["kind"]
+  with open(TERRAIN, "rb") as f:
+    return pickle.load(f)["kind"]
