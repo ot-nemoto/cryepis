@@ -501,7 +501,7 @@ class SiteTest(unittest.TestCase):
     state = game.new_state(world, "h1", "勇者")
     state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "iron_shield": 1, "lifeblood_charm": 1}
     gear = "装備: " + rpg.gear_text(world, state)
-    self.assertNotIn(gear, rpg.build_text(world, state))  # Gist では幅に収まるように詰める
+    self.assertIn(gear, rpg.build_text(world, state))  # 毎日の実行のログでも詰めない
     self.assertIn(escape(gear), website.build_hero(world, hero, state))
 
   def test_site_url_only_in_actions(self):

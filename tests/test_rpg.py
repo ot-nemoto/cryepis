@@ -29,12 +29,10 @@ def load(hero_id):
 
 
 class DisplayTest(unittest.TestCase):
-  def test_card_fits_and_has_five_lines(self):
+  def test_text_starts_with_five_summary_lines(self):
     states = [game.new_state(WORLD, "h1", "あ" * 8)] + [play(n, f"h{n}") for n in (1, 10, 40, 90)]
     for state in states:
       lines = rpg.build_text(WORLD, state).splitlines()
-      for line in lines[:5]:
-        self.assertLessEqual(common.width(line), common.LINE_MAX, line)
       self.assertEqual(lines[5], "")  # カードの 5 行のあとに詳細が続く
       self.assertTrue(lines[0].startswith("⚔️ "))
       self.assertTrue(lines[1].startswith("📍 "))
@@ -237,14 +235,13 @@ class HeroesTest(unittest.TestCase):
     self.assertEqual(rpg.clean_name("a" * 40), "a" * 32)  # 半角は 32 文字まで
 
   def test_long_names_fit_the_cards(self):
-    # 表示幅 32 の名前でも、ランキングのカードの出来事と、勇者のカードの Lv・日が切れない
+    # 表示幅 32 の名前でも、ランキングのカードの出来事が読める（勇者の文章は詰めないので、名前も Lv・日も全部出る）
     name = "あいうえおかきくけこさしすせそた"
     world = WORLD
     state = game.new_state(world, "h1", name)
     game.advance(world, state, DAY)
     head = rpg.build_text(world, state).splitlines()[0]
-    self.assertTrue(head.endswith(f"Day {state['season_day']}"), head)
-    self.assertIn(name, rpg.build_text(world, state, fold=False))  # サイトでは名前を詰めない
+    self.assertEqual(head, f"⚔️ {name} Lv.{state['hero']['level']}  S{state['season']} Day {state['season_day']}")
     hero = {"id": "h1", "name": name}
     news = rpg.news([(hero, state)], DAY, rpg.BOARD_NAME_WIDTH)
     self.assertTrue(news[0].startswith(rpg.shorten(name, rpg.BOARD_NAME_WIDTH) + ": "), news)
