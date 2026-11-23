@@ -37,6 +37,7 @@ def a_hunt(town=TOWN):
 def with_rares():
   """南大陸の町に epic・legendary も置いた世界（今のデータには上のレアがないので、仕組みを確かめるため）。"""
   world = copy.deepcopy(WORLD)
+  world["season"]["rare_drops"] = True  # レアの配布を止めていても、しくみは確かめる
   world["items"]["x_epic"] = {
     "id": "x_epic",
     "name": "試しの盾",
@@ -448,10 +449,20 @@ class BattleAndItemTest(unittest.TestCase):
     self.assertIsNone(day.draw([["x_far", 1]], "salina"))  # ID を直接書いても出ない
 
   def test_every_town_gives_something_for_every_rarity(self):
-    day = day_of(G.new_state(WORLD))
-    for town in WORLD["towns"]:
-      for rarity in WORLD["rarities"]:
+    world = copy.deepcopy(WORLD)
+    world["season"]["rare_drops"] = True
+    day = G.Day(world, G.new_state(world), START, random.Random("t"))
+    for town in world["towns"]:
+      for rarity in world["rarities"]:
         self.assertIsNotNone(day.draw([[rarity, 1]], town), (town, rarity))
+
+  def test_rare_drops_can_be_stopped(self):
+    world = with_rares()
+    world["season"]["rare_drops"] = False
+    day = G.Day(world, G.new_state(world), START, random.Random("t"))
+    for key in ("rare", "epic", "legendary", "x_epic"):  # レアは当たっても何も出ない（ID を直接書いても）
+      self.assertEqual({day.draw([[key, 1]], "salina") for _ in range(20)}, {None}, key)
+    self.assertIsNotNone(day.draw([["common", 1]], "salina"))  # common は出る
 
   def test_quest_reward_uses_the_quest_town(self):
     world = with_rares()
@@ -849,6 +860,8 @@ class BalanceTest(unittest.TestCase):
     self.assertTrue(0.6 <= done / (done + failed), (done, failed))
 
   def test_rare_items_are_rare_but_not_absent(self):
+    if not WORLD["season"].get("rare_drops", True):
+      self.skipTest("レアの配布を止めている（season.json の rare_drops）")
     rares = [len(s["season_stats"]["rares"]) for s in self.results]
     # 1 シーズンに数個（中央値 9 ほど。討伐が 1 行動になって、こなす依頼が増えた #165）
     self.assertTrue(1 <= self.median(rares) <= 12, sorted(rares))

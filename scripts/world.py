@@ -245,6 +245,8 @@ def validate(raw: dict) -> list[str]:
     err(
       "season.json: road_battle_size は [[一度に出る数（1 以上の整数）, 重み（0 以上）], ...] にしてください（重みの合計は正）"
     )
+  if not isinstance(season.get("rare_drops", True), bool):
+    err("season.json: rare_drops は true か false にしてください（false ならレアのアイテムを出さない）")
   levels = season.get("encounter_levels")
   if (
     not isinstance(levels, list)
