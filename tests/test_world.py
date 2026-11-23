@@ -27,6 +27,27 @@ class DataTest(unittest.TestCase):
   def test_world_data_is_valid(self):
     self.assertEqual(W.validate(RAW), [])
 
+  def test_quest_texts_follow_the_story_rules(self):
+    """依頼の文は、民話の語り口の決まり（docs/MYTH.md の 6・7）を守る: 設定の言葉を使わず、星の思惑を断定しない。"""
+    texts = []
+
+    def walk(value):
+      if isinstance(value, str):
+        texts.append(value)
+      elif isinstance(value, list):
+        for v in value:
+          walk(v)
+      elif isinstance(value, dict):
+        for v in value.values():
+          walk(v)
+
+    for key in ("hunts", "deliveries", "town_quests"):
+      walk(RAW[key])
+    self.assertGreater(len(texts), 40)
+    for text in texts:
+      for word in ("創造主", "シーズン", "レベル", "経験値", "加護を与え", "利用"):
+        self.assertNotIn(word, text, text)  # 設定の言葉・星の思惑の断定は、作中の文に出さない
+
   def test_load_world_builds_routes(self):
     world = W.load_world()
     start = world["starts"][0]
