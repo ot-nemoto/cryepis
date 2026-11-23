@@ -135,6 +135,7 @@ jobs:
 
       # deploy-pages は、アップロード直後のアーティファクトが API から見えず（Found 0 artifact(s)）、たまに失敗する。
       # 一時的な問題なので、失敗したら少し待って 1 回だけやり直す（2 回とも失敗したときだけジョブを失敗にする）
+      # （待っても直らないとき、たとえばアップロードが登録されていないときは、Actions で Re-run failed jobs する）
       - id: deploy
         uses: actions/deploy-pages@v5
         continue-on-error: true
