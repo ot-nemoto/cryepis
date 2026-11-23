@@ -1,7 +1,7 @@
 {
   "id": "h13",
-  "name": "PRAETORIAN GUARD",
-  "trait": "swift",
+  "name": "MEDOCUS",
+  "trait": "sturdy",
   "season": null,
   "season_day": 0,
   "day": 0,
@@ -19,8 +19,8 @@
     "potions": 1
   },
   "inventory": {},
-  "place": "karun",
-  "home_town": "karun",
+  "place": "eques",
+  "home_town": "eques",
   "road": null,
   "quest": null,
   "taken": [],

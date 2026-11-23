@@ -1,7 +1,7 @@
 {
   "id": "h14",
-  "name": "MEDOCUS",
-  "trait": "sturdy",
+  "name": "KHNUBA",
+  "trait": "guard",
   "season": null,
   "season_day": 0,
   "day": 0,
@@ -19,8 +19,8 @@
     "potions": 1
   },
   "inventory": {},
-  "place": "eques",
-  "home_town": "eques",
+  "place": "karun",
+  "home_town": "karun",
   "road": null,
   "quest": null,
   "taken": [],
