@@ -33,9 +33,11 @@ def run(main, *argv):
 def exits(main, *argv):
   """main が SystemExit で止まるときの、メッセージ。"""
   with mock.patch.object(sys, "argv", ["tool", *argv]), contextlib.redirect_stdout(io.StringIO()):
-    with unittest.TestCase().assertRaises(SystemExit) as cm:
+    try:
       main()
-  return str(cm.exception)
+    except SystemExit as e:
+      return str(e)
+  raise AssertionError(f"引数 {argv} で止まらなかった")
 
 
 class StatValueTest(unittest.TestCase):
@@ -151,7 +153,8 @@ class BattleSimToolTest(unittest.TestCase):
     self.assertEqual(fit["spd"], DOG["spd"])
     rate, lost = B.fight(WORLD, fit, "lucky", 1, [], 0, 80)
     self.assertGreaterEqual(rate, 0.9)  # 勝てる強さ
-    self.assertTrue(lost is not None and lost < 0.6, lost)
+    self.assertIsNotNone(lost)
+    self.assertAlmostEqual(lost, 0.2, delta=0.1)  # 目標（20%）の近く
 
   def test_default_mode_prints_a_win_rate_per_trait(self):
     code, out = run(B.main, "-n", "10")
