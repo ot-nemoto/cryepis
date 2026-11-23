@@ -403,9 +403,7 @@ class BattleAndItemTest(unittest.TestCase):
   def test_keeps_going_on_the_road_when_hp_is_low(self):
     # ムラリス →（6 行動）→ カルン の 1 歩目。HP 1・回復薬なしでも引き返さずに進む
     state = self.low_hp_on_road("muralis", "karun", 5)
-    state["quest"] = G.patrol(WORLD, {**state, "place": "muralis"}, random.Random(0)) | {"place": "karun"}
     day = day_of(state)
-    day.rng = random.Random(0)
     day.road_event = lambda a, b: True  # 道の出来事は何も起きない
     day.act()
     self.assertEqual((state["place"], state["road"]), ("muralis", {"to": "karun", "left": 4}))
