@@ -23,7 +23,7 @@ Gist は Fine-grained PAT に対応していないため Classic PAT を使い�
 |---|---|---|
 | Secret | `GIST_PAT` | 手順 1 の Classic PAT |
 
-Repository variable は使わない（Gist の ID は `.state/heroes.json` に記録される）。
+Repository variable は使わない（ランキングの Gist の ID は `.state/board.json` に記録される）。
 勇者がいない間、毎日の実行は何もしない（keepalive だけコミットする）。
 
 `.state/` の記録は github-actions[bot] 名義で master に直接コミットされます（PR は通しません）。
@@ -35,7 +35,8 @@ master にブランチ保護（PR 必須など）を設定すると、このコ�
 |---|---|
 | `Gist API エラー 403/404` | PAT の `gist` スコープ不足・期限切れ、または Gist ID の誤り |
 | *Commit state* ステップで push が失敗する | master のブランチ保護で bot の直接 push が拒否されている |
-| 警告 `…を進められませんでした: …`（ジョブが失敗する） | その勇者だけの失敗（Gist の API エラーなど）。ほかの勇者は進んでいる。Gist ID の誤りや PAT を確認して、もう一度実行する |
+| 警告 `…を進められませんでした: …`（ジョブが失敗する） | その勇者だけの失敗（状態ファイルが読めないなど）。ほかの勇者は進んでいる。警告の中身を確認して、もう一度実行する |
+| 警告 `ランキングの Gist を更新できませんでした: …`（ジョブが失敗する） | PAT の期限切れ・スコープ不足など。勇者の状態は保存されている。PAT を確認して、もう一度実行する |
 | 手動実行（*New game* / *Retire hero*）が `Cancelled` になる | 同じ `concurrency` グループ（毎日の実行を含む）で待てるのは 1 件だけで、さらに後から起動した実行が先の待機中の実行を置き換える。1 件終わってから次を実行する（取り消された分はもう一度実行する） |
 | *New game* が `勇者は最大 30 人です` で失敗する | 現役の勇者が上限。*Retire hero* で引退させてから実行する |
 | 毎日の実行が `GIST_PAT を環境変数で指定してください` で失敗する | Secret `GIST_PAT` が未登録 |

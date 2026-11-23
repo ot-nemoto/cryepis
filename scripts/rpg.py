@@ -506,7 +506,7 @@ def new_game(world: dict, raw_name: str, today: date) -> int:
 
 
 def retire(key: str) -> int:
-  """ID か名前で勇者を引退させる（Gist と状態は残す）。"""
+  """ID か名前で勇者を引退させる（状態は残し、サイトの詳細のページも残る）。"""
   heroes = load_heroes()
   active = [h for h in heroes if h["active"]]
   # ID を優先して照合する（名前が ID と同じ勇者は作れない）
