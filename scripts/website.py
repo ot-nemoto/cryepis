@@ -560,7 +560,11 @@ def build_towns(world: dict) -> str:
     ]
     return [
       ("ギルドの規模", f'{size}（<a href="guild.html#{escape(town)}">掲示板を見る</a>）'),
-      ("依頼の報酬で出るレア", "<br>".join(label(i) for i in rares) or "-"),
+      (
+        "依頼の報酬で出るレア",
+        ("<br>".join(label(i) for i in rares) or "-")
+        + ("" if world["season"].get("rare_drops", True) else '<div class="note">今はレアの配布を止めています</div>'),
+      ),
       ("店の品ぞろえ", "<br>".join([label(i) for i in shop] + [potion])),
       ("道（行き先と行動回数）", "・".join(roads) or "-"),
     ]
@@ -650,6 +654,7 @@ def build_items(world: dict) -> str:
   slots = [slot for slot in W.SLOTS if rows[slot]]  # 開放した地域で手に入る装備のない種類は、タブを出さない
   body = [
     "<h2>アイテム一覧</h2>",
+    "" if world["season"].get("rare_drops", True) else '<p class="note">今はレア（★★ 以上）の配布を止めています。</p>',
     tab_bar([(slot, slot_label(slot)) for slot in slots]),
     rarity_filter([(r, game.rarity_mark(world, r)) for r in used], "条件に合うアイテムはありません。"),
   ]

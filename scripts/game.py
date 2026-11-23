@@ -733,6 +733,7 @@ class Day:
     """ドロップ表から抽選する。珍しさが当たったら、その珍しさのアイテムから均等に選ぶ。
     common は、開放した地域のもの（開放した町の店で売っている品）だけ。
     レア（common 以外）は、その町（town。依頼を出した町）の依頼で出るもの（items.json の towns）だけ。
+    season.json の rare_drops が false なら、レアが当たっても何も出ない（配布を止めている）。
     その町にない珍しさが当たったら、1 つ下の珍しさに落として選び直す（どの町にも rare は必ずある）。"""
     if not table:
       return None
@@ -741,6 +742,8 @@ class Day:
     if key == W.NONE:
       return None
     items, region = self.world["items"], self.world["region_items"]
+    if not self.cfg.get("rare_drops", True) and (items[key]["rarity"] if key in items else key) != W.COMMON:
+      return None  # レアの配布は止めている（season.json の rare_drops）。当たっても何も出ない
 
     def here(iid: str) -> bool:  # 出せるアイテムか（common は開放した地域のもの、レアはその町のもの）
       item = items[iid]

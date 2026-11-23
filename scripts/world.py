@@ -226,6 +226,8 @@ def validate(raw: dict) -> list[str]:
   for key, _ in season.get("treasure") or []:  # レアは依頼の報酬だけで出る
     if (key in rarities and key != COMMON) or items.get(key, {}).get("rarity", COMMON) != COMMON:
       err(f"season.json の treasure: {key!r} は宝箱からは出せません（レアは町の依頼の報酬だけで出る）")
+  if not isinstance(season.get("rare_drops", True), bool):
+    err("season.json: rare_drops は true か false にしてください（false ならレアのアイテムを出さない）")
   levels = season.get("encounter_levels")
   if (
     not isinstance(levels, list)
