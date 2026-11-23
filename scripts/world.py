@@ -43,6 +43,17 @@ TERRAIN_NAMES = {
   "volcano": "火山",
   "sea": "海",
 }
+TERRAIN_EMOJI = {  # 地図で道の地形を表す印
+  "plain": "🌾",
+  "forest": "🌲",
+  "jungle": "🌴",
+  "desert": "🏜",
+  "wetland": "🌿",
+  "snow": "❄",
+  "mountain": "⛰",
+  "volcano": "🌋",
+  "sea": "🌊",
+}
 TRAITS = ("first_strike", "poison", "swarm", "fierce", "armored", "thief")
 REWARD_STATS = ("hp", "atk", "def", "spd", "dex")  # 魔物の強さ点に使う能力（season.json の monster_reward）
 QUEST_TYPES = ("hunt", "deliver")
@@ -715,6 +726,15 @@ def road_monsters(terrain: list, monsters: list[dict]) -> list[tuple[str, float]
     here = [m["id"] for m in monsters if m["terrain"] == t and on_road(m)]  # ボス・強敵は道には出ない
     pool += [(mid, weight / len(here)) for mid in here]
   return pool
+
+
+def terrain_shares(monsters: dict, pool: list) -> list[tuple[str, float]]:
+  """道に出る魔物（[ID, 重み], ...）から、地形ごとの割合（戦いになったとき、その地形の魔物が出る割合）。多い順。"""
+  out: dict[str, float] = {}
+  for mid, w in pool:
+    out[monsters[mid]["terrain"]] = out.get(monsters[mid]["terrain"], 0) + w
+  total = sum(out.values()) or 1
+  return sorted(((t, w / total) for t, w in out.items()), key=lambda x: -x[1])
 
 
 def on_road(monster: dict) -> bool:

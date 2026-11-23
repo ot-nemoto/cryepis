@@ -284,14 +284,14 @@ class SiteTest(unittest.TestCase):
     for mid in shown:  # 開放した道に出る魔物
       self.assertIn(f"<td>{WORLD['monsters'][mid]['name']}</td>", south)
     self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の魔物は出さない
-    self.assertIn("サリナ〜エクエス（", south)  # 出る道と割合
+    self.assertNotIn("サリナ〜エクエス（", south)  # 出る道と割合は出さない（地図に地形の割合）
+    self.assertIn('<tr><td>野犬</td><td class="num">1</td><td>草原</td>', south)  # 名前の右に Lv と地形
+    self.assertLess(south.index("<td>野犬</td>"), south.index("<td>暴れ猪</td>"))  # Lv の順
     self.assertIn('<td class="icon"><span class="tag">群れ</span></td>', south)  # 性質は名前だけの枠の札
     self.assertNotIn("数が多く", south)  # 性質の説明は出さない
-    self.assertIn('<th class="icon">属性</th><th class="num">HP</th>', html)  # Lv の列は出さない
+    self.assertIn('<th class="icon">属性</th><th class="num">HP</th>', html)
     self.assertIn('<th class="num">速</th><th class="num">器</th><th class="num">EXP</th>', html)  # 器用さ
-    self.assertNotIn(">Lv<", html)
-    self.assertIn('<th>名前</th><th class="icon">性質</th>', html)  # 地形の列は出さない
-    self.assertNotIn("<th>地形</th>", html)
+    self.assertIn('<th>名前</th><th class="num">Lv</th><th>地形</th><th class="icon">性質</th>', html)
     self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 氷狼（アイテムと同じ枠の札）
     roads, boss = south.split('<h3 class="sub">ボス</h3>')  # ボスは道の魔物とは別の表
     self.assertNotIn("巣穴の主", roads)
@@ -394,11 +394,12 @@ class SiteTest(unittest.TestCase):
     world["areas"] = {}  # 地方がなくても、その他のまとまりに魔物を出す
     self.assertNotIn("まだ開放されていません", website.build_monsters(world))
     world = copy.deepcopy(WORLD)
-    info = world["road_info"][("salina", "eques")]
-    info["monsters"] = [("wild_dog", 1.0), ("wild_dog", 1.0), ("yeti", 0.01)]  # 同じ魔物が 2 度・ごく少ない魔物
+    for key in (("salina", "eques"), ("eques", "salina")):
+      world["road_info"][key]["monsters"] = [("wild_dog", 1.0), ("wild_dog", 1.0)]  # 同じ魔物が 2 度出ても 1 行
+    for key in [k for k in world["road_info"] if k not in (("salina", "eques"), ("eques", "salina"))]:
+      del world["road_info"][key]
     html = website.build_monsters(world)
-    self.assertEqual(html.count("サリナ〜エクエス（"), 2)  # 野犬は 1 つにまとめる
-    self.assertIn("サリナ〜エクエス（1%未満）", html)
+    self.assertEqual(html.count("<td>野犬</td>"), 1)
 
   def test_story_markdown(self):
     blocks = website.md_html(

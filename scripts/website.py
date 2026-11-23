@@ -8,7 +8,7 @@
   heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
-  monsters.html       開放した道に出る魔物とボス（地方ごとのタブ。性質・属性・強さ・出る道）
+  monsters.html       開放した道に出る魔物とボス（地方ごとのタブ。Lv・地形・性質・属性・強さ）
   guide.html          手引き（能力・勇者の特性・魔物の性質・属性と相性・戦いの決まりの説明）
   guild.html          町ごとのギルドの掲示板（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
@@ -673,68 +673,65 @@ def build_items(world: dict) -> str:
 
 
 # ---- 魔物 ---------------------------------------------------------------------------------
-MONSTER_STATS = ("hp", "atk", "def", "spd", "dex", "exp", "gold")  # 魔物のページの強さの列（Lv は出さない）
+MONSTER_STATS = ("hp", "atk", "def", "spd", "dex", "exp", "gold")  # 魔物のページの強さの列（Lv は名前の右に出す）
 MONSTER_STAT_NAMES = ("HP", "攻", "防", "速", "器", "EXP", "G")
 
 
 def build_monsters(world: dict) -> str:
-  """開放した道に出る魔物の一覧（地方ごとのタブ。性質・属性・強さ・出る道と、その道で出会う割合）。
-  並びは地形の順（同じ土地の魔物がまとまる）。地形の列は出さない（出る場所は「出る道」で分かる）。
-  道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
+  """開放した道に出る魔物の一覧（地方ごとのタブ。Lv・地形・性質・属性・強さ）。並びは Lv の順（同じ Lv は地形の順）。
+  どの道でどの地形の魔物が出やすいかは、地図に道ごとの地形の割合で出す（道で出会う魔物は勇者の Lv でも変わるので、
+  魔物ごとの「出る道と割合」は出さない）。道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
   ボスは、いるダンジョンの地方に、道の魔物とは別の表で出す（開放した町のある地方だけ）。"""
   places, monsters, traits = world["places"], world["monsters"], world["traits"]
   towns = [t for t, p in places.items() if p["type"] == "town"]
   order = {t: i for i, t in enumerate(W.TERRAINS)}
   place_order = {p: i for i, p in enumerate(places)}
 
-  def rate(r: float) -> str:  # 出会う割合（四捨五入で 0% にならないように）
-    return "1%未満" if r < 0.01 else f"{r:.0%}"
-
   def table(members: list[str]) -> str:
-    seen: dict[str, list[str]] = {}
+    seen: set[str] = set()
     for (a, b), info in world["road_info"].items():
       if place_order[a] > place_order[b] or not ({a, b} & set(members)):
         continue  # 同じ道は 1 度だけ。この地方（のまとまり）の町につながる道だけ
-      total = sum(w for _, w in info["monsters"]) or 1
-      weights: dict[str, float] = {}  # 同じ魔物が地形の重複などで 2 度出ても、1 つにまとめる
-      for mid, w in info["monsters"]:
-        weights[mid] = weights.get(mid, 0) + w
-      road = f"{places[a]['name']}〜{places[b]['name']}"
-      for mid, w in weights.items():
-        seen.setdefault(mid, []).append(f"{escape(road)}（{rate(w / total)}）")
+      seen |= {mid for mid, _ in info["monsters"]}
     if not seen:
       return '<div class="card"><p class="note">まだ開放されていません（この地方の道は通れません）。</p></div>'
     rows = [
-      monster_row(mid, "<br>".join(seen[mid]))
-      for mid in sorted(seen, key=lambda m: (order.get(monsters[m]["terrain"], 99), m))
+      monster_row(mid)
+      for mid in sorted(seen, key=lambda m: (monsters[m]["level"], order.get(monsters[m]["terrain"], 99), m))
     ]
     return (
-      monster_table(rows, "出る道（その道で出会う割合）")
+      monster_table(rows)
       + '<p class="note">HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
-      "出会う割合は、その道で戦いになったときに、その魔物が出る割合です。</p></div>"
+      '道で出会うのは、その道の地形の魔物のうち、勇者の Lv に近い魔物です（<a href="guide.html">手引き</a>）。'
+      '道ごとの地形の割合は<a href="map.html">地図</a>に出しています。</p></div>'
     )
 
-  def monster_row(mid: str, where: str) -> str:  # 魔物の 1 行（where は「出る道」「いる場所」の欄の HTML）
+  def monster_row(mid: str, where: str | None = None) -> str:  # 魔物の 1 行（where は「いる場所」などの欄の HTML）
     m = monsters[mid]
     trait = traits.get(m.get("trait"), {})
     return (
       f"<tr><td>{escape(m['name'])}</td>"
+      f'<td class="num">{m["level"]}</td><td>{escape(W.TERRAIN_NAMES.get(m["terrain"], m["terrain"]))}</td>'
       + (
         f'<td class="icon"><span class="tag">{escape(trait["name"])}</span></td>' if trait else '<td class="icon"></td>'
       )
       + element_cell(world, m.get("element"))
       + "".join(f'<td class="num">{m[k]}</td>' for k in MONSTER_STATS)
-      + f"<td>{where}</td></tr>"
+      + (f"<td>{where}</td>" if where is not None else "")
+      + "</tr>"
     )
 
-  def monster_table(rows: list[str], where: str) -> str:  # 魔物の表（カードを開いたまま返す。閉じるのは呼ぶ側）
+  def monster_table(rows: list[str], where: str | None = None) -> str:  # 魔物の表（カードを開いたまま返す）
     return (
       '<div class="card"><div class="scroll"><table class="wide-table monsters"><colgroup><col style="width:7em">'
-      '<col style="width:5em"><col style="width:5em">'
+      '<col style="width:3em"><col style="width:4em"><col style="width:5em"><col style="width:5em">'
       + '<col style="width:3.5em">' * len(MONSTER_STATS)
-      + '<col></colgroup><tr><th>名前</th><th class="icon">性質</th><th class="icon">属性</th>'
+      + ("<col>" if where is not None else "")
+      + '</colgroup><tr><th>名前</th><th class="num">Lv</th><th>地形</th>'
+      '<th class="icon">性質</th><th class="icon">属性</th>'
       + "".join(f'<th class="num">{name}</th>' for name in MONSTER_STAT_NAMES)
-      + f"<th>{where}</th></tr>"
+      + (f"<th>{where}</th>" if where is not None else "")
+      + "</tr>"
       + "".join(rows)
       + "</table></div>"
     )
@@ -878,6 +875,13 @@ def build_guide(world: dict) -> str:
       "勇者は戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える。"
       "苦手な属性の武器しかなく、持たないほうが効くときは、武器を持たずに戦う。"
       "装飾品は、弱点を突ける属性のものを持っていれば、その戦いだけ着け替える（苦手な属性なら外す）",
+    ),
+    (
+      "道で出会う魔物",
+      "戦いになったら、まず道の地形を地図に出ている割合で決め、その地形の魔物のうち、Lv が勇者の Lv "
+      + "〜".join(f"{d:+d}" for d in cfg["encounter_levels"])
+      + " の魔物から出る（同じ地形の中では同じくらいずつ）。Lv の合う魔物のいない地形は出ず、その分ほかの地形が出る。"
+      "範囲に合う魔物がどの地形にもいなければ、いちばん近い Lv の魔物",
     ),
     ("強敵", "道では出会わない。町の討伐の依頼で狙って戦う。依頼は、魔物のレベル以上の勇者だけが受けられる"),
     ("ボス", "道では出会わない。ダンジョンの奥にいる"),
