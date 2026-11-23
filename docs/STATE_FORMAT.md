@@ -5,7 +5,7 @@
 
 | ファイル | 書き込み元 | 中身 |
 |---|---|---|
-| [`heroes.json`](#heroesjson) | `scripts/rpg.py`（New game / Retire hero） | 勇者管理シート（勇者の一覧と Gist の ID） |
+| [`heroes.json`](#heroesjson) | `scripts/rpg.py`（New game / Retire hero） | 勇者管理シート（勇者の一覧） |
 | [`board.json`](#boardjson) | `scripts/rpg.py`（最初の毎日の実行） | ランキングの Gist の ID と URL |
 | [`guild.json`](#guildjson) | `scripts/rpg.py`（毎日の実行） | 町ごとのギルドの掲示板（日をまたいで残る。早い者勝ち） |
 | [`heroes/<id>.json`](#heroesidjson) | `scripts/rpg.py` | 勇者ごとの状態・持ち物・日誌・シーズンの記録 |
@@ -37,8 +37,6 @@
 | `name` | 勇者の名前（表示幅 32 まで。全角 16 文字・半角 32 文字） |
 | `created` | 作った日（JST） |
 | `active` | 現役か。`false`（引退）の勇者は毎日の更新の対象外。現役は最大 30 人 |
-
-以前は勇者ごとに Gist を作っていたため、古い行には `gist_id` / `gist_url` が残っています。今は使いません（その Gist も更新しません）。
 
 ---
 
@@ -97,25 +95,25 @@
 {
   "id": "h1",
   "name": "アリス",
-  "season": 1,
+  "season": 2,
   "season_day": 40,
-  "day": 40,
-  "last_date": "2027-01-09",
+  "day": 130,
+  "last_date": "2027-04-09",
   "trait": "swift",
   "hero": {"level": 12, "exp": 120, "max_hp": 118, "hp": 117, "base_atk": 24, "base_def": 15, "base_spd": 25, "base_dex": 20,
            "gold": 1587, "potions": 3},
   "inventory": {"wooden_sword": 1, "iron_sword": 1, "iron_shield": 1, "lucky_charm": 1},
-  "place": "lost_forest",
-  "home_town": "town_mori",
+  "place": "salina",
+  "home_town": "salina",
   "road": null,
-  "quest": {"type": "hunt", "name": "討伐", "template": "hunt", "town": "town_mori", "place": "lost_forest",
-            "report": "town_mori", "monster": "wolf", "count": 4, "progress": 1, "level": [7, 12],
-            "deadline": "2027-01-14", "reward": {"exp": 112, "gold": 140, "item": [["none", 85], ["common", 10], ["rare", 5]]}},
+  "quest": {"type": "hunt", "name": "討伐", "template": "hunt", "town": "salina", "place": "eques",
+            "report": "salina", "monster": "wild_dog", "count": 4, "progress": 1, "level": [7, 12],
+            "deadline": null, "reward": {"exp": 112, "gold": 140, "item": [["none", 85], ["common", 10], ["rare", 5]]}},
   "season_stats": {"quests_done": 12, "quests_failed": 1, "kills": 61, "deaths": 0, "rares": []},
-  "last": {"date": "2027-01-09", "actions": 4, "events": ["ウルフを倒した (+17EXP)", "…"]},
-  "journal": [{"date": "2027-01-09", "actions": 4, "text": "ウルフを倒した (+17EXP) / …"}],
-  "seasons": [{"season": 0, "days": 90, "level": 21, "quests_done": 30, "quests_failed": 2, "kills": 144,
-               "deaths": 1, "rares": ["blue_flame_sword"], "ended_on": "2026-11-30"}]
+  "last": {"date": "2027-04-09", "actions": 3, "events": ["野犬を倒した (+17EXP)", "…"]},
+  "journal": [{"date": "2027-04-09", "actions": 3, "text": "野犬を倒した (+17EXP) / …"}],
+  "seasons": [{"season": 1, "days": 90, "level": 21, "quests_done": 30, "quests_failed": 2, "kills": 144,
+               "deaths": 1, "rares": ["blue_flame_sword"], "ended_on": "2027-02-28"}]
 }
 ```
 

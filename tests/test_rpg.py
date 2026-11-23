@@ -111,9 +111,7 @@ class DisplayTest(unittest.TestCase):
 
   def test_board_card_fits_and_ranks(self):
     names = ["アリス", "ボブ", "ゴールドヒルデガルト", "あ" * 8]
-    entries = [
-      ({"id": f"h{i}", "name": n, "gist_url": f"https://g/{i}"}, play(30, f"h{i}")) for i, n in enumerate(names)
-    ]
+    entries = [({"id": f"h{i}", "name": n}, play(30, f"h{i}")) for i, n in enumerate(names)]
     today = DAY + timedelta(days=29)
     lines = rpg.build_board(WORLD, entries, today).splitlines()
     for line in lines[:5]:
@@ -132,7 +130,7 @@ class DisplayTest(unittest.TestCase):
     self.assertIn("■ アリス  Lv.", text)
 
   def test_board_before_the_season_and_for_heroes_not_started(self):
-    entries = [({"id": "h1", "name": "アリス", "gist_url": "u"}, game.new_state(WORLD, "h1", "アリス"))]
+    entries = [({"id": "h1", "name": "アリス"}, game.new_state(WORLD, "h1", "アリス"))]
     lines = rpg.build_board(WORLD, entries, DAY - timedelta(days=3)).splitlines()
     self.assertIn("開幕前", lines[0])
     self.assertIn("今日も勇者たちは冒険中", lines[4])
@@ -142,7 +140,7 @@ class DisplayTest(unittest.TestCase):
     for i, exp in enumerate((5, 30, 10)):
       state = play(1, f"h{i}")
       state["hero"].update(level=13, exp=exp)
-      entries.append(({"id": f"h{i}", "name": f"勇者{i}", "gist_url": "u"}, state))
+      entries.append(({"id": f"h{i}", "name": f"勇者{i}"}, state))
     line = rpg.build_board(WORLD, entries, DAY).splitlines()[1]
     self.assertEqual(line.count("🥇"), 3, line)
 
@@ -167,7 +165,7 @@ class DisplayTest(unittest.TestCase):
         "ended_on": "2027-02-28",
       }
     ]
-    text = rpg.build_board(WORLD, [({"id": "h1", "name": "アリス", "gist_url": "u"}, state)], DAY)
+    text = rpg.build_board(WORLD, [({"id": "h1", "name": "アリス"}, state)], DAY)
     self.assertIn("シーズン1: 最高レベル アリス Lv.22  討伐数 アリス 150体", text)
 
   def test_highlights_prefer_important_events_and_merge_level_ups(self):

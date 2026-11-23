@@ -23,7 +23,7 @@ Gist は Fine-grained PAT に対応していないため Classic PAT を使い�
 |---|---|---|
 | Secret | `GIST_PAT` | 手順 1 の Classic PAT |
 
-Repository variable は使わない（Gist の ID は `.state/heroes.json` に記録される）。
+Repository variable は使わない（ランキングの Gist の ID は `.state/board.json` に記録される）。
 勇者がいない間、毎日の実行は何もしない（keepalive だけコミットする）。
 
 `.state/` の記録は github-actions[bot] 名義で master に直接コミットされます（PR は通しません）。

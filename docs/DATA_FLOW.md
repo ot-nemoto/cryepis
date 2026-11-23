@@ -31,7 +31,7 @@ flowchart LR
     ranking["ランキングの Gist<br/>（Pin する）"]
 
     world --> rpg
-    heroes -->|"現役の勇者と Gist の ID"| rpg
+    heroes -->|"現役の勇者"| rpg
     heroState <-->|"前日の状態を読み、今日の分を書く"| rpg
     heroState -->|"冒険の様子"| site
     world --> site
@@ -52,7 +52,7 @@ flowchart LR
 | ファイル | 書き込み元 | 中身 | 使い道 |
 |---|---|---|---|
 | `world/*.json` | 人（手で編集） | テキスト RPG の世界（シーズン・MAP・敵・アイテム・ギルドの依頼）。形式は README の「世界を広げる」 | `rpg.py` の入力（Test で検証してから使う） |
-| `.state/heroes.json` | `rpg.py`（New game / Retire hero） | 勇者の一覧（ID・名前・Gist の ID と URL・作成日・現役かどうか）。現役は最大 30 人 | 毎日の更新の対象と、更新先の Gist |
+| `.state/heroes.json` | `rpg.py`（New game / Retire hero） | 勇者の一覧（ID・名前・作成日・現役かどうか）。現役は最大 30 人 | 毎日の更新の対象 |
 | `.state/heroes/<id>.json` | `rpg.py` | 勇者の状態（場所・HP・レベル・依頼など）、持ち物、直近 30 日の日誌、シーズンの記録 | 翌日の続きと、Gist の表示 |
 | `.state/board.json` | `rpg.py`（最初の毎日の実行） | ランキングの Gist の ID と URL | 毎日更新するランキングの Gist |
 | `.state/guild.json` | `rpg.py`（毎日の実行） | 町ごとのギルドの掲示板（日をまたいで残る。受付中・受注中・達成・失敗） | 勇者が依頼を受ける（早い者勝ち）。サイトのギルドのページで、受付の残り日数と受けた勇者を出す |
