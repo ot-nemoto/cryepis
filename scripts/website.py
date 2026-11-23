@@ -321,7 +321,7 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
     rows = "".join(
       f'<tr><td class="num">{r}</td><td><a href="{hero_href(h["id"])}">{escape(h["name"])}</a></td>'
       f'<td class="num">{"Lv." if title == "レベル" else ""}{value(s)}{"" if title == "レベル" else unit}</td></tr>'
-      for r, h, s in rpg.ranked(views, key)
+      for r, h, s in rpg.ranked(views, key)[: rpg.RANKING_TOP]
     )
     cards.append(
       f'<div class="card"><h3>{escape(title)}</h3>'
