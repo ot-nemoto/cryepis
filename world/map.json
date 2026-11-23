@@ -377,7 +377,7 @@
    "area": "austral_land",
    "region": "南の凍原",
    "emoji": "🦌",
-   "text": "大草原の遊牧民が、夏にトナカイを連れて移り住む村。毛皮と干し肉の村。南壁山脈の巣穴から下りてくる魔物に悩まされている。トナカイの骨は、冬のうちに雪へ返す決まりだ",
+   "text": "大草原の遊牧民が、夏にトナカイを連れて移り住む村。毛皮と干し肉の村で、南壁山脈の巣穴から下りてくる魔物に悩まされている。トナカイの骨は、冬のうちに雪へ返す決まりだ",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [935,875],
    "quests_per_day": 3
