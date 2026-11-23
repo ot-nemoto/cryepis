@@ -294,7 +294,15 @@ class SiteTest(unittest.TestCase):
     for t in ("plain", "wetland", "mountain", "forest", "snow"):
       self.assertIn(f'class="chip" data-f="{t}"', head)
     self.assertNotIn('data-f="sea"', head)
-    self.assertIn('<span class="f-label">地形</span>', head)
+    self.assertIn('data-f="world"', head)  # 強敵は WORLD、ボスは RAID で絞り込める
+    self.assertIn('data-f="raid"', head)
+    self.assertIn(
+      '<tr data-f="world"><td>雪男</td><td class="num">10</td><td><span class="habitat">WORLD</span></td>', south
+    )
+    self.assertIn(
+      '<tr data-f="raid"><td>巣穴の主</td><td class="num">15</td><td><span class="habitat">RAID</span></td>', south
+    )
+    self.assertIn('<span class="f-label">生息地</span>', head)
     self.assertIn('id="f-none"', html)
     self.assertEqual(south.count('<div class="card board">'), 3)  # 道の魔物・強敵・ボス（絞り込みで隠す単位）
     roads = south[: south.index("<table")]  # 魔物の表の上に、この地方の街道と地形の割合
@@ -308,7 +316,7 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("数が多く", south)  # 性質の説明は出さない
     self.assertIn('<th class="icon">属性</th><th class="num">HP</th>', html)
     self.assertIn('<th class="num">速</th><th class="num">器</th><th class="num">EXP</th>', html)  # 器用さ
-    self.assertIn('<th>名前</th><th class="num">Lv</th><th>地形</th><th class="icon">性質</th>', html)
+    self.assertIn('<th>名前</th><th class="num">Lv</th><th>生息地</th><th class="icon">性質</th>', html)
     self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 氷狼（アイテムと同じ枠の札）
     roads, boss = south.split('<h3 class="sub">ボス</h3>')  # ボスは道の魔物とは別の表
     self.assertNotIn("巣穴の主", roads)

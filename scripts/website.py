@@ -121,6 +121,8 @@ h3.sub{font-size:15px;margin:18px 0 0}
 .road svg{width:64px;height:64px;flex:none}
 .road .name{font-weight:bold;font-size:14px}
 .road ul{list-style:none;margin:2px 0 0;padding:0;font-size:13px}
+.habitat{display:inline-block;padding:0 6px;border:1px solid var(--sub);border-radius:4px;font-size:11px;
+font-weight:bold;letter-spacing:.06em;color:var(--sub)}
 .tdot{display:inline-block;width:.7em;height:.7em;border-radius:50%;margin-right:5px;vertical-align:-.02em}
 h4.sub{font-size:14px;margin:16px 0 4px}
 .levels{max-width:420px}
@@ -702,6 +704,21 @@ def terrain_label(terrain: str) -> str:
   )
 
 
+HABITATS = {"world": "WORLD", "raid": "RAID"}  # 道では出会わない魔物の生息地（強敵は WORLD、ボスは RAID）
+
+
+def habitat(monster: dict) -> str:
+  """魔物の生息地（絞り込みの値）。道の魔物は地形、強敵は world、ボスは raid。"""
+  return "raid" if monster.get("boss") else "world" if monster.get("elite") else monster["terrain"]
+
+
+def habitat_label(hid: str) -> str:
+  """生息地の表示（地形は色の丸と名前、強敵・ボスは WORLD・RAID の札）。"""
+  if hid in HABITATS:
+    return f'<span class="habitat">{escape(HABITATS[hid])}</span>'
+  return terrain_label(hid)
+
+
 def terrain_shares(monsters: dict, pool: list) -> list[tuple[str, float]]:
   """道に出る魔物（[ID, 重み], ...）から、地形ごとの割合（戦いになったとき、その地形が選ばれる割合）。多い順。"""
   out: dict[str, float] = {}
@@ -763,8 +780,8 @@ def build_monsters(world: dict) -> str:
     m = monsters[mid]
     trait = traits.get(m.get("trait"), {})
     return (
-      f'<tr data-f="{escape(m["terrain"])}"><td>{escape(m["name"])}</td>'
-      f'<td class="num">{m["level"]}</td><td>{terrain_label(m["terrain"])}</td>'
+      f'<tr data-f="{escape(habitat(m))}"><td>{escape(m["name"])}</td>'
+      f'<td class="num">{m["level"]}</td><td>{habitat_label(habitat(m))}</td>'
       + (
         f'<td class="icon"><span class="tag">{escape(trait["name"])}</span></td>' if trait else '<td class="icon"></td>'
       )
@@ -780,7 +797,7 @@ def build_monsters(world: dict) -> str:
       '<col style="width:3em"><col style="width:4em"><col style="width:5em"><col style="width:5em">'
       + '<col style="width:3.5em">' * len(MONSTER_STATS)
       + ("<col>" if where is not None else "")
-      + '</colgroup><tr><th>名前</th><th class="num">Lv</th><th>地形</th>'
+      + '</colgroup><tr><th>名前</th><th class="num">Lv</th><th>生息地</th>'
       '<th class="icon">性質</th><th class="icon">属性</th>'
       + "".join(f'<th class="num">{name}</th>' for name in MONSTER_STAT_NAMES)
       + (f"<th>{where}</th>" if where is not None else "")
@@ -855,13 +872,12 @@ def build_monsters(world: dict) -> str:
   groups = area_groups(world, towns)
   guide = '<p class="note">性質・属性・素早さなどの説明は、<a href="guide.html">手引き</a>にまとめています。</p>'
   on_roads = {m for info in world["road_info"].values() for m, _ in info["monsters"]}
-  used = {monsters[m]["terrain"] for m in on_roads} | {
-    m["terrain"] for m in monsters.values() if m.get("elite") or m.get("boss")
-  }
-  chips = [(t, terrain_label(t)) for t in W.TERRAINS if t in used]
+  used = {monsters[m]["terrain"] for m in on_roads}
+  chips = [(t, habitat_label(t)) for t in W.TERRAINS if t in used]
+  chips += [(h, habitat_label(h)) for h in HABITATS if any(habitat(m) == h for m in monsters.values())]
   body = [
     "<h2>魔物の情報</h2>",
-    chip_filter("地形", chips, "条件に合う魔物はいません。"),
+    chip_filter("生息地", chips, "条件に合う魔物はいません。"),
     tab_bar([(aid, a["name"]) for aid, a, _ in groups]),
     guide,
   ]
