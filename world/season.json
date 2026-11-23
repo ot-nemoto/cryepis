@@ -12,7 +12,6 @@
   "max_level": 20,
   "potion": {"price": 15, "heal_rate": 0.5, "keep": 3},
   "rest_heal_rate": 0.25,
-  "retreat_hp_rate": 0.3,
   "actions_per_day": 3,
   "quest_open_days": 3,
   "deliver_range": 6,
