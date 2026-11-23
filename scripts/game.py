@@ -168,15 +168,16 @@ QUEST_TYPES = ("hunt", "deliver", "patrol")
 
 
 def hunt_steps_ok(quest: dict) -> bool:
-  """討伐の段取りが、進み（progress）と合っているか。段取りが空なのに倒し終えていない、残りの討伐の数が
-  count - progress と違う、などは壊れている（前に掲示板と段取りを共有していたころに壊れた依頼）。"""
+  """討伐の段取りが、進み（progress）と合っているか。段取りが空なのに倒し終えていない、討伐の段取りが残っているのに
+  倒し終えている・残っていないのに倒し終えていない、などは壊れている（前に掲示板と段取りを共有していたころに壊れた依頼）。
+  討伐の段取りの行動力は問わない（前の形式の「1 体 1 行動」の段取りも、そのまま 1 行動で残りを連戦する）。"""
   steps, progress, count = quest.get("steps"), quest.get("progress", 0), quest.get("count")
   if not isinstance(steps, list) or not steps or not isinstance(count, int) or not isinstance(progress, int):
     return False
   if not all(isinstance(p, list) and len(p) == 2 and isinstance(p[1], int) and p[1] > 0 for p in steps):
     return False
-  left = sum(n for phase, n in steps if phase == "hunt")
-  return left == count - progress if left else progress >= count
+  hunting = any(phase == "hunt" for phase, _ in steps)
+  return progress < count if hunting else progress >= count
 
 
 def elite_ok(world: dict, quest: dict) -> bool:
@@ -428,9 +429,9 @@ HUNT_TRIP_MAX = 2  # 討伐の狩り場までの行動力の上限（狩り場�
 
 
 def hunt_steps(world: dict, town: str, to: str, count: int) -> list[list]:
-  """討伐の段取り: 行き（狩り場まで）→ 討伐（1 行動で 1 体）→ 帰り。[[段取り, 残りの行動力], ...]。"""
+  """討伐の段取り: 行き（狩り場まで）→ 討伐（何体いても 1 行動で連戦）→ 帰り。[[段取り, 残りの行動力], ...]。"""
   trip = min(HUNT_TRIP_MAX, -(-world["roads"][(town, to)] // 2))
-  return [["go", trip], ["hunt", count], ["back", trip]]
+  return [["go", trip], ["hunt", 1], ["back", trip]]
 
 
 def finish_quest(world: dict, quest: dict, town: str) -> dict:
@@ -868,10 +869,15 @@ class Day:
     info = self.world["road_info"][(a, b)]
     kinds, weights = zip(*self.cfg["road_events"].items())
     kind = self.rng.choices(kinds, weights)[0]
-    if kind == "battle":
+    if kind == "battle":  # 何体か一度に出ることがある（season.json の road_battle_size）。1 体ずつ連戦する
       mids, mw = zip(*encounters(self.world, info["monsters"], self.hero["level"]))
-      if not self.battle(self.world["monsters"][self.rng.choices(mids, mw)[0]]):
-        return False
+      sizes, sw = zip(*self.cfg["road_battle_size"])
+      group = [self.world["monsters"][m] for m in self.rng.choices(mids, mw, k=self.rng.choices(sizes, sw)[0])]
+      if len(group) > 1:
+        self.log("魔物が" + "・".join(m["name"] for m in group) + "の" + f"{len(group)}体で現れた")
+      for monster in group:
+        if not self.battle(monster):
+          return False
     elif kind == "treasure":
       iid = self.draw(self.cfg["treasure"])
       if iid:
@@ -934,17 +940,22 @@ class Day:
       self.log(f"HP が心もとないので{world['places'][origin]['name']}へ引き返した")
 
   def hunt_step(self, quest: dict) -> bool:
-    """討伐の依頼を 1 行動ぶん進める（行き・帰りは道の出来事、討伐は目的の魔物と 1 回戦う）。"""
+    """討伐の依頼を 1 行動ぶん進める（行き・帰りは道の出来事。討伐は 1 行動で、残りの目的の魔物と 1 体ずつ連戦する。
+    HP は減ったまま次の魔物へ。倒すたびに経験値・お金が入り、途中で力尽きても倒した分は残る）。"""
     if not quest.get("steps"):  # 段取りが壊れている（読み込みで捨てるので、ふつうは起きない）。止まらずに失敗にする
       self.fail_quest("段取りが壊れていた")
       return True
     phase = quest["steps"][0]
     if phase[0] == "hunt":
-      if not self.battle(self.world["monsters"][quest["monster"]]):
-        return False
-      quest["progress"] += 1
-      if quest["progress"] >= quest["count"]:
-        self.log(f"討伐の目標を果たした（{quest['count']}体）")
+      left = quest["count"] - quest["progress"]
+      if left > 1:
+        self.log(f"{self.world['monsters'][quest['monster']]['name']}が{left}体現れた")
+      while quest["progress"] < quest["count"]:
+        if not self.battle(self.world["monsters"][quest["monster"]]):
+          return False
+        quest["progress"] += 1
+      self.log(f"討伐の目標を果たした（{quest['count']}体）")
+      phase[1] = 1  # 何体いても 1 行動（前の形式の段取りも、ここで終わる）
     else:
       if not self.road_event(quest["report"], quest["place"]):
         return False
