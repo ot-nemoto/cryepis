@@ -1,3 +1,4 @@
+import ast
 import copy
 import sys
 import tempfile
@@ -14,6 +15,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import game  # noqa: E402
 import mapsvg  # noqa: E402
 import rpg  # noqa: E402
+import view  # noqa: E402
 import website  # noqa: E402
 import world as W  # noqa: E402
 
@@ -528,9 +530,9 @@ class SiteTest(unittest.TestCase):
     hero = {"id": "h1", "name": "勇者"}
     state = game.new_state(world, "h1", "勇者")
     state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "iron_shield": 1, "lifeblood_charm": 1}
-    gear = "装備: " + rpg.gear_text(world, state)
+    gear = "装備: " + view.gear_text(world, state)
     self.assertGreater(rpg.common.width(gear), rpg.common.LINE_MAX)  # Gist のカードの幅より長い行
-    self.assertIn(gear, rpg.build_text(world, state))  # 毎日の実行のログでも詰めない
+    self.assertIn(gear, view.build_text(world, state))  # 毎日の実行のログでも詰めない
     self.assertIn(escape(gear), website.build_hero(world, hero, state))
 
   def test_site_url_only_in_actions(self):
@@ -539,6 +541,15 @@ class SiteTest(unittest.TestCase):
       self.assertIn("https://owner.github.io/cryepis/", rpg.build_board(WORLD, [], DAY))
     with mock.patch.dict("os.environ", {}, clear=True):
       self.assertIsNone(rpg.site_url())
+
+
+class ImportsTest(unittest.TestCase):
+  def test_website_does_not_depend_on_rpg(self):
+    """サイトの書き出しは、勇者の登録やランキングの Gist の更新（rpg.py）を読み込まない（表示は view.py、状態は store.py）。"""
+    tree = ast.parse(Path(website.__file__).read_text(encoding="utf-8"))
+    imported = {a.name.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
+    imported |= {n.module.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module}
+    self.assertNotIn("rpg", imported)
 
 
 class MapTitleTest(unittest.TestCase):
