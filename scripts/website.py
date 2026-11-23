@@ -8,7 +8,7 @@
   heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
-  monsters.html       開放した道に出る魔物とボス（地方ごとのタブ。Lv・地形・性質・属性・強さ）
+  monsters.html       開放した道に出る魔物とボス（地方ごとのタブ。街道の地形の割合・Lv・地形・性質・属性・強さ）
   guide.html          手引き（能力・勇者の特性・魔物の性質・属性と相性・戦いの決まりの説明）
   guild.html          町ごとのギルドの掲示板（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
   heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import math
 import os
 import shutil
 import sys
@@ -54,9 +55,13 @@ PAGES = (
 
 CSS = """
 :root{--bg:#f6efdc;--card:#fffaf0;--ink:#3f2f22;--sub:#6b5a48;--line:#d9c9a8;--accent:#7a5530;--hero:#b91c1c;
---minus:#c0262d;color-scheme:light}
+--minus:#c0262d;color-scheme:light;
+--t-plain:#a9c25d;--t-forest:#2f6b3a;--t-jungle:#3f8f4f;--t-desert:#d9b36c;--t-wetland:#4f9a8c;--t-snow:#8fc3e0;
+--t-mountain:#8a7462;--t-volcano:#c4553a;--t-sea:#3f74b5}
 @media (prefers-color-scheme:dark){:root{--bg:#1f1a14;--card:#2a231b;--ink:#efe4cf;--sub:#bfae92;--line:#4a3d2c;
---accent:#e0b878;--hero:#f87171;--minus:#f87171;color-scheme:dark}}
+--accent:#e0b878;--hero:#f87171;--minus:#f87171;color-scheme:dark;
+--t-plain:#b8d16a;--t-forest:#4f9a5c;--t-jungle:#5fb06e;--t-desert:#e3c483;--t-wetland:#62b5a6;--t-snow:#a8d4ee;
+--t-mountain:#a68d79;--t-volcano:#e07258;--t-sea:#6a9ad6}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 'Hiragino Sans','Hiragino Kaku Gothic ProN',
 'Noto Sans JP','Yu Gothic',Meiryo,sans-serif}
@@ -111,6 +116,12 @@ h3.sub{font-size:15px;margin:18px 0 0}
 .guide th:first-child,.guide td:first-child{width:9em;white-space:nowrap}
 .card h3+p,.card h3+.scroll{margin-top:8px}
 .icon{text-align:center;white-space:nowrap}
+.roads{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 16px;margin-top:8px}
+.road{display:flex;gap:10px;align-items:center}
+.road svg{width:64px;height:64px;flex:none}
+.road .name{font-weight:bold;font-size:14px}
+.road ul{list-style:none;margin:2px 0 0;padding:0;font-size:13px}
+.tdot{display:inline-block;width:.7em;height:.7em;border-radius:50%;margin-right:5px;vertical-align:-.02em}
 h4.sub{font-size:14px;margin:16px 0 4px}
 .levels{max-width:420px}
 td.icon .tag{margin-left:0}
@@ -677,6 +688,43 @@ MONSTER_STATS = ("hp", "atk", "def", "spd", "dex", "exp", "gold")  # 魔物の�
 MONSTER_STAT_NAMES = ("HP", "攻", "防", "速", "器", "EXP", "G")
 
 
+def terrain_label(terrain: str) -> str:
+  """地形の名前に、地形の色の丸を添える（街道の円グラフと同じ色）。"""
+  return f'<span class="tdot" style="background:var(--t-{escape(terrain)})"></span>' + escape(
+    W.TERRAIN_NAMES.get(terrain, terrain)
+  )
+
+
+def terrain_shares(monsters: dict, pool: list) -> list[tuple[str, float]]:
+  """道に出る魔物（[ID, 重み], ...）から、地形ごとの割合（戦いになったとき、その地形が選ばれる割合）。多い順。"""
+  out: dict[str, float] = {}
+  for mid, w in pool:
+    out[monsters[mid]["terrain"]] = out.get(monsters[mid]["terrain"], 0) + w
+  total = sum(out.values()) or 1
+  return sorted(((t, w / total) for t, w in out.items()), key=lambda x: (-x[1], W.TERRAINS.index(x[0])))
+
+
+def pie_svg(shares: list[tuple[str, float]]) -> str:
+  """地形の割合の円グラフ（12 時から時計回り。色は地形の色）。"""
+  name = lambda t: W.TERRAIN_NAMES.get(t, t)  # noqa: E731
+  if len(shares) == 1:
+    t = shares[0][0]
+    body = f'<circle r="1" fill="var(--t-{escape(t)})"><title>{escape(name(t))} 100%</title></circle>'
+  else:
+    body, start = "", 0.0
+    for t, share in shares:
+      end = start + share
+      x0, y0 = math.sin(2 * math.pi * start), -math.cos(2 * math.pi * start)
+      x1, y1 = math.sin(2 * math.pi * end), -math.cos(2 * math.pi * end)
+      large = 1 if share > 0.5 else 0
+      body += (
+        f'<path d="M0,0 L{x0:.4f},{y0:.4f} A1,1 0 {large} 1 {x1:.4f},{y1:.4f} Z" fill="var(--t-{escape(t)})" '
+        f'stroke="var(--card)" stroke-width="0.03"><title>{escape(name(t))} {share:.0%}</title></path>'
+      )
+      start = end
+  return f'<svg viewBox="-1.05 -1.05 2.1 2.1" role="img" aria-label="地形の割合">{body}</svg>'
+
+
 def build_monsters(world: dict) -> str:
   """開放した道に出る魔物の一覧（地方ごとのタブ。Lv・地形・性質・属性・強さ）。並びは Lv の順（同じ Lv は地形の順）。
   道で出会う魔物は勇者の Lv でも変わるので、魔物ごとの「出る道と割合」は出さない。道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
@@ -709,7 +757,7 @@ def build_monsters(world: dict) -> str:
     trait = traits.get(m.get("trait"), {})
     return (
       f"<tr><td>{escape(m['name'])}</td>"
-      f'<td class="num">{m["level"]}</td><td>{escape(W.TERRAIN_NAMES.get(m["terrain"], m["terrain"]))}</td>'
+      f'<td class="num">{m["level"]}</td><td>{terrain_label(m["terrain"])}</td>'
       + (
         f'<td class="icon"><span class="tag">{escape(trait["name"])}</span></td>' if trait else '<td class="icon"></td>'
       )
@@ -777,6 +825,26 @@ def build_monsters(world: dict) -> str:
       "HP・攻・防は、性質の効果がかかる前の値です。</p></div>"
     )
 
+  def road_card(members: list[str]) -> str:  # この地方の町につながる、開放した街道と、その地形の割合
+    items = []
+    for (a, b), info in world["road_info"].items():
+      if place_order[a] > place_order[b] or not ({a, b} & set(members)):
+        continue
+      shares = terrain_shares(monsters, info["monsters"])
+      legend = "".join(f"<li>{terrain_label(t)} {share:.0%}</li>" for t, share in shares)
+      items.append(
+        f'<div class="road">{pie_svg(shares)}<div><div class="name">{escape(places[a]["name"])}〜'
+        f"{escape(places[b]['name'])}（{world['roads'][(a, b)]}）</div><ul>{legend}</ul></div></div>"
+      )
+    if not items:
+      return ""
+    return (
+      '<div class="card"><h3>街道</h3><div class="roads">'
+      + "".join(items)
+      + '</div><p class="note">かっこの中は移動にかかる行動回数。円グラフは、道で戦いになったときに、どの地形の魔物が出るかの割合'
+      "（その地形の魔物のうち、勇者の Lv に近い魔物が出る）。</p></div>"
+    )
+
   groups = area_groups(world, towns)
   guide = '<p class="note">性質・属性・素早さなどの説明は、<a href="guide.html">手引き</a>にまとめています。</p>'
   body = ["<h2>魔物の情報</h2>", tab_bar([(aid, a["name"]) for aid, a, _ in groups]), guide]
@@ -785,7 +853,7 @@ def build_monsters(world: dict) -> str:
       tab_panel(
         aid,
         name_html(area["name"], area.get("en")),
-        table(members) + elite_table(aid, members) + boss_table(aid, members),
+        road_card(members) + table(members) + elite_table(aid, members) + boss_table(aid, members),
       )
     )
   return page("魔物", "".join(body), "monsters.html", script=TABS_JS)
@@ -876,7 +944,7 @@ def build_guide(world: dict) -> str:
     ),
     (
       "道で出会う魔物",
-      "戦いになったら、まず道の地形（草原・森など。道ごとに割合が決まっている）を選び、その地形の魔物のうち、Lv が勇者の Lv "
+      "戦いになったら、まず道の地形（草原・森など。道ごとの割合は魔物のページの「街道」）を選び、その地形の魔物のうち、Lv が勇者の Lv "
       + "〜".join(f"{d:+d}" for d in cfg["encounter_levels"])
       + " の魔物から出る（同じ地形の中では同じくらいずつ）。Lv の合う魔物のいない地形は出ず、その分ほかの地形が出る。"
       "範囲に合う魔物がどの地形にもいなければ、いちばん近い Lv の魔物",

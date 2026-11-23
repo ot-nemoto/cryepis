@@ -284,8 +284,17 @@ class SiteTest(unittest.TestCase):
     for mid in shown:  # 開放した道に出る魔物
       self.assertIn(f"<td>{WORLD['monsters'][mid]['name']}</td>", south)
     self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の魔物は出さない
-    self.assertNotIn("サリナ〜エクエス（", south)  # 出る道と割合は出さない（地図に地形の割合）
-    self.assertIn('<tr><td>野犬</td><td class="num">1</td><td>草原</td>', south)  # 名前の右に Lv と地形
+    self.assertNotIn("サリナ〜エクエス（", south[south.index("<table") :])  # 魔物の表には出る道と割合を出さない
+    self.assertIn(
+      '<tr><td>野犬</td><td class="num">1</td><td><span class="tdot" style="background:var(--t-plain)"></span>草原</td>',
+      south,
+    )  # 名前の右に Lv と地形（街道の円グラフと同じ色の丸）
+    roads = south[: south.index("<table")]  # 魔物の表の上に、この地方の街道と地形の割合
+    self.assertIn("<h3>街道</h3>", roads)
+    self.assertEqual(roads.count('<div class="road">'), sum(1 for a, b in WORLD["road_info"] if a < b))
+    self.assertIn("サリナ〜エクエス（2）", roads)  # 道の名前（行動回数）
+    self.assertIn('<span class="tdot" style="background:var(--t-plain)"></span>草原 83%</li>', roads)
+    self.assertIn('<span class="tdot" style="background:var(--t-wetland)"></span>湿地 17%</li>', roads)
     self.assertLess(south.index("<td>野犬</td>"), south.index("<td>暴れ猪</td>"))  # Lv の順
     self.assertIn('<td class="icon"><span class="tag">群れ</span></td>', south)  # 性質は名前だけの枠の札
     self.assertNotIn("数が多く", south)  # 性質の説明は出さない
@@ -388,6 +397,17 @@ class SiteTest(unittest.TestCase):
     world["elements"] = {}
     html = website.build_guide(world)  # 属性がなくても落ちない
     self.assertNotIn("属性と相性", html)
+
+  def test_pie_and_terrain_shares(self):
+    shares = website.terrain_shares(WORLD["monsters"], WORLD["road_info"][("karun", "muralis")]["monsters"])
+    self.assertAlmostEqual(sum(x for _, x in shares), 1.0)
+    self.assertEqual([t for t, _ in shares], ["plain", "mountain", "forest", "snow"])  # 多い順
+    svg = website.pie_svg(shares)
+    self.assertEqual(svg.count("<path"), 4)
+    self.assertIn("<title>草原 57%</title>", svg)
+    one = website.pie_svg([("plain", 1.0)])  # 1 つだけなら円
+    self.assertIn("<circle", one)
+    self.assertNotIn("<path", one)
 
   def test_monsters_page_edge_cases(self):
     world = copy.deepcopy(WORLD)
