@@ -1431,6 +1431,14 @@ class BattleDepthTest(unittest.TestCase):
     with mock.patch.object(day, "draw_once", side_effect=[None, "iron_sword"]):
       self.assertIsNone(day.draw([["none", 1]]))
 
+  def test_nothing_drops_when_the_town_has_no_such_rare(self):
+    world = with_rares()
+    state = G.new_state(world)
+    day = G.Day(world, state, START, random.Random(0))
+    self.assertIsNone(day.draw_once([["rare", 1]], None))  # 町のない抽選（宝箱など）には、レアはない
+    self.assertIsNone(day.draw_once([["epic", 1]], None))  # 上のレアがなく、その下のレアもなければ、何も出ない
+    self.assertEqual(day.draw_once([["epic", 1]], "salina"), "x_epic")  # その町に置いてあれば出る
+
 
 class FallPathsTest(unittest.TestCase):
   """力尽きる経路（道の途中・出発・討伐の行き帰り・旅）。力尽きたら依頼は失敗し、お金と持ち物は残り、
@@ -1506,6 +1514,16 @@ class FallPathsTest(unittest.TestCase):
     self.assertEqual(state["season_stats"]["quests_done"], 1)
     self.assertTrue(any("依頼達成" in e for e in day.events))
 
+  def test_reports_when_the_finished_quest_is_in_the_report_town(self):
+    # 進み終えた依頼が、報告先の町にいるとき（ふだんの配達は、着いたらその場で報告するので、念のための動き）
+    quest = self.deliver("salina", "eques")
+    quest["progress"] = quest["count"]
+    state = self.hero_state(quest, "eques")
+    day = day_of(state)
+    day.road_event = lambda a, b: True
+    self.assertTrue(day.act())
+    self.assertEqual(state["season_stats"]["quests_done"], 1)
+
   def test_goes_to_the_report_town_when_the_quest_is_done_elsewhere(self):
     # 進み終えた依頼が、報告先とは別の町にいるとき（ふだんの配達は届け先で報告するので、念のための動き）
     quest = self.deliver("salina", "eques")
@@ -1525,14 +1543,6 @@ class FallPathsTest(unittest.TestCase):
     day.road_event = lambda a, b: True
     self.assertTrue(day.act())
     self.assertIsNone(state["quest"])
-
-  def test_nothing_drops_when_the_town_has_no_such_rare(self):
-    world = with_rares()
-    state = G.new_state(world)
-    day = G.Day(world, state, START, random.Random(0))
-    self.assertIsNone(day.draw_once([["rare", 1]], None))  # 町のない抽選（宝箱など）には、レアはない
-    self.assertIsNone(day.draw_once([["epic", 1]], None))  # 上のレアがなく、その下のレアもなければ、何も出ない
-    self.assertEqual(day.draw_once([["epic", 1]], "salina"), "x_epic")  # その町に置いてあれば出る
 
 
 if __name__ == "__main__":
