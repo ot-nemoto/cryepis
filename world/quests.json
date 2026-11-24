@@ -21,7 +21,7 @@
   },
   "texts": [
    ["{place}{monster}が出て困っている。{count}体、追い払ってくれないか", "{place}{monster}がうろついている。夜になる前に、片付けてくれないか"],
-   ["{place}{monster}が{count}体居ついた。人も家畜も、外に出られない。退治してほしい", "{place}現れる{monster}に手を焼いている。{count}体、討ってくれ"],
+   ["{place}{monster}が{count}体居ついた。人も家畜も外に出られず、どの教えの祈りも効かない。退治してほしい", "{place}現れる{monster}に手を焼いている。{count}体、討ってくれ"],
    ["{place}{monster}の群れが迫っている。放っておけば、村が焼ける。{count}体、必ず討ち取ってほしい", "{monster}が{place}まで来ている。もう猶予がない。取り返しがつかなくなる前に、片をつけてくれ"]
   ]
  },
@@ -29,8 +29,8 @@
   "ranks": [4, 8],
   "dangers": [
    {"shift": 0, "min_level": 0, "texts": ["{to}へ、{cargo}を届けてくれないか。急がなくていいが、日のあるうちに頼む", "{cargo}を{to}まで運んでほしい。待っている人がいるんだ"]},
-   {"shift": 2, "min_level": 0, "texts": ["大事な{cargo}だ。{to}まで、無事に届けてほしい", "{cargo}を{to}へ。道ばたの竜の骨には、近づくなよ"]},
-   {"shift": 4, "min_level": 5, "texts": ["{cargo}を狙う者がいると聞く。誰かは分からない。{to}まで、決して渡すな", "{cargo}のうわさが広まっている。教えのちがう者も、欲しがるだろう。{to}まで、奪われるな"]}
+   {"shift": 2, "min_level": 0, "texts": ["大事な{cargo}だ。{to}まで、無事に届けてほしい", "{cargo}を{to}へ。道ばたの竜の骨のそばでは、寝るなよ"]},
+   {"shift": 4, "min_level": 5, "texts": ["{cargo}を狙う者がいると聞く。どの教えの者かは分からない。{to}まで、決して渡すな", "{cargo}のうわさが広まっている。教えのちがう者も、欲しがるだろう。{to}まで、奪われるな"]}
   ],
   "cargo": {
    "salina": [["塩", "干し魚", "貝の干物", "弔いの白布"], ["真珠", "おおうみへの供えの塩", "南の香辛料"], ["竜骨の欠片", "沈没船の宝箱"]],
@@ -44,11 +44,11 @@
   "salina": [],
   "eques": [],
   "muralis": [
-   {"id": "muralis_4", "rank": 3, "type": "hunt", "name": "南壁の大鷲", "to": "salina", "monster": "great_eagle", "count": 1, "text": "南壁の山のてっぺんには、雷をつれた大鷲がいる。砦の見張り台を襲うので、追い払ってほしい"}
+   {"id": "muralis_4", "rank": 3, "type": "hunt", "name": "南壁の大鷲", "to": "salina", "monster": "great_eagle", "count": 1, "text": "南壁の山のてっぺんには、雷をつれた大鷲がいる。王の旗を立てた見張り台を襲うので、追い払ってほしい"}
   ],
   "karun": [
    {"id": "karun_3", "rank": 2, "type": "hunt", "name": "吹雪の雪男", "to": "muralis", "monster": "yeti", "count": 1, "text": "吹雪の晩、山から雪男が下りてくる。牙の冷たさを持ち出したものだと、年寄りは言う。食い止めてほしい"},
-   {"id": "karun_4", "rank": 3, "type": "hunt", "name": "巣穴からあふれた岩ゴーレム", "to": "muralis", "monster": "rock_golem", "count": 1, "text": "南壁の巣穴の岩は、もとは竜の骨のかけらだという。あふれ出た岩ゴーレムを討ってほしい"}
+   {"id": "karun_4", "rank": 3, "type": "hunt", "name": "巣穴からあふれた岩ゴーレム", "to": "muralis", "monster": "rock_golem", "count": 1, "text": "南壁の巣穴の岩は、もとは竜の骨のかけらだという。竜の民は祈りに来て、星読みは顔をしかめる。あふれ出た岩ゴーレムを討ってほしい"}
   ]
  }
 }

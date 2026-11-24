@@ -48,6 +48,16 @@ class DataTest(unittest.TestCase):
       for word in ("創造主", "シーズン", "レベル", "経験値", "加護を与え", "利用"):
         self.assertNotIn(word, text, text)  # 設定の言葉・星の思惑の断定は、作中の文に出さない
 
+  def test_quest_texts_hint_at_the_teachings(self):
+    """依頼の文に、教えどうしの争いと骨の禁令が、少しだけ混ざっている（docs/MYTH.md §5）。"""
+    deliveries = " ".join(t for d in RAW["deliveries"]["dangers"] for t in d["texts"])
+    hunts = " ".join(t for tier in RAW["hunts"]["texts"] for t in tier)
+    towns = " ".join(q["text"] for qs in RAW["town_quests"].values() for q in qs)
+    self.assertIn("教え", deliveries)
+    self.assertIn("竜の骨", deliveries)
+    self.assertIn("教え", hunts)
+    self.assertTrue("竜の民" in towns and "星読み" in towns)
+
   def test_load_world_builds_routes(self):
     world = W.load_world()
     start = world["starts"][0]
