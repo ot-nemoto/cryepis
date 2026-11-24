@@ -405,6 +405,47 @@ class ValidateTest(unittest.TestCase):
     self.assertEqual(len(story), 6)
     self.assertEqual(story, doc)
 
+  def test_conflict_history_matches_between_story_and_world_doc(self):
+    """教えの争いの出来事（骨の禁令・大災厄・霧氷の裁き）は、story.md と WORLD.md の歴史の表で、時代と出来事の文が同じ。"""
+
+    def rows(path):
+      lines = (ROOT / path).read_text(encoding="utf-8").splitlines()
+      found = {}
+      for line in lines:
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if line.startswith("|") and cells[0].startswith(("骨の禁令", "大災厄", "霧氷の裁き")):
+          found[cells[0]] = cells[1]
+      return found
+
+    story, doc = rows("world/story.md"), rows("docs/WORLD.md")
+    self.assertEqual(len(story), 3)
+    for key in story:
+      if key.startswith("大災厄"):  # WORLD.md の文は、生き残りの話が続く。誰のせいかが分かれる一文だけをそろえる
+        for rows_ in (story, doc):
+          self.assertIn("誰のせいかは、教えによって言うことが違う", rows_[key])
+      else:
+        self.assertEqual(story[key], doc[key])
+
+  def test_story_keeps_the_secret_and_the_rules(self):
+    """サイトに出す物語に、作者だけの秘密（星が人を使っている）と、設定の言葉を書かない。教えの語りは「と教える」「という」の形。"""
+    text = (ROOT / "world/story.md").read_text(encoding="utf-8")
+    self.assertIn("## 三つの教え", text)
+    section = text.split("## 三つの教え")[1].split("\n## ")[0]
+    for word in ("創造主", "利用", "シーズン", "経験値", "加護を与え", "星の思惑", "道具"):
+      self.assertNotIn(word, section)
+    for phrase in (
+      "星は人を使",
+      "星が人を使",
+      "人を利用",
+      "思惑",
+    ):  # 秘密の言い換えも、出さない（文字どおりの語だけを見る簡単な守り）
+      self.assertNotIn(phrase, text)
+    for word in ("創造主", "利用"):  # 物語の全体にも、出さない
+      self.assertNotIn(word, text)
+    for teaching in ("星読み", "竜の民", "王国の教え"):
+      self.assertIn(teaching, section)
+    self.assertIn("どれが本当かは、誰も知らない", section)
+
   def test_every_item_has_a_text(self):
     for item in RAW["items"]:
       self.assertTrue(item.get("text"), item["id"])  # 13 個すべてに、説明がある（民話の語り口）
