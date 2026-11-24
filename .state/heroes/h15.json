@@ -2,36 +2,105 @@
   "id": "h15",
   "name": "KASOS",
   "trait": "guard",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-24",
   "hero": {
-    "level": 1,
+    "level": 3,
     "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
-    "base_def": 6,
-    "base_spd": 6,
-    "base_dex": 6,
-    "gold": 60,
-    "potions": 1
+    "max_hp": 46,
+    "hp": 46,
+    "base_atk": 10,
+    "base_def": 7,
+    "base_spd": 7,
+    "base_dex": 9,
+    "gold": 28,
+    "potions": 2
   },
-  "inventory": {},
+  "inventory": {
+    "wooden_helm": 1
+  },
   "place": "karun",
   "home_town": "karun",
   "road": null,
-  "quest": null,
-  "taken": [],
+  "quest": {
+    "type": "hunt",
+    "place": "muralis",
+    "report": "karun",
+    "monster": "ice_wolf",
+    "count": 2,
+    "rank": 1,
+    "name": "氷狼の討伐",
+    "text": "トナカイの放牧地に氷狼が出て困っている。2体、追い払ってくれないか",
+    "template": "hunt",
+    "steps": [
+      [
+        "back",
+        2
+      ]
+    ],
+    "away": 2,
+    "town": "karun",
+    "progress": 2,
+    "level": [
+      4,
+      4
+    ],
+    "deadline": null,
+    "cost": 5,
+    "reward": {
+      "exp": 0,
+      "gold": 40,
+      "item": [
+        [
+          "none",
+          88
+        ],
+        [
+          "common",
+          10
+        ],
+        [
+          "rare",
+          2
+        ]
+      ]
+    },
+    "id": "2026-11-24-karun-0"
+  },
+  "taken": [
+    "2026-11-24-karun-0"
+  ],
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 3,
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-24",
+    "actions": 3,
+    "events": [
+      "カルンで木の兜を買った",
+      "カルンのギルドで依頼を受けた: ★ 氷狼の討伐（カルンとムラリスの間の道で氷狼を2体討伐）（行動力 5）",
+      "ゴブリンを倒した (+8EXP)",
+      "吐く息が白い",
+      "氷狼が2体現れた",
+      "氷狼〔群れ〕を倒した (+15EXP)",
+      "レベルが上がった！ Lv.2",
+      "氷狼〔群れ〕を倒した (+15EXP)",
+      "レベルが上がった！ Lv.3",
+      "討伐の目標を果たした（2体）"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-24",
+      "actions": 3,
+      "text": "カルンで木の兜を買った / カルンのギルドで依頼を受けた: ★ 氷狼の討伐（カルンとムラリスの間の道で氷狼を2体討伐）（行動力 5） / ゴブリンを倒した (+8EXP) / 吐く息が白い / 氷狼が2体現れた / 氷狼〔群れ〕を倒した (+15EXP) / レベルが上がった！ Lv.2 / 氷狼〔群れ〕を倒した (+15EXP) / レベルが上がった！ Lv.3 / 討伐の目標を果たした（2体）"
+    }
+  ],
   "seasons": []
 }

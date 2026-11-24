@@ -2,10 +2,10 @@
   "id": "h17",
   "name": "TUKHORIS",
   "trait": "lucky",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-24",
   "hero": {
     "level": 1,
     "exp": 0,
@@ -15,15 +15,39 @@
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 6,
-    "gold": 60,
-    "potions": 1
+    "gold": 0,
+    "potions": 3
   },
-  "inventory": {},
+  "inventory": {
+    "wooden_helm": 1
+  },
   "place": "salina",
   "home_town": "salina",
-  "road": null,
-  "quest": null,
-  "taken": [],
+  "road": {
+    "to": "muralis",
+    "left": 3
+  },
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "muralis",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 0,
+    "level": [
+      2,
+      2
+    ],
+    "deadline": null,
+    "reward": null,
+    "cost": 6
+  },
+  "taken": [
+    "2026-11-24-patrol"
+  ],
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
@@ -31,7 +55,23 @@
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-24",
+    "actions": 3,
+    "events": [
+      "サリナで木の兜を買った",
+      "サリナのギルドには受けられる依頼がない。ムラリスへ旅に出る",
+      "眼下に雲海が広がっている",
+      "切り立った崖の細い道を進んだ",
+      "葦の間を小舟がすべっていった"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-24",
+      "actions": 3,
+      "text": "サリナで木の兜を買った / サリナのギルドには受けられる依頼がない。ムラリスへ旅に出る / 眼下に雲海が広がっている / 切り立った崖の細い道を進んだ / 葦の間を小舟がすべっていった"
+    }
+  ],
   "seasons": []
 }

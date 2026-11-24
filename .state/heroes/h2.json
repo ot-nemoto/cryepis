@@ -3,61 +3,66 @@
   "name": "CASSIA",
   "trait": "swift",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-23",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-24",
   "hero": {
-    "level": 4,
-    "exp": 46,
-    "max_hp": 54,
-    "hp": 53,
-    "base_atk": 12,
-    "base_def": 7,
-    "base_spd": 9,
-    "base_dex": 10,
-    "gold": 7,
+    "level": 5,
+    "exp": 98,
+    "max_hp": 62,
+    "hp": 62,
+    "base_atk": 14,
+    "base_def": 8,
+    "base_spd": 10,
+    "base_dex": 11,
+    "gold": 147,
     "potions": 3
   },
   "inventory": {
     "iron_sword": 1,
     "iron_helm": 1,
-    "soaring_leaf_charm": 1
+    "soaring_leaf_charm": 1,
+    "wooden_shield": 1
   },
   "place": "salina",
   "home_town": "salina",
   "road": null,
   "quest": {
     "type": "hunt",
-    "place": "eques",
+    "place": "muralis",
     "report": "salina",
-    "monster": "wild_dog",
-    "count": 6,
-    "template": "hunt_big",
-    "name": "大物討伐",
+    "monster": "mountain_bandit",
+    "count": 5,
     "rank": 2,
-    "text": "",
+    "name": "山賊の討伐",
+    "text": "弔いの舟が出る浜に現れる山賊に手を焼いている。5体、討ってくれ",
+    "template": "hunt",
     "steps": [
       [
+        "go",
+        1
+      ],
+      [
         "hunt",
-        6
+        1
       ],
       [
         "back",
-        1
+        2
       ]
     ],
     "away": 1,
     "town": "salina",
     "progress": 0,
     "level": [
-      1,
-      1
+      5,
+      5
     ],
     "deadline": null,
-    "cost": 8,
+    "cost": 5,
     "reward": {
-      "exp": 80,
-      "gold": 128,
+      "exp": 0,
+      "gold": 80,
       "item": [
         [
           "none",
@@ -77,33 +82,45 @@
         ]
       ]
     },
-    "id": "2026-11-21-salina-2"
+    "id": "2026-11-24-salina-1"
   },
   "taken": [
-    "2026-11-21-salina-2"
+    "2026-11-24-salina-1"
   ],
   "season_stats": {
-    "quests_done": 1,
+    "quests_done": 2,
     "quests_failed": 0,
-    "kills": 6,
+    "kills": 14,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-23",
+    "date": "2026-11-24",
     "actions": 3,
     "events": [
-      "岩の間から竜の骨のような白い石がのぞく",
-      "足元の泥がぬかるむ",
+      "野犬が6体現れた",
+      "野犬を倒した (+6EXP)",
+      "野犬を倒した (+6EXP)",
+      "野犬を倒した (+6EXP)",
+      "野犬を倒した (+6EXP)",
+      "野犬を倒した (+6EXP)",
+      "野犬を倒した (+6EXP)",
+      "レベルが上がった！ Lv.5",
+      "討伐の目標を果たした（6体）",
+      "ゴブリンを倒した (+8EXP)",
       "サリナに戻った",
-      "依頼達成！★★ 干潟の鬼火（サリナとムラリスの間の道で鬼火を4体討伐）（+80EXP +128G）",
-      "レベルが上がった！ Lv.4",
-      "サリナで鉄の剣と鉄の兜と翔天葉の護符を買った",
-      "サリナのギルドで依頼を受けた: ★★ 大物討伐（サリナとエクエスの間の道で野犬を6体討伐）（行動力 8）",
+      "依頼達成！★★ 大物討伐（サリナとエクエスの間の道で野犬を6体討伐）（+80EXP +128G）",
+      "サリナで木の盾を買った",
+      "サリナのギルドで依頼を受けた: ★★ 山賊の討伐（サリナとムラリスの間の道で山賊を5体討伐）（行動力 5）",
       "ゴブリンを倒した (+8EXP)"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-24",
+      "actions": 3,
+      "text": "野犬が6体現れた / 野犬を倒した (+6EXP) / 野犬を倒した (+6EXP) / 野犬を倒した (+6EXP) / 野犬を倒した (+6EXP) / 野犬を倒した (+6EXP) / 野犬を倒した (+6EXP) / レベルが上がった！ Lv.5 / 討伐の目標を果たした（6体） / ゴブリンを倒した (+8EXP) / サリナに戻った / 依頼達成！★★ 大物討伐（サリナとエクエスの間の道で野犬を6体討伐）（+80EXP +128G） / サリナで木の盾を買った / サリナのギルドで依頼を受けた: ★★ 山賊の討伐（サリナとムラリスの間の道で山賊を5体討伐）（行動力 5） / ゴブリンを倒した (+8EXP)"
+    },
     {
       "date": "2026-11-23",
       "actions": 3,

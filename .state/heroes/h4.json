@@ -3,54 +3,58 @@
   "name": "SPATALIA",
   "trait": "strong",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-23",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-24",
   "hero": {
     "level": 2,
-    "exp": 1,
+    "exp": 13,
     "max_hp": 36,
     "hp": 36,
     "base_atk": 9,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 38,
+    "gold": 18,
     "potions": 3
   },
   "inventory": {
-    "wooden_helm": 1
+    "wooden_helm": 1,
+    "wooden_shield": 1
   },
-  "place": "eques",
-  "home_town": "eques",
+  "place": "salina",
+  "home_town": "salina",
   "road": null,
   "quest": null,
   "taken": [
-    "2026-11-23-patrol"
+    "2026-11-24-patrol"
   ],
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 1,
+    "kills": 3,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-23",
+    "date": "2026-11-24",
     "actions": 3,
     "events": [
-      "サリナで木の兜を買った",
-      "サリナのギルドには受けられる依頼がない。エクエスへ旅に出る",
-      "草原を風が吹き抜けていく",
-      "沼ヒル〔毒〕を倒した (+11EXP)",
-      "毒で HP が 3 減った",
-      "レベルが上がった！ Lv.2",
-      "エクエスに着いた",
-      "エクエスの周りを散策した",
-      "宝箱から30Gを見つけた"
+      "エクエスのギルドには受けられる依頼がない。サリナへ旅に出る",
+      "野犬を倒した (+6EXP)",
+      "野犬を倒した (+6EXP)",
+      "サリナに着いた",
+      "サリナで木の盾を買った",
+      "サリナの周りを散策した",
+      "草原を風が吹き抜けていく"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-24",
+      "actions": 3,
+      "text": "エクエスのギルドには受けられる依頼がない。サリナへ旅に出る / 野犬を倒した (+6EXP) / 野犬を倒した (+6EXP) / サリナに着いた / サリナで木の盾を買った / サリナの周りを散策した / 草原を風が吹き抜けていく"
+    },
     {
       "date": "2026-11-23",
       "actions": 3,

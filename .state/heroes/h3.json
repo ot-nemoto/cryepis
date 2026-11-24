@@ -3,98 +3,81 @@
   "name": "BERENICE",
   "trait": "swift",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-23",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-24",
   "hero": {
-    "level": 3,
-    "exp": 9,
-    "max_hp": 46,
-    "hp": 44,
-    "base_atk": 10,
+    "level": 4,
+    "exp": 2,
+    "max_hp": 54,
+    "hp": 54,
+    "base_atk": 12,
     "base_def": 7,
-    "base_spd": 7,
-    "base_dex": 9,
-    "gold": 62,
+    "base_spd": 9,
+    "base_dex": 10,
+    "gold": 18,
     "potions": 3
   },
   "inventory": {
-    "steel_helm": 1
+    "steel_helm": 1,
+    "iron_sword": 1,
+    "soaring_leaf_charm": 1
   },
   "place": "eques",
   "home_town": "eques",
-  "road": null,
+  "road": {
+    "to": "salina",
+    "left": 1
+  },
   "quest": {
-    "type": "hunt",
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
     "place": "salina",
-    "report": "eques",
-    "monster": "wild_dog",
-    "count": 3,
-    "template": "eques_1",
-    "name": "馬を狙う野犬",
-    "rank": 1,
-    "text": "放牧の馬を襲う野犬を追い払ってほしい",
-    "steps": [
-      [
-        "hunt",
-        1
-      ],
-      [
-        "back",
-        1
-      ]
-    ],
-    "away": 1,
-    "town": "eques",
-    "progress": 2,
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 0,
     "level": [
-      1,
-      1
+      2,
+      2
     ],
     "deadline": null,
-    "cost": 5,
-    "reward": {
-      "exp": 25,
-      "gold": 40,
-      "item": [
-        [
-          "none",
-          88
-        ],
-        [
-          "common",
-          10
-        ],
-        [
-          "rare",
-          2
-        ]
-      ]
-    },
-    "id": "2026-11-21-eques-1"
+    "reward": null,
+    "cost": 2
   },
   "taken": [
-    "2026-11-21-eques-1"
+    "2026-11-24-patrol"
   ],
   "season_stats": {
-    "quests_done": 2,
+    "quests_done": 3,
     "quests_failed": 0,
-    "kills": 3,
+    "kills": 6,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-23",
+    "date": "2026-11-24",
     "actions": 3,
     "events": [
-      "エクエスのギルドで依頼を受けた: ★ 馬を狙う野犬（エクエスとサリナの間の道で野犬を3体討伐）（行動力 5）",
-      "霧の中でカエルが鳴いている",
       "野犬を倒した (+6EXP)",
-      "レベルが上がった！ Lv.3",
-      "野犬を倒した (+6EXP)"
+      "討伐の目標を果たした（3体）",
+      "ゴブリンを倒した (+8EXP)",
+      "エクエスに戻った",
+      "依頼達成！★ 馬を狙う野犬（エクエスとサリナの間の道で野犬を3体討伐）（+25EXP +40G）",
+      "エクエスで鉄の剣と翔天葉の護符を買った",
+      "エクエスのギルドには受けられる依頼がない。サリナへ旅に出る",
+      "野犬を倒した (+6EXP)",
+      "レベルが上がった！ Lv.4"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-24",
+      "actions": 3,
+      "text": "野犬を倒した (+6EXP) / 討伐の目標を果たした（3体） / ゴブリンを倒した (+8EXP) / エクエスに戻った / 依頼達成！★ 馬を狙う野犬（エクエスとサリナの間の道で野犬を3体討伐）（+25EXP +40G） / エクエスで鉄の剣と翔天葉の護符を買った / エクエスのギルドには受けられる依頼がない。サリナへ旅に出る / 野犬を倒した (+6EXP) / レベルが上がった！ Lv.4"
+    },
     {
       "date": "2026-11-23",
       "actions": 3,

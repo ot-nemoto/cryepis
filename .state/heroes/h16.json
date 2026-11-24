@@ -2,36 +2,58 @@
   "id": "h16",
   "name": "THALES",
   "trait": "skilled",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-24",
   "hero": {
     "level": 1,
-    "exp": 0,
+    "exp": 5,
     "max_hp": 30,
     "hp": 30,
     "base_atk": 6,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 6,
-    "gold": 60,
-    "potions": 1
+    "gold": 4,
+    "potions": 3
   },
-  "inventory": {},
-  "place": "karun",
-  "home_town": "karun",
+  "inventory": {
+    "wooden_helm": 1
+  },
+  "place": "eques",
+  "home_town": "eques",
   "road": null,
   "quest": null,
-  "taken": [],
+  "taken": [
+    "2026-11-24-patrol"
+  ],
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 1,
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-24",
+    "actions": 3,
+    "events": [
+      "カルンで木の兜を買った",
+      "カルンのギルドには受けられる依頼がない。エクエスへ旅に出る",
+      "吐く息が白い",
+      "大ネズミ〔群れ〕を倒した (+5EXP)",
+      "エクエスに着いた",
+      "エクエスの周りを散策した",
+      "遠くで雪崩の音がした"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-24",
+      "actions": 3,
+      "text": "カルンで木の兜を買った / カルンのギルドには受けられる依頼がない。エクエスへ旅に出る / 吐く息が白い / 大ネズミ〔群れ〕を倒した (+5EXP) / エクエスに着いた / エクエスの周りを散策した / 遠くで雪崩の音がした"
+    }
+  ],
   "seasons": []
 }

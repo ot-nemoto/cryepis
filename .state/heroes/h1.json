@@ -3,95 +3,58 @@
   "name": "GOLD HILDR",
   "trait": "strong",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-23",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-24",
   "hero": {
-    "level": 3,
-    "exp": 45,
-    "max_hp": 41,
-    "hp": 39,
-    "base_atk": 11,
+    "level": 4,
+    "exp": 26,
+    "max_hp": 47,
+    "hp": 47,
+    "base_atk": 14,
     "base_def": 7,
-    "base_spd": 7,
-    "base_dex": 9,
-    "gold": 18,
+    "base_spd": 8,
+    "base_dex": 10,
+    "gold": 10,
     "potions": 3
   },
   "inventory": {
     "iron_sword": 1,
-    "iron_helm": 1
+    "iron_helm": 1,
+    "soaring_leaf_charm": 1
   },
-  "place": "salina",
-  "home_town": "salina",
-  "road": {
-    "to": "eques",
-    "left": 1
-  },
-  "quest": {
-    "type": "deliver",
-    "place": "karun",
-    "report": "karun",
-    "monster": null,
-    "count": 1,
-    "template": "salina_2",
-    "name": "塩の積み出し",
-    "rank": 1,
-    "text": "塩田で作った塩を、冬の保存食にする凍原の村へ届けてほしい",
-    "town": "salina",
-    "progress": 0,
-    "level": [
-      2,
-      2
-    ],
-    "deadline": null,
-    "cost": 4,
-    "reward": {
-      "exp": 20,
-      "gold": 32,
-      "item": [
-        [
-          "none",
-          88
-        ],
-        [
-          "common",
-          10
-        ],
-        [
-          "rare",
-          2
-        ]
-      ]
-    },
-    "id": "2026-11-23-salina-0"
-  },
-  "taken": [
-    "2026-11-23-salina-0"
-  ],
+  "place": "karun",
+  "home_town": "karun",
+  "road": null,
+  "quest": null,
+  "taken": [],
   "season_stats": {
-    "quests_done": 2,
+    "quests_done": 3,
     "quests_failed": 0,
-    "kills": 5,
+    "kills": 7,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-23",
+    "date": "2026-11-24",
     "actions": 3,
     "events": [
-      "沼ヒル〔毒〕を倒した (+11EXP)",
-      "毒で HP が 4 減った",
-      "討伐の目標を果たした（3体）",
-      "葦の間を小舟がすべっていった",
-      "サリナに戻った",
-      "依頼達成！★ 干潟のヒル（サリナとエクエスの間の道で沼ヒルを3体討伐）（+25EXP +40G）",
-      "サリナで鉄の剣と鉄の兜を買った",
-      "サリナのギルドで依頼を受けた: ★ 塩の積み出し（カルンへ荷物を届ける）（行動力 4）",
-      "野犬を倒した (+6EXP)"
+      "草原を風が吹き抜けていく",
+      "エクエスに着いた",
+      "大ネズミ〔群れ〕を倒した (+5EXP)",
+      "ゴブリンを倒した (+8EXP)",
+      "レベルが上がった！ Lv.4",
+      "カルンに着いた",
+      "依頼達成！★ 塩の積み出し（カルンへ荷物を届ける）（+20EXP +32G）",
+      "カルンで翔天葉の護符を買った"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-24",
+      "actions": 3,
+      "text": "草原を風が吹き抜けていく / エクエスに着いた / 大ネズミ〔群れ〕を倒した (+5EXP) / ゴブリンを倒した (+8EXP) / レベルが上がった！ Lv.4 / カルンに着いた / 依頼達成！★ 塩の積み出し（カルンへ荷物を届ける）（+20EXP +32G） / カルンで翔天葉の護符を買った"
+    },
     {
       "date": "2026-11-23",
       "actions": 3,

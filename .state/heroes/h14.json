@@ -2,36 +2,59 @@
   "id": "h14",
   "name": "KHNUBA",
   "trait": "guard",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-24",
   "hero": {
-    "level": 1,
-    "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
+    "level": 2,
+    "exp": 1,
+    "max_hp": 38,
+    "hp": 38,
+    "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
-    "base_dex": 6,
-    "gold": 60,
-    "potions": 1
+    "base_dex": 7,
+    "gold": 9,
+    "potions": 3
   },
-  "inventory": {},
-  "place": "karun",
-  "home_town": "karun",
+  "inventory": {
+    "wooden_helm": 1
+  },
+  "place": "eques",
+  "home_town": "eques",
   "road": null,
   "quest": null,
-  "taken": [],
+  "taken": [
+    "2026-11-24-patrol"
+  ],
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 2,
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-24",
+    "actions": 3,
+    "events": [
+      "カルンで木の兜を買った",
+      "カルンのギルドには受けられる依頼がない。エクエスへ旅に出る",
+      "大ネズミ〔群れ〕を倒した (+5EXP)",
+      "雪原に獣の足跡が続いている",
+      "エクエスに着いた",
+      "エクエスの周りを散策した",
+      "野犬を倒した (+6EXP)",
+      "レベルが上がった！ Lv.2"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-24",
+      "actions": 3,
+      "text": "カルンで木の兜を買った / カルンのギルドには受けられる依頼がない。エクエスへ旅に出る / 大ネズミ〔群れ〕を倒した (+5EXP) / 雪原に獣の足跡が続いている / エクエスに着いた / エクエスの周りを散策した / 野犬を倒した (+6EXP) / レベルが上がった！ Lv.2"
+    }
+  ],
   "seasons": []
 }

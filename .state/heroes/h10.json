@@ -2,10 +2,10 @@
   "id": "h10",
   "name": "AMBILLUS",
   "trait": "guard",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-24",
   "hero": {
     "level": 1,
     "exp": 0,
@@ -15,15 +15,19 @@
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 6,
-    "gold": 60,
-    "potions": 1
+    "gold": 0,
+    "potions": 3
   },
-  "inventory": {},
-  "place": "salina",
-  "home_town": "salina",
+  "inventory": {
+    "wooden_helm": 1
+  },
+  "place": "eques",
+  "home_town": "eques",
   "road": null,
   "quest": null,
-  "taken": [],
+  "taken": [
+    "2026-11-24-patrol"
+  ],
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
@@ -31,7 +35,25 @@
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-24",
+    "actions": 3,
+    "events": [
+      "サリナで木の兜を買った",
+      "サリナのギルドには受けられる依頼がない。エクエスへ旅に出る",
+      "葦の間を小舟がすべっていった",
+      "遠くで羊の群れが草を食んでいる",
+      "エクエスに着いた",
+      "エクエスの周りを散策した",
+      "草原を風が吹き抜けていく"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-24",
+      "actions": 3,
+      "text": "サリナで木の兜を買った / サリナのギルドには受けられる依頼がない。エクエスへ旅に出る / 葦の間を小舟がすべっていった / 遠くで羊の群れが草を食んでいる / エクエスに着いた / エクエスの周りを散策した / 草原を風が吹き抜けていく"
+    }
+  ],
   "seasons": []
 }

@@ -2,36 +2,76 @@
   "id": "h11",
   "name": "SALOMON",
   "trait": "strong",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-24",
   "hero": {
     "level": 1,
-    "exp": 0,
+    "exp": 6,
     "max_hp": 30,
-    "hp": 30,
+    "hp": 24,
     "base_atk": 6,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 6,
-    "gold": 60,
-    "potions": 1
+    "gold": 5,
+    "potions": 3
   },
-  "inventory": {},
+  "inventory": {
+    "wooden_helm": 1
+  },
   "place": "karun",
   "home_town": "karun",
-  "road": null,
-  "quest": null,
-  "taken": [],
+  "road": {
+    "to": "muralis",
+    "left": 3
+  },
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "muralis",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 0,
+    "level": [
+      2,
+      2
+    ],
+    "deadline": null,
+    "reward": null,
+    "cost": 6
+  },
+  "taken": [
+    "2026-11-24-patrol"
+  ],
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 1,
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-24",
+    "actions": 3,
+    "events": [
+      "カルンで木の兜を買った",
+      "カルンのギルドには受けられる依頼がない。ムラリスへ旅に出る",
+      "どこかでキツツキが木をつついている",
+      "木漏れ日が道をまだらに照らす",
+      "野犬を倒した (+6EXP)"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-24",
+      "actions": 3,
+      "text": "カルンで木の兜を買った / カルンのギルドには受けられる依頼がない。ムラリスへ旅に出る / どこかでキツツキが木をつついている / 木漏れ日が道をまだらに照らす / 野犬を倒した (+6EXP)"
+    }
+  ],
   "seasons": []
 }
