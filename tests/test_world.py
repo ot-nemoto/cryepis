@@ -426,6 +426,13 @@ class ValidateTest(unittest.TestCase):
       else:
         self.assertEqual(story[key], doc[key])
 
+  def test_calendar_is_called_tomoshi_goyomi(self):
+    """年の数え方は「灯暦」。古い呼び名「星暦」は、設定とサイトの物語に残さない。"""
+    for path in ("world/story.md", "docs/WORLD.md", "docs/MYTH.md"):
+      text = (ROOT / path).read_text(encoding="utf-8")
+      self.assertNotIn("星暦", text, path)
+      self.assertIn("灯暦", text, path)
+
   def test_story_keeps_the_secret_and_the_rules(self):
     """サイトに出す物語に、作者だけの秘密（星が人を使っている）と、設定の言葉を書かない。教えの語りは「と教える」「という」の形。"""
     text = (ROOT / "world/story.md").read_text(encoding="utf-8")
