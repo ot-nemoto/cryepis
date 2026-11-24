@@ -28,7 +28,7 @@ class DataTest(unittest.TestCase):
     self.assertEqual(W.validate(RAW), [])
 
   def test_quest_texts_follow_the_story_rules(self):
-    """依頼の文は、民話の語り口の決まり（docs/MYTH.md の 6・7）を守る: 設定の言葉を使わず、星の思惑を断定しない。"""
+    """依頼の文は、民話の語り口の決まり（docs/MYTH.md の 6・7）を守る: 設定の言葉を使わず、竜の思惑を断定しない。"""
     texts = []
 
     def walk(value):
@@ -46,7 +46,7 @@ class DataTest(unittest.TestCase):
     self.assertGreater(len(texts), 40)
     for text in texts:
       for word in ("創造主", "シーズン", "レベル", "経験値", "加護を与え", "利用"):
-        self.assertNotIn(word, text, text)  # 設定の言葉・星の思惑の断定は、作中の文に出さない
+        self.assertNotIn(word, text, text)  # 設定の言葉・竜の思惑の断定は、作中の文に出さない
 
   def test_quest_texts_hint_at_the_teachings(self):
     """依頼の文に、教えどうしの争いと骨の禁令が、少しだけ混ざっている（docs/MYTH.md §5）。"""
