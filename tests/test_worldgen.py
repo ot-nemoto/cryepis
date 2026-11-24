@@ -155,7 +155,16 @@ class TownTextTest(unittest.TestCase):
 
   def test_relic_towns_hint_at_the_relics(self):
     """聖遺物のある土地（docs/MYTH.md §5）の説明に、聖遺物の言い伝えがある。断定せず、設定の言葉・秘密は出さない。"""
-    hints = {"霧氷の修道院": "牙の欠片", "焔の湯治場": "消えない火", "天門の町": "頭骨の冠"}
+    hints = {
+      "霧氷の修道院": "牙の欠片",
+      "氷牙の砦": "牙の欠片",
+      "焔の湯治場": "消えない火",
+      "天門の町": "頭骨の冠",
+      "雨林の村": "骨の禁令",
+      "鋼山の町": "骨の禁令",
+      "オアシスの町": "誰のせいか",
+      "王都": "星読みの使い",
+    }
     for alias, word in hints.items():
       self.assertIn(word, lore.TEXT[alias], alias)
     for name, text in lore.TEXT.items():

@@ -179,7 +179,7 @@
    "area": "eastern_highlands",
    "region": "氷牙山地",
    "emoji": "🧊",
-   "text": "始祖竜の牙だった雪山に築かれた砦。牙から出る竜気で、氷の魔物が絶えない。牙は「かぎり」のありかとされ、星読みの兵が鎮めの祈りを続ける。欠片を狙う者を見張る砦だ、とうわさされる",
+   "text": "始祖竜の牙だった雪山に築かれた砦。牙から出る竜気で、氷の魔物が絶えない。牙は「かぎり」のありかとされ、星読みの兵が鎮めの祈りを続ける。牙の欠片を狙う者を見張る砦だ、とうわさされる",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1185,150],
    "quests_per_day": 3,
