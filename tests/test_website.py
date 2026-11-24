@@ -472,6 +472,34 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("霧氷石", html)
     self.assertIn("<td>いのち</td>", html)
 
+  def test_visible_texts_do_not_reveal_the_secret(self):
+    """作者だけの秘密（竜は前の人類がつくった AI で、三つの教えを埋め込んだ。docs/MYTH.md §7）は、サイトに出す文
+    （物語・町の説明・依頼の文・アイテムの説明・手引き）のどこにも書かない。文字どおりの語だけを見る簡単な守り。"""
+    raw = W.load_raw()
+    texts = [
+      (ROOT / "world" / "story.md").read_text(encoding="utf-8"),
+      website.build_guide(WORLD),
+      *(p["text"] for p in raw["map"]["places"] if p.get("text")),
+      *(i["text"] for i in raw["items"] if i.get("text")),
+    ]
+
+    def walk(value):
+      if isinstance(value, str):
+        texts.append(value)
+      elif isinstance(value, list):
+        for v in value:
+          walk(v)
+      elif isinstance(value, dict):
+        for v in value.values():
+          walk(v)
+
+    for key in ("hunts", "deliveries", "town_quests"):
+      walk(raw[key])
+    self.assertGreater(len(texts), 60)
+    for text in texts:
+      for word in ("AI", "機械", "人工", "埋め込", "冷凍", "思惑", "創造主", "利用"):
+        self.assertNotIn(word, text, word)
+
   def test_guide_page_without_deliveries(self):
     world = copy.deepcopy(WORLD)
     world["deliveries"] = None  # 配達の設定がない世界でも落ちない（危ない配達の行は出さない）
