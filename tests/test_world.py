@@ -560,6 +560,25 @@ class ValidateTest(unittest.TestCase):
 
     self.assertError(bad_scenery, ["terrain_scenery"])
 
+  def test_personality_settings(self):
+    self.assertError(lambda r: r["season"].update(stroll_events={"fight": 1}), ["stroll_events"])
+    self.assertError(lambda r: r["season"].update(stroll_treasure={"item": -1}), ["stroll_treasure"])
+    self.assertError(lambda r: r["season"].update(stroll_strong_levels=[3, 2]), ["stroll_strong_levels"])
+    self.assertError(lambda r: r["season"].update(inn={"price": -1}), ["inn"])
+    self.assertError(lambda r: r["season"].update(stored_days=-1), ["stored_days"])
+    self.assertError(lambda r: r["season"].update(personalities={}), ["personalities"])
+    self.assertError(lambda r: r["season"]["personalities"]["careful"].update(inn_below=2), ["careful", "inn_below"])
+    self.assertError(
+      lambda r: r["season"]["personalities"]["careful"]["quest"].update(levels=[1, 0]), ["careful", "quest.levels"]
+    )
+    self.assertError(
+      lambda r: r["season"]["personalities"]["careful"]["quest"].update(order=["fast"]), ["careful", "quest.order"]
+    )
+    self.assertError(lambda r: r["season"]["personalities"]["brave"].update(spare="sleep"), ["brave", "spare"])
+    self.assertError(
+      lambda r: r["season"]["personalities"]["careful"].update(when_full="rest"), ["careful", "when_full"]
+    )
+
     def bad_hero(r):
       del r["season"]["hero"]["max_hp"]
 

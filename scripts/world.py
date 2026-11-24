@@ -47,6 +47,14 @@ TRAITS = ("first_strike", "poison", "swarm", "fierce", "armored", "thief")
 REWARD_STATS = ("hp", "atk", "def", "spd", "dex")  # 魔物の強さ点に使う能力（season.json の monster_reward）
 QUEST_TYPES = ("hunt", "deliver")
 ROAD_EVENTS = ("battle", "treasure", "nothing")
+STROLL_EVENTS = ("battle", "strong_battle", "treasure", "nothing")
+STROLL_TREASURE = ("item", "potion", "gold")
+PERSONALITY_SPARE = (
+  "rest",
+  "stroll",
+  "move",
+)  # その日の残りの行動（休む＝行動力を溜める・散策する・となりの町へ移動する）
+PERSONALITY_ORDER = ("level_high", "level_low", "rank_high", "rank_low")  # 依頼の選び方（game.QUEST_ORDER）
 STATS = ("atk", "def", "hp")
 NONE = "none"  # ドロップ表の「何も出ない」
 COMMON = "common"  # 店で売り、どの町でも出る珍しさ（それ以外はレアで、決めた町の依頼でしか出ない）
@@ -656,6 +664,83 @@ def _check_hero_traits(c: _Check):
       err(f"{where}: luck は true か false にしてください")
 
 
+def _weights_dict_ok(table, keys) -> bool:
+  """{名前: 重み}（名前は keys のどれか、重みは 0 以上、合計が正）か。"""
+  return (
+    isinstance(table, dict)
+    and bool(table)
+    and all(k in keys and isinstance(v, (int, float)) and not isinstance(v, bool) and v >= 0 for k, v in table.items())
+    and sum(table.values()) > 0
+  )
+
+
+def _rate_ok(value) -> bool:
+  return isinstance(value, (int, float)) and not isinstance(value, bool) and 0 <= value <= 1
+
+
+def _check_personalities(c: _Check):
+  """season.json の宿（inn）・溜める行動力（stored_days）・散策の表・性格（personalities）。"""
+  err, season = c.err, c.season
+  if not _weights_dict_ok(season.get("stroll_events"), STROLL_EVENTS):
+    err(f"season.json: stroll_events は {'/'.join(STROLL_EVENTS)} の重み（0 以上、合計が正）にしてください")
+  if not _weights_dict_ok(season.get("stroll_treasure"), STROLL_TREASURE):
+    err(f"season.json: stroll_treasure は {'/'.join(STROLL_TREASURE)} の重み（0 以上、合計が正）にしてください")
+  levels = season.get("stroll_strong_levels")
+  if (
+    not isinstance(levels, list)
+    or len(levels) != 2
+    or not all(isinstance(v, int) and not isinstance(v, bool) for v in levels)
+    or levels[0] > levels[1]
+  ):
+    err("season.json: stroll_strong_levels は [下, 上]（勇者の Lv との差。整数で、下 ≦ 上）にしてください")
+  inn = season.get("inn")
+  price = inn.get("price") if isinstance(inn, dict) else None
+  if not isinstance(price, int) or isinstance(price, bool) or price < 0:
+    err('season.json: inn は {"price": 宿代（0 以上の整数）} にしてください')
+  days = season.get("stored_days")
+  if not isinstance(days, int) or isinstance(days, bool) or days < 0:
+    err("season.json: stored_days（行動力を溜められる日数）は 0 以上の整数にしてください")
+  table = season.get("personalities")
+  if not isinstance(table, dict) or not table:
+    err("season.json: personalities（勇者の性格）を 1 つ以上書いてください")
+    return
+  for pid, p in table.items():
+    where = f"season.json の personalities の {pid}"
+    if (
+      not isinstance(p, dict)
+      or not isinstance(p.get("name"), str)
+      or not p["name"]
+      or not isinstance(p.get("text"), str)
+    ):
+      err(f"{where}: name と text（文字列）を書いてください")
+      continue
+    for key in ("inn_below", "potion_below"):
+      if not _rate_ok(p.get(key)):
+        err(f"{where}: {key} は 0〜1 の数（HP の割合）にしてください")
+    first = p.get("potions_first")
+    if not isinstance(first, int) or isinstance(first, bool) or first < 0:
+      err(f"{where}: potions_first（装備より先に買う回復薬の数）は 0 以上の整数にしてください")
+    quest = p.get("quest")
+    lv = quest.get("levels") if isinstance(quest, dict) else None
+    if (
+      not isinstance(lv, list)
+      or len(lv) != 2
+      or not all(v is None or (isinstance(v, int) and not isinstance(v, bool)) for v in lv)
+      or not isinstance(lv[1], int)
+      or (lv[0] is not None and lv[0] > lv[1])
+    ):
+      err(f"{where}: quest.levels は [下, 上]（勇者の Lv との差。下は null で下限なし。下 ≦ 上）にしてください")
+    order = quest.get("order") if isinstance(quest, dict) else None
+    if not isinstance(order, list) or any(o not in PERSONALITY_ORDER for o in order):
+      err(f"{where}: quest.order は {'/'.join(PERSONALITY_ORDER)} の一覧にしてください")
+    if p.get("spare") not in PERSONALITY_SPARE:
+      err(f"{where}: spare（その日の残りの行動）は {'/'.join(PERSONALITY_SPARE)} のどれかにしてください")
+    if "when_full" in p and p["when_full"] not in ("stroll", "move"):
+      err(f"{where}: when_full（溜まりきっていたら）は stroll か move にしてください")
+    if "stroll_hp" in p and not _rate_ok(p["stroll_hp"]):
+      err(f"{where}: stroll_hp は 0〜1 の数（散策する HP の割合）にしてください")
+
+
 def _check_monster_reward(c: _Check):
   """season.json の monster_reward（魔物の経験値とお金の計算）。"""
   err, season = c.err, c.season
@@ -1005,6 +1090,7 @@ def validate(raw: dict) -> list[str]:
   _run(c, _check_growth)
   _run(c, _check_element_rates)
   _run(c, _check_hero_traits)
+  _run(c, _check_personalities)
   _run(c, _check_monster_reward)
   _run(c, _check_monster_traits)
   _run(c, _check_monsters)
