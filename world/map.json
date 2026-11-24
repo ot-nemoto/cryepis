@@ -250,7 +250,7 @@
    "area": "northmarch",
    "region": "霧氷の半島",
    "emoji": "🔭",
-   "text": "北の海に突き出た崖に建つ修道院。星読みの修道士が、旅立つ勇者に星の祝福を授け、返し方の作法も教える。氷の底に竜の牙の欠片が眠ると言われ、昔の裁きの話は、誰もしたがらない",
+   "text": "北の海に突き出た崖に建つ修道院。星読みの修道士が、旅立つ勇者に、竜から借りた加護の返し方を教える。氷の底に竜の牙の欠片が眠ると言われ、昔の裁きの話は、誰もしたがらない",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [735,165],
    "quests_per_day": 3

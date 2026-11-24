@@ -451,17 +451,19 @@ class ValidateTest(unittest.TestCase):
       self.assertNotIn("星暦", path.read_text(encoding="utf-8"), str(path))
 
   def test_story_keeps_the_secret_and_the_rules(self):
-    """サイトに出す物語に、作者だけの秘密（星が人を使っている）と、設定の言葉を書かない。教えの語りは「と教える」「という」の形。"""
+    """サイトに出す物語に、作者だけの秘密（竜は前の人類がつくった AI で、三つの教えを埋め込んだ。docs/MYTH.md §7）と、設定の言葉を書かない。教えの語りは「と教える」「という」の形。"""
     text = (ROOT / "world/story.md").read_text(encoding="utf-8")
     self.assertIn("## 三つの教え", text)
     section = text.split("## 三つの教え")[1].split("\n## ")[0]
-    for word in ("創造主", "利用", "シーズン", "経験値", "加護を与え", "星の思惑", "道具"):
+    for word in ("創造主", "利用", "シーズン", "経験値", "加護を与え", "思惑", "道具"):
       self.assertNotIn(word, section)
     for phrase in (
-      "星は人を使",
-      "星が人を使",
       "人を利用",
       "思惑",
+      "AI",
+      "機械",
+      "人工",
+      "埋め込",
     ):  # 秘密の言い換えも、出さない（文字どおりの語だけを見る簡単な守り）
       self.assertNotIn(phrase, text)
     for word in ("創造主", "利用"):  # 物語の全体にも、出さない
