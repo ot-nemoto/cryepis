@@ -887,6 +887,78 @@ def element_chart(world: dict) -> str:
   )
 
 
+# 属性と竜の部位・徳の対応。語りの元は docs/MYTH.md と world/story.md（直すときは 3 か所をそろえる）。
+# ここに無い属性は、「三つの徳」の表に出ない
+MYTH_ELEMENT = {"flame": ("心臓", "いのち"), "ice": ("牙", "かぎり"), "thunder": ("頭", "こころざし")}
+
+
+def build_myth_cards(world, table):
+  """手引きの「世界のなりたち」の節（カードのリスト）。語りは民話の調子で、確かでないことは「言われている」と書く"""
+  months = world["season"]["months"]
+  cards = [
+    (
+      "はじまりの話",
+      "<p>はじめに、海だけがあった。海は「おおうみ」といい、海そのものがからだだったという。"
+      "おおうみは、底からてのひらをさしあげて、大地をつくった。てのひらの上には星をならべ、"
+      "最後に息を吹いて、はじまりの竜（始祖竜）を生んだ。</p>"
+      "<p>そののち、竜は星といさかいをして、大地に落ちた。竜気が、いまも獣を魔物にしている。</p>"
+      '<p class="note">くわしい話は、世界のページにある</p>',
+    ),
+    (
+      "星の巡りと加護",
+      f"<p>星の巡りは、{escape(str(months))} か月ごとにやってくる。星が勇者に加護（レベル）を貸し、"
+      "巡りが変わると、加護は空へ還る。勇者の力が最初からやりなおしになるのは、このため。</p>"
+      "<p>人が死ぬと、からだは海へ帰り、名は空へ還り、形は大地に残ると言われている。"
+      "名は空へ還るので、レベルは巡りごとに戻る。形は大地に残るので、アイテムは残る。</p>",
+    ),
+  ]
+  rows = []
+  for eid, (part, virtue) in MYTH_ELEMENT.items():
+    el = world.get("elements", {}).get(eid)
+    if el:
+      rows.append(
+        (
+          f'<span class="tag">{escape(el["name"])}属性</span>',
+          escape(part),
+          escape(virtue),
+          escape(el.get("ore", "")),
+        )
+      )
+  if rows:
+    cards.append(
+      (
+        "三つの徳",
+        table(("属性", "始祖竜の部位", "徳", "鉱石"), rows)
+        + '<p class="note">始祖竜は、いのち・かぎり・こころざしを一つに持っていたが、'
+        "大地に落ちて三つにちぎれた。かぎりはいのちを鎮め（氷→炎）、いのちはこころざしを焼き（炎→雷）、"
+        "こころざしはかぎりを砕く（雷→氷）。属性の相性は、この関係そのもの</p>",
+      )
+    )
+  cards.append(
+    (
+      "三つの教えと争い",
+      "<p>竜と星のいさかいの理由は、教えによって語りが違う。どれも、そう言われている、という話。</p>"
+      + table(
+        ("教え", "いさかいの理由（そう言われている）", "重んじる徳"),
+        [
+          (escape("星読み"), escape("竜が傲り、めぐりを呑もうとした。星はめぐりを守った"), escape("かぎり")),
+          (escape("竜の民"), escape("竜は生き物を解き放とうとした。星は看守だった"), escape("いのち")),
+          (
+            escape("王国の教え"),
+            escape("竜も星も被造物。法と秩序を守って、おおうみが目覚める日に備える"),
+            escape("こころざし"),
+          ),
+          (escape("土地の古い信仰"), escape("神は土地ごとにいる。竜の血が根になり、風になった"), escape("土地")),
+        ],
+      )
+      + '<p class="note">人の争いも、三つの徳の相性に重なると言われている。星読みは竜の民を抑え、竜の民の熱は王国の秩序を揺るがし、'
+      "王国は星読みを従わせようとする、と。どこにも決定的な勝者はいない</p>"
+      + '<p class="note">年寄りの言葉: 「星の灯りは、ただではない」「貸した手より、返す手のほうが冷たい」</p>',
+    )
+  )
+  return cards
+
+
 def build_guide(world: dict) -> str:
   """手引き: 能力・勇者の特性・魔物の性質・属性と相性・戦いの決まりの説明（値は world/ から）。"""
   cfg = world["season"]
@@ -1105,6 +1177,7 @@ def build_guide(world: dict) -> str:
   cards.append(("依頼の進め方", table(("場面", "どうなるか"), quest_rows)))
   cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))
   cards.append(("魔物の経験値とお金", table(("項目", "決め方"), reward_rows)))
+  cards.extend(build_myth_cards(world, table))
   body = "<h2>手引き</h2>" + "".join(f'<div class="card"><h3>{escape(h)}</h3>{inner}</div>' for h, inner in cards)
   return page("手引き", body, "guide.html")
 
