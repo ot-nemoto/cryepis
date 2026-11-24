@@ -433,6 +433,13 @@ class ValidateTest(unittest.TestCase):
     section = text.split("## 三つの教え")[1].split("\n## ")[0]
     for word in ("創造主", "利用", "シーズン", "経験値", "加護を与え", "星の思惑", "道具"):
       self.assertNotIn(word, section)
+    for phrase in (
+      "星は人を使",
+      "星が人を使",
+      "人を利用",
+      "思惑",
+    ):  # 秘密の言い換えも、出さない（文字どおりの語だけを見る簡単な守り）
+      self.assertNotIn(phrase, text)
     for word in ("創造主", "利用"):  # 物語の全体にも、出さない
       self.assertNotIn(word, text)
     for teaching in ("星読み", "竜の民", "王国の教え"):
