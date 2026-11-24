@@ -4,15 +4,15 @@
   {"id": "iron_sword", "name": "鉄の剣", "slot": "weapon", "rarity": "common", "atk": 1, "price": 50, "text": "町の鍛冶屋が、ふつうに打った剣。ふつうがいちばん折れない、と鍛冶屋は言う"},
   {"id": "iron_axe", "name": "鉄の斧", "slot": "weapon", "rarity": "common", "atk": 2, "spd": -2, "price": 80, "text": "薪も割れるし、魔物も割れる。重いので、足が遅くなる"},
   {"id": "wooden_helm", "name": "木の兜", "slot": "helmet", "rarity": "common", "def": 1, "spd": 1, "price": 30, "text": "森の民が、古木の枝で編んだ兜。軽くて、頭に風が通る"},
-  {"id": "iron_helm", "name": "鉄の兜", "slot": "helmet", "rarity": "common", "def": 2, "price": 50, "text": "鉄を打って作った兜。かぶると、少し声がこもる"},
+  {"id": "iron_helm", "name": "鉄の兜", "slot": "helmet", "rarity": "common", "def": 2, "price": 50, "text": "鉄を打って作った兜。かぶると、少し声がこもる。王の兵はこれをかぶり、星読みの前でも脱がないという"},
   {"id": "wooden_shield", "name": "木の盾", "slot": "shield", "rarity": "common", "def": 2, "price": 30, "text": "古木の板を重ねた盾。根の母の守りがある、と森の民は言う"},
-  {"id": "iron_shield", "name": "鉄の盾", "slot": "shield", "rarity": "common", "def": 3, "spd": -1, "price": 50, "text": "分厚い鉄の盾。心強いが、足をとられる"},
+  {"id": "iron_shield", "name": "鉄の盾", "slot": "shield", "rarity": "common", "def": 3, "spd": -1, "price": 50, "text": "分厚い鉄の盾。心強いが、足をとられる。縁に、王の旗の印が打ってある"},
   {"id": "soaring_leaf_charm", "name": "翔天葉の護符", "slot": "accessory", "rarity": "common", "spd": 2, "price": 50, "text": "風に舞う葉を編んだ護符。身が軽くなる。風は、竜の吐息の名残だという"},
   {"id": "silkvine_charm", "name": "糸紡蔓の護符", "slot": "accessory", "rarity": "common", "dex": 5, "price": 50, "text": "蔦の糸をよって結んだ護符。指先が、よく利くようになる"},
-  {"id": "lifeblood_charm", "name": "活血樹の護符", "slot": "accessory", "rarity": "common", "hp": 5, "price": 50, "text": "竜の血を吸った木の根で作った護符。持つと、胸があたたかい"},
-  {"id": "steel_sword", "name": "鋼鉄の剣", "slot": "weapon", "rarity": "rare", "atk": 2, "towns": ["salina"], "text": "鉄を何度も折り返して打った剣。潮風にさらしても錆びない、とサリナの鍛冶屋は自慢する"},
+  {"id": "lifeblood_charm", "name": "活血樹の護符", "slot": "accessory", "rarity": "common", "hp": 5, "price": 50, "text": "竜の血を吸った木の根で作った護符。持つと、胸があたたかい。竜の民は、いのちの火の分けだと言う"},
+  {"id": "steel_sword", "name": "鋼鉄の剣", "slot": "weapon", "rarity": "rare", "atk": 2, "towns": ["salina"], "text": "鉄を何度も折り返して打った剣。潮風にさらしても錆びない、とサリナの鍛冶屋は自慢する。どの教えの兵も、これを欲しがる"},
   {"id": "steel_helm", "name": "鋼鉄の兜", "slot": "helmet", "rarity": "rare", "def": 4, "towns": ["eques"], "text": "草原の馬の民が、風の抜ける形に打った鋼の兜。かぶると、風の声が聞こえるそうな"},
-  {"id": "steel_shield", "name": "鋼鉄の盾", "slot": "shield", "rarity": "rare", "hp": 5, "def": 4, "spd": -2, "towns": ["karun"], "text": "凍原の村で打つ、分厚い鋼の盾。重いが、冬の寒さにも割れない"},
+  {"id": "steel_shield", "name": "鋼鉄の盾", "slot": "shield", "rarity": "rare", "hp": 5, "def": 4, "spd": -2, "towns": ["karun"], "text": "凍原の村で打つ、分厚い鋼の盾。重いが、冬の寒さにも割れない。星読みの兵も、これを使う"},
   {"id": "crimson_grass_charm", "name": "紅蓮草の護符", "slot": "accessory", "rarity": "rare", "element": "flame", "towns": ["muralis"], "text": "岩の割れ目に咲く、燃えるように赤い草の護符。握ると、手のひらが熱くなる。砦の兵が、お守りにする"}
  ]
 }
