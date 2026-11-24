@@ -430,8 +430,15 @@ class ValidateTest(unittest.TestCase):
     """年の数え方は「灯暦」。古い呼び名「星暦」は、設定とサイトの物語に残さない。"""
     for path in ("world/story.md", "docs/WORLD.md", "docs/MYTH.md"):
       text = (ROOT / path).read_text(encoding="utf-8")
-      self.assertNotIn("星暦", text, path)
       self.assertIn("灯暦", text, path)
+    for path in [
+      *ROOT.glob("world/*"),
+      *ROOT.glob("docs/*.md"),
+      *ROOT.glob("scripts/*.py"),
+      *ROOT.glob("tools/worldgen/*.py"),
+      ROOT / "README.md",
+    ]:
+      self.assertNotIn("星暦", path.read_text(encoding="utf-8"), str(path))
 
   def test_story_keeps_the_secret_and_the_rules(self):
     """サイトに出す物語に、作者だけの秘密（星が人を使っている）と、設定の言葉を書かない。教えの語りは「と教える」「という」の形。"""
