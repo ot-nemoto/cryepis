@@ -1,5 +1,6 @@
 import ast
 import copy
+import re
 import sys
 import tempfile
 import unittest
@@ -478,7 +479,7 @@ class SiteTest(unittest.TestCase):
     raw = W.load_raw()
     texts = [
       (ROOT / "world" / "story.md").read_text(encoding="utf-8"),
-      website.build_guide(WORLD),
+      re.sub(r"<[^>]*>", "", website.build_guide(WORLD)),  # タグは見ない（読める文字だけ）
       *(p["text"] for p in raw["map"]["places"] if p.get("text")),
       *(i["text"] for i in raw["items"] if i.get("text")),
     ]
