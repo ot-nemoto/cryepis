@@ -463,7 +463,9 @@ class ValidateTest(unittest.TestCase):
   def test_item_texts_hint_at_the_teachings(self):
     """装備の説明に、教えのちがいが少し混ざっている（王の兵・星読みの兵・竜の民。docs/MYTH.md §5）。断定せず、秘密は出さない。"""
     texts = {i["id"]: i["text"] for i in RAW["items"]}
+    self.assertIn("王の兵", texts["iron_helm"])
     self.assertIn("王", texts["iron_shield"])
+    self.assertIn("教えの兵", texts["steel_sword"])
     self.assertIn("星読み", texts["steel_shield"])
     self.assertIn("竜の民", texts["lifeblood_charm"])
     joined = " ".join(texts.values())
