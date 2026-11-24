@@ -383,6 +383,32 @@ class ValidateTest(unittest.TestCase):
   def test_every_town_has_a_quest_list(self):
     self.assertEqual(set(RAW["town_quests"]), set(RAW["map"]["open"]))  # 町の依頼は強敵だけ（ない町もある）
 
+  def test_item_text_is_checked(self):
+    for bad in ("", "  ", 5, None, ["説明"], "あ" * (W.ITEM_TEXT_MAX + 1)):
+      with self.subTest(bad=bad):
+        self.assertError(lambda r, bad=bad: r["items"][0].update(text=bad), ["iron_sword", "text", "説明"])
+    self.assertEqual(
+      errors_after(lambda r: r["items"][0].update(text="あ" * W.ITEM_TEXT_MAX)), []
+    )  # 上限ちょうどは通る
+    self.assertEqual(errors_after(lambda r: r["items"][0].pop("text")), [])  # 説明は、書かなくてよい
+
+  def test_ore_descriptions_match_between_story_and_world_doc(self):
+    """鉱石の説明は、world/story.md（サイト）と docs/WORLD.md に同じ文を書いている（直したら、両方を直す）。"""
+
+    names = ("熾焔鋼", "霧氷石", "紫電鉄", "宵翳鋼", "星屑鉄", "陽炎石")
+
+    def ores(path):
+      lines = (ROOT / path).read_text(encoding="utf-8").splitlines()
+      return [line for line in lines if any(line.startswith(f"- **{name}") for name in names)]
+
+    story, doc = ores("world/story.md"), ores("docs/WORLD.md")
+    self.assertEqual(len(story), 6)
+    self.assertEqual(story, doc)
+
+  def test_every_item_has_a_text(self):
+    for item in RAW["items"]:
+      self.assertTrue(item.get("text"), item["id"])  # 13 個すべてに、説明がある（民話の語り口）
+
   def test_too_strong_item(self):
     def change(r):
       r["items"].append(

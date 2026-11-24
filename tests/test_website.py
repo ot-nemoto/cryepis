@@ -218,13 +218,32 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("宝箱", html)
     self.assertIn('<th>名前</th><th class="icon">属性</th><th class="num">HP</th>', html)  # 特産の列はない
     self.assertNotIn("特産", html)
-    self.assertIn('鉄の剣</td><td class="icon"></td><td class="num zero">0</td>', html)  # ★ は属性なし
+    sword = html.split("<td>鉄の剣")[1].split("</tr>")[0]
+    self.assertIn(
+      '</span></td><td class="icon"></td><td class="num zero">0</td>', sword
+    )  # ★ は属性なし（名前の下に説明がある）
     self.assertNotIn("🏷️", html)  # 属性は絵文字にしない
     self.assertNotIn("🌪️", html)
-    self.assertIn('<td class="mark">★★</td><td>鋼鉄の剣</td>', html)  # ★ は先頭の列
+    self.assertIn('<td class="mark">★★</td><td>鋼鉄の剣', html)  # ★ は先頭の列
     for slot in ("weapon", "helmet", "shield", "accessory"):  # ★ の多い順
       marks = [len(game.rarity_mark(WORLD, r["item"]["rarity"])) for r in website.item_rows(WORLD)[slot]]
       self.assertEqual(marks, sorted(marks, reverse=True))
+
+  def test_items_page_shows_the_descriptions(self):
+    html = website.build_items(WORLD)
+    for it in WORLD["items"].values():  # 13 個すべてに説明があり、名前の下に出る
+      self.assertIn(f'<td>{escape(it["name"])}<br><span class="note">{escape(it["text"])}</span></td>', html)
+
+  def test_item_description_is_optional_and_escaped(self):
+    world = copy.deepcopy(WORLD)
+    world["items"]["iron_sword"]["text"] = "<b>剣</b> & 盾"
+    world["items"]["iron_axe"].pop("text")
+    html = website.build_items(world)
+    self.assertIn('<span class="note">&lt;b&gt;剣&lt;/b&gt; &amp; 盾</span>', html)  # エスケープする
+    self.assertNotIn("<b>剣</b>", html)
+    axe = html.split("<td>鉄の斧")[1].split("</tr>")[0]
+    self.assertTrue(axe.startswith("</td>"), axe[:30])  # 説明がなければ、名前だけ
+    self.assertNotIn('<span class="note">', axe.split("</td>")[0])
 
   def test_town_pill_and_stat_cell(self):
     world = copy.deepcopy(WORLD)

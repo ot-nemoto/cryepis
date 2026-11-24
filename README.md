@@ -160,7 +160,7 @@ HP ██████████ 117/123  攻33 防16  1587G
 | `world/map-base.svg` | ベースの地図（地形の絵） |
 | `tools/worldgen/` | 地図づくりのスクリプト。`python tools/worldgen/make.py` で地形・陸路・航路・行動回数を作り直し、`world/map.json` と `world/map-base.svg` を書き出す（町の配置は `places.py`、名前は `names.py`、山脈・地域・川は `terrain.py`） |
 | `world/monsters.json` | 魔物（出る地形 `terrain`・性質 `trait`・属性 `element`・素早さ `spd`・器用さ `dex`。経験値とお金は書かず、能力から計算する: `season.json` の `monster_reward`）と、性質の一覧（`traits`。`score` は強さ点で足す値、`gold_rate` は倒したときのお金の倍率。盗みの魔物は多い）、属性と相性（`elements`: 名前と、強い相手の属性 `strong`） |
-| `world/items.json` | アイテムと珍しさ（common / rare / epic / legendary。印は ★〜★★★★ で、依頼のレアリティと同じく ★ から始まる）。店で売るもの（common）は `price` を書く。レア（rare 以上）は `towns` に書いた町の依頼の報酬でしか出ない（レベルの制限なし）。町ごとの特産とレアは [docs/WORLD.md](docs/WORLD.md) |
+| `world/items.json` | アイテムと珍しさ（common / rare / epic / legendary。印は ★〜★★★★ で、依頼のレアリティと同じく ★ から始まる）。説明（`text`。任意で、100 文字以内。サイトのアイテムのページの名前の下に出る）。店で売るもの（common）は `price` を書く。レア（rare 以上）は `towns` に書いた町の依頼の報酬でしか出ない（レベルの制限なし）。町ごとの特産とレアは [docs/WORLD.md](docs/WORLD.md) |
 | `world/quests.json` | ギルドの依頼。1 行動あたりの報酬（`reward`）、レアリティ（`ranks`: ★〜★★★★ の出やすさ・報酬の倍率・アイテムのドロップ表）、共通の依頼（`templates`）、町ごとの依頼（`towns`: 名前・内容・ギルドの言葉。開放した町だけに書く。いまは南大陸の 3 件。強敵の討伐だけ） |
 | `world/story.md` | サイトの最初のページ（ストーリー）の文。Markdown の一部（`#`・`##` の見出し、`-` の箇条書き、`|` の表、`**太字**`、段落）が使える。物語を書き足すときはここを編集する |
 

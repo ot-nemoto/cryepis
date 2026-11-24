@@ -59,6 +59,7 @@ BACKGROUND_TYPES = {
   ".webp": "image/webp",
 }
 BACKGROUND_MAX_BYTES = 1024 * 1024
+ITEM_TEXT_MAX = 100  # アイテムの説明（items.json の text）の長さの上限
 BIG = 10**9
 # season.json の必須項目: 名前 → (型, 最小, 最大)
 SEASON_KEYS = {
@@ -744,6 +745,8 @@ def _check_items(c: _Check):
       err(f"{where}: ID に珍しさの名前は使えません")
     if not it.get("name"):
       err(f"{where}: name がありません")
+    if "text" in it and (not isinstance(it["text"], str) or not it["text"].strip() or len(it["text"]) > ITEM_TEXT_MAX):
+      err(f"{where}: text（説明）は、空でない {ITEM_TEXT_MAX} 文字以内の文字列にしてください")
     if it.get("slot") not in SLOTS:
       err(f"{where}: slot は {'/'.join(SLOTS)} のどれかにしてください")
     if it.get("rarity") not in rarities:
