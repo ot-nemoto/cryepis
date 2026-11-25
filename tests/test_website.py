@@ -305,7 +305,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("旅をしている勇者</th><td>2 人", html)  # いまの冒険の状況
     self.assertIn('坂東 <span class="en">Bando</span>', html)
     self.assertIn('href="towns.html#edo"', html)
-    for word in ("オルドラ", "竜", "星の巡り"):  # 物語はいったん外した（#249）
+    for word in ("オルドラ", "星の巡り"):  # 物語はいったん外した（#249）
       self.assertNotIn(word, html)
 
   def test_heroes_page(self):

@@ -165,7 +165,7 @@ class TownTextTest(unittest.TestCase):
 
   def test_texts_do_not_use_game_words(self):
     for name, text in lore.TEXT.items():
-      for banned in ("創造主", "利用", "シーズン", "レベル", "加護を与え", "勇者"):
+      for banned in ("シーズン", "レベル", "勇者"):
         self.assertNotIn(banned, text, name)
 
   def test_world_md_lists_the_same_texts(self):

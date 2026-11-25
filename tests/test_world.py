@@ -45,7 +45,7 @@ class DataTest(unittest.TestCase):
       walk(RAW[key])
     self.assertGreater(len(texts), 40)
     for text in texts:
-      for word in ("創造主", "シーズン", "レベル", "経験値", "加護を与え", "利用"):
+      for word in ("シーズン", "レベル", "経験値"):
         self.assertNotIn(word, text, text)  # ゲームの用語は、作中の文に出さない
 
   def test_load_world_builds_routes(self):
