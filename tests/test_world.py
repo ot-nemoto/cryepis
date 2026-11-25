@@ -153,43 +153,45 @@ class ValidateTest(unittest.TestCase):
   def test_disconnected_place(self):
     def change(r):
       r["map"]["places"].append(
-        {"id": "island", "type": "town", "name": "離れ小島", "pos": [1, 1], "quests_per_day": 3, "area": "crownlands"}
+        {"id": "island", "type": "town", "name": "離れ小島", "pos": [1, 1], "quests_per_day": 3, "area": "kinai"}
       )
       r["map"]["open"].append("island")
 
     self.assertError(change, ["island", "行けません"])
 
   def test_bad_road(self):
-    self.assertError(lambda r: r["map"]["roads"].append({"from": "aurea", "to": "x", "distance": 0}), ["distance"])
+    self.assertError(lambda r: r["map"]["roads"].append({"from": "kyoto", "to": "x", "distance": 0}), ["distance"])
 
   def test_road_kinds_connect_the_right_places(self):
     def land_to_dungeon(r):
       r["map"]["roads"].append(
-        {"from": "aurea", "to": "jade_tomb", "distance": 1, "kind": "land", "terrain": [["plain", 100]]}
+        {"from": "kyoto", "to": "kumano", "distance": 1, "kind": "land", "terrain": [["plain", 100]]}
       )
 
     self.assertError(land_to_dungeon, ["町どうし"])
 
     def trail_between_towns(r):
-      r["map"]["roads"].append({"from": "aurea", "to": "zafra", "distance": 1, "kind": "trail"})
+      r["map"]["roads"].append({"from": "kyoto", "to": "osaka", "distance": 1, "kind": "trail"})
 
     self.assertError(trail_between_towns, ["trail", "ダンジョン"])
 
   def test_start_must_be_a_town(self):
     def change(r):
-      r["map"]["starts"] = ["jade_tomb"]
+      r["map"]["starts"] = ["kumano"]
 
-    self.assertError(change, ["starts", "jade_tomb"])
-    self.assertError(lambda r: r["map"].update(starts=["aurea"]), ["starts", "aurea", "開放"])
+    self.assertError(change, ["starts", "kumano"])
+    self.assertError(lambda r: r["map"].update(starts=["kyoto"]), ["starts", "kyoto", "開放"])
 
   def test_bad_areas_are_reported_not_crashed(self):
     self.assertError(lambda r: r["map"].update(areas=None), ["areas"])
     self.assertError(lambda r: r["map"]["areas"].append({"id": ["x"], "name": "y"}), ["areas", "id"])
     self.assertError(lambda r: r["map"]["areas"].append({"id": "x", "name": 1}), ["areas", "name"])
-    self.assertError(lambda r: r["map"]["places"][0].update(area=["crownlands"]), ["area", "地方"])
+    self.assertError(lambda r: r["map"]["places"][0].update(area=["kinai"]), ["area", "地方"])
 
   def test_area_ids_do_not_clash_with_places(self):
-    self.assertError(lambda r: r["map"]["areas"].append({"id": "eques", "name": "x"}), ["areas", "町・ダンジョンの ID"])
+    self.assertError(
+      lambda r: r["map"]["areas"].append({"id": "odawara", "name": "x"}), ["areas", "町・ダンジョンの ID"]
+    )
     self.assertError(lambda r: r["map"]["areas"].append({"id": "_other", "name": "x"}), ["areas", "_"])
 
   def test_elements_speed_and_personas_are_checked(self):
@@ -235,8 +237,8 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"].pop("critical"), ["critical"])
 
   def test_boss_needs_a_dungeon(self):
-    self.assertError(lambda r: r["monsters"][-1].update(boss="salina"), ["den_lord", "boss"])
-    self.assertError(lambda r: r["monsters"][-1].update(boss=["wall_den"]), ["den_lord", "boss"])  # 落ちない
+    self.assertError(lambda r: r["monsters"][-1].update(boss="edo"), ["den_lord", "boss"])
+    self.assertError(lambda r: r["monsters"][-1].update(boss=["fuji"]), ["den_lord", "boss"])  # 落ちない
 
   def test_road_needs_a_monster_other_than_the_boss(self):
     def boss_only(r):  # 火山にはボスだけ、という道
@@ -248,12 +250,12 @@ class ValidateTest(unittest.TestCase):
 
   def test_hunt_quest_cannot_target_the_boss(self):
     def boss_quest(r):
-      q = r["town_quests"]["karun"][0]
+      q = r["town_quests"]["nagano"][0]
       boss = r["monsters"][-1]
       boss["terrain"] = next(m["terrain"] for m in r["monsters"] if m["id"] == q["monster"])  # 道の地形に合わせる
       q["monster"] = boss["id"]
 
-    self.assertError(boss_quest, ["karun_3", "ボス以外"])
+    self.assertError(boss_quest, ["nagano_3", "ボス以外"])
 
   def test_item_dex_is_checked(self):
     self.assertError(lambda r: r["items"][-1].update(dex="2"), ["crimson_grass_charm", "dex"])
@@ -264,20 +266,20 @@ class ValidateTest(unittest.TestCase):
   def test_areas_and_english_names(self):
     self.assertError(lambda r: r["map"]["places"][0].update(area="moon"), ["area", "地方"])
     self.assertError(lambda r: r["map"]["places"][0].pop("area"), ["area", "地方"])
-    self.assertError(lambda r: r["map"]["areas"].append({"id": "crownlands", "name": "x"}), ["areas", "重複"])
+    self.assertError(lambda r: r["map"]["areas"].append({"id": "kinai", "name": "x"}), ["areas", "重複"])
     self.assertError(lambda r: r["map"]["places"][0].update(en=""), ["en"])
     world = W.load_world()
-    self.assertEqual(len(world["areas"]), 8)
+    self.assertEqual(len(world["areas"]), 7)
     for p in world["places"].values():  # どの町・ダンジョンにも地方と英語名がある
       self.assertIn(p["area"], world["areas"])
       self.assertTrue(p["en"])
-    self.assertEqual({world["places"][t]["area"] for t in world["towns"]}, {"austral_land"})
+    self.assertEqual({world["places"][t]["area"] for t in world["towns"]}, {"bando"})
 
   def test_every_town_has_a_guild_size(self):
     self.assertError(lambda r: r["map"]["places"][0].pop("quests_per_day"), ["quests_per_day", "ギルドの規模"])
 
   def test_open_must_be_towns(self):
-    self.assertError(lambda r: r["map"].update(open=["jade_tomb"]), ["open", "jade_tomb"])
+    self.assertError(lambda r: r["map"].update(open=["kumano"]), ["open", "kumano"])
     self.assertError(lambda r: r["map"].update(open=[]), ["open"])
 
   def test_closed_roads_are_not_used(self):
@@ -288,7 +290,7 @@ class ValidateTest(unittest.TestCase):
       self.assertTrue(a in opened and b in opened, (a, b))
     for r in world["trails"]:
       self.assertTrue({r["from"], r["to"]} & opened, r)
-    self.assertFalse(any(i["kind"] == "sea" for i in world["road_info"].values()))  # サリナからの航路は出さない
+    self.assertFalse(any(i["kind"] == "sea" for i in world["road_info"].values()))  # 江戸からの航路は出さない
     self.assertEqual(len(world["places"]), len(RAW["map"]["places"]))  # 町・ダンジョンは地図に出す
 
   def test_without_open_every_town_is_open(self):
@@ -314,21 +316,21 @@ class ValidateTest(unittest.TestCase):
 
   def test_rare_items_need_quest_towns(self):
     self.assertError(lambda r: r["items"][-1].pop("towns"), ["crimson_grass_charm", "towns"])
-    self.assertError(lambda r: r["items"][-1].update(towns=["jade_tomb"]), ["towns", "jade_tomb"])
-    self.assertError(lambda r: r["items"][0].update(towns=["salina"]), ["iron_sword", "common"])
+    self.assertError(lambda r: r["items"][-1].update(towns=["kumano"]), ["towns", "kumano"])
+    self.assertError(lambda r: r["items"][0].update(towns=["edo"]), ["iron_sword", "common"])
     self.assertError(
-      lambda r: r["items"][-1].update(towns=["aurea"]), ["crimson_grass_charm", "aurea", "開放"]
+      lambda r: r["items"][-1].update(towns=["kyoto"]), ["crimson_grass_charm", "kyoto", "開放"]
     )  # 開放していない町
-    for bad in (5, "salina", [["salina"]]):  # 型が違っても落ちずにエラーを返す
+    for bad in (5, "edo", [["edo"]]):  # 型が違っても落ちずにエラーを返す
       self.assertError(lambda r, bad=bad: r["items"][-1].update(towns=bad), ["crimson_grass_charm", "towns"])
 
   def test_every_town_needs_a_rare(self):
     def change(r):
       for it in r["items"]:
-        if it["rarity"] == "rare" and "karun" in it["towns"]:
-          it["towns"].remove("karun")
+        if it["rarity"] == "rare" and "nagano" in it["towns"]:
+          it["towns"].remove("nagano")
 
-    self.assertError(change, ["karun", "rare"])
+    self.assertError(change, ["nagano", "rare"])
 
   def test_treasure_cannot_hold_rares(self):
     self.assertError(lambda r: r["season"]["treasure"].append(["rare", 1]), ["treasure", "rare"])
@@ -347,31 +349,31 @@ class ValidateTest(unittest.TestCase):
 
   def test_town_quests_are_checked(self):
     base = {
-      "id": "karun_x",
+      "id": "nagano_x",
       "rank": 1,
       "type": "hunt",
       "name": "試し",
-      "to": "eques",
+      "to": "kofu",
       "monster": "ice_wolf",
       "count": 3,
     }
 
     def town_quest(**change):
       def apply(r):
-        r["town_quests"]["karun"].append(dict(base, **change))
+        r["town_quests"]["nagano"].append(dict(base, **change))
 
       return apply
 
     self.assertEqual(errors_after(town_quest()), [])  # 町の討伐も書ける（今は強敵だけ）
-    self.assertError(town_quest(to="salina"), ["karun_x", "直接つながる"])  # 道がない
-    self.assertError(town_quest(monster="mountain_bandit"), ["karun_x", "その道に出る"])  # その道にいない魔物
-    self.assertError(town_quest(rank=9), ["karun_x", "rank"])
-    self.assertError(town_quest(count=0), ["karun_x", "count"])
-    self.assertError(town_quest(type="deliver", to="karun"), ["karun_x", "別の町"])
-    self.assertError(town_quest(type="deliver", to="aurea"), ["karun_x", "開放した別の町"])
+    self.assertError(town_quest(to="edo"), ["nagano_x", "直接つながる"])  # 道がない
+    self.assertError(town_quest(monster="marsh_leech"), ["nagano_x", "その道に出る"])  # その道にいない魔物
+    self.assertError(town_quest(rank=9), ["nagano_x", "rank"])
+    self.assertError(town_quest(count=0), ["nagano_x", "count"])
+    self.assertError(town_quest(type="deliver", to="nagano"), ["nagano_x", "別の町"])
+    self.assertError(town_quest(type="deliver", to="kyoto"), ["nagano_x", "開放した別の町"])
     self.assertError(town_quest(id="hunt"), ["重複"])  # 共通の依頼と同じ ID
-    self.assertError(lambda r: r["town_quests"].update(jade_tomb=[]), ["jade_tomb", "町の ID"])
-    self.assertError(lambda r: r["town_quests"].update(aurea=[]), ["aurea", "開放した町"])
+    self.assertError(lambda r: r["town_quests"].update(kumano=[]), ["kumano", "町の ID"])
+    self.assertError(lambda r: r["town_quests"].update(kyoto=[]), ["kyoto", "開放した町"])
 
   def test_bad_hunt_texts(self):
     self.assertError(lambda r: r["hunts"]["places"].update(nowhere=["x"]), ["nowhere"])
@@ -491,7 +493,7 @@ class ValidateTest(unittest.TestCase):
   def test_too_strong_item(self):
     def change(r):
       r["items"].append(
-        {"id": "god_sword", "name": "神の剣", "slot": "weapon", "rarity": "legendary", "atk": 99, "towns": ["salina"]}
+        {"id": "god_sword", "name": "神の剣", "slot": "weapon", "rarity": "legendary", "atk": 99, "towns": ["edo"]}
       )
 
     self.assertError(change, ["god_sword", "点数 99", "legendary"])
@@ -631,12 +633,12 @@ class ValidateTest(unittest.TestCase):
     def no_pos(r):
       del r["map"]["places"][0]["pos"]
 
-    self.assertError(no_pos, ["aurea", "pos"])
+    self.assertError(no_pos, ["tosaminato", "pos"])
 
     def bad_quests_per_day(r):
       r["map"]["places"][0]["quests_per_day"] = 0
 
-    self.assertError(bad_quests_per_day, ["aurea", "quests_per_day"])
+    self.assertError(bad_quests_per_day, ["tosaminato", "quests_per_day"])
 
     def bad_path(r):
       r["map"]["roads"][0]["path"] = [[1, 2]]
@@ -651,7 +653,7 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["deliveries"].update(ranks=[8, 4]), ["deliveries の ranks"])
     self.assertError(lambda r: r["deliveries"]["dangers"][0].update(texts=["{cargo}を運ぶ"]), ["texts"])
     self.assertError(lambda r: r["deliveries"]["cargo"].update(nowhere=[[], [], []]), ["nowhere"])
-    self.assertError(lambda r: r["deliveries"]["cargo"].update(salina=[["塩"]]), ["salina"])
+    self.assertError(lambda r: r["deliveries"]["cargo"].update(edo=[["塩"]]), ["edo"])
 
   def test_bad_season(self):
     def change(r):
@@ -710,7 +712,7 @@ class BrokenDataTest(unittest.TestCase):
       (lambda r: r["monsters"][0].update(terrain=[]), ["monsters[0]", "terrain", "文字列"]),
       (lambda r: r.update(rarities=[1, 2]), ["rarities", "文字列の一覧"]),
       (lambda r: r.update(map=[]), ["map.json", "辞書"]),
-      (lambda r: r["town_quests"]["muralis"][0].update(to=[]), ["muralis", "to", "文字列"]),
+      (lambda r: r["town_quests"]["kofu"][0].update(to=[]), ["kofu", "to", "文字列"]),
       (lambda r: r["map"].update(open=[[]]), ["open", "文字列の一覧"]),
     ):
       with self.subTest(words):

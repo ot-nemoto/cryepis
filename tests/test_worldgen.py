@@ -78,7 +78,6 @@ class TablesTest(unittest.TestCase):
       ("QUESTS_PER_DAY", build_world.QUESTS_PER_DAY),
     ):
       self.assertEqual(set(table), towns, label)  # 足りない町も、余分な町もない
-    self.assertEqual(len(set(names.NAMES.values())), len(towns))  # 固有の名前は重ならない
 
   def test_every_dungeon_has_its_tables(self):
     dungeons = set(self.DUNGEON_NAMES)
@@ -98,9 +97,18 @@ class TablesTest(unittest.TestCase):
 
   def test_sea_routes_connect_towns(self):
     towns = set(self.TOWN_NAMES)
-    for a, b, via in places.SEA_ROUTES:
+    for a, b in places.SEA_ROUTES:
       self.assertTrue(a in towns and b in towns and a != b, (a, b))
-      self.assertTrue(via)
+
+  def test_routes_connect_known_places(self):
+    towns, dungeons = set(self.TOWN_NAMES), set(self.DUNGEON_NAMES)
+    for a, b in places.LAND_ROADS:
+      self.assertTrue(a in towns and b in towns and a != b, (a, b))
+    for d, t in places.TRAILS:
+      self.assertTrue(d in dungeons and t in towns, (d, t))
+    self.assertEqual({d for d, _ in places.TRAILS}, dungeons)  # どのダンジョンにも道がある
+    pairs = [frozenset(p) for p in places.LAND_ROADS + places.TRAILS + places.SEA_ROUTES]
+    self.assertEqual(len(pairs), len(set(pairs)))  # 同じ道を 2 度書かない
 
   def test_labels_and_open_towns(self):
     for name, side in places.LABEL.items():
@@ -138,7 +146,9 @@ class CommittedMapTest(unittest.TestCase):
     """道の端点は表の町・ダンジョン・航路と合う（道の線そのものは、地形から作るので、ここでは見ない）。"""
     pid = build_world.pid
     sea_roads = {frozenset((r["from"], r["to"])) for r in MAP["roads"] if r["kind"] == "sea"}
-    self.assertEqual(sea_roads, {frozenset((pid(a), pid(b))) for a, b, _ in places.SEA_ROUTES})
+    self.assertEqual(sea_roads, {frozenset((pid(a), pid(b))) for a, b in places.SEA_ROUTES})
+    land_roads = {frozenset((r["from"], r["to"])) for r in MAP["roads"] if r["kind"] != "sea"}
+    self.assertEqual(land_roads, {frozenset((pid(a), pid(b))) for a, b in places.LAND_ROADS + places.TRAILS})
     dungeons = {pid(n) for n, _, _ in places.DUNGEONS}
     for r in MAP["roads"]:
       self.assertEqual(r["kind"] == "trail", bool({r["from"], r["to"]} & dungeons), r)  # ダンジョンへの道だけ trail
@@ -153,44 +163,35 @@ class TownTextTest(unittest.TestCase):
       self.assertTrue(text.strip() == text and "\n" not in text, name)
       self.assertTrue(20 <= len(text) <= 120, (name, len(text)))  # 1〜2 文。町のカードに収まる長さ
 
-  def test_relic_towns_hint_at_the_relics(self):
-    """聖遺物のある土地（docs/MYTH.md §5）の説明に、聖遺物の言い伝えがある。断定せず、設定の言葉・秘密は出さない。"""
-    hints = {
-      "霧氷の修道院": "牙の欠片",
-      "氷牙の砦": "牙の欠片",
-      "焔の湯治場": "消えない火",
-      "天門の町": "頭骨の冠",
-      "雨林の村": "骨の禁令",
-      "鋼山の町": "骨の禁令",
-      "オアシスの町": "誰のせいか",
-      "王都": "星読みの使い",
-    }
-    for alias, word in hints.items():
-      self.assertIn(word, lore.TEXT[alias], alias)
+  def test_texts_do_not_use_game_words(self):
     for name, text in lore.TEXT.items():
-      for banned in ("創造主", "利用", "シーズン", "レベル", "加護を与え"):
+      for banned in ("シーズン", "レベル", "勇者"):
         self.assertNotIn(banned, text, name)
 
   def test_world_md_lists_the_same_texts(self):
     """docs/WORLD.md の町の一覧の「特徴」が、lore.TEXT と同じ（直したら、両方を直す）。"""
     doc = (ROOT / "docs" / "WORLD.md").read_text(encoding="utf-8")
-    for alias, text in lore.TEXT.items():
-      self.assertIn(f"（{alias}） |", doc, alias)
-      row = next(line for line in doc.splitlines() if f"（{alias}） |" in line)
-      self.assertTrue(row.rstrip().endswith(f"| {text} |"), alias)
+    for name, text in lore.TEXT.items():
+      row = next((line for line in doc.splitlines() if line.startswith("| ") and f"| {name}（" in line), None)
+      self.assertIsNotNone(row, name)
+      self.assertTrue(row.rstrip().endswith(f"| {text} |"), name)
 
 
 class ActionsTest(unittest.TestCase):
+  """移動日数＝行動回数（1 日に進む距離で割って四捨五入）。"""
+
   def test_land_actions(self):
-    self.assertEqual([actions.land(c) for c in (0, 1, 19, 20, 40, 60, 100)], [1, 1, 1, 1, 1, 2, 2])  # 最低 1 回
-    self.assertEqual(actions.land(400), 10)
+    self.assertEqual([actions.land(km) for km in (0, 10, 36, 53, 55, 72, 289)], [1, 1, 1, 1, 2, 2, 8])  # 最低 1 回
+
+  def test_trail_actions_are_slower(self):
+    self.assertEqual([actions.trail(km) for km in (0, 20, 45, 100)], [1, 1, 2, 5])
+    self.assertLess(actions.TRAIL_KM, actions.LAND_KM)  # 山道は遅い
 
   def test_sea_actions_have_a_minimum_for_boarding(self):
     self.assertEqual(actions.sea(0), actions.SEA_MIN)
-    self.assertEqual(actions.sea(60), 2)
-    self.assertEqual(actions.sea(300), 5)
-    self.assertGreater(actions.LAND_PER_ACTION, 0)
-    self.assertGreater(actions.SEA_PER_ACTION, actions.LAND_PER_ACTION)  # 船は速い
+    self.assertEqual(actions.sea(140), 2)
+    self.assertEqual(actions.sea(565), 8)
+    self.assertGreater(actions.SEA_KM, actions.LAND_KM)  # 船は速い
 
 
 class SimplifyTest(unittest.TestCase):

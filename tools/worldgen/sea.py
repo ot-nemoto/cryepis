@@ -11,7 +11,7 @@ import math
 
 import paths
 from places import SEA_ROUTES, TOWNS
-from roads import simplify
+from roads import length_km, simplify
 
 STEP = 2
 kind = paths.kind()
@@ -102,9 +102,9 @@ def check(pts):
 
 def main():
   routes = []
-  for a, b, _ in SEA_ROUTES:
+  for a, b in SEA_ROUTES:
     pts, cost = sea_path(a, b)
-    routes.append({"from": a, "to": b, "cost": cost, "path": pts})
+    routes.append({"from": a, "to": b, "cost": cost, "km": length_km(pts), "path": pts})
     assert check(pts) == 0, f"航路 {a}-{b} が陸の上を通っています"
   with open(paths.SEA, "w", encoding="utf-8") as f:
     json.dump(routes, f, ensure_ascii=False, indent=1)

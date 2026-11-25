@@ -61,12 +61,20 @@ def toy_world(kind=None):
     tmp = Path(tmp)
     for module in (roads, sea):
       stack.enter_context(mock.patch.multiple(module, kind=kind, GH=GH, GW=GW))
-    stack.enter_context(mock.patch.multiple(roads, TOWNS=TOWNS, DUNGEONS=DUNGEONS))
+    stack.enter_context(
+      mock.patch.multiple(
+        roads,
+        TOWNS=TOWNS,
+        DUNGEONS=DUNGEONS,
+        LAND_ROADS=[("北の町", "東の町"), ("北の町", "南の町")],
+        TRAILS=[("東の洞", "東の町")],
+      )
+    )
     stack.enter_context(
       mock.patch.multiple(
         sea,
         pos={**{n: (x, y) for n, x, y in TOWNS}, **PORTS},
-        SEA_ROUTES=[("港 A", "港 B", [])],
+        SEA_ROUTES=[("港 A", "港 B")],
         OCEAN=sea.ocean_cells(),
       )
     )
@@ -213,14 +221,15 @@ class TerrainGenerateTest(SmallLand):
 class ActionsMainTest(unittest.TestCase):
   def test_writes_actions_into_roads_and_sea(self):
     with toy_world():
-      paths.ROADS.write_text(json.dumps([{"cost": 30}, {"cost": 100}]), encoding="utf-8")
-      paths.SEA.write_text(json.dumps([{"cost": 10}, {"cost": 300}]), encoding="utf-8")
+      roads_in = [{"km": 30, "kind": "road"}, {"km": 100, "kind": "road"}, {"km": 100, "kind": "trail"}]
+      paths.ROADS.write_text(json.dumps(roads_in), encoding="utf-8")
+      paths.SEA.write_text(json.dumps([{"km": 10}, {"km": 300}]), encoding="utf-8")
       actions.main()
       roads_out = json.loads(paths.ROADS.read_text(encoding="utf-8"))
       sea_out = json.loads(paths.SEA.read_text(encoding="utf-8"))
-    self.assertEqual([r["actions"] for r in roads_out], [1, 2])
-    self.assertEqual([r["actions"] for r in sea_out], [2, 5])
-    self.assertEqual([r["cost"] for r in roads_out], [30, 100])  # もとの値は残る
+    self.assertEqual([r["actions"] for r in roads_out], [1, 3, 5])  # 山道は街道より遅い
+    self.assertEqual([r["actions"] for r in sea_out], [2, 4])
+    self.assertEqual([r["km"] for r in roads_out], [30, 100, 100])  # もとの値は残る
 
 
 class RoadsMainTest(unittest.TestCase):
@@ -229,50 +238,37 @@ class RoadsMainTest(unittest.TestCase):
       roads.main()
       return json.loads(paths.ROADS.read_text(encoding="utf-8"))
 
-  def test_towns_are_connected_and_the_dungeon_hangs_off_the_nearest_town(self):
+  def test_roads_follow_the_route_tables(self):
     out = self.run_roads()
-    towns = {"北の町", "東の町", "南の町"}
-    land_roads = [r for r in out if r["kind"] == "road"]
-    trails = [r for r in out if r["kind"] == "trail"]
-    self.assertEqual(len(trails), 1)
-    self.assertEqual(trails[0]["from"], "東の洞")
-    self.assertIn(trails[0]["to"], towns)
-    seen = {land_roads[0]["from"]}  # 町どうしは、1 つにつながっている
-    for _ in land_roads:
-      for r in land_roads:
-        if r["from"] in seen or r["to"] in seen:
-          seen |= {r["from"], r["to"]}
-    self.assertEqual(seen, towns)
+    self.assertEqual(
+      [(r["from"], r["to"], r["kind"]) for r in out],
+      [("北の町", "東の町", "road"), ("北の町", "南の町", "road"), ("東の洞", "東の町", "trail")],
+    )
 
-  def test_roads_have_costs_and_paths_on_land(self):
+  def test_roads_have_costs_lengths_and_paths_on_land(self):
     kind = toy_kind()
     for r in self.run_roads():
       self.assertGreater(r["cost"], 0)
       self.assertGreaterEqual(len(r["path"]), 2)
+      self.assertEqual(r["km"], roads.length_km(r["path"]))  # 長さは線の長さ
       for x, y in r["path"]:
         self.assertNotEqual(kind[y // STEP][x // STEP], "sea")  # 海は通らない
-      self.assertIn(r["kind"], ("road", "trail"))
 
-  def test_relative_neighbourhood_drops_the_long_way_round(self):
-    # 北の町・東の町・南の町は三角形。いちばん長い辺（東の町 - 南の町）は、北の町を経由するほうが近いので、つながない
-    out = {frozenset((r["from"], r["to"])) for r in self.run_roads() if r["kind"] == "road"}
-    self.assertIn(frozenset(("北の町", "東の町")), out)
-    self.assertIn(frozenset(("北の町", "南の町")), out)
-    self.assertNotIn(frozenset(("東の町", "南の町")), out)
+  def test_length_km_follows_the_map_scale(self):
+    self.assertEqual(roads.length_km([(0, 0), (30, 40)]), round(50 * roads.japan.KM_PER_PX))
 
-  def test_towns_separated_by_water_are_not_connected(self):
+  def test_trails_take_mountains_more_easily(self):
+    self.assertLess(roads.TRAIL_COST["mount"], roads.COST["mount"])
+    self.assertEqual(roads.TRAIL_COST["plain"], roads.COST["plain"])
+
+  def test_towns_separated_by_water_stop_the_build(self):
     kind = toy_kind()
     for j in range(GH):  # 海の帯で、西（北の町・南の町）と東（東の町・東の洞）に分ける
       for i in range(65, 75):
         kind[j][i] = "sea"
-    with toy_world(kind):
+    with toy_world(kind), self.assertRaises(SystemExit) as cm:
       roads.main()
-      out = json.loads(paths.ROADS.read_text(encoding="utf-8"))
-    roads_ = {frozenset((r["from"], r["to"])) for r in out if r["kind"] == "road"}
-    self.assertEqual(roads_, {frozenset(("北の町", "南の町"))})  # 東の町へは陸路がない
-    self.assertEqual(
-      [(r["from"], r["to"]) for r in out if r["kind"] == "trail"], [("東の洞", "東の町")]
-    )  # 洞は、行ける町へ
+    self.assertIn("陸で行けません", str(cm.exception))
 
 
 class SeaStagesTest(unittest.TestCase):
@@ -324,6 +320,7 @@ class SeaStagesTest(unittest.TestCase):
       out = json.loads(paths.SEA.read_text(encoding="utf-8"))
     self.assertEqual([(r["from"], r["to"]) for r in out], [("港 A", "港 B")])
     self.assertGreater(out[0]["cost"], 0)
+    self.assertEqual(out[0]["km"], roads.length_km(out[0]["path"]))
 
   def test_main_refuses_a_route_over_land(self):
     with toy_world(), mock.patch.object(sea, "check", return_value=3), self.assertRaises(AssertionError) as cm:
@@ -379,14 +376,14 @@ class BuildWorldMainTest(unittest.TestCase):
     paths.ROADS.write_text(
       json.dumps(
         [
-          {"from": "干潟の港", "to": "大草原の町", "cost": 80, "actions": 2, "path": path, "kind": "road"},
-          {"from": "南壁の巣穴", "to": "南壁の砦", "cost": 40, "actions": 1, "path": path[:2], "kind": "trail"},
+          {"from": "江戸", "to": "小田原", "cost": 80, "actions": 2, "path": path, "kind": "road"},
+          {"from": "富士山", "to": "甲府", "cost": 40, "actions": 1, "path": path[:2], "kind": "trail"},
         ]
       ),
       encoding="utf-8",
     )
     paths.SEA.write_text(
-      json.dumps([{"from": "暁の港", "to": "焔の湯治場", "cost": 120, "actions": 2, "path": path}]), encoding="utf-8"
+      json.dumps([{"from": "大坂", "to": "勝瑞", "cost": 120, "actions": 2, "path": path}]), encoding="utf-8"
     )
     paths.BASE_SVG.write_text("<svg/>", encoding="utf-8")
 
@@ -412,11 +409,9 @@ class BuildWorldMainTest(unittest.TestCase):
     _, mp, _, _ = self.run_main()
     land_road, trail, sea_road = mp["roads"]
     self.assertEqual(
-      (land_road["from"], land_road["to"], land_road["kind"], land_road["distance"]), ("salina", "eques", "land", 2)
+      (land_road["from"], land_road["to"], land_road["kind"], land_road["distance"]), ("edo", "odawara", "land", 2)
     )
-    self.assertEqual(
-      (trail["from"], trail["to"], trail["kind"], trail["distance"]), ("wall_den", "muralis", "trail", 1)
-    )
+    self.assertEqual((trail["from"], trail["to"], trail["kind"], trail["distance"]), ("fuji", "kofu", "trail", 1))
     self.assertEqual((sea_road["kind"], sea_road["terrain"]), ("sea", [["sea", 100]]))
     self.assertEqual(land_road["terrain"], [["plain", 100]])  # 全部が草原の地形
     self.assertEqual(land_road["path"], [[100, 100], [200, 120], [400, 300]])

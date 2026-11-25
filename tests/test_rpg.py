@@ -54,7 +54,7 @@ class DisplayTest(unittest.TestCase):
           "slot": "helmet",
           "rarity": "epic",
           "def": 9,
-          "towns": ["salina"],
+          "towns": ["edo"],
         },
       },
     }
@@ -74,7 +74,7 @@ class DisplayTest(unittest.TestCase):
   def test_detail_shows_the_current_quest(self):
     state = play(1)
     t = next(x for x in WORLD["quests"] if x["type"] == "hunt")
-    q = game.make_quest(WORLD, t, "salina", DAY, game.random.Random(0), 1)
+    q = game.make_quest(WORLD, t, "edo", DAY, game.random.Random(0), 1)
     state["quest"] = q
     text = view.build_text(WORLD, state)
     self.assertIn("── 受けている依頼 ──", text)
@@ -536,7 +536,7 @@ class HeroesTest(unittest.TestCase):
     self.new_game("アリス")
     out = self.dir / "grid.svg"
     self.assertEqual(self.run_main(["--map-grid", str(out)]), 0)
-    self.assertIn("aurea (850, 495)", out.read_text(encoding="utf-8"))  # 確認用: 場所の ID と座標
+    self.assertIn("kyoto (784, 641)", out.read_text(encoding="utf-8"))  # 確認用: 場所の ID と座標
     self.assertEqual(load("h1")["day"], 0)
 
   def test_dry_run_writes_nothing(self):

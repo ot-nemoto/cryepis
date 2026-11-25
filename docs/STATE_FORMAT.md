@@ -74,11 +74,11 @@
 ```json
 {
  "season": 1,
- "refreshed": {"aurea":"2026-12-03"},
+ "refreshed": {"edo":"2026-12-03"},
  "towns": {
- "aurea": [
-  {"type":"deliver","place":"astol","report":"astol",…,"id":"2026-12-01-aurea-1","posted":"2026-12-01","status":"held","holder":"h2","returned":false},
-  {"type":"hunt","place":"flumen","report":"aurea",…,"id":"2026-12-03-aurea-0","posted":"2026-12-03","status":"open","holder":null,"returned":false}
+ "edo": [
+  {"type":"deliver","place":"kofu","report":"kofu",…,"id":"2026-12-01-edo-1","posted":"2026-12-01","status":"held","holder":"h2","returned":false},
+  {"type":"hunt","place":"odawara","report":"edo",…,"id":"2026-12-03-edo-0","posted":"2026-12-03","status":"open","holder":null,"returned":false}
  ]
  }
 }
@@ -105,11 +105,11 @@
            "gold": 1587, "potions": 3, "stored": 2},
   "inventory": [{"id": "steel_sword", "skill": "pierce"}, {"id": "iron_sword", "skill": null}, {"id": "iron_shield", "skill": null}],
   "storage": [{"id": "wooden_helm", "skill": null}],
-  "place": "salina",
-  "home_town": "salina",
+  "place": "edo",
+  "home_town": "edo",
   "road": null,
-  "quest": {"type": "hunt", "name": "討伐", "template": "hunt", "town": "salina", "place": "eques",
-            "report": "salina", "monster": "wild_dog", "count": 4, "progress": 1, "level": [1, 1],
+  "quest": {"type": "hunt", "name": "討伐", "template": "hunt", "town": "edo", "place": "odawara",
+            "report": "edo", "monster": "wild_dog", "count": 4, "progress": 1, "level": [1, 1],
             "deadline": null, "reward": {"exp": 112, "gold": 140, "item": [["none", 85], ["common", 10], ["rare", 5]]}},
   "season_stats": {"quests_done": 12, "quests_failed": 1, "kills": 61, "deaths": 0, "rares": []},
   "last": {"date": "2027-04-09", "actions": 3, "events": ["野犬を倒した (+17EXP)", "…"]},
