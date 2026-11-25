@@ -1840,5 +1840,122 @@ class PersonalityTest(unittest.TestCase):
     self.assertTrue(brave["inventory"])
 
 
+def gear(*pairs):
+  """装備の一覧（(ID, スキル) の組から）。"""
+  return [{"id": i, "skill": k} for i, k in pairs]
+
+
+class SkillTest(unittest.TestCase):
+  """装備のスキル（#233）・入れ替え（#234）・性格のルール（#235）。"""
+
+  def test_every_slot_has_ten_skills_of_every_kind(self):
+    by_slot = {}
+    for sk in WORLD["skills"].values():
+      by_slot.setdefault(sk["slot"], []).append(sk["kind"])
+    self.assertEqual(sorted(by_slot), sorted(W.SLOTS))
+    for slot, kinds in by_slot.items():
+      self.assertEqual(len(kinds), 10, slot)
+      self.assertEqual(set(kinds), set(W.SKILL_KINDS), slot)  # どの部位にも、どの系統も 1 つ以上
+
+  def test_smith_follows_the_personality(self):
+    price = WORLD["skill_prices"]["rare"]
+    brave = with_personality("brave")  # ★★ 以上・余裕 1 倍・付け替える
+    brave["inventory"] = gear(("steel_sword", None))
+    brave["hero"]["gold"] = 10_000
+    day = day_of(brave)
+    day.smith(brave["place"])
+    self.assertIsNotNone(G.carried(brave)[0]["skill"])
+    self.assertEqual(brave["hero"]["gold"], 10_000 - price)
+    self.assertIn("鍛冶屋", day.events[-1])
+    day.smith(brave["place"])  # 1 日 1 回まで
+    self.assertEqual(brave["hero"]["gold"], 10_000 - price)
+    poor = with_personality("brave")
+    poor["inventory"] = gear(("steel_sword", None))
+    poor["hero"]["gold"] = price  # 宿代・回復薬の分を残すと足りない
+    day_of(poor).smith(poor["place"])
+    self.assertIsNone(G.carried(poor)[0]["skill"])
+    careful = with_personality("careful")  # ★★★ 以上なので、★★ には付けない
+    careful["inventory"] = gear(("steel_sword", None))
+    careful["hero"]["gold"] = 10_000
+    day_of(careful).smith(careful["place"])
+    self.assertIsNone(G.carried(careful)[0]["skill"])
+    common = with_personality("brave")  # ★ にはスキルを付けない
+    common["inventory"] = gear(("iron_sword", None))
+    common["hero"]["gold"] = 10_000
+    day_of(common).smith(common["place"])
+    self.assertIsNone(G.carried(common)[0]["skill"])
+
+  def test_smith_keeps_the_better_skill(self):
+    brave = with_personality("brave")  # 攻めがいちばん
+    brave["inventory"] = gear(("steel_sword", "crit_art"))
+    brave["hero"]["gold"] = 10_000
+    day = day_of(brave)
+    with mock.patch.object(day.rng, "choice", return_value="hunter"):  # お金の系統（勇猛では下）
+      day.smith(brave["place"])
+    self.assertEqual(G.carried(brave)[0]["skill"], "crit_art")  # 元のほうを残す
+    self.assertIn("元の", day.events[-1])
+
+  def test_rank_puts_useless_counters_last(self):
+    state = with_personality("diligent")  # 対策がいちばん
+    world = copy.deepcopy(WORLD)
+    world["skills"]["pierce"]["counter"] = {"trait": "nobody_has_this"}
+    self.assertGreater(G.skill_rank(world, state, "pierce"), G.skill_rank(world, state, "hunter"))
+    self.assertGreater(G.skill_rank(WORLD, state, None), G.skill_rank(WORLD, state, "hunter"))  # スキルなしは最後
+
+  def test_arrange_brings_counters_for_the_quest(self):
+    state = with_personality("tactician")
+    helms = gear(("iron_helm", None), ("wooden_helm", "antidote"))  # 兜は 1 つしか持てない
+    state["inventory"], state["storage"] = helms[:1], helms[1:]
+    poison = next(m for m in WORLD["monsters"].values() if m.get("trait") == "poison")
+    quest = {"type": "hunt", "monster": poison["id"]}
+    day = day_of(state)
+    day.arrange(state["place"], quest)
+    self.assertEqual(G.carried(state)[0]["skill"], "antidote")  # 毒の魔物の討伐なので、毒よけの兜を持つ
+
+  def test_battle_skills(self):
+    state = with_personality("brave")
+    day = day_of(state)
+    poison = dict(WORLD["monsters"]["wild_dog"], trait="poison", hp=1, atk=1)
+    state["inventory"] = gear(("iron_helm", "antidote"))
+    hp = state["hero"]["hp"]
+    self.assertTrue(day.battle(poison))
+    self.assertNotIn("毒で HP", " ".join(day.events))  # 毒よけ
+    self.assertGreaterEqual(state["hero"]["hp"], hp - 2)
+    state["inventory"] = gear(("iron_shield", "endure"))
+    strong = dict(WORLD["monsters"]["wild_dog"], atk=999, hp=999, spd=99)
+    state["hero"]["hp"] = 10
+    day.battle(strong)
+    self.assertIn("踏ん張って", " ".join(day.events))  # 1 日 1 回、HP 1 で耐える
+
+  def test_pierce_ignores_armor(self):
+    state = with_personality("brave")
+    armored = dict(WORLD["monsters"]["wild_dog"], trait="armored", **{"def": 20})
+    state["inventory"] = gear(("iron_sword", None))
+    plain = day_of(state).pick_weapon(armored, W.trait_effect(armored)["guard"])
+    state["inventory"] = gear(("iron_sword", "pierce"))
+    day = day_of(state)
+    w, *_ = day.pick_gear(armored, W.trait_effect(armored)["guard"])
+    self.assertEqual(w["skill"], "pierce")
+    self.assertEqual(day.counters(w, armored), 1)
+    self.assertEqual(plain[0], "iron_sword")
+
+  def test_money_and_travel_skills(self):
+    state = with_personality("brave")
+    state["inventory"] = gear(("lifeblood_charm", "haggle"))
+    day = day_of(state)
+    self.assertEqual(day.price(100), 90)  # 値切り
+    state["inventory"] = gear(("lifeblood_charm", "stealth"))
+    weights = day.event_weights(False)
+    base = WORLD["season"]["road_events"]
+    self.assertLess(weights["battle"], base["battle"])  # 忍び足
+    self.assertAlmostEqual(sum(weights.values()), sum(base.values()))  # 減った分は「何もない」へ
+    state["inventory"] = gear(("iron_sword", "hunter"))
+    state["quest"] = common_hunt()
+    G.finish_quest(WORLD, state["quest"], TOWN)
+    gold = state["hero"]["gold"]
+    day.report(state["quest"] | {"reward": {"exp": 0, "gold": 100, "item": None}})
+    self.assertEqual(state["hero"]["gold"], gold + 120)  # 狩人
+
+
 if __name__ == "__main__":
   unittest.main()
