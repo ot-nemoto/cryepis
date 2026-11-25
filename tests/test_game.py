@@ -151,7 +151,7 @@ class AdvanceTest(unittest.TestCase):
 
   def test_first_day_shops_and_takes_a_quest(self):
     state = play(1, actions=1)
-    self.assertTrue(state["inventory"])  # 最初の町で装備を買う
+    self.assertEqual(state["inventory"], [])  # 最初の手持ち（60G）では、★ の装備（240G〜）はまだ買えない（#245）
     self.assertIsNotNone(state["quest"])
 
   def test_journal_is_capped(self):
@@ -1289,7 +1289,7 @@ class BattleDepthTest(unittest.TestCase):
   def test_elemental_accessory_is_swapped_in_against_its_weak_foe(self):
     state = self.hero_state(base_atk=20)
     state["inventory"] = {"iron_sword": 1, "silkvine_charm": 1, "x_flame_charm": 1}  # 試しの炎の護符は 1 点の ★
-    WORLD["items"]["x_flame_charm"].update(rarity="common", price=100)  # setUp で毎回作り直す仮の品
+    WORLD["items"]["x_flame_charm"].update(rarity="common", price=1000)  # setUp で毎回作り直す仮の品
     state.update(personality="diligent", trait="lucky")
     self.assertEqual(
       G.equipment(WORLD, state)["accessory"], "silkvine_charm"
