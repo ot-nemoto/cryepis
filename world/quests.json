@@ -48,7 +48,7 @@
   ],
   "nagano": [
    {"id": "nagano_3", "rank": 2, "type": "hunt", "name": "吹雪の雪女", "to": "kofu", "monster": "yeti", "count": 1, "text": "吹雪の晩、山から雪女が下りてくる。凍えた旅人が、峠でいくつも見つかっている。食い止めてほしい"},
-   {"id": "nagano_4", "rank": 3, "type": "hunt", "name": "裾野のがしゃどくろ", "to": "kofu", "monster": "rock_golem", "count": 1, "text": "富士の裾野で行き倒れた者たちの骨が集まって、大きな骸骨になった。夜ごと街道へ出てくるので、討ってほしい"}
+   {"id": "nagano_4", "rank": 3, "type": "hunt", "name": "裾野のだいだらぼっち", "to": "kofu", "monster": "rock_golem", "count": 1, "text": "富士の山を作ったという大男が、裾野をのし歩いている。踏みつぶされた村も出ている。討ってほしい"}
   ]
  }
 }

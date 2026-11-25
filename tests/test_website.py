@@ -373,7 +373,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<th class="num">速</th><th class="num">器</th><th class="num">EXP</th>', html)  # 器用さ
     self.assertIn('<th>名前</th><th class="num">Lv</th><th>生息地</th><th class="icon">性質</th>', html)
     self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 雪狼（アイテムと同じ枠の札）
-    for name in ("雪女", "がしゃどくろ", "大天狗"):  # 大物（長野・甲府の討伐の依頼）も 1 度ずつ
+    for name in ("雪女", "だいだらぼっち", "大天狗"):  # 大物（長野・甲府の討伐の依頼）も 1 度ずつ
       self.assertEqual(south.count(f"<td>{name}</td>"), 1)
     self.assertNotIn("属性の相性", html)  # 説明は手引きのページに
     self.assertIn('<a href="guide.html">手引き</a>', html)
