@@ -1644,11 +1644,11 @@ class PersonalityTest(unittest.TestCase):
     day = G.Day(WORLD, state, START + timedelta(days=limit - 1), random.Random(0))
     state["stay"] = {"town": town, "since": START.isoformat()}
     day.take_quest(town)
-    self.assertNotIn("長くいた", " ".join(day.events))  # 6 日目までは依頼を受ける
+    self.assertNotIn("長くいた", " ".join(day.events))  # 着いた日を 0 日目として、6 日目までは依頼を受ける
     state.update(quest=None, taken=[])
     day = G.Day(WORLD, state, START + timedelta(days=limit), random.Random(0))
     day.take_quest(town)
-    self.assertEqual(state["quest"]["type"], "patrol")  # 7 日目は依頼を受けずに旅に出る
+    self.assertEqual(state["quest"]["type"], "patrol")  # 7 日目（7 日たった日）は依頼を受けずに旅に出る
     self.assertIn(state["quest"]["place"], WORLD["neighbors"][town])
     self.assertIn("長くいたので", day.events[-1])
     day.visit_town(town)  # 討伐から同じ町に戻っても数え直さない
@@ -1656,6 +1656,24 @@ class PersonalityTest(unittest.TestCase):
     other = WORLD["neighbors"][town][0]
     day.visit_town(other)  # 別の町に着いたら、その日から数え直す
     self.assertEqual(state["stay"], {"town": other, "since": (START + timedelta(days=limit)).isoformat()})
+
+  def test_stay_waits_until_the_morning_after_a_report(self):
+    limit = WORLD["season"]["stay_days_max"]
+    state = with_personality("diligent")
+    town = state["place"]
+    state["stay"] = {"town": town, "since": START.isoformat()}
+    day = G.Day(WORLD, state, START + timedelta(days=limit + 1), random.Random(0))
+    day.reported = True  # 今日、依頼から帰ってきた
+    day.take_quest(town)
+    self.assertIsNone(state["quest"])  # 今日は旅に出ない（残りの行動をする）
+    self.assertTrue(state["taken"])
+    state["stay"]["since"] = None  # 着いた日が壊れていても落ちない（今日から数え直す）
+    self.assertFalse(day.stayed_too_long(town))
+
+  def test_deliveries_fit_any_range(self):
+    deliver = {"type": "deliver", "level": [2, 2]}
+    self.assertTrue(G.suitable(deliver, 5, [1, 3]))  # 0 を含まない範囲でも入る
+    self.assertEqual(G.level_gap(deliver, 5, [1, 3]), 0)
 
   def test_broken_stay_is_reset_on_load(self):
     with tempfile.TemporaryDirectory() as d:

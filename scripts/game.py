@@ -618,6 +618,8 @@ def suitable(quest: dict, level: int, levels: list | None = None) -> bool:
   """受けられる依頼か。levels（性格の [下, 上]。勇者の Lv との差。None は下限なし）があれば、依頼の Lv がその範囲のものだけ。
   なければ、依頼のレベルが自分のレベル＋3 を超える、強すぎる依頼だけを避ける（弱すぎる依頼も受ける）。
   配達は Lv を見ない（いつも範囲に入る）。強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level）。"""
+  if quest.get("type") == "deliver":  # 配達は Lv を見ない（どんな範囲でも入る）
+    return True
   low, high = levels if levels else (None, 3)
   gap = quest_gap(quest, level)
   return (low is None or gap >= low) and gap <= high and level >= quest.get("min_level", 0)
@@ -625,6 +627,8 @@ def suitable(quest: dict, level: int, levels: list | None = None) -> bool:
 
 def level_gap(quest: dict, level: int, levels: list) -> int:
   """依頼の Lv が、性格の範囲（levels。勇者の Lv との差 [下, 上]、下は None で下限なし）からどれだけ外れているか（範囲内は 0）。"""
+  if quest.get("type") == "deliver":  # 配達はいつも範囲に入る
+    return 0
   low, high = levels
   gap = quest_gap(quest, level)
   return max(0 if low is None else low - gap, gap - high, 0)
@@ -715,6 +719,7 @@ class Day:
     self.events: list[str] = []
     self.fallen = False
     self.strolled = False
+    self.reported = False  # 今日、依頼を報告したか（長くいた町から旅に出るのは、次の日の朝にする）
     self.rested = False
     self.guild = guild if guild is not None else new_guild()  # 全員で共有する掲示板（None なら、この勇者だけの掲示板）
 
@@ -938,6 +943,7 @@ class Day:
       entry["status"] = status
 
   def report(self, quest: dict) -> None:
+    self.reported = True
     self.settle(quest, "done")
     reward = quest["reward"]
     self.hero["gold"] += reward["gold"]
@@ -988,11 +994,15 @@ class Day:
   def mark_stay(self, town: str) -> None:
     """町にいる日を数え始める（別の町に着いたときだけ。同じ町に戻っても数え直さない）。"""
     stay = self.state.get("stay")
-    if not isinstance(stay, dict) or stay.get("town") != town:
+    try:
+      ok = isinstance(stay, dict) and stay.get("town") == town and bool(date.fromisoformat(stay["since"]))
+    except (KeyError, TypeError, ValueError):  # 着いた日が壊れていたら、今日から数え直す
+      ok = False
+    if not ok:
       self.state["stay"] = {"town": town, "since": self.today.isoformat()}
 
   def stayed_too_long(self, town: str) -> bool:
-    """同じ町に stay_days_max 日以上いるか（その日は依頼を受けず、となりの町へ旅に出る。#231）。"""
+    """町に着いた日から stay_days_max 日たったか（着いた日を 0 日目として数える。その日は依頼を受けず、となりの町へ旅に出る。#231）。"""
     self.mark_stay(town)  # 数え始めていなければ、今日から
     limit = self.cfg.get("stay_days_max")
     since = date.fromisoformat(self.state["stay"]["since"])
@@ -1000,6 +1010,9 @@ class Day:
 
   def take_quest(self, town: str) -> None:
     if self.stayed_too_long(town):  # 居ついたので、依頼を受けずに旅に出る（依頼の途中なら、帰ってきた次の日の朝）
+      if self.reported:  # 今日、依頼から帰ってきたばかり: 今日は残りの行動をして、旅は次の日の朝
+        self.state["taken"].append(f"{self.today.isoformat()}-back")
+        return
       quest = patrol(self.world, self.state, self.rng)
       self.state["taken"].append(f"{self.today.isoformat()}-patrol")
       self.log(
