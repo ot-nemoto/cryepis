@@ -39,16 +39,35 @@ COST = {
   "snowcap": 30,
   "volcano": 6,
   "lava": 60,
-  "shallow": 40,  # 海峡・湖。渡し舟で渡る
-}  # 書いていない地形（沖の海・氷）は通れない
+}  # 書いていない地形（海・湖・氷）は通れない
+# 渡し舟で渡れる海峡（経度, 緯度, 半径 px）。このまわりの浅い海だけ、通りにくいが渡れる
+STRAITS = [(130.95, 33.95, 12)]  # 関門の海峡
+STRAIT_COST = 40
 
 
 # ダンジョンへの道（山道）は、山を越えて行く（山・雪の通りにくさを下げる）
 TRAIL_COST = COST | {"mount": 2.5, "snowcap": 5, "hill": 1.5}
 
 
+def strait_cells():
+  cells = set()
+  for lon, lat, r in STRAITS:
+    x, y = japan.to_map(lon, lat)
+    for j in range(int(y - r) // STEP, int(y + r) // STEP + 1):
+      for i in range(int(x - r) // STEP, int(x + r) // STEP + 1):
+        if math.hypot(i * STEP + 1 - x, j * STEP + 1 - y) <= r:
+          cells.add((i, j))
+  return cells
+
+
+STRAIT_CELLS = strait_cells()
+
+
 def cost(i, j, table=None):
-  return (table or COST).get(kind[j][i])
+  k = kind[j][i]
+  if k == "shallow" and (i, j) in STRAIT_CELLS:
+    return STRAIT_COST
+  return (table or COST).get(k)
 
 
 def dijkstra(sx, sy, targets, table=None):

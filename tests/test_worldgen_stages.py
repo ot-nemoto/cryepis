@@ -257,6 +257,12 @@ class RoadsMainTest(unittest.TestCase):
   def test_length_km_follows_the_map_scale(self):
     self.assertEqual(roads.length_km([(0, 0), (30, 40)]), round(50 * roads.japan.KM_PER_PX))
 
+  def test_shallow_sea_is_crossed_only_at_straits(self):
+    with mock.patch.multiple(roads, kind=[["shallow", "shallow"]], STRAIT_CELLS={(0, 0)}):
+      self.assertEqual(roads.cost(0, 0), roads.STRAIT_COST)  # 海峡は渡し舟で渡れる
+      self.assertIsNone(roads.cost(1, 0))  # ほかの浅い海・湖は通れない
+    self.assertTrue(roads.strait_cells())  # 関門の海峡のまわり
+
   def test_trails_take_mountains_more_easily(self):
     self.assertLess(roads.TRAIL_COST["mount"], roads.COST["mount"])
     self.assertEqual(roads.TRAIL_COST["plain"], roads.COST["plain"])

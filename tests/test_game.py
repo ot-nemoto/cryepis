@@ -407,12 +407,12 @@ class BattleAndItemTest(unittest.TestCase):
     return state
 
   def test_keeps_going_on_the_road_when_hp_is_low(self):
-    # 甲府 →（6 行動）→ 長野 の 1 歩目。HP 1・回復薬なしでも引き返さずに進む
-    state = self.low_hp_on_road("kofu", "nagano", 5)
+    # 甲府 →（3 行動）→ 長野 の 1 歩目。HP 1・回復薬なしでも引き返さずに進む
+    state = self.low_hp_on_road("kofu", "nagano", 3)
     day = day_of(state)
     day.road_event = lambda a, b, stroll=False: True  # 道の出来事は何も起きない
     day.act()
-    self.assertEqual((state["place"], state["road"]), ("kofu", {"to": "nagano", "left": 4}))
+    self.assertEqual((state["place"], state["road"]), ("kofu", {"to": "nagano", "left": 2}))
     self.assertFalse(any("引き返" in e for e in day.events))
 
   def test_start_town_is_random_per_hero_and_season(self):
@@ -473,7 +473,7 @@ class BattleAndItemTest(unittest.TestCase):
   def test_items_sold_only_in_closed_towns_do_not_drop(self):
     raw = W.load_raw()
     raw["items"].append({"id": "x_far", "name": "遠くの剣", "slot": "weapon", "rarity": "common", "atk": 1, "price": 1})
-    next(p for p in raw["map"]["places"] if p["id"] == "kyoto")["shop"].append("x_far")  # 開放していない王都だけで売る
+    next(p for p in raw["map"]["places"] if p["id"] == "kyoto")["shop"].append("x_far")  # 開放していない京都だけで売る
     world = W.build(raw)
     day = G.Day(world, G.new_state(world), START, random.Random("t"))
     self.assertNotIn("x_far", world["region_items"])
@@ -1506,8 +1506,8 @@ class FallPathsTest(unittest.TestCase):
     self.assertTrue(any("力尽きた" in e for e in state["last"]["events"]))
 
   def test_fall_in_the_middle_of_a_long_road(self):
-    # 甲府 →（6 行動）→ 長野 の途中で力尽きる
-    state = self.hero_state(self.deliver("kofu", "nagano"), "kofu", {"to": "nagano", "left": 5})
+    # 甲府 →（3 行動）→ 長野 の途中で力尽きる
+    state = self.hero_state(self.deliver("kofu", "nagano"), "kofu", {"to": "nagano", "left": 2})
     self.assertEqual(self.advance_until_fall(state), 1)  # 残りの行動回数があっても、その日はもう動かない
     self.assert_fallen(state)
 
@@ -1835,7 +1835,7 @@ class PersonalityTest(unittest.TestCase):
     self.assertEqual((state["last"]["actions"], state["hero"]["stored"]), (per_day + 6, 0))  # 溜めた分を全部使う
     for trip, road in (
       ({"type": "patrol"}, None),
-      (None, {"to": "odawara", "left": 5}),
+      (None, {"to": "odawara", "left": 2}),
     ):  # 旅・残りの行動の道には使わない
       walker = with_personality("diligent")
       walker["hero"]["stored"] = 6

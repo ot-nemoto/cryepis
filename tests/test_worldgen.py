@@ -165,7 +165,7 @@ class TownTextTest(unittest.TestCase):
 
   def test_texts_do_not_use_game_words(self):
     for name, text in lore.TEXT.items():
-      for banned in ("シーズン", "レベル", "勇者"):
+      for banned in ("創造主", "利用", "シーズン", "レベル", "加護を与え", "勇者"):
         self.assertNotIn(banned, text, name)
 
   def test_world_md_lists_the_same_texts(self):
@@ -182,15 +182,17 @@ class ActionsTest(unittest.TestCase):
 
   def test_land_actions(self):
     self.assertEqual([actions.land(km) for km in (0, 10, 36, 53, 55, 72, 289)], [1, 1, 1, 1, 2, 2, 8])  # 最低 1 回
+    self.assertEqual([actions.land(km) for km in (90, 162)], [3, 5])  # ちょうど .5 は切り上げ（四捨五入）
 
   def test_trail_actions_are_slower(self):
-    self.assertEqual([actions.trail(km) for km in (0, 20, 45, 100)], [1, 1, 2, 5])
+    self.assertEqual([actions.trail(km) for km in (0, 20, 45, 50, 100)], [1, 1, 2, 3, 5])
     self.assertLess(actions.TRAIL_KM, actions.LAND_KM)  # 山道は遅い
 
   def test_sea_actions_have_a_minimum_for_boarding(self):
     self.assertEqual(actions.sea(0), actions.SEA_MIN)
     self.assertEqual(actions.sea(140), 2)
     self.assertEqual(actions.sea(565), 8)
+    self.assertEqual(actions.sea(175), 3)  # 2.5 日は 3 回
     self.assertGreater(actions.SEA_KM, actions.LAND_KM)  # 船は速い
 
 

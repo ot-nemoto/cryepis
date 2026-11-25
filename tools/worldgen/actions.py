@@ -7,22 +7,28 @@
 """
 
 import json
+import math
 
 import paths
 
 LAND_KM, TRAIL_KM, SEA_KM, SEA_MIN = 36, 20, 70, 2
 
 
+def days(km, per_day):
+  """km を 1 日に進む距離で割って四捨五入（round の偶数への丸めは使わない）。"""
+  return math.floor(km / per_day + 0.5)
+
+
 def land(km):
-  return max(1, round(km / LAND_KM))
+  return max(1, days(km, LAND_KM))
 
 
 def trail(km):
-  return max(1, round(km / TRAIL_KM))
+  return max(1, days(km, TRAIL_KM))
 
 
 def sea(km):
-  return max(SEA_MIN, round(km / SEA_KM))
+  return max(SEA_MIN, days(km, SEA_KM))
 
 
 def main():
