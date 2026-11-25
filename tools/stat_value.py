@@ -4,7 +4,7 @@
   強さ = (もののふの HP ÷ 1 手で受けるダメージ) × (1 手で与えるダメージ ÷ 物の怪の HP)
 とし、能力を 1 だけ上げたときに強さが何 % 上がるかを出す。ダメージは小数のまま（守りの半分を引く・会心の分を平均で足す）。
 素早さは、相手を追い越す・2 倍になるときだけ急に効く（少しずつは効かない）ので、相手ごとの表には出さず、
-Lv1〜20 × 相手（開放した道の物の怪と、強敵・ボス）の平均で出す（2 回攻撃だけを見る。先に攻撃できる分は入らない）。
+Lv1〜20 × 相手（開放した道の物の怪と、大物・主）の平均で出す（2 回攻撃だけを見る。先に攻撃できる分は入らない）。
 docs/BALANCE.md の「8. アイテムの強さ」を参照。
 
 使い方:
@@ -21,7 +21,7 @@ import game  # noqa: E402
 import world as W  # noqa: E402
 
 STATS = ("hp", "atk", "def", "dex")
-# 比べる相手と、もののふのレベル（道の物の怪は同じ Lv、強敵は Lv10、ボスは Lv15・Lv20）
+# 比べる相手と、もののふのレベル（道の物の怪は同じ Lv、大物は Lv10、主は Lv15・Lv20）
 CASES = [
   ("wild_dog", 1),
   ("mud_golem", 3),
@@ -56,7 +56,7 @@ def gains(world: dict, monster: dict, level: int, stats: tuple[str, ...] = STATS
 
 
 def average(world: dict) -> dict[str, float]:
-  """素早さも含めた、能力 +1 の効き目の平均（攻撃 +1 を 1 とした比）。Lv1〜最大 Lv × 相手（道の物の怪・強敵・ボス）。"""
+  """素早さも含めた、能力 +1 の効き目の平均（攻撃 +1 を 1 とした比）。Lv1〜最大 Lv × 相手（道の物の怪・大物・主）。"""
   foes = {m for i in world["road_info"].values() for m, _ in i["monsters"]}
   foes |= {mid for mid, m in world["monsters"].items() if m.get("elite") or m.get("boss")}
   keys = (*STATS, "spd")
@@ -81,7 +81,7 @@ def main() -> int:
     print(f"  Lv{lv:2d} {world['monsters'][mid]['name']:6s} {cells}")
   avg = average(world)
   print(
-    "Lv1〜20 × 相手（道の物の怪・強敵・ボス）の平均（攻撃 +1 を 1。素早さは 2 回攻撃だけ）: "
+    "Lv1〜20 × 相手（道の物の怪・大物・主）の平均（攻撃 +1 を 1。素早さは 2 回攻撃だけ）: "
     + "  ".join(f"{k} {v:.2f}" for k, v in avg.items())
   )
   print("今の重み（season.json の item_points.weights）: " + "  ".join(f"{k} {v:g}" for k, v in weights.items()))

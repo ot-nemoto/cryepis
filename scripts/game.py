@@ -218,8 +218,8 @@ def hunt_steps_ok(quest: dict) -> bool:
 
 
 def elite_ok(world: dict, quest: dict) -> bool:
-  """強敵の討伐が、今の決まりで作られた依頼か（受けられるレベルが物の怪のレベルで、倒す数が町の依頼と同じ）。
-  強敵にする前に貼られた・受けられた依頼（Lv の決まりがなく、数も多い）は捨てる。強敵でなければ True。"""
+  """大物の討伐が、今の決まりで作られた依頼か（受けられるレベルが物の怪のレベルで、倒す数が町の依頼と同じ）。
+  大物にする前に貼られた・受けられた依頼（Lv の決まりがなく、数も多い）は捨てる。大物でなければ True。"""
   target = world["monsters"].get(quest.get("monster"), {})
   if not target.get("elite"):
     return True
@@ -247,7 +247,7 @@ def quest_ok(world: dict, quest: dict, steps: bool = True) -> bool:
     return (
       (quest.get("report"), quest["place"]) in world["roads"]
       and quest.get("monster") in world["monsters"]
-      and not world["monsters"][quest["monster"]].get("boss")  # ボスは道に出ない
+      and not world["monsters"][quest["monster"]].get("boss")  # 主は道に出ない
       and elite_ok(world, quest)
       and (hunt_steps_ok(quest) if steps else isinstance(quest.get("steps"), list))
     )
@@ -545,7 +545,7 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
   if quest["type"] == "hunt":
     quest["steps"] = hunt_steps(world, town, quest["place"])
     target = world["monsters"].get(quest["monster"], {})
-    if target.get("elite"):  # 強敵は、物の怪のレベル以上のもののふだけが受ける
+    if target.get("elite"):  # 大物は、物の怪のレベル以上のもののふだけが受ける
       quest["min_level"] = lvl
     quest["away"] = 0  # 町から何行動ぶん離れているか（地図に描く位置）
     cost = sum(n for _, n in quest["steps"])
@@ -686,7 +686,7 @@ def quest_gap(quest: dict, level: int) -> int:
 def suitable(quest: dict, level: int, levels: list | None = None) -> bool:
   """受けられる依頼か。levels（性格の [下, 上]。もののふの Lv との差。None は下限なし）があれば、依頼の Lv がその範囲のものだけ。
   なければ、依頼のレベルが自分のレベル＋3 を超える、強すぎる依頼だけを避ける（弱すぎる依頼も受ける）。
-  配達は Lv を見ない（いつも範囲に入る）。強敵の討伐は、もののふのレベルが物の怪のレベル以上のときだけ受ける（min_level）。"""
+  配達は Lv を見ない（いつも範囲に入る）。大物の討伐は、もののふのレベルが物の怪のレベル以上のときだけ受ける（min_level）。"""
   if quest.get("type") == "deliver":  # 配達は Lv を見ない（どんな範囲でも入る）
     return True
   low, high = levels if levels else (None, 3)
@@ -766,7 +766,7 @@ def quest_detail(world: dict, quest: dict) -> str:
 
 
 def quest_text(world: dict, quest: dict) -> str:
-  """依頼の表示。レアリティと名前があれば「★★ 砂漠の盗賊団（〜を 6 体討伐）」の形にする。"""
+  """依頼の表示。レアリティと名前があれば「★★ 砂かけ婆団（〜を 6 体討伐）」の形にする。"""
   detail = quest_detail(world, quest)
   if quest["type"] == "patrol":
     return detail
@@ -1394,7 +1394,7 @@ class Day:
     entries = [e for e in open_ if suitable(e, level, levels)]
     if not entries and levels:
       # 性格の範囲に合う依頼がなければ、範囲より弱い依頼のうち、範囲にいちばん近い Lv の依頼を受ける
-      # （範囲より強い依頼は受けない。強敵は Lv が足りなければ受けない）
+      # （範囲より強い依頼は受けない。大物は Lv が足りなければ受けない）
       others = [e for e in open_ if suitable(e, level, [None, levels[1]])]  # 下限だけを外して、ほかの決まりは同じ
       if others:
         near = min(level_gap(e, level, levels) for e in others)
@@ -1415,7 +1415,7 @@ class Day:
         f"（行動力 {quest['cost']}）"
       )
       self.arrange(town, quest)  # 依頼に合わせて、蔵の装備と入れ替える（#234）
-    else:  # 受けられる依頼がない（どれも性格の範囲より強い・強敵の Lv が足りない・ほかのもののふに取られた）ので、旅に出る
+    else:  # 受けられる依頼がない（どれも性格の範囲より強い・大物の Lv が足りない・ほかのもののふに取られた）ので、旅に出る
       quest = patrol(self.world, self.state, self.rng)
       self.state["taken"].append(f"{self.today.isoformat()}-patrol")  # 旅もその日の 1 回に数える
       self.log(

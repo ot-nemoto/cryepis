@@ -159,7 +159,7 @@ class BattleSimToolTest(unittest.TestCase):
   def test_default_mode_prints_a_win_rate_per_trait(self):
     code, out = run(B.main, "-n", "10")
     self.assertEqual(code, 0)
-    self.assertIn("巣穴の主 と戦う", out)
+    self.assertIn("酒呑童子 と戦う", out)
     for t in WORLD["season"]["hero_traits"].values():
       self.assertIn(t["name"], out)
     self.assertIn("勝率", out)
@@ -196,7 +196,7 @@ class BattleSimToolTest(unittest.TestCase):
       code, out = run(B.main, "-n", "20", "--fit-hp-loss", "0.2", "--monster", "wild_dog")
     self.assertEqual(code, 0)
     self.assertIn("勝ったときに減る HP 20%", out)
-    self.assertIn("野犬（wild_dog）", out)
+    self.assertIn("送り犬（wild_dog）", out)
     self.assertIn("EXP", out)
 
   def test_bad_arguments_stop_with_a_message(self):
@@ -207,7 +207,7 @@ class BattleSimToolTest(unittest.TestCase):
     self.assertIn("使えません", exits(B.main, "--fit-hp-loss", "0.2", "--gear", "iron_sword"))
     self.assertIn("使えません", exits(B.main, "--fit-hp-loss", "0.2", "--potions", "1"))
     self.assertIn("0 より大きく 1 より小さい", exits(B.main, "--fit-hp-loss", "1.5"))
-    self.assertIn("強敵かボスです", exits(B.main, "--fit-hp-loss", "0.2", "--monster", "den_lord"))
+    self.assertIn("大物か主です", exits(B.main, "--fit-hp-loss", "0.2", "--monster", "den_lord"))
     self.assertIn("がいません", exits(B.main, "--fit-hp-loss", "0.2", "--monster", "nobody"))
 
 
