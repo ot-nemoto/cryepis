@@ -111,7 +111,8 @@ def pick_personality(world: dict, hero_id: str) -> str | None:
 
 
 def personality(world: dict, state: dict) -> dict:
-  """勇者の性格（season.json の personalities）。性格のない勇者（シミュレーターなど）は空の dict（今までの動き）。"""
+  """勇者の性格（season.json の personalities）。性格のない勇者（シミュレーターなど）は空の dict（今までの動き。
+  ただし配達は、性格のない勇者も Lv を見ない。配達の Lv はいつも仮の値なので、前から Lv で外れることはなかった）。"""
   return (world["season"].get("personalities") or {}).get(state.get("personality"), {})
 
 

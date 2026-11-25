@@ -1629,7 +1629,7 @@ class PersonalityTest(unittest.TestCase):
     entries[2].update(level=[5, 5], rank=3)
     G.Day(WORLD, tactician, START, random.Random(0), guild).take_quest(town)
     self.assertIs(next(e for e in entries if e["status"] == "held"), entries[2])  # 同じ Lv5 なら ★ の多いもの
-    self.assertNotEqual(state["quest"]["type"], "patrol")  # 旅には出ない
+    self.assertNotEqual(tactician["quest"]["type"], "patrol")  # 旅には出ない
     self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [-2, 0]), 5)
     deliver = {"type": "deliver", "level": [2, 2]}  # 配達は Lv を見ない（どの範囲にも入る）
     self.assertTrue(G.suitable(deliver, 15, [-2, 0]))
