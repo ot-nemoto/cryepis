@@ -1637,6 +1637,35 @@ class PersonalityTest(unittest.TestCase):
     self.assertEqual(G.QUEST_ORDER["level_high"](deliver, 15), 0)  # Lv を比べるときは自分と同じ Lv
     self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [None, 0]), 0)
 
+  def test_stay_too_long_and_travel(self):
+    limit = WORLD["season"]["stay_days_max"]
+    state = with_personality("diligent")
+    town = state["place"]
+    day = G.Day(WORLD, state, START + timedelta(days=limit - 1), random.Random(0))
+    state["stay"] = {"town": town, "since": START.isoformat()}
+    day.take_quest(town)
+    self.assertNotIn("長くいた", " ".join(day.events))  # 6 日目までは依頼を受ける
+    state.update(quest=None, taken=[])
+    day = G.Day(WORLD, state, START + timedelta(days=limit), random.Random(0))
+    day.take_quest(town)
+    self.assertEqual(state["quest"]["type"], "patrol")  # 7 日目は依頼を受けずに旅に出る
+    self.assertIn(state["quest"]["place"], WORLD["neighbors"][town])
+    self.assertIn("長くいたので", day.events[-1])
+    day.visit_town(town)  # 討伐から同じ町に戻っても数え直さない
+    self.assertEqual(state["stay"], {"town": town, "since": START.isoformat()})
+    other = WORLD["neighbors"][town][0]
+    day.visit_town(other)  # 別の町に着いたら、その日から数え直す
+    self.assertEqual(state["stay"], {"town": other, "since": (START + timedelta(days=limit)).isoformat()})
+
+  def test_broken_stay_is_reset_on_load(self):
+    with tempfile.TemporaryDirectory() as d:
+      path = Path(d) / "h1.json"
+      for bad in ({"town": "nowhere", "since": "2026-12-01"}, {"town": "salina", "since": "x"}, "x"):
+        state = G.new_state(WORLD, "h1")
+        state["stay"] = bad
+        G.save_state(state, path)
+        self.assertIsNone(G.load_state(WORLD, path, "h1")["stay"])
+
   def test_potion_is_used_below_the_rate_and_zero_hp_falls(self):
     state = with_personality("careful")  # 回復薬は HP 50% 未満
     day = day_of(state)

@@ -140,6 +140,7 @@ def new_state(world: dict, hero_id: str = "h1", name: str = "勇者") -> dict:
     "road": None,
     "quest": None,
     "taken": [],
+    "stay": None,  # 今の町に着いた日 {"town": 町, "since": 日付}（同じ町に stay_days_max 日いたら旅に出る）
     "season_stats": new_season_stats(),
     "last": None,
     "journal": [],
@@ -185,6 +186,13 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
   quest = state["quest"]
   if quest and not quest_ok(world, quest):
     state["quest"] = None
+  stay = state.get("stay")
+  try:  # 今の町に着いた日（壊れていたら数え直す）
+    ok = isinstance(stay, dict) and stay.get("town") == state["place"] and bool(date.fromisoformat(stay["since"]))
+  except (KeyError, TypeError, ValueError):
+    ok = False
+  if not ok:
+    state["stay"] = None
   hp_max = stats(world, state)["max_hp"]
   state["hero"]["hp"] = min(state["hero"]["hp"], hp_max)
   return state
@@ -913,6 +921,7 @@ class Day:
     """町に着いた: 依頼の報告と買い物（HP は宿で休憩しないと回復しない）。"""
     state, hero = self.state, self.hero
     state["home_town"] = town
+    self.mark_stay(town)
     quest = state["quest"]
     if quest and quest["type"] in ("deliver", "patrol") and quest["place"] == town:
       quest["progress"] = quest["count"]
@@ -976,7 +985,28 @@ class Day:
     if bought:
       self.log(f"{name}で{'と'.join(bought)}を買った")
 
+  def mark_stay(self, town: str) -> None:
+    """町にいる日を数え始める（別の町に着いたときだけ。同じ町に戻っても数え直さない）。"""
+    stay = self.state.get("stay")
+    if not isinstance(stay, dict) or stay.get("town") != town:
+      self.state["stay"] = {"town": town, "since": self.today.isoformat()}
+
+  def stayed_too_long(self, town: str) -> bool:
+    """同じ町に stay_days_max 日以上いるか（その日は依頼を受けず、となりの町へ旅に出る。#231）。"""
+    self.mark_stay(town)  # 数え始めていなければ、今日から
+    limit = self.cfg.get("stay_days_max")
+    since = date.fromisoformat(self.state["stay"]["since"])
+    return bool(limit) and (self.today - since).days >= limit
+
   def take_quest(self, town: str) -> None:
+    if self.stayed_too_long(town):  # 居ついたので、依頼を受けずに旅に出る（依頼の途中なら、帰ってきた次の日の朝）
+      quest = patrol(self.world, self.state, self.rng)
+      self.state["taken"].append(f"{self.today.isoformat()}-patrol")
+      self.log(
+        f"{self.world['places'][town]['name']}に長くいたので、{self.world['places'][quest['place']]['name']}へ旅に出る"
+      )
+      self.state["quest"] = quest
+      return
     level, me = self.hero["level"], personality(self.world, self.state)
     refresh_guild(self.world, self.guild, self.today, season_of(self.world, self.today), [town])
     levels = me.get("quest", {}).get("levels")
@@ -1227,6 +1257,7 @@ def start_season(world: dict, state: dict, season: int) -> None:
     road=None,
     quest=None,
     season_stats=new_season_stats(),
+    stay=None,
   )
 
 
