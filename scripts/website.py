@@ -132,6 +132,8 @@ td.icon .tag{margin-left:0}
 .pill{display:inline-block;margin:2px 6px 2px 0;padding:1px 10px;border:1.5px solid #f0a868;border-radius:999px;
   background:var(--card);color:var(--ink);text-decoration:none;font-size:13px;white-space:nowrap}
 .pill:hover{border-color:#e8833a}
+.guide-nav{margin:4px 0 12px}
+svg.tri{display:block;max-width:100%;height:auto;color:var(--ink);margin:6px 0}
 .tag{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #e8833a;border-radius:4px;color:#c2621c;font-size:11px}
 .chip{font:inherit;font-size:14px;font-weight:bold;color:var(--ink);background:var(--card);border:1.5px solid #f0a868;
 border-radius:999px;padding:4px 14px;cursor:pointer;box-shadow:0 0 0 2px rgba(240,168,104,.15)}
@@ -900,75 +902,16 @@ def element_chart(world: dict) -> str:
 MYTH_ELEMENT = {"flame": ("心臓", "いのち"), "ice": ("牙", "かぎり"), "thunder": ("頭", "こころざし")}
 
 
-def build_myth_cards(world, table):
-  """手引きの「世界のなりたち」の節（カードのリスト）。語りは民話の調子で、確かでないことは「言われている」と書く"""
+def season_card(world: dict) -> tuple[str, str]:
+  """手引きの「シーズン（星の巡り）」: レベルが戻り、装備だけが残る決まり（物語の話はストーリーのページ）。"""
   months = world["season"]["months"]
-  cards = [
-    (
-      "はじまりの話",
-      "<p>はじめに、海だけがあった。海は「おおうみ」といい、海そのものがからだだったという。"
-      "おおうみは、底からてのひらをさしあげて、大地をつくった。</p>"
-      "<p>大地には前の人がいて、そのそばに竜（始祖竜）と呼ばれる、神のようなものがいた。前の人は竜の力をひとりじめしようとして争い、"
-      "みな海へ帰った。竜は長く眠ったあと目を覚まし、百五十人の人を出して、三つに分かれたという。"
-      "死にきれない竜からしみ出す竜気が、いまも獣を魔物にしている。</p>"
-      '<p class="note">くわしい話は、世界のページにある</p>',
-    ),
-    (
-      "星の巡りと加護",
-      f"<p>星の巡りは、{escape(str(months))} か月ごとにやってくる。竜が勇者に加護（レベル）を貸し、"
-      "巡りが変わると、加護は竜へ還る。勇者の力が最初からやりなおしになるのは、このため。</p>"
-      "<p>人が死ぬと、からだは海へ帰り、名は竜へ還り、形は大地に残ると言われている。"
-      "名は竜へ還るので、レベルは巡りごとに戻る。形は大地に残るので、アイテムは残る。</p>",
-    ),
-  ]
-  rows = []
-  for eid, (part, virtue) in MYTH_ELEMENT.items():
-    el = world.get("elements", {}).get(eid)
-    if el:
-      rows.append(
-        (
-          f'<span class="tag">{escape(el["name"])}属性</span>',
-          escape(part),
-          escape(virtue),
-          escape(el.get("ore", "")),
-        )
-      )
-  if rows:
-    cards.append(
-      (
-        "三つの徳",
-        table(("属性", "始祖竜の部位", "徳", "鉱石"), rows)
-        + '<p class="note">始祖竜は、いのち・かぎり・こころざしを一つに持っていたが、'
-        "三つに分かれた、という。かぎりはいのちを鎮め（氷→炎）、いのちはこころざしを焼き（炎→雷）、"
-        "こころざしはかぎりを砕く（雷→氷）。属性の相性は、この関係そのもの</p>",
-      )
-    )
-  cards.append(
-    (
-      "三つの教えと争い",
-      "<p>三つの教えは、はじめの三つの里から生まれた。竜をどう見るかは、教えによって語りが違う。"
-      "どれも、そう言われている、という話。</p>"
-      + table(
-        ("教え", "竜をどう見るか（そう言われている）", "重んじる徳"),
-        [
-          (escape("星読み"), escape("眠らせておくべき、おそろしいもの。加護はかならず返す"), escape("かぎり")),
-          (escape("竜の民"), escape("人を生んだ親。加護は親から子への贈り物"), escape("いのち")),
-          (
-            escape("王国の教え"),
-            escape("人が法で治め、使いこなすべき力。加護は使うべき力"),
-            escape("こころざし"),
-          ),
-          (escape("土地の古い信仰"), escape("神は土地ごとにいる。竜の血が根になり、風になった"), escape("土地")),
-        ],
-      )
-      + '<p class="note">三つの欠片（牙・心臓・頭）がそろえば、大きな力になり、同時に大きな災いになると言い伝えられる。'
-      "星読みは封じるために、竜の民は竜を救うために、王国は治めるために、三つを集めようとしている、と言われる</p>"
-      + '<p class="note">人の争いも、三つの徳の相性に重なると言われている。星読みは竜の民を抑え、竜の民の熱は王国の秩序を揺るがし、'
-      "王国は星読みを従わせようとする、と。どこにも決定的な勝者はいない</p>"
-      + '<p class="note">年寄りの言葉: 「竜の火は、ただではない」「貸した手より、返す手のほうが冷たい」</p>',
-    )
+  return (
+    "シーズン（星の巡り）",
+    f"<p>星の巡りは、{escape(str(months))} か月ごとにやってくる（シーズン）。巡りが変わると、レベル・経験値・お金・回復薬・"
+    "居場所・依頼・溜めた行動力は最初に戻り、持ち物と保管庫の装備だけが残る。</p>"
+    '<p class="note">竜が勇者に貸した加護（レベル）は竜へ還り、形ある品は大地に残る、と言われている。'
+    '世界のなりたちや三つの教えは、<a href="index.html">ストーリー</a>のページにある</p>',
   )
-  return cards
 
 
 SPARE_NAMES = {"rest": "休む（溜める）", "stroll": "散策する", "move": "となりの町へ移動する"}
@@ -978,6 +921,62 @@ ORDER_NAMES = {
   "rank_high": "★の多いもの",
   "rank_low": "★の少ないもの",
 }
+
+
+def skill_slots(world: dict, rarity: str) -> str:
+  """珍しさごとのスキルの数の説明（★ はなし。スキルの付く珍しさは 1 つ。★★★ 以上は、あとで固定スキルを足す予定）。
+  いちばん下の珍しさは、items.json の並びではなく rarities の順で決める。"""
+  prices = world.get("skill_prices") or {}
+  if rarity not in prices:
+    return "なし"
+  if rarity == min(prices, key=world["rarities"].index):
+    return f"1 つ（{prices[rarity]}G）"
+  return f"1 つ（{prices[rarity]}G。★★★ 以上は、あとで固定スキルも付ける予定）"
+
+
+def skill_tag(name: str) -> str:
+  """スキルの名前の札（特性と同じ枠）。"""
+  return f'<span class="tag">{escape(name)}</span>'
+
+
+def element_triangle(world: dict) -> str:
+  """属性の三すくみの図（SVG）。強い相手へ矢印を引く（炎→雷→氷→炎）。3 つでなければ出さない。"""
+  elements = world.get("elements") or {}
+  order, cur = [], next(iter(elements), None)
+  while cur in elements and cur not in order:
+    order.append(cur)
+    cur = elements[cur]["strong"]
+  if len(order) != 3 or len(elements) != 3 or cur != order[0]:
+    return ""
+  # 中心 (150, 125)・半径 95 の三角形。上の円（半径 28 と線）が枠に収まるように、中心を下げている
+  pts = [(150 + 95 * math.sin(2 * math.pi * i / 3), 125 - 95 * math.cos(2 * math.pi * i / 3)) for i in range(3)]
+  colors = {"flame": "#d9534f", "ice": "#4f8fd9", "thunder": "#b58ad9"}
+  parts = []
+  for i in range(3):
+    (x1, y1), (x2, y2) = pts[i], pts[(i + 1) % 3]
+    dx, dy = x2 - x1, y2 - y1
+    d = math.hypot(dx, dy)
+    ux, uy = dx / d, dy / d
+    sx, sy, ex, ey = x1 + ux * 34, y1 + uy * 34, x2 - ux * 38, y2 - uy * 38
+    parts.append(
+      f'<line x1="{sx:.1f}" y1="{sy:.1f}" x2="{ex:.1f}" y2="{ey:.1f}" stroke="currentColor" stroke-width="2.5" marker-end="url(#arrow)"/>'
+    )
+    mx, my = (x1 + x2) / 2 - uy * 14, (y1 + y2) / 2 + ux * 14
+    parts.append(f'<text x="{mx:.1f}" y="{my:.1f}" font-size="12" text-anchor="middle" fill="currentColor">強い</text>')
+  for eid, (x, y) in zip(order, pts, strict=True):
+    color = colors.get(eid, "#888")
+    parts.append(
+      f'<circle cx="{x:.1f}" cy="{y:.1f}" r="28" fill="{color}" fill-opacity="0.18" stroke="{color}" stroke-width="2"/>'
+    )
+    parts.append(
+      f'<text x="{x:.1f}" y="{y + 5:.1f}" font-size="15" font-weight="bold" text-anchor="middle" fill="currentColor">'
+      f"{escape(elements[eid]['name'])}</text>"
+    )
+  return (
+    '<svg viewBox="0 0 300 230" width="300" height="230" role="img" aria-label="属性の三すくみ" class="tri">'
+    '<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
+    '<path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>' + "".join(parts) + "</svg>"
+  )
 
 
 def skill_logic(sk: dict) -> str:
@@ -1023,7 +1022,7 @@ def skill_cards(world: dict, table) -> list[tuple[str, str]]:
   )
   for slot in W.SLOTS:
     rows = [
-      (escape(kinds.get(sk["kind"], sk["kind"])), escape(sk["name"]), escape(sk["text"]), escape(skill_logic(sk)))
+      (escape(kinds.get(sk["kind"], sk["kind"])), skill_tag(sk["name"]), escape(sk["text"]), escape(skill_logic(sk)))
       for sk in skills.values()
       if sk["slot"] == slot
     ]
@@ -1078,7 +1077,11 @@ def personality_table(world: dict, table) -> str:
           (
             f"優先スキル（{W.SLOT_NAMES[slot]}）",
             [
-              "・".join(world["skills"][i]["name"] for i in p["skill"]["prefer"][slot] if i in world.get("skills", {}))
+              "".join(
+                skill_tag(world["skills"][i]["name"])
+                for i in p["skill"]["prefer"][slot]
+                if i in world.get("skills", {})
+              )
               for p in ps
             ],
           )
@@ -1090,7 +1093,10 @@ def personality_table(world: dict, table) -> str:
     ),
   ]
   return (
-    table(("項目", *(p["name"] for p in ps)), [(escape(k), *(escape(v) for v in vs)) for k, vs in rows])
+    table(
+      ("項目", *(p["name"] for p in ps)),
+      [(escape(k), *(v if k.startswith("優先スキル") else escape(v) for v in vs)) for k, vs in rows],  # 札は HTML
+    )
     + "".join(f'<p class="note">{escape(p["name"])}: {escape(p["text"])}</p>' for p in ps)
     + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない。'
     "選ぶ依頼の Lv は討伐だけで見る（配達は Lv を見ず、どの性格の範囲にも入る。Lv を比べるときは自分と同じ Lv として数える）。"
@@ -1137,16 +1143,8 @@ def build_guide(world: dict) -> str:
   hero_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in cfg["hero_traits"].values()]
   monster_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in world["traits"].values()]
   elements, rates = world["elements"], cfg["element_rates"]
-  weak_to: dict[str, list[str]] = {}  # その属性に強い属性（いくつあってもよい）
-  for eid, e in elements.items():
-    weak_to.setdefault(e["strong"], []).append(eid)
-  element_rows = [
-    (
-      tag(f"{e['name']}属性"),
-      escape(element_label(world, e["strong"])),
-      escape("・".join(element_label(world, w) for w in weak_to.get(eid, [])) or "-"),
-      escape(e.get("ore", "-")),
-    )
+  element_rows = [  # 属性と、竜の部位・徳（三つの徳）・鉱石
+    (tag(f"{e['name']}属性"), *(escape(v) for v in MYTH_ELEMENT.get(eid, ("-", "-"))), escape(e.get("ore", "-")))
     for eid, e in elements.items()
   ]
   potion = cfg["potion"]
@@ -1232,13 +1230,14 @@ def build_guide(world: dict) -> str:
   level_rows = "".join(
     f'<tr><td class="num">Lv{lv}</td>'
     + "".join(f'<td class="num">{v}</td>' for v in (b["max_hp"], b["atk"], b["def"], b["spd"], b["dex"]))
+    + f'<td class="num">{game.exp_need(world, lv) if lv < lv_max else "—"}</td>'
     + "</tr>"
     for lv in range(1, lv_max + 1)
     for b in [game.base_stats(world, None, lv)]
   )
   level_table = (
     '<div class="scroll"><table class="levels"><tr><th class="num">Lv</th>'
-    + "".join(f'<th class="num">{h}</th>' for h in ("HP", "攻", "防", "速", "器"))
+    + "".join(f'<th class="num">{h}</th>' for h in ("HP", "攻", "防", "速", "器", "次の Lv まで"))
     + "</tr>"
     + level_rows
     + "</table></div>"
@@ -1248,8 +1247,8 @@ def build_guide(world: dict) -> str:
       "能力",
       table(("能力", "説明"), stats)
       + f'<p class="note">{escape(stat_note)}</p>'
-      + '<h4 class="sub">レベルごとの能力（特性の倍率がかかる前の値。強運の勇者と同じ。ほかの特性と装備で変わる）</h4>'
-      + level_table,
+      + '<h4 class="sub">レベルごとの能力（特性の倍率がかかる前の値。強運の勇者と同じ。ほかの特性と装備で変わる）と、'
+      "次のレベルまでに要る経験値</h4>" + level_table,
     ),
     (
       "勇者の特性",
@@ -1269,10 +1268,18 @@ def build_guide(world: dict) -> str:
       (
         "属性と相性",
         f"<p>相性（左が右に強い）: {element_chart(world)}</p>"
-        + table(("属性", "強い相手", "苦手な相手", "鉱石"), element_rows)
+        + element_triangle(world)
+        + table(("属性", "竜の部位", "徳", "鉱石"), element_rows)
         + f'<p class="note">強い相手を攻めるとダメージ {rates["strong"]} 倍、苦手な相手だと {rates["weak"]} 倍。'
         "属性は魔物と一部の武器・装飾品にある（属性のない魔物・武器もある）。装飾品の属性は、武器に属性がないとき攻撃に付く。"
-        "属性の武器は、その属性の力を持つ鉱石から作られる</p>",
+        "属性の武器は、その属性の力を持つ鉱石から作られる</p>"
+        + (  # 三つの徳の話は、相性が三すくみ（図を描けるとき）だけ
+          '<p class="note">竜は、いのち・かぎり・こころざしを一つに持っていたが、三つに分かれた、という。'
+          "かぎりはいのちを鎮め（氷→炎）、いのちはこころざしを焼き（炎→雷）、こころざしはかぎりを砕く（雷→氷）。"
+          "属性の相性は、この関係そのものと言われる</p>"
+          if element_triangle(world)
+          else ""
+        ),
       )
     )
   points = world["season"]["item_points"]
@@ -1285,6 +1292,7 @@ def build_guide(world: dict) -> str:
       escape(game.rarity_mark(world, r)),
       escape(f"{points['max'][r]:g} 点まで"),
       escape("なし" if r == W.COMMON else "付くことがある（武器・装飾品）"),
+      escape(skill_slots(world, r)),
     )
     for r in world["rarities"]
   ]
@@ -1303,9 +1311,9 @@ def build_guide(world: dict) -> str:
       "<p>アイテムの強さは点数で決まる。能力の増減に、能力ごとの点数を掛けて足す（マイナスの能力も同じ点数で引く）</p>"
       + table(("能力", "+1 あたり", "1 点になる量"), weight_rows)
       + '<h4 class="sub">珍しさごとの点数</h4>'
-      + table(("珍しさ", "点数の上限", "属性"), rarity_rows)
-      + f'<p class="note">{escape(example)}。勇者は点数の高いアイテムを装備し、店でも点数の高いものを買う'
-      "（同じ点数なら、マイナスの能力のないもの）</p>",
+      + table(("珍しさ", "点数の上限", "属性", "スキル"), rarity_rows)
+      + f'<p class="note">{escape(example)}。勇者は ★ の多いアイテムを装備し（★ が同じなら点数の高いもの。'
+      "それも同じなら、マイナスの能力のないもの）、店でもその順に買う。スキルは点数に入らない</p>",
     )
   )
   quest_rows = [
@@ -1367,8 +1375,17 @@ def build_guide(world: dict) -> str:
   cards.append(("依頼の進め方", table(("場面", "どうなるか"), quest_rows)))
   cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))
   cards.append(("魔物の経験値とお金", table(("項目", "決め方"), reward_rows)))
-  cards.extend(build_myth_cards(world, table))
-  body = "<h2>手引き</h2>" + "".join(f'<div class="card"><h3>{escape(h)}</h3>{inner}</div>' for h, inner in cards)
+  cards.append(season_card(world))
+  nav = (
+    '<p class="guide-nav">'
+    + "".join(f'<a class="pill" href="#g{i}">{escape(h)}</a>' for i, (h, _) in enumerate(cards))
+    + "</p>"
+  )
+  body = (
+    "<h2>手引き</h2>"
+    + nav
+    + "".join(f'<div class="card" id="g{i}"><h3>{escape(h)}</h3>{inner}</div>' for i, (h, inner) in enumerate(cards))
+  )
   return page("手引き", body, "guide.html")
 
 
