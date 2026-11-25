@@ -134,7 +134,7 @@
 | `stay` | 今の町に着いた日 `{"town": 町, "since": 日付}`（最後に別の町に着いた日。討伐で同じ町に戻っても変わらない）。着いた日から `stay_days_max` 日たったら（着いた日を 0 日目として数える）旅に出る。シーズンが変わると `null` |
 | `personality` | 性格の ID（season.json の `personalities`）。勇者を作るときにランダムで決まり、シーズンが変わっても変わらない。ない・消えた性格は、読み込むときに付け直す |
 | `road` | 道を進んでいる途中なら `{"to": 行き先の町, "left": 残りの行動回数}`、町にいれば `null` |
-| `quest` | 受けている依頼（なければ `null`）。`type` は `hunt`（討伐）/ `deliver`（配達）/ `patrol`（となりの町への旅。報酬なし）。`place` が目的地（討伐は依頼の道の向こうの町）、`report` が報告する町（旅は `null`）、`progress` / `count` が進み具合、`cost` が必要な行動力、`steps` が討伐の残りの段取り（`[["go"/"hunt"/"back", 残りの行動力], ...]`）、`away` が討伐で町から何行動ぶん離れているか、`deadline` は使わない（`null`。期限はない）、`rank` がレアリティ（1〜4。★ の数）、`name` が依頼の名前、`text` がギルドの言葉（町の依頼だけ） |
+| `quest` | 受けている依頼（なければ `null`）。`type` は `hunt`（討伐）/ `deliver`（配達）/ `patrol`（となりの町への旅。報酬なし）。`place` が目的地（討伐は依頼の道の向こうの町）、`report` が報告する町（旅は `null`）、`progress` / `count` が進み具合、`cost` が必要な行動力、`steps` が討伐の残りの段取り（`[["go"/"hunt"/"back", 残りの行動力], ...]`）、`away` が討伐で町から何行動ぶん離れているか、`deadline` は使わない（`null`。期限はない）、`level` が依頼の Lv（討伐は狙う魔物の Lv。配達は Lv を持たず `null`。旅は持たない）、`rank` がレアリティ（1〜4。★ の数）、`name` が依頼の名前、`text` がギルドの言葉（町の依頼だけ） |
 | `season_stats` | 今のシーズンの成績（達成・失敗した依頼の数、倒した敵の数、力尽きた回数、手に入れたレアアイテムの ID） |
 | `last` | 最後に進めた日の結果（`date` は進めた日、`actions` はその日の行動回数（season.json の actions_per_day）、`events` は出来事） |
 | `journal` | 日誌。新しい順に直近 30 日分（`JOURNAL_DAYS`） |

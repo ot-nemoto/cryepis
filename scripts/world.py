@@ -364,6 +364,14 @@ def _check_season(c: _Check):
       continue
     if (key in rarities and key != COMMON) or items.get(key, {}).get("rarity", COMMON) != COMMON:
       err(f"season.json の treasure: {key!r} は宝箱からは出せません（レアは町の依頼の報酬だけで出る）")
+  gold = season.get("treasure_gold")
+  if (
+    not isinstance(gold, list)
+    or len(gold) != 2
+    or not all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in gold)
+    or gold[0] > gold[1]
+  ):
+    err("season.json: treasure_gold は宝箱のお金 [下, 上]（0 以上の整数。下 ≦ 上）にしてください")
   if not isinstance(season.get("rare_drops", True), bool):
     err("season.json: rare_drops は true か false にしてください（false ならレアのアイテムを出さない）")
   levels = season.get("encounter_levels")
