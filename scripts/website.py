@@ -923,6 +923,13 @@ ORDER_NAMES = {
 }
 
 
+GEAR_NAMES = {
+  "grow": "伸ばす（特性の得意な能力が上がるもの）",
+  "cover": "補う（特性の不得意な能力が上がるもの）",
+  "balance": "バランス（マイナスのないもの → 安いもの）",
+}
+
+
 def skill_slots(world: dict, rarity: str) -> str:
   """珍しさごとのスキルの数の説明（★ はなし。スキルの付く珍しさは 1 つ。★★★ 以上は、あとで固定スキルを足す予定）。
   いちばん下の珍しさは、items.json の並びではなく rarities の順で決める。"""
@@ -1059,6 +1066,7 @@ def personality_table(world: dict, table) -> str:
       [levels(p) + "。" + ("、".join(ORDER_NAMES[o] for o in p["quest"]["order"]) or "掲示板の上から") for p in ps],
     ),
     ("その日の残りの行動", [spare(p) for p in ps]),
+    ("同じ点数の装備", [GEAR_NAMES.get(p.get("gear", "balance"), "") for p in ps]),
     *(
       [
         (
@@ -1140,7 +1148,16 @@ def build_guide(world: dict) -> str:
     "・".join(f"{names[k]}は Lv1 で {growth[k][0]}、Lv{lv_max} で {growth[k][-1]}" for k in names if k in growth)
     + "。伸びる時期は能力ごとに違い、特性で伸び方が変わる。装備でも増える・減る"
   )
-  hero_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in cfg["hero_traits"].values()]
+  stat_names = {"hp": "HP", "atk": "攻", "def": "防", "spd": "速", "dex": "器"}
+  hero_traits = [
+    (
+      tag(t["name"]),
+      escape(t.get("text", "")),
+      escape(stat_names.get(t.get("strong_stat"), "-")),
+      escape(stat_names.get(t.get("weak_stat"), "-")),
+    )
+    for t in cfg["hero_traits"].values()
+  ]
   monster_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in world["traits"].values()]
   elements, rates = world["elements"], cfg["element_rates"]
   element_rows = [  # 属性と、竜の部位・徳（三つの徳）・鉱石
@@ -1252,8 +1269,9 @@ def build_guide(world: dict) -> str:
     ),
     (
       "勇者の特性",
-      table(("特性", "効果"), hero_traits)
-      + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない</p>',
+      table(("特性", "効果", "得意", "不得意"), hero_traits)
+      + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない。'
+      "得意・不得意は、同じ点数の装備のどれを選ぶかに使う（伸ばすか補うかは性格で決まる）</p>",
     ),
     ("勇者の性格", personality_table(world, table)),
     *skill_cards(world, table),
@@ -1313,7 +1331,8 @@ def build_guide(world: dict) -> str:
       + '<h4 class="sub">珍しさごとの点数</h4>'
       + table(("珍しさ", "点数の上限", "属性", "スキル"), rarity_rows)
       + f'<p class="note">{escape(example)}。勇者は ★ の多いアイテムを装備し（★ が同じなら点数の高いもの。'
-      "それも同じなら、マイナスの能力のないもの）、店でもその順に買う。スキルは点数に入らない</p>",
+      "それも同じなら、特性と性格で選ぶ。勇者の性格の「同じ点数の装備」）、店でもその順に買う（同じ強さの品は買い直さない）。"
+      "スキルは点数に入らない</p>",
     )
   )
   quest_rows = [

@@ -271,11 +271,6 @@ def minus_points(world: dict, item: dict) -> float:
   return -sum(weights.get(k, 0) * v for k, v in item.items() if k in W.REWARD_STATS and isinstance(v, int) and v < 0)
 
 
-def equip_key(world: dict, item: dict, rank: dict[str, int]) -> tuple:
-  """装備を比べる順: 点数 → 珍しさ → マイナスの少なさ（同じ点数なら、損のないものを選ぶ） → 値段の高さ。"""
-  return (item_score(world, item), rank[item["rarity"]], -minus_points(world, item), item.get("price", 0))
-
-
 def instances(value) -> list[dict]:
   """持ち物・保管庫を、1 つずつの {"id", "skill"} の一覧にする（前の形式 {ID: 個数} も読める。テストでも使う）。"""
   if isinstance(value, dict):
@@ -325,10 +320,23 @@ def carry_limit(world: dict, slot: str) -> int:
   return world["season"].get("carry", {}).get(slot, 99)
 
 
-def gear_key(world: dict, item: dict) -> tuple:
-  """装備の優先順（大きいほど先）: ★ の多さ → 点数 → マイナスの少なさ → 値段の高さ（#237: ★ の多い装備を優先する）。"""
+def gear_stat(world: dict, state: dict | None) -> str | None:
+  """同じ点数の装備を選ぶときに重んじる能力（#244）。特性の得意（strong_stat）・不得意（weak_stat）を、
+  性格の扱い方（gear: grow＝伸ばす・cover＝補う・balance＝バランス）で選ぶ。なければ None（バランス）。"""
+  if not state:
+    return None
+  trait = hero_trait(world, state)
+  how = personality(world, state).get("gear", "balance")
+  return trait.get("strong_stat") if how == "grow" else trait.get("weak_stat") if how == "cover" else None
+
+
+def gear_key(world: dict, item: dict, state: dict | None = None) -> tuple:
+  """装備の優先順（大きいほど先）: ★ の多さ → 点数 → 重んじる能力（gear_stat）の上がり方 → マイナスの少なさ → 安さ。
+  （#237: ★ の多い装備を優先する。#244: 同じ点数なら、特性と性格で選ぶ。値段の高さでは比べない）"""
   rank = {r: i for i, r in enumerate(world["rarities"])}
-  return (rank[item["rarity"]], item_score(world, item), -minus_points(world, item), item.get("price", 0))
+  stat = gear_stat(world, state)
+  value = item.get(stat, 0) if stat else 0  # stat は装備の能力の名前（hp・atk・def・spd・dex）
+  return (rank[item["rarity"]], item_score(world, item), value, -minus_points(world, item), -item.get("price", 0))
 
 
 def worn(world: dict, state: dict) -> dict[str, dict | None]:
@@ -338,7 +346,7 @@ def worn(world: dict, state: dict) -> dict[str, dict | None]:
   best_key: dict[str, tuple] = {}
   for x in sorted(carried(state), key=lambda x: (x["id"], x.get("skill") or "")):
     item = world["items"][x["id"]]
-    k = (gear_key(world, item), -prefer_index(world, state, x))
+    k = (gear_key(world, item, state), -prefer_index(world, state, x))
     if best[item["slot"]] is None or k > best_key[item["slot"]]:
       best[item["slot"]], best_key[item["slot"]] = x, k
   return best
@@ -1181,7 +1189,7 @@ class Day:
       )
       n = carry_limit(self.world, slot)
       if n > 1 and mine:  # ふだん着ける装備（★ の多いもの）は必ず持つ
-        strongest = max(mine, key=lambda x: (gear_key(self.world, items[x["id"]]), x["id"]))
+        strongest = max(mine, key=lambda x: (gear_key(self.world, items[x["id"]], state), x["id"]))
         mine = [strongest] + [x for x in mine if x is not strongest]
       for x in mine:  # 同じ装備のスキルなしは、2 つ目から手放す（持ち物・保管庫が増え続けないように）
         if not x.get("skill") and any(y["id"] == x["id"] and not y.get("skill") for y in keep + store):
@@ -1211,7 +1219,7 @@ class Day:
       else 0.0
     )
     want = -prefer_index(self.world, self.state, x)
-    return (hit, weak, want, gear_key(self.world, self.world["items"][x["id"]]), x["id"])
+    return (hit, weak, want, gear_key(self.world, self.world["items"][x["id"]], self.state), x["id"])
 
   def region_foes(self) -> list[dict]:
     """開放した道に出る魔物（依頼のないときの入れ替えに使う）。"""
@@ -1254,7 +1262,7 @@ class Day:
         for x in carried(self.state)  # 持っている装備だけ（保管庫の装備には付けない）
         if items[x["id"]]["rarity"] in prices and rarities.index(items[x["id"]]["rarity"]) >= low
       ),
-      key=lambda x: (gear_key(self.world, items[x["id"]]), x["id"]),
+      key=lambda x: (gear_key(self.world, items[x["id"]], self.state), x["id"]),
       reverse=True,
     )
     foes = self.quest_foes(self.state["quest"])
@@ -1322,7 +1330,7 @@ class Day:
     else:
       reserve = potion["price"] * max(0, potion["keep"] - hero["potions"])  # 回復薬の分は残して装備を買う
       keep_after = 0
-    key = lambda i: gear_key(self.world, items[i])  # noqa: E731  装備を選ぶとき（worn）と同じ比べ方（★ → 点数）
+    key = lambda i: gear_key(self.world, items[i], self.state)  # noqa: E731  装備を選ぶとき（worn）と同じ比べ方（★ → 点数）
     best_owned: dict[str, str | None] = {slot: None for slot in W.SLOTS}  # 保管庫も含めて、部位ごとにいちばん強い品
     for x in owned(self.state):
       slot = items[x["id"]]["slot"]
@@ -1331,7 +1339,8 @@ class Day:
     # 強い品から順に見る（買える中でいちばん強い品を買い、それより弱い品は買わない）
     for iid in sorted(self.world["places"][town].get("shop", []), key=key, reverse=True):
       item, cur = items[iid], best_owned[items[iid]["slot"]]
-      better = cur is None or key(iid) > key(cur)
+      # 安さは、同じ強さの品をどれから見るかだけに使う。買い替えるのは、安さを除いて強いときだけ（同じ強さは買い直さない）
+      better = cur is None or key(iid)[:-1] > key(cur)[:-1]
       # まだ持っていない属性の武器も買う（属性の弱点を突くために、戦いのたびに持ち替える）
       elements = {items[x["id"]].get("element") for x in owned(self.state) if items[x["id"]]["slot"] == "weapon"}
       better = better or (item["slot"] == "weapon" and item.get("element") and item["element"] not in elements)

@@ -673,6 +673,9 @@ def _check_hero_traits(c: _Check):
       err(f"{where}: growth は {{hp/atk/def/spd/dex: 伸びの倍率（0 以上の数）}} にしてください")
     if "luck" in t and not isinstance(t["luck"], bool):
       err(f"{where}: luck は true か false にしてください")
+    for key in ("strong_stat", "weak_stat"):  # 同じ点数の装備を選ぶときの得意・不得意（#244）
+      if key in t and t[key] not in ("hp", "atk", "def", "spd", "dex"):
+        err(f"{where}: {key} は hp/atk/def/spd/dex のどれかにしてください")
 
 
 def _weights_dict_ok(table, keys) -> bool:
@@ -754,6 +757,8 @@ def _check_personalities(c: _Check):
     order = quest.get("order") if isinstance(quest, dict) else None
     if not isinstance(order, list) or any(o not in PERSONALITY_ORDER for o in order):
       err(f"{where}: quest.order は {'/'.join(PERSONALITY_ORDER)} の一覧にしてください")
+    if "gear" in p and p["gear"] not in ("grow", "cover", "balance"):  # 書かなければバランス
+      err(f"{where}: gear（同じ点数の装備の選び方）は grow（伸ばす）・cover（補う）・balance のどれかにしてください")
     if p.get("spare") not in PERSONALITY_SPARE:
       err(f"{where}: spare（その日の残りの行動）は {'/'.join(PERSONALITY_SPARE)} のどれかにしてください")
     if "when_full" in p and p["when_full"] not in ("stroll", "move"):
