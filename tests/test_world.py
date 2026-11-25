@@ -567,6 +567,17 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"].update(inn={"price": -1}), ["inn"])
     self.assertError(lambda r: r["season"].update(stored_days=-1), ["stored_days"])
     self.assertError(lambda r: r["season"].update(stay_days_max="7"), ["stay_days_max"])
+    self.assertError(lambda r: r["season"].update(carry={"weapon": 3}), ["carry"])
+    self.assertError(lambda r: r["skills"][0].update(slot="boots"), ["skills", "slot"])
+    self.assertError(lambda r: r["skills"][0].update(kind="magic"), ["skills", "kind"])
+    self.assertError(lambda r: r["skills"][0].update(counter={"trait": "laser"}), ["skills", "counter"])
+    self.assertError(lambda r: r["skill_prices"].update(common=1), ["skill_prices"])
+    self.assertError(lambda r: r["skills"][1].pop("value"), ["skills", "value"])  # しくみに value を使うのに値がない
+    self.assertError(
+      lambda r: r["season"]["personalities"]["brave"]["skill"]["prefer"].update(weapon=["haggle"]),
+      ["brave", "skill.prefer"],
+    )
+    self.assertError(lambda r: r["season"]["personalities"]["brave"]["skill"].pop("prefer"), ["brave", "skill.prefer"])
     self.assertError(lambda r: r["season"].update(personalities={}), ["personalities"])
     self.assertError(lambda r: r["season"]["personalities"]["careful"].update(inn_below=2), ["careful", "inn_below"])
     self.assertError(

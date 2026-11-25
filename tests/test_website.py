@@ -381,6 +381,26 @@ class SiteTest(unittest.TestCase):
     self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
     self.assertEqual(html.count("<td>巣穴の主</td>"), 1)  # ボスのいない地方・開放していない地方には出さない
 
+  def test_guide_shows_skills_and_storage(self):
+    html = website.build_guide(WORLD)
+    self.assertIn("<h3>装備のスキル</h3>", html)
+    self.assertIn("<h3>持てる数と保管庫</h3>", html)
+    self.assertIn("鎧通し", html)
+    self.assertIn("会心の倍率を 4 倍にする", html)  # しくみの value は値に置き換える
+    self.assertIn("最大 HP の 5% 回復", html)  # HP の割合は %
+    self.assertIn("スキルを付ける余裕", html)  # 性格の表にスキルの行
+    self.assertIn("★★ 500G", html)
+    items = website.build_items(WORLD)
+    self.assertIn("鍛冶屋でスキルを付けられる", items)
+
+  def test_hero_text_shows_skills_and_storage(self):
+    state = game.new_state(WORLD, "h1")
+    state["inventory"] = [{"id": "steel_sword", "skill": "pierce"}]
+    state["storage"] = [{"id": "iron_sword", "skill": None}]
+    text = view.build_text(WORLD, state)
+    self.assertIn("鋼鉄の剣〔鎧通し〕", text)
+    self.assertIn("── 保管庫", text)
+
   def test_guide_page(self):
     html = website.build_guide(WORLD)
     self.assertIn('<a href="guide.html" class="on">手引き</a>', html)

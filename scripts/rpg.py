@@ -170,7 +170,7 @@ def hero_summary(world: dict, entry: dict, state: dict, today: date) -> list[str
   """ランキングの本文に載せる、勇者ごとの短い欄（entry は heroes.json の行）。"""
   hero, s = state["hero"], game.stats(world, state)
   rares = sorted(
-    {i for i in state["inventory"] if world["items"][i]["rarity"] != "common"},
+    {x["id"] for x in game.owned(state) if world["items"][x["id"]]["rarity"] != "common"},
     key=lambda i: (-world["rarities"].index(world["items"][i]["rarity"]), i),
   )
   last = state["last"]

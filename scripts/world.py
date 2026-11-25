@@ -130,6 +130,9 @@ def load_raw(directory: Path | None = None) -> dict:
     "elements": monsters.get("elements", {}),
     "rarities": _need(items, "rarities", "items.json"),
     "items": _need(items, "items", "items.json"),
+    "skills": items.get("skills", []),
+    "skill_kinds": items.get("skill_kinds", {}),
+    "skill_prices": items.get("skill_prices", {}),
     "quests": _need(quests, "templates", "quests.json"),
     "quest_ranks": quests.get("ranks"),
     "quest_reward": quests.get("reward"),
@@ -697,6 +700,13 @@ def _check_personalities(c: _Check):
   price = inn.get("price") if isinstance(inn, dict) else None
   if not isinstance(price, int) or isinstance(price, bool) or price < 0:
     err('season.json: inn は {"price": 宿代（0 以上の整数）} にしてください')
+  carry = season.get("carry")
+  if (
+    not isinstance(carry, dict)
+    or any(k not in SLOTS or not isinstance(v, int) or isinstance(v, bool) or v < 1 for k, v in carry.items())
+    or set(carry) != set(SLOTS)
+  ):
+    err(f"season.json: carry（部位ごとに持てる数）は {'/'.join(SLOTS)} それぞれに 1 以上の整数を書いてください")
   stay = season.get("stay_days_max")
   if not isinstance(stay, int) or isinstance(stay, bool) or stay < 0:
     err("season.json: stay_days_max（同じ町にいられる日数。0 なら旅に出さない）は 0 以上の整数にしてください")
@@ -742,6 +752,78 @@ def _check_personalities(c: _Check):
       err(f"{where}: when_full（溜まりきっていたら）は stroll か move にしてください")
     if "stroll_hp" in p and not _rate_ok(p["stroll_hp"]):
       err(f"{where}: stroll_hp は 0〜1 の数（散策する HP の割合）にしてください")
+    sk = p.get("skill")
+    rarities = c.raw.get("rarities") if isinstance(c.raw.get("rarities"), list) else []
+    if not isinstance(sk, dict):
+      err(f"{where}: skill（スキルを付ける条件。from・margin・prefer）を書いてください")
+    else:
+      if sk.get("from") not in rarities or sk.get("from") == COMMON:
+        err(f"{where}: skill.from は、スキルを付ける装備の珍しさの下限（common 以外）にしてください")
+      margin = sk.get("margin")
+      if not isinstance(margin, (int, float)) or isinstance(margin, bool) or margin < 1:
+        err(f"{where}: skill.margin は 1 以上の数（余裕の倍率）にしてください")
+      prefer = sk.get("prefer")
+      slots_of = {
+        k.get("id"): k.get("slot") for k in (c.raw.get("skills") or []) if isinstance(k, dict) and k.get("id")
+      }
+      if not isinstance(prefer, dict) or set(prefer) != set(SLOTS):
+        err(f"{where}: skill.prefer は {'/'.join(SLOTS)} ごとの優先スキルの一覧にしてください")
+      else:
+        for slot, ids in prefer.items():
+          if not isinstance(ids, list) or not ids or any(slots_of.get(i) != slot for i in ids):
+            err(f"{where}: skill.prefer の {slot} は、その部位のスキルの ID の一覧（1 つ以上）にしてください")
+
+
+SKILL_KINDS = ("counter", "attack", "guard", "heal", "travel", "money", "growth")
+
+
+def _check_skills(c: _Check):
+  """items.json の skills（装備のスキル。#233）・skill_kinds・skill_prices。"""
+  err, raw = c.err, c.raw
+  kinds = raw.get("skill_kinds")
+  if (
+    not isinstance(kinds, dict)
+    or set(kinds) != set(SKILL_KINDS)
+    or not all(isinstance(v, str) and v for v in kinds.values())
+  ):
+    err(f"items.json: skill_kinds は {'/'.join(SKILL_KINDS)} の名前（文字列）にしてください")
+  prices = raw.get("skill_prices")
+  rarities = raw.get("rarities") if isinstance(raw.get("rarities"), list) else []
+  if not isinstance(prices, dict) or any(
+    k not in rarities or k == COMMON or not isinstance(v, int) or isinstance(v, bool) or v < 0
+    for k, v in prices.items()
+  ):
+    err("items.json: skill_prices は {珍しさ（common 以外）: 付ける代金（0 以上の整数）} にしてください")
+  skills = raw.get("skills")
+  if not isinstance(skills, list):
+    err("items.json: skills はスキルの一覧にしてください")
+    return
+  seen = set()
+  for k in skills:
+    if not isinstance(k, dict) or not isinstance(k.get("id"), str):
+      err("items.json の skills: id のないスキルがあります")
+      continue
+    where = f"items.json の skills の {k['id']}"
+    if k["id"] in seen:
+      err(f"{where}: id が重なっています")
+    seen.add(k["id"])
+    for key in ("name", "text", "logic"):
+      if not isinstance(k.get(key), str) or not k[key]:
+        err(f"{where}: {key}（文字列）を書いてください")
+    if k.get("slot") not in SLOTS:
+      err(f"{where}: slot は {'/'.join(SLOTS)} のどれかにしてください")
+    if k.get("kind") not in SKILL_KINDS:
+      err(f"{where}: kind は {'/'.join(SKILL_KINDS)} のどれかにしてください")
+    if "value" in k and (not isinstance(k["value"], (int, float)) or isinstance(k["value"], bool)):
+      err(f"{where}: value は数にしてください")
+    if "value" not in k and "value" in str(k.get("logic", "")):  # しくみに value を使うスキルは、値がいる
+      err(f"{where}: logic に value を使うので、value（数）を書いてください")
+    counter = k.get("counter")
+    if counter is not None and not (
+      isinstance(counter, dict)
+      and (counter.get("trait") in (raw.get("traits") or {}) or counter.get("element") is True)
+    ):
+      err(f'{where}: counter は {{"trait": 魔物の性質}} か {{"element": true}} にしてください')
 
 
 def _check_monster_reward(c: _Check):
@@ -1094,6 +1176,7 @@ def validate(raw: dict) -> list[str]:
   _run(c, _check_element_rates)
   _run(c, _check_hero_traits)
   _run(c, _check_personalities)
+  _run(c, _check_skills)
   _run(c, _check_monster_reward)
   _run(c, _check_monster_traits)
   _run(c, _check_monsters)
@@ -1300,6 +1383,9 @@ def build(raw: dict) -> dict:
     "elements": raw.get("elements", {}),
     "rarities": raw["rarities"],
     "items": {i["id"]: i for i in raw["items"]},
+    "skills": {k["id"]: k for k in raw.get("skills") or []},
+    "skill_kinds": dict(raw.get("skill_kinds") or {}),
+    "skill_prices": dict(raw.get("skill_prices") or {}),
     # 開放した地域の common（開放した町の店で売っている品）。宝箱と依頼の報酬の common はここから出る
     "region_items": sorted({iid for t in towns for iid in places[t].get("shop", [])}),
     "quests": raw["quests"],

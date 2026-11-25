@@ -660,6 +660,13 @@ def build_items(world: dict) -> str:
   body = [
     "<h2>アイテム一覧</h2>",
     "" if world["season"].get("rare_drops", True) else '<p class="note">今はレア（★★ 以上）の配布を止めています。</p>',
+    (
+      '<p class="note">★★ 以上の装備には、町の鍛冶屋でスキルを付けられる（'
+      + escape("・".join(f"{game.rarity_mark(world, r)} {p}G" for r, p in world["skill_prices"].items()))
+      + "。くわしくは手引きの「装備のスキル」）</p>"
+      if world.get("skill_prices")
+      else ""
+    ),
     tab_bar([(slot, slot_label(slot)) for slot in slots]),
     rarity_filter([(r, game.rarity_mark(world, r)) for r in used], "条件に合うアイテムはありません。"),
   ]
@@ -973,6 +980,58 @@ ORDER_NAMES = {
 }
 
 
+def skill_logic(sk: dict) -> str:
+  """スキルのしくみの説明（logic の value を、値に置き換える。確率・HP の割合は %）。"""
+  text, v = sk["logic"], sk.get("value")
+  if v is None:
+    return text
+  pct = f"{v:.0%}"
+  num = str(int(v)) if float(v).is_integer() else str(v)
+  for a, b in (
+    ("value の確率", f"{pct} の確率"),
+    ("の value 回復", f"の {pct} 回復"),
+    ("から value に", f"から {pct} に"),
+  ):
+    text = text.replace(a, b)
+  return text.replace("value", num)
+
+
+def skill_cards(world: dict, table) -> list[tuple[str, str]]:
+  """手引きの「装備のスキル」と「持てる数と保管庫」の節。"""
+  skills, kinds = world.get("skills") or {}, world.get("skill_kinds") or {}
+  cards = []
+  carry = world["season"].get("carry")
+  if carry:
+    cards.append(
+      (
+        "持てる数と保管庫",
+        table(("部位", "持てる数"), [(escape(W.SLOT_NAMES[s]), f"{carry[s]}") for s in W.SLOTS])
+        + '<p class="note">着けるのは部位ごとに 1 つ（武器と装飾品は、戦いのたびに持っている中から選ぶ）。'
+        "持てる数を超えた分は、町のギルドの保管庫に預ける（どの町でも出し入れでき、依頼に合わせて入れ替える。"
+        "依頼の魔物の性質に効くスキル → 弱点を突ける属性 → 性格の優先スキル → ★ の多い装備、の順に持つ）。持ち物と保管庫はシーズンをまたいで残る</p>",
+      )
+    )
+  if not skills:
+    return cards
+  prices = world.get("skill_prices") or {}
+  price_text = "・".join(f"{game.rarity_mark(world, r)} {p}G" for r, p in prices.items())
+  body = (
+    f"<p>スキルは {escape(game.rarity_mark(world, next(iter(prices), 'rare')))} 以上の装備に、町の鍛冶屋で付けられる"
+    f"（代金 {escape(price_text)}。1 日 1 回まで、行動力は使わない）。部位ごとのスキルからランダムで 1 つ付き、"
+    "持っている装備を ★ の多い順に見て、性格の優先スキルの付いていない最初の装備に付ける（優先スキルが付いた装備は、もう変えない）。スキルは点数（アイテムの強さ）には入らない。"
+    "★★★ 以上の固定スキルは、まだない</p>"
+  )
+  for slot in W.SLOTS:
+    rows = [
+      (escape(kinds.get(sk["kind"], sk["kind"])), escape(sk["name"]), escape(sk["text"]), escape(skill_logic(sk)))
+      for sk in skills.values()
+      if sk["slot"] == slot
+    ]
+    body += f'<h4 class="sub">{escape(W.SLOT_NAMES[slot])}</h4>' + table(("系統", "スキル", "効果", "しくみ"), rows)
+  cards.append(("装備のスキル", body))
+  return cards
+
+
 def personality_table(world: dict, table) -> str:
   """手引きの「勇者の性格」: 性格ごとの動き（宿・回復薬・買い物・依頼・残りの行動）を、性格を列にした表で。"""
   ps = list((world["season"].get("personalities") or {}).values())
@@ -1001,6 +1060,34 @@ def personality_table(world: dict, table) -> str:
       [levels(p) + "。" + ("、".join(ORDER_NAMES[o] for o in p["quest"]["order"]) or "掲示板の上から") for p in ps],
     ),
     ("その日の残りの行動", [spare(p) for p in ps]),
+    *(
+      [
+        (
+          "スキルを付ける装備",
+          [
+            game.rarity_mark(world, p["skill"]["from"])
+            + (" だけ" if p["skill"]["from"] == world["rarities"][-1] else " 以上")
+            for p in ps
+          ],
+        ),
+        (
+          "スキルを付ける余裕",
+          [("余裕があれば" if p["skill"]["margin"] <= 1 else f"代金の {p['skill']['margin']} 倍以上") for p in ps],
+        ),
+        *(
+          (
+            f"優先スキル（{W.SLOT_NAMES[slot]}）",
+            [
+              "・".join(world["skills"][i]["name"] for i in p["skill"]["prefer"][slot] if i in world.get("skills", {}))
+              for p in ps
+            ],
+          )
+          for slot in W.SLOTS
+        ),
+      ]
+      if all("skill" in p for p in ps)
+      else []
+    ),
   ]
   return (
     table(("項目", *(p["name"] for p in ps)), [(escape(k), *(escape(v) for v in vs)) for k, vs in rows])
@@ -1170,6 +1257,7 @@ def build_guide(world: dict) -> str:
       + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない</p>',
     ),
     ("勇者の性格", personality_table(world, table)),
+    *skill_cards(world, table),
     (
       "魔物の性質",
       table(("性質", "効果"), monster_traits)

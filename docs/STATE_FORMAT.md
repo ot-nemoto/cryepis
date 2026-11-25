@@ -103,7 +103,8 @@
   "personality": "careful",
   "hero": {"level": 12, "exp": 120, "max_hp": 118, "hp": 117, "base_atk": 24, "base_def": 15, "base_spd": 25, "base_dex": 20,
            "gold": 1587, "potions": 3, "stored": 2},
-  "inventory": {"wooden_sword": 1, "iron_sword": 1, "iron_shield": 1, "lucky_charm": 1},
+  "inventory": [{"id": "steel_sword", "skill": "pierce"}, {"id": "iron_sword", "skill": null}, {"id": "iron_shield", "skill": null}],
+  "storage": [{"id": "wooden_helm", "skill": null}],
   "place": "salina",
   "home_town": "salina",
   "road": null,
@@ -125,7 +126,8 @@
 | `day` | 通算の日数（シーズンをまたいで数える） |
 | `last_date` | 最後に進めた日（JST）。この日以前の日付では進めない（同じ日に再実行しても進まない） |
 | `hero` | レベル、経験値（次のレベルまでの途中の値）、HP、基本の最大 HP・攻撃力・防御力（装備なし）、所持金、回復薬、溜めた行動力（`stored`。シーズンが変わると 0） |
-| `inventory` | 持ち物（アイテムの ID → 個数）。**シーズンをまたいで持ち越す**。装備は持ち物から部位ごとにいちばん強いものを毎回選ぶ（状態には持たない） |
+| `inventory` | 持っている装備（1 つずつ `{"id": アイテム, "skill": スキルか null}`）。部位ごとに `season.json` の `carry` の数まで。**シーズンをまたいで持ち越す**。ふだん着ける装備は、持ち物から部位ごとにいちばん強いものを毎回選ぶ（状態には持たない）。前の形式（ID → 個数）も読める |
+| `storage` | 保管庫の装備（形は `inventory` と同じ）。持てる数を超えた分を、町のギルドで預ける。シーズンをまたいで持ち越す |
 | `place` | 今いる町の ID（道の途中なら出発した町） |
 | `home_town` | 最後に寄った町（力尽きたらここで目を覚ます） |
 | `trait` | 特性の ID（season.json の `hero_traits`）。勇者を作るときにランダムで決まり、シーズンが変わっても変わらない |
@@ -138,7 +140,7 @@
 | `journal` | 日誌。新しい順に直近 30 日分（`JOURNAL_DAYS`） |
 | `seasons` | 終わったシーズンの記録（日数、最後のレベル、成績、終わった日）。無制限に残す |
 
-- シーズンが変わった最初の実行で、`seasons` に記録を足し、`inventory` 以外（`hero`・`place`・`quest`・`season_stats` など）を最初の状態に戻します。
+- シーズンが変わった最初の実行で、`seasons` に記録を足し、`inventory`・`storage` 以外（`hero`・`place`・`quest`・`season_stats` など）を最初の状態に戻します。
 - workflow が動かなかった日は、次の実行で `last_date` の翌日から 1 日ずつ進めます（最大 7 日分。`CATCH_UP_DAYS`）。
 - 読み込むときに、足りない項目は初期値で補います。`world/` から消えた場所にいれば最初の町に戻し、消えたアイテムは持ち物から外し、
   消えた場所・町・敵を参照する依頼は取り消します。
@@ -168,7 +170,7 @@ with open(".state/heroes/h1.json", encoding="utf-8") as f:
   state = json.load(f)
 hero = state["hero"]
 print(f"シーズン{state['season']} {state['season_day']}日目 Lv.{hero['level']} 所持金 {hero['gold']}G")
-print("持ち物:", ", ".join(f"{k} ×{n}" for k, n in state["inventory"].items()))
+print("持ち物:", ", ".join(x["id"] + (f"〔{x['skill']}〕" if x["skill"] else "") for x in state["inventory"]))
 for r in state["seasons"]:
   print(f"シーズン{r['season']}: Lv.{r['level']} 依頼達成 {r['quests_done']}")
 ```

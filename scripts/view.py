@@ -71,6 +71,12 @@ def personality_text(world: dict, state: dict) -> str:
   return f"性格: {p.get('name', '-')}（{p.get('text', '')}）" + stored if p else "性格: -" + stored
 
 
+def skill_note(world: dict, x: dict) -> str:
+  """装備に付いたスキル（「〔吸命〕」の形。なければ空）。"""
+  skill = (world.get("skills") or {}).get(x.get("skill"))
+  return f"〔{skill['name']}〕" if skill else ""
+
+
 def item_power(item: dict, world: dict | None = None) -> str:
   """装備の性能（攻+5 防+1 HP+8 速-1 炎 など）。world を渡すと、属性を名前で出す。"""
   names = {"atk": "攻", "def": "防", "hp": "HP"}
@@ -104,9 +110,9 @@ def location(world: dict, state: dict) -> str:
 def gear_text(world: dict, state: dict) -> str:
   """装備の名前を「/」でつなぐ（4 か所あるので、行が切れても見えるように ★ の多いものを先に、同じ ★ なら部位の順）。"""
   rank = {r: i for i, r in enumerate(world["rarities"])}
-  worn = [iid for iid in game.equipment(world, state).values() if iid]
-  worn.sort(key=lambda i: -rank[world["items"][i]["rarity"]])  # 安定ソートなので部位の順は保つ
-  return "/".join(item_label(world, i) for i in worn) or "なし"
+  worn = [x for x in game.worn(world, state).values() if x]
+  worn.sort(key=lambda x: -rank[world["items"][x["id"]]["rarity"]])  # 安定ソートなので部位の順は保つ
+  return "/".join(item_label(world, x["id"]) + skill_note(world, x) for x in worn) or "なし"
 
 
 def build_text(world: dict, state: dict) -> str:
@@ -155,12 +161,20 @@ def build_text(world: dict, state: dict) -> str:
       + (f"{item_label(world, iid)}（{item_power(world['items'][iid], world)}）" if iid else "なし")
     )
   rank = {r: i for i, r in enumerate(world["rarities"])}
-  inv = sorted(
-    state["inventory"].items(),
-    key=lambda kv: (-rank[world["items"][kv[0]]["rarity"]], -game.item_score(world, world["items"][kv[0]]), kv[0]),
-  )
-  detail += ["", "── 持ち物（シーズンをまたいで持ち越す）──"]
-  detail += [f"{item_label(world, iid)}" + (f" ×{n}" if n > 1 else "") for iid, n in inv] or ["なし"]
+
+  def listing(xs: list[dict]) -> list[str]:
+    xs = sorted(
+      xs,
+      key=lambda x: (
+        -rank[world["items"][x["id"]]["rarity"]],
+        -game.item_score(world, world["items"][x["id"]]),
+        x["id"],
+      ),
+    )
+    return [item_label(world, x["id"]) + skill_note(world, x) for x in xs] or ["なし"]
+
+  detail += ["", "── 持ち物（シーズンをまたいで持ち越す）──", *listing(game.carried(state))]
+  detail += ["", "── 保管庫（どの町のギルドでも出し入れできる）──", *listing(game.stored(state))]
   quest = state["quest"]
   if quest and quest["type"] != "patrol":
     detail += ["", "── 受けている依頼 ──", game.quest_text(world, quest)]

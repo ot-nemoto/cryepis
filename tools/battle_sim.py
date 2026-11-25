@@ -35,7 +35,7 @@ def make_hero(world: dict, trait: str, level: int, gear: list[str], potions: int
   state["personality"] = None  # 強敵・ボスの強さは、性格のない勇者（倒れる前に回復薬を使う）で測る
   state["hero"]["level"] = level
   game.set_base_stats(world, state)  # レベルと特性で決まる能力（レベルアップを繰り返したのと同じ）
-  state["inventory"] = {iid: 1 for iid in gear}
+  state["inventory"] = [{"id": iid, "skill": None} for iid in gear]
   state["hero"].update(potions=potions, hp=game.stats(world, state)["max_hp"], exp=0)
   return state
 

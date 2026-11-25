@@ -19,7 +19,7 @@ class BattleSimTest(unittest.TestCase):
 
   def test_make_hero_grows_by_trait(self):
     state = B.make_hero(WORLD, "strong", 15, [], 3)
-    self.assertEqual((state["hero"]["level"], state["hero"]["potions"], state["inventory"]), (15, 3, {}))
+    self.assertEqual((state["hero"]["level"], state["hero"]["potions"], state["inventory"]), (15, 3, []))
     self.assertEqual(state["hero"]["hp"], 108)  # 装備なし、怪力は HP の伸びが 0.7 倍（30 + 8×14×0.7 = 108.4）
 
   def test_boss_win_rates_for_a_plain_hero(self):
