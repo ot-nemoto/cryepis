@@ -3,10 +3,10 @@
 もののふはレベルアップの伸び（特性つき）だけで作り、装備は指定したものだけを持たせる。戦いの処理はゲームと同じ（game.Day.battle）。
 
 使い方:
-  python tools/battle_sim.py                          # 巣穴の主に、Lv15・装備なし・丸薬 3 個で、特性ごとの勝率
+  python tools/battle_sim.py                          # 酒呑童子に、Lv15・装備なし・丸薬 3 個で、特性ごとの勝率
   python tools/battle_sim.py --level 16 --gear steel_sword,cavalry_lance
   python tools/battle_sim.py --reach                  # 特性ごとに、勝率 50% に届くレベル（とレベルごとの勝率）
-  python tools/battle_sim.py --strength               # 特性ごとに、五分（勝率 50%）で戦えるボスの強さ（HP と攻撃の倍率）
+  python tools/battle_sim.py --strength               # 特性ごとに、五分（勝率 50%）で戦える主の強さ（HP と攻撃の倍率）
   python tools/battle_sim.py --monster wild_dog --level 1 --potions 0 --hp-loss  # 勝ったときに減る HP（道の物の怪の調整）
   python tools/battle_sim.py --monster road --fit-hp-loss 0.2   # 道の物の怪の HP・攻撃・防御を、減る HP 20% に合わせて探す
   python tools/battle_sim.py --monster rock_golem -n 5000
@@ -32,7 +32,7 @@ def make_hero(world: dict, trait: str, level: int, gear: list[str], potions: int
   """特性 trait のもののふを、レベルアップの伸びだけで level まで育てる（装備は gear、丸薬は potions 個）。"""
   state = game.new_state(world, "sim", "試し")
   state["trait"] = trait
-  state["personality"] = None  # 強敵・ボスの強さは、性格のないもののふ（倒れる前に丸薬を使う）で測る
+  state["personality"] = None  # 大物・主の強さは、性格のないもののふ（倒れる前に丸薬を使う）で測る
   state["hero"]["level"] = level
   game.set_base_stats(world, state)  # レベルと特性で決まる能力（レベルアップを繰り返したのと同じ）
   state["inventory"] = [{"id": iid, "skill": None} for iid in gear]
@@ -142,7 +142,7 @@ def main() -> int:
   ap.add_argument(
     "--monster",
     default="den_lord",
-    help="戦う物の怪の ID（既定: 巣穴の主）。--fit-hp-loss では road＝開放した道の物の怪すべて",
+    help="戦う物の怪の ID（既定: 酒呑童子）。--fit-hp-loss では road＝開放した道の物の怪すべて",
   )
   ap.add_argument("--level", type=int, help="もののふのレベル（既定: 15。--fit-hp-loss では物の怪のレベル）")
   ap.add_argument("--trait", help="特性の ID（既定: 全部の特性）")
@@ -221,8 +221,8 @@ def fit_main(world: dict, a: argparse.Namespace) -> int:
     ids = sorted({m for i in world["road_info"].values() for m, _ in i["monsters"]})
     ids.sort(key=lambda m: (world["monsters"][m]["level"], m))
   elif a.monster in world["monsters"]:
-    if not W.on_road(world["monsters"][a.monster]):  # 強敵・ボスは 20:7:2 の比ではない
-      raise SystemExit(f"{world['monsters'][a.monster]['name']} は強敵かボスです（--fit-hp-loss は道の物の怪だけ）")
+    if not W.on_road(world["monsters"][a.monster]):  # 大物・主は 20:7:2 の比ではない
+      raise SystemExit(f"{world['monsters'][a.monster]['name']} は大物か主です（--fit-hp-loss は道の物の怪だけ）")
     ids = [a.monster]
   else:
     raise SystemExit(f"物の怪 {a.monster!r} がいません（道の物の怪すべては road）")

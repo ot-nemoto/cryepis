@@ -65,7 +65,7 @@ class DisplayTest(unittest.TestCase):
   def test_quest_marks_are_not_rare_items(self):
     events = [
       "アウレアの口入れ屋で依頼を受けた: ★ 王家の書状（カエルムへ荷物を届ける）",
-      "野犬を倒した (+9EXP)",
+      "送り犬を倒した (+9EXP)",
       "宝箱から★「木の剣」を手に入れた",
       "宝箱から★★「狩人の短剣」を手に入れた！",
     ]
@@ -171,7 +171,7 @@ class DisplayTest(unittest.TestCase):
     self.assertIn("シーズン1: 最高レベル アリス Lv.22  討伐数 アリス 150体", text)
 
   def test_highlights_prefer_important_events_and_merge_level_ups(self):
-    events = ["スライムを倒した", "レベルが上がった！ Lv.2", "レベルが上がった！ Lv.3", "依頼達成！x", "景色"]
+    events = ["小鬼を倒した", "レベルが上がった！ Lv.2", "レベルが上がった！ Lv.3", "依頼達成！x", "景色"]
     self.assertEqual(view.highlights(events), ["レベルが上がった！ Lv.3", "依頼達成！x"])
     self.assertEqual(
       view.highlights(["a", "宝箱から★★「蒼炎の剣」を手に入れた！", "力尽きた…"]),

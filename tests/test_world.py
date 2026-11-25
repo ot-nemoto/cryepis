@@ -204,8 +204,8 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"].pop("growth"), ["growth"])
 
   def test_elite_needs_a_town_hunt_quest(self):
-    self.assertError(lambda r: r["monsters"][1].update(elite=True), ["giant_rat", "強敵"])  # 狙える依頼がない
-    self.assertError(lambda r: r["monsters"][-1].update(elite=True), ["den_lord", "elite"])  # ボスには付けない
+    self.assertError(lambda r: r["monsters"][1].update(elite=True), ["giant_rat", "大物"])  # 狙える依頼がない
+    self.assertError(lambda r: r["monsters"][-1].update(elite=True), ["den_lord", "elite"])  # 主には付けない
 
   def test_monster_reward_is_checked(self):
     self.assertError(lambda r: r["monsters"][0].update(exp=9), ["wild_dog", "exp", "計算"])  # 経験値は書かない
@@ -229,12 +229,12 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["monsters"][-1].update(boss=["fuji"]), ["den_lord", "boss"])  # 落ちない
 
   def test_road_needs_a_monster_other_than_the_boss(self):
-    def boss_only(r):  # 火山にはボスだけ、という道
+    def boss_only(r):  # 火山には主だけ、という道
       r["monsters"] = [m for m in r["monsters"] if m["terrain"] != "volcano" or m.get("boss")]
       r["monsters"][-1]["terrain"] = "volcano"
       r["map"]["roads"][0]["terrain"] = [["volcano", 1]]
 
-    self.assertError(boss_only, ["roads[0]", "ボス以外"])
+    self.assertError(boss_only, ["roads[0]", "主以外"])
 
   def test_hunt_quest_cannot_target_the_boss(self):
     def boss_quest(r):
@@ -243,7 +243,7 @@ class ValidateTest(unittest.TestCase):
       boss["terrain"] = next(m["terrain"] for m in r["monsters"] if m["id"] == q["monster"])  # 道の地形に合わせる
       q["monster"] = boss["id"]
 
-    self.assertError(boss_quest, ["nagano_3", "ボス以外"])
+    self.assertError(boss_quest, ["nagano_3", "主以外"])
 
   def test_item_dex_is_checked(self):
     self.assertError(lambda r: r["items"][-1].update(dex="2"), ["crimson_grass_charm", "dex"])
@@ -352,7 +352,7 @@ class ValidateTest(unittest.TestCase):
 
       return apply
 
-    self.assertEqual(errors_after(town_quest()), [])  # 町の討伐も書ける（今は強敵だけ）
+    self.assertEqual(errors_after(town_quest()), [])  # 町の討伐も書ける（今は大物だけ）
     self.assertError(town_quest(to="edo"), ["nagano_x", "直接つながる"])  # 道がない
     self.assertError(town_quest(monster="marsh_leech"), ["nagano_x", "その道に出る"])  # その道にいない物の怪
     self.assertError(town_quest(rank=9), ["nagano_x", "rank"])
@@ -381,7 +381,7 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["quests"].clear(), ["共通の依頼"])
 
   def test_every_town_has_a_quest_list(self):
-    self.assertEqual(set(RAW["town_quests"]), set(RAW["map"]["open"]))  # 町の依頼は強敵だけ（ない町もある）
+    self.assertEqual(set(RAW["town_quests"]), set(RAW["map"]["open"]))  # 町の依頼は大物だけ（ない町もある）
 
   def test_item_text_is_checked(self):
     for bad in ("", "  ", 5, None, ["説明"], "あ" * (W.ITEM_TEXT_MAX + 1)):

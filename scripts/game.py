@@ -15,6 +15,7 @@ import copy
 import json
 import math
 import random
+import re
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -189,6 +190,8 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "もの
   quest = state["quest"]
   if quest and not quest_ok(world, quest):
     state["quest"] = None
+  if state["quest"]:
+    renew_quest_texts(world, state["quest"])
   stay = state.get("stay")
   try:  # 今の町に着いた日（壊れていたら数え直す）
     ok = isinstance(stay, dict) and stay.get("town") == state["place"] and bool(date.fromisoformat(stay["since"]))
@@ -199,6 +202,68 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "もの
   hp_max = stats(world, state)["max_hp"]
   state["hero"]["hp"] = min(state["hero"]["hp"], hp_max)
   return state
+
+
+# 物の怪の前の名前 → 今の名前（#253）。名前を変える前に貼られた・受けられた依頼の文を直す（長い名前から順に置き換える）
+OLD_NAMES = {
+  "ケンタウロス": "鎌鼬",
+  "溶岩スライム": "釣瓶火",
+  "リザードマン": "河童",
+  "吸血コウモリ": "野衾",
+  "草原の大蛇": "野槌",
+  "荒くれ野牛": "輪入道",
+  "グリフォン": "以津真天",
+  "森オオカミ": "山犬",
+  "岩ゴーレム": "だいだらぼっち",
+  "雪原の白熊": "鬼熊",
+  "密林の大蛇": "うわばみ",
+  "砂漠の盗賊": "砂狐",
+  "雪男の牙": "雪女の簪",
+  "大ネズミ": "鉄鼠",
+  "ゴブリン": "小鬼",
+  "人食い花": "人面樹",
+  "霜の巨人": "霜の大入道",
+  "サハギン": "七人ミサキ",
+  "火トカゲ": "火鼠",
+  "沼トカゲ": "大山椒魚",
+  "毒ガエル": "大蝦蟇",
+  "砂サソリ": "砂蠍",
+  "岩トカゲ": "石蜥蜴",
+  "暴れ猪": "猪笹王",
+  "野盗団": "野伏せり",
+  "オーク": "赤鬼",
+  "オーガ": "青鬼",
+  "大蜘蛛": "女郎蜘蛛",
+  "氷の精": "雪ん子",
+  "大ダコ": "蛸入道",
+  "炎の鳥": "青鷺火",
+  "沼ヒル": "沼蛭",
+  "泥人形": "泥田坊",
+  "ヒドラ": "蛟",
+  "野犬": "送り犬",
+  "地竜": "落ち武者",
+  "山賊": "狒々",
+  "雷鳥": "雷獣",
+  "大鷲": "大天狗",
+  "雪男": "雪女",
+  "氷狼": "雪狼",
+  "海賊": "船幽霊",
+}
+_OLD_NAMES_RE = re.compile("|".join(re.escape(k) for k in OLD_NAMES))
+
+
+def renew_quest_texts(world: dict, quest: dict) -> None:
+  """依頼の名前・説明・荷物を、今の world/ の言葉に合わせる。町の決まった依頼は quests.json から作り直し、
+  共通の依頼は、物の怪の前の名前（OLD_NAMES）を今の名前に置き換える。"""
+  template = next(
+    (q for q in world["town_quests"].get(quest.get("town"), []) if q["id"] == quest.get("template")), None
+  )
+  if template is not None:
+    quest.update(name=template["name"], text=template.get("text", ""))
+    return
+  for key in ("name", "text", "cargo"):
+    if isinstance(quest.get(key), str):
+      quest[key] = _OLD_NAMES_RE.sub(lambda m: OLD_NAMES[m.group(0)], quest[key])
 
 
 QUEST_TYPES = ("hunt", "deliver", "patrol")
@@ -218,8 +283,8 @@ def hunt_steps_ok(quest: dict) -> bool:
 
 
 def elite_ok(world: dict, quest: dict) -> bool:
-  """強敵の討伐が、今の決まりで作られた依頼か（受けられるレベルが物の怪のレベルで、倒す数が町の依頼と同じ）。
-  強敵にする前に貼られた・受けられた依頼（Lv の決まりがなく、数も多い）は捨てる。強敵でなければ True。"""
+  """大物の討伐が、今の決まりで作られた依頼か（受けられるレベルが物の怪のレベルで、倒す数が町の依頼と同じ）。
+  大物にする前に貼られた・受けられた依頼（Lv の決まりがなく、数も多い）は捨てる。大物でなければ True。"""
   target = world["monsters"].get(quest.get("monster"), {})
   if not target.get("elite"):
     return True
@@ -247,7 +312,7 @@ def quest_ok(world: dict, quest: dict, steps: bool = True) -> bool:
     return (
       (quest.get("report"), quest["place"]) in world["roads"]
       and quest.get("monster") in world["monsters"]
-      and not world["monsters"][quest["monster"]].get("boss")  # ボスは道に出ない
+      and not world["monsters"][quest["monster"]].get("boss")  # 主は道に出ない
       and elite_ok(world, quest)
       and (hunt_steps_ok(quest) if steps else isinstance(quest.get("steps"), list))
     )
@@ -493,6 +558,7 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
         continue  # 達成された依頼（と、world/ から消えた依頼）ははがす
       if e["status"] == "open" and last_open_day(world, e) < d:
         continue  # 誰も受けないまま受付が終わった
+      renew_quest_texts(world, e)  # 物の怪の名前が変わったら、文も合わせる
       if e["status"] == "open":  # 物の怪のレベルが変わったら、依頼のレベルも合わせる
         lv = quest_level(world, e)
         e["level"] = [lv, lv] if lv is not None else None
@@ -545,7 +611,7 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
   if quest["type"] == "hunt":
     quest["steps"] = hunt_steps(world, town, quest["place"])
     target = world["monsters"].get(quest["monster"], {})
-    if target.get("elite"):  # 強敵は、物の怪のレベル以上のもののふだけが受ける
+    if target.get("elite"):  # 大物は、物の怪のレベル以上のもののふだけが受ける
       quest["min_level"] = lvl
     quest["away"] = 0  # 町から何行動ぶん離れているか（地図に描く位置）
     cost = sum(n for _, n in quest["steps"])
@@ -686,7 +752,7 @@ def quest_gap(quest: dict, level: int) -> int:
 def suitable(quest: dict, level: int, levels: list | None = None) -> bool:
   """受けられる依頼か。levels（性格の [下, 上]。もののふの Lv との差。None は下限なし）があれば、依頼の Lv がその範囲のものだけ。
   なければ、依頼のレベルが自分のレベル＋3 を超える、強すぎる依頼だけを避ける（弱すぎる依頼も受ける）。
-  配達は Lv を見ない（いつも範囲に入る）。強敵の討伐は、もののふのレベルが物の怪のレベル以上のときだけ受ける（min_level）。"""
+  配達は Lv を見ない（いつも範囲に入る）。大物の討伐は、もののふのレベルが物の怪のレベル以上のときだけ受ける（min_level）。"""
   if quest.get("type") == "deliver":  # 配達は Lv を見ない（どんな範囲でも入る）
     return True
   low, high = levels if levels else (None, 3)
@@ -766,7 +832,7 @@ def quest_detail(world: dict, quest: dict) -> str:
 
 
 def quest_text(world: dict, quest: dict) -> str:
-  """依頼の表示。レアリティと名前があれば「★★ 砂漠の盗賊団（〜を 6 体討伐）」の形にする。"""
+  """依頼の表示。レアリティと名前があれば「★★ 砂狐の討伐（〜を 6 体討伐）」の形にする。"""
   detail = quest_detail(world, quest)
   if quest["type"] == "patrol":
     return detail
@@ -1394,7 +1460,7 @@ class Day:
     entries = [e for e in open_ if suitable(e, level, levels)]
     if not entries and levels:
       # 性格の範囲に合う依頼がなければ、範囲より弱い依頼のうち、範囲にいちばん近い Lv の依頼を受ける
-      # （範囲より強い依頼は受けない。強敵は Lv が足りなければ受けない）
+      # （範囲より強い依頼は受けない。大物は Lv が足りなければ受けない）
       others = [e for e in open_ if suitable(e, level, [None, levels[1]])]  # 下限だけを外して、ほかの決まりは同じ
       if others:
         near = min(level_gap(e, level, levels) for e in others)
@@ -1415,7 +1481,7 @@ class Day:
         f"（行動力 {quest['cost']}）"
       )
       self.arrange(town, quest)  # 依頼に合わせて、蔵の装備と入れ替える（#234）
-    else:  # 受けられる依頼がない（どれも性格の範囲より強い・強敵の Lv が足りない・ほかのもののふに取られた）ので、旅に出る
+    else:  # 受けられる依頼がない（どれも性格の範囲より強い・大物の Lv が足りない・ほかのもののふに取られた）ので、旅に出る
       quest = patrol(self.world, self.state, self.rng)
       self.state["taken"].append(f"{self.today.isoformat()}-patrol")  # 旅もその日の 1 回に数える
       self.log(

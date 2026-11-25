@@ -181,7 +181,7 @@ class QuestTest(unittest.TestCase):
           self.assertIsNone(q["deadline"])
           self.assertGreater(q["cost"], 0)
           self.assertTrue(G.quest_ok(WORLD, q))
-          if q["type"] == "hunt":  # 討伐は町から出る道で、その道に出る物の怪（強敵は、その道の地形の強敵）
+          if q["type"] == "hunt":  # 討伐は町から出る道で、その道に出る物の怪（大物は、その道の地形の大物）
             self.assertEqual(q["report"], town)
             target = WORLD["monsters"][q["monster"]]
             if target.get("elite"):
@@ -197,7 +197,7 @@ class QuestTest(unittest.TestCase):
     self.assertEqual(set(elites), {"yeti", "rock_golem", "great_eagle"})
     on_roads = {m for i in WORLD["road_info"].values() for m, _ in i["monsters"]}
     self.assertFalse(on_roads & set(elites))  # 道では出会わない
-    for town, quests in WORLD["town_quests"].items():  # どの強敵の依頼も、物の怪のレベルから受けられる
+    for town, quests in WORLD["town_quests"].items():  # どの大物の依頼も、物の怪のレベルから受けられる
       for quest in quests:
         if quest.get("monster") not in elites:
           continue
@@ -208,10 +208,10 @@ class QuestTest(unittest.TestCase):
         self.assertTrue(G.suitable(q, lv))
         self.assertTrue(G.quest_ok(WORLD, q, steps=False))
     targets = {q.get("monster") for qs in WORLD["town_quests"].values() for q in qs}
-    self.assertLessEqual(set(elites), targets)  # どの強敵も、町の依頼で狙える
+    self.assertLessEqual(set(elites), targets)  # どの大物も、町の依頼で狙える
     quest = next(q for q in WORLD["town_quests"]["nagano"] if q.get("monster") == "yeti")
     q = G.make_town_quest(WORLD, quest, "nagano", START)
-    # 強敵にする前に貼られた依頼（Lv の決まりがなく、数も多い）は捨てる（高札からも、もののふの状態からも）
+    # 大物にする前に貼られた依頼（Lv の決まりがなく、数も多い）は捨てる（高札からも、もののふの状態からも）
     old = {k: v for k, v in q.items() if k != "min_level"} | {"count": 5, "level": [2, 2]}
     self.assertFalse(G.quest_ok(WORLD, old, steps=False))
     self.assertFalse(G.quest_ok(WORLD, q | {"count": 5}, steps=False))
@@ -731,7 +731,7 @@ class TraitTest(unittest.TestCase):
 
   def test_name_shows_the_trait(self):
     _, _, day = self.fight("poison")
-    self.assertIn("野犬〔毒〕を倒した", day.events[0])
+    self.assertIn("送り犬〔毒〕を倒した", day.events[0])
 
   def test_poison_hurts_after_the_battle(self):
     won, state, day = self.fight("poison")
@@ -793,6 +793,19 @@ class StateFileTest(unittest.TestCase):
       path = Path(d) / "h1.json"
       G.save_state(state, path)
       self.assertEqual(G.load_state(WORLD, path), state)
+
+  def test_load_renews_quest_texts_with_old_monster_names(self):
+    """物の怪の名前を変える前（#253）に受けた依頼は、読み込むときに今の名前の文にする。"""
+    state = play(1)
+    quest = common_hunt()
+    quest.update(name="野犬の討伐", text="道に野犬が出る。雪男の牙も運べ")
+    state["quest"] = quest
+    with tempfile.TemporaryDirectory() as d:
+      path = Path(d) / "h1.json"
+      G.save_state(state, path)
+      loaded = G.load_state(WORLD, path)
+    self.assertEqual(loaded["quest"]["name"], "送り犬の討伐")
+    self.assertEqual(loaded["quest"]["text"], "道に送り犬が出る。雪女の簪も運べ")  # 長い名前（雪男の牙）から置き換える
 
   def test_load_repairs_references_removed_from_the_world(self):
     state = play(5)
@@ -871,7 +884,7 @@ class StateFileTest(unittest.TestCase):
       ({"type": "hunt", "place": near, "monster": "wild_dog"}, True),
       ({"type": "hunt", "place": far, "monster": "wild_dog"}, False),  # 道がない
       ({"type": "hunt", "place": near, "monster": "slime"}, False),  # 物の怪がいない
-      ({"type": "hunt", "place": near, "monster": "den_lord"}, False),  # ボスは道に出ない
+      ({"type": "hunt", "place": near, "monster": "den_lord"}, False),  # 主は道に出ない
       ({"type": "deliver", "place": "kumano", "monster": None}, False),  # 霊場へは配達しない
       ({"type": "deliver", "place": far, "monster": None}, True),
       ({"type": "teleport", "place": near, "monster": None}, False),
@@ -943,6 +956,22 @@ class GuildBoardTest(unittest.TestCase):
     G.refresh_guild(WORLD, self.guild, START + timedelta(days=n), 1)
     self.board = self.guild["towns"][self.TOWN]
     return {e["id"]: e for e in self.board}
+
+  def test_old_monster_names_on_the_board_are_renewed(self):
+    """名前を変える前（#253）に貼られた依頼は、翌朝の貼り替えで今の文にする（町の決まった依頼は quests.json から）。"""
+    town_q = next(q for q in WORLD["town_quests"]["nagano"] if q["monster"] == "yeti")
+    entry = G.make_town_quest(WORLD, town_q, "nagano", START)
+    entry.update(id="old-1", posted=START.isoformat(), status="held", holder="h1", returned=False)
+    entry.update(name="吹雪の雪男", text="牙の冷たさを持ち出したものだ")
+    common = common_hunt()
+    common.update(id="old-2", posted=START.isoformat(), status="held", holder="h2", returned=False)
+    common.update(name="ゴブリンの討伐", text="ゴブリンを追い払ってくれ")
+    self.guild["towns"]["nagano"].append(entry)
+    self.guild["towns"][self.TOWN].append(common)
+    self.next_day()
+    byid = {e["id"]: e for es in self.guild["towns"].values() for e in es}
+    self.assertEqual((byid["old-1"]["name"], byid["old-1"]["text"]), (town_q["name"], town_q["text"]))
+    self.assertEqual((byid["old-2"]["name"], byid["old-2"]["text"]), ("小鬼の討伐", "小鬼を追い払ってくれ"))
 
   def test_every_town_is_filled(self):
     for town in WORLD["towns"]:
@@ -1606,7 +1635,7 @@ class PersonalityTest(unittest.TestCase):
     self.assertFalse(G.suitable(q, 4, [None, 0]))  # 自分より強い依頼は受けない（慎重）
     self.assertTrue(G.suitable(q, 2, [None, 3]))
     self.assertFalse(G.suitable(q, 8, [-2, 0]))  # 弱すぎる依頼も受けない（勤勉）
-    self.assertFalse(G.suitable({"level": [5, 5], "min_level": 6}, 5, [None, 3]))  # 強敵は Lv 以上から
+    self.assertFalse(G.suitable({"level": [5, 5], "min_level": 6}, 5, [None, 3]))  # 大物は Lv 以上から
 
   def test_take_quest_follows_the_order(self):
     guild = G.new_guild()
@@ -1645,7 +1674,7 @@ class PersonalityTest(unittest.TestCase):
     G.Day(WORLD, state, START, random.Random(0), guild).take_quest(town)
     picked = next(e for e in entries if e["status"] == "held")
     self.assertEqual(picked["level"][0], 7)  # 範囲より弱い依頼のうち、いちばん近い Lv7
-    # 強敵（min_level）は、範囲より弱い依頼でも Lv が足りなければ受けない
+    # 大物（min_level）は、範囲より弱い依頼でも Lv が足りなければ受けない
     for e in entries:
       e.update(status="open", holder=None)
     entries[1].update(level=[9, 9], min_level=13)

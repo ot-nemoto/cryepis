@@ -8,7 +8,7 @@
   heroes.html         旅をしているもののふの一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・口入れ屋の規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
-  monsters.html       開放した道に出る物の怪とボス（地方ごとのタブ。街道の地形の割合・Lv・生息地・性質・属性・強さ。生息地で絞り込める）
+  monsters.html       開放した道に出る物の怪と主（地方ごとのタブ。街道の地形の割合・Lv・生息地・性質・属性・強さ。生息地で絞り込める）
   guide.html          手引き（能力・もののふの特性・物の怪の性質・属性と相性・戦いの決まりの説明）
   guild.html          町ごとの口入れ屋の高札（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
   heroes/<id>.html    もののふごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
@@ -643,16 +643,16 @@ def terrain_label(terrain: str) -> str:
   )
 
 
-HABITATS = {"world": "WORLD", "raid": "RAID"}  # 道では出会わない物の怪の生息地（強敵は WORLD、ボスは RAID）
+HABITATS = {"world": "WORLD", "raid": "RAID"}  # 道では出会わない物の怪の生息地（大物は WORLD、主は RAID）
 
 
 def habitat(monster: dict) -> str:
-  """物の怪の生息地（絞り込みの値）。道の物の怪は地形、強敵は world、ボスは raid。"""
+  """物の怪の生息地（絞り込みの値）。道の物の怪は地形、大物は world、主は raid。"""
   return "raid" if monster.get("boss") else "world" if monster.get("elite") else monster["terrain"]
 
 
 def habitat_label(hid: str) -> str:
-  """生息地の表示（地形は色の丸と名前、強敵・ボスは WORLD・RAID の札）。"""
+  """生息地の表示（地形は色の丸と名前、大物・主は WORLD・RAID の札）。"""
   if hid in HABITATS:
     return f'<span class="habitat">{escape(HABITATS[hid])}</span>'
   return terrain_label(hid)
@@ -696,7 +696,7 @@ def pie_svg(shares: list[tuple[str, float]]) -> str:
 def build_monsters(world: dict) -> str:
   """開放した道に出る物の怪の一覧（地方ごとのタブ。Lv・生息地・性質・属性・強さ）。並びは Lv の順（同じ Lv は地形の順）。
   道で出会う物の怪はもののふの Lv でも変わるので、物の怪ごとの「出る道と割合」は出さない。道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
-  強敵（生息地 WORLD）とボス（RAID）も同じ表に、道の物の怪のあとに出す（開放した町のある地方だけ。Lv は N/A）。"""
+  大物（生息地 WORLD）と主（RAID）も同じ表に、道の物の怪のあとに出す（開放した町のある地方だけ。Lv は N/A）。"""
   places, monsters, traits = world["places"], world["monsters"], world["traits"]
   towns = [t for t, p in places.items() if p["type"] == "town"]
   order = {t: i for i, t in enumerate(W.TERRAINS)}
@@ -704,13 +704,13 @@ def build_monsters(world: dict) -> str:
 
   shown: set[str] = set()  # 表に出した物の怪の生息地（絞り込みのボタンは、表に出したものだけ）
 
-  def boss_area(m: dict) -> str:  # ボスのいる霊場の地方（地方がない・知らない地方なら、その他のまとまり）
+  def boss_area(m: dict) -> str:  # 主のいる霊場の地方（地方がない・知らない地方なら、その他のまとまり）
     area = places[m["boss"]].get("area")
     return area if area in world["areas"] else OTHER_AREA
 
   def table(aid: str, members: list[str]) -> str:
-    """この地方の物の怪: 町につながる開放した道の物の怪、町の討伐の依頼で狙う強敵（WORLD）、霊場のボス（RAID）。
-    並びは道の物の怪（Lv の順）→ 強敵 → ボス。強敵・ボスは、開放した町のある地方だけ。"""
+    """この地方の物の怪: 町につながる開放した道の物の怪、町の討伐の依頼で狙う大物（WORLD）、霊場の主（RAID）。
+    並びは道の物の怪（Lv の順）→ 大物 → 主。大物・主は、開放した町のある地方だけ。"""
     seen: set[str] = set()
     for (a, b), info in world["road_info"].items():
       if place_order[a] > place_order[b] or not ({a, b} & set(members)):
@@ -734,11 +734,11 @@ def build_monsters(world: dict) -> str:
       monster_table(rows)
       + '<p class="note">HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
       '道で出会うのは、その道の地形の物の怪のうち、もののふの Lv に近い物の怪です（<a href="guide.html">手引き</a>）。'
-      "生息地が WORLD の物の怪（強敵）は道では出会わず、町の討伐の依頼で狙って戦います。"
-      "RAID の物の怪（ボス）は霊場の奥にいます（まだ挑めません）。</p></div>"
+      "生息地が WORLD の物の怪（大物）は道では出会わず、町の討伐の依頼で狙って戦います。"
+      "RAID の物の怪（主）は霊場の奥にいます（まだ挑めません）。</p></div>"
     )
 
-  def monster_row(mid: str) -> str:  # 物の怪の 1 行（強敵・ボスの Lv は N/A。道の物の怪と Lv の意味が違うので）
+  def monster_row(mid: str) -> str:  # 物の怪の 1 行（大物・主の Lv は N/A。道の物の怪と Lv の意味が違うので）
     m = monsters[mid]
     trait = traits.get(m.get("trait"), {})
     hid = habitat(m)
@@ -1032,7 +1032,7 @@ def personality_table(world: dict, table) -> str:
     + '<p class="note">もののふを作るときにランダムで決まり、シーズンが変わっても変わらない。'
     "選ぶ依頼の Lv は討伐だけで見る（配達は Lv を見ず、どの性格の範囲にも入る。Lv を比べるときは自分と同じ Lv として数える）。"
     "選ぶ依頼が同じ条件で並んだら、高札の上のものを選ぶ。Lv の範囲に合う依頼がなければ、範囲より弱い依頼のうち、"
-    "範囲にいちばん近い Lv の依頼を受ける（範囲より強い依頼は受けない）。強敵の依頼は、どの性格も強敵の Lv 以上になってから受ける</p>"
+    "範囲にいちばん近い Lv の依頼を受ける（範囲より強い依頼は受けない）。大物の依頼は、どの性格も大物の Lv 以上になってから受ける</p>"
   )
 
 
@@ -1131,8 +1131,8 @@ def build_guide(world: dict) -> str:
       + " の物の怪から出る（同じ地形の中では同じくらいずつ）。Lv の合う物の怪のいない地形は出ず、その分ほかの地形が出る。"
       "範囲に合う物の怪がどの地形にもいなければ、いちばん近い Lv の物の怪",
     ),
-    ("強敵", "道では出会わない。町の討伐の依頼で狙って戦う。依頼は、物の怪のレベル以上のもののふだけが受けられる"),
-    ("ボス", "道では出会わない。霊場の奥にいる"),
+    ("大物", "道では出会わない。町の討伐の依頼で狙って戦う。依頼は、物の怪のレベル以上のもののふだけが受けられる"),
+    ("主", "道では出会わない。霊場の奥にいる"),
   ]
   reward = cfg["monster_reward"]
   names_all = {"hp": "HP", "atk": "攻", "def": "防", "spd": "速", "dex": "器"}

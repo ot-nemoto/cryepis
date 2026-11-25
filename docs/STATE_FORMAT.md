@@ -112,8 +112,8 @@
             "report": "edo", "monster": "wild_dog", "count": 4, "progress": 1, "level": [1, 1],
             "deadline": null, "reward": {"exp": 112, "gold": 140, "item": [["none", 85], ["common", 10], ["rare", 5]]}},
   "season_stats": {"quests_done": 12, "quests_failed": 1, "kills": 61, "deaths": 0, "rares": []},
-  "last": {"date": "2027-04-09", "actions": 3, "events": ["野犬を倒した (+17EXP)", "…"]},
-  "journal": [{"date": "2027-04-09", "actions": 3, "text": "野犬を倒した (+17EXP) / …"}],
+  "last": {"date": "2027-04-09", "actions": 3, "events": ["送り犬を倒した (+17EXP)", "…"]},
+  "journal": [{"date": "2027-04-09", "actions": 3, "text": "送り犬を倒した (+17EXP) / …"}],
   "seasons": [{"season": 1, "days": 90, "level": 21, "quests_done": 30, "quests_failed": 2, "kills": 144,
                "deaths": 1, "rares": ["blue_flame_sword"], "ended_on": "2027-02-28"}]
 }
