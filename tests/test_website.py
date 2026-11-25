@@ -414,8 +414,8 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
     self.assertIn("相性（左が右に強い）: 炎→雷→氷→炎", html)
     self.assertIn(
-      '<td><span class="tag">雷属性</span></td><td>紫電鉄</td>', html
-    )  # 属性と鉱石（強い・苦手は図で見せる）
+      '<td><span class="tag">雷属性</span></td><td>頭</td><td>こころざし</td><td>紫電鉄</td>', html
+    )  # 属性・竜の部位・徳・鉱石（強い・苦手は図で見せる）
     self.assertIn('aria-label="属性の三すくみ"', html)
     self.assertIn('<a class="pill" href="#g0">能力</a>', html)  # 上の移動ボタン
     self.assertIn('<div class="card" id="g0">', html)
@@ -484,10 +484,11 @@ class SiteTest(unittest.TestCase):
 
   def test_guide_page_tells_the_myth(self):
     html = website.build_guide(WORLD)
-    for h in ("はじまりの話", "星の巡りと加護", "三つの徳", "三つの教えと争い"):
-      self.assertIn(f"<h3>{h}</h3>", html)
+    for h in ("はじまりの話", "星の巡りと加護", "三つの徳", "三つの教えと争い"):  # 物語はストーリーのページへ（#240）
+      self.assertNotIn(f"<h3>{h}</h3>", html)
+    self.assertIn("<h3>シーズン（星の巡り）</h3>", html)
     self.assertIn(f"星の巡りは、{WORLD['season']['months']} か月ごとにやってくる", html)
-    # 三つの徳の表は、属性と鉱石を world/ から引く
+    # 属性と相性の表は、竜の部位・徳・鉱石を world/ から引く
     self.assertIn('<td><span class="tag">炎属性</span></td><td>心臓</td><td>いのち</td><td>熾焔鋼</td>', html)
     self.assertIn('<td><span class="tag">氷属性</span></td><td>牙</td><td>かぎり</td><td>霧氷石</td>', html)
     self.assertIn('<td><span class="tag">雷属性</span></td><td>頭</td><td>こころざし</td><td>紫電鉄</td>', html)

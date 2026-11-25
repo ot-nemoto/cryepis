@@ -902,75 +902,16 @@ def element_chart(world: dict) -> str:
 MYTH_ELEMENT = {"flame": ("心臓", "いのち"), "ice": ("牙", "かぎり"), "thunder": ("頭", "こころざし")}
 
 
-def build_myth_cards(world, table):
-  """手引きの「世界のなりたち」の節（カードのリスト）。語りは民話の調子で、確かでないことは「言われている」と書く"""
+def season_card(world: dict) -> tuple[str, str]:
+  """手引きの「シーズン（星の巡り）」: レベルが戻り、装備だけが残る決まり（物語の話はストーリーのページ）。"""
   months = world["season"]["months"]
-  cards = [
-    (
-      "はじまりの話",
-      "<p>はじめに、海だけがあった。海は「おおうみ」といい、海そのものがからだだったという。"
-      "おおうみは、底からてのひらをさしあげて、大地をつくった。</p>"
-      "<p>大地には前の人がいて、そのそばに竜（始祖竜）と呼ばれる、神のようなものがいた。前の人は竜の力をひとりじめしようとして争い、"
-      "みな海へ帰った。竜は長く眠ったあと目を覚まし、百五十人の人を出して、三つに分かれたという。"
-      "死にきれない竜からしみ出す竜気が、いまも獣を魔物にしている。</p>"
-      '<p class="note">くわしい話は、世界のページにある</p>',
-    ),
-    (
-      "星の巡りと加護",
-      f"<p>星の巡りは、{escape(str(months))} か月ごとにやってくる。竜が勇者に加護（レベル）を貸し、"
-      "巡りが変わると、加護は竜へ還る。勇者の力が最初からやりなおしになるのは、このため。</p>"
-      "<p>人が死ぬと、からだは海へ帰り、名は竜へ還り、形は大地に残ると言われている。"
-      "名は竜へ還るので、レベルは巡りごとに戻る。形は大地に残るので、アイテムは残る。</p>",
-    ),
-  ]
-  rows = []
-  for eid, (part, virtue) in MYTH_ELEMENT.items():
-    el = world.get("elements", {}).get(eid)
-    if el:
-      rows.append(
-        (
-          f'<span class="tag">{escape(el["name"])}属性</span>',
-          escape(part),
-          escape(virtue),
-          escape(el.get("ore", "")),
-        )
-      )
-  if rows:
-    cards.append(
-      (
-        "三つの徳",
-        table(("属性", "始祖竜の部位", "徳", "鉱石"), rows)
-        + '<p class="note">始祖竜は、いのち・かぎり・こころざしを一つに持っていたが、'
-        "三つに分かれた、という。かぎりはいのちを鎮め（氷→炎）、いのちはこころざしを焼き（炎→雷）、"
-        "こころざしはかぎりを砕く（雷→氷）。属性の相性は、この関係そのもの</p>",
-      )
-    )
-  cards.append(
-    (
-      "三つの教えと争い",
-      "<p>三つの教えは、はじめの三つの里から生まれた。竜をどう見るかは、教えによって語りが違う。"
-      "どれも、そう言われている、という話。</p>"
-      + table(
-        ("教え", "竜をどう見るか（そう言われている）", "重んじる徳"),
-        [
-          (escape("星読み"), escape("眠らせておくべき、おそろしいもの。加護はかならず返す"), escape("かぎり")),
-          (escape("竜の民"), escape("人を生んだ親。加護は親から子への贈り物"), escape("いのち")),
-          (
-            escape("王国の教え"),
-            escape("人が法で治め、使いこなすべき力。加護は使うべき力"),
-            escape("こころざし"),
-          ),
-          (escape("土地の古い信仰"), escape("神は土地ごとにいる。竜の血が根になり、風になった"), escape("土地")),
-        ],
-      )
-      + '<p class="note">三つの欠片（牙・心臓・頭）がそろえば、大きな力になり、同時に大きな災いになると言い伝えられる。'
-      "星読みは封じるために、竜の民は竜を救うために、王国は治めるために、三つを集めようとしている、と言われる</p>"
-      + '<p class="note">人の争いも、三つの徳の相性に重なると言われている。星読みは竜の民を抑え、竜の民の熱は王国の秩序を揺るがし、'
-      "王国は星読みを従わせようとする、と。どこにも決定的な勝者はいない</p>"
-      + '<p class="note">年寄りの言葉: 「竜の火は、ただではない」「貸した手より、返す手のほうが冷たい」</p>',
-    )
+  return (
+    "シーズン（星の巡り）",
+    f"<p>星の巡りは、{escape(str(months))} か月ごとにやってくる（シーズン）。巡りが変わると、レベル・経験値・お金・回復薬・"
+    "居場所・依頼・溜めた行動力は最初に戻り、持ち物と保管庫の装備だけが残る。</p>"
+    '<p class="note">竜が勇者に貸した加護（レベル）は竜へ還り、形ある品は大地に残る、と言われている。'
+    '世界のなりたちや三つの教えは、<a href="index.html">ストーリー</a>のページにある</p>',
   )
-  return cards
 
 
 SPARE_NAMES = {"rest": "休む（溜める）", "stroll": "散策する", "move": "となりの町へ移動する"}
@@ -1201,7 +1142,10 @@ def build_guide(world: dict) -> str:
   hero_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in cfg["hero_traits"].values()]
   monster_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in world["traits"].values()]
   elements, rates = world["elements"], cfg["element_rates"]
-  element_rows = [(tag(f"{e['name']}属性"), escape(e.get("ore", "-"))) for e in elements.values()]
+  element_rows = [  # 属性と、竜の部位・徳（三つの徳）・鉱石
+    (tag(f"{e['name']}属性"), *(escape(v) for v in MYTH_ELEMENT.get(eid, ("-", "-"))), escape(e.get("ore", "-")))
+    for eid, e in elements.items()
+  ]
   potion = cfg["potion"]
   shifts = "・".join(  # 危ない配達で上がる魔物の Lv（配達の設定がない世界では、行を出さない）
     f"危なさ {n} は +{d['shift']}"
@@ -1324,10 +1268,13 @@ def build_guide(world: dict) -> str:
         "属性と相性",
         f"<p>相性（左が右に強い）: {element_chart(world)}</p>"
         + element_triangle(world)
-        + table(("属性", "鉱石"), element_rows)
+        + table(("属性", "竜の部位", "徳", "鉱石"), element_rows)
         + f'<p class="note">強い相手を攻めるとダメージ {rates["strong"]} 倍、苦手な相手だと {rates["weak"]} 倍。'
         "属性は魔物と一部の武器・装飾品にある（属性のない魔物・武器もある）。装飾品の属性は、武器に属性がないとき攻撃に付く。"
-        "属性の武器は、その属性の力を持つ鉱石から作られる</p>",
+        "属性の武器は、その属性の力を持つ鉱石から作られる</p>"
+        + '<p class="note">竜は、いのち・かぎり・こころざしを一つに持っていたが、三つに分かれた、という。'
+        "かぎりはいのちを鎮め（氷→炎）、いのちはこころざしを焼き（炎→雷）、こころざしはかぎりを砕く（雷→氷）。"
+        "属性の相性は、この関係そのものと言われる</p>",
       )
     )
   points = world["season"]["item_points"]
@@ -1423,7 +1370,7 @@ def build_guide(world: dict) -> str:
   cards.append(("依頼の進め方", table(("場面", "どうなるか"), quest_rows)))
   cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))
   cards.append(("魔物の経験値とお金", table(("項目", "決め方"), reward_rows)))
-  cards.extend(build_myth_cards(world, table))
+  cards.append(season_card(world))
   nav = (
     '<p class="guide-nav">'
     + "".join(f'<a class="pill" href="#g{i}">{escape(h)}</a>' for i, (h, _) in enumerate(cards))
