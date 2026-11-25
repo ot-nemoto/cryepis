@@ -25,6 +25,11 @@ def play(days, hero_id="h1", actions=None, first=START):
   return state
 
 
+def ids(state):
+  """持っている装備の ID（並べたもの）。"""
+  return sorted(x["id"] for x in G.carried(state))
+
+
 def day_of(state, d=START, seed="t"):
   return G.Day(WORLD, state, d, random.Random(seed))
 
@@ -102,7 +107,7 @@ class SeasonTest(unittest.TestCase):
 
   def test_new_season_keeps_only_items(self):
     state = play(3)
-    state["inventory"]["steel_sword"] = 1
+    G.carried(state).append({"id": "steel_sword", "skill": None})
     state["hero"].update(level=15, gold=999)
     last = START + timedelta(days=2)
     state["last_date"] = last.isoformat()
@@ -115,7 +120,7 @@ class SeasonTest(unittest.TestCase):
     self.assertEqual(
       (state["hero"]["level"], state["place"], state["quest"]), (1, G.start_town(WORLD, state["id"], 2), None)
     )
-    self.assertIn("steel_sword", state["inventory"])
+    self.assertIn("steel_sword", ids(state))
     (record,) = state["seasons"]
     self.assertEqual((record["season"], record["level"], record["days"]), (1, 15, 3))
     self.assertIn("シーズン2が始まった", state["last"]["events"][0])
@@ -492,7 +497,7 @@ class BattleAndItemTest(unittest.TestCase):
     quest = a_hunt() | {"progress": 99, "town": "salina", "reward": {"exp": 0, "gold": 0, "item": [["legendary", 1]]}}
     state["quest"] = quest
     G.Day(world, state, START, random.Random("t")).report(quest)
-    self.assertIn("x_legend", state["inventory"])
+    self.assertIn("x_legend", ids(state))
 
   def test_rarity_marks_follow_the_rarities(self):
     self.assertEqual([G.rarity_mark(WORLD, r) for r in WORLD["rarities"]], ["★", "★★", "★★★", "★★★★"])
@@ -787,7 +792,7 @@ class StateFileTest(unittest.TestCase):
   def test_load_repairs_references_removed_from_the_world(self):
     state = play(5)
     state.update(place="gone", home_town="gone", road={"to": "gone", "left": 1})
-    state["inventory"]["gone_item"] = 1
+    G.carried(state).append({"id": "gone_item", "skill": None})
     state["quest"] = {"place": "gone", "report": None}
     with tempfile.TemporaryDirectory() as d:
       path = Path(d) / "h1.json"
@@ -797,7 +802,7 @@ class StateFileTest(unittest.TestCase):
       (loaded["place"], loaded["home_town"], loaded["road"], loaded["quest"]),
       (G.start_town(WORLD, "h1", 1),) * 2 + (None, None),
     )
-    self.assertNotIn("gone_item", loaded["inventory"])
+    self.assertNotIn("gone_item", ids(loaded))
 
   def test_load_drops_removed_items_from_rare_records(self):
     state = play(2)
@@ -1186,7 +1191,7 @@ class BattleDepthTest(unittest.TestCase):
   def count_first(self, monster, spd, inventory=None):
     """勇者と魔物の、最初の数回の攻撃の順番（"h" / "m"）。"""
     state = self.hero_state(base_spd=spd)
-    state["inventory"] = dict(inventory or {})
+    state["inventory"] = G.instances(inventory or {})
     day = day_of(state)
     order = []
 
@@ -1255,7 +1260,9 @@ class BattleDepthTest(unittest.TestCase):
     self.assertEqual(rate, WORLD["season"]["element_rates"]["strong"])  # 炎は雷に強い
     day.battle(self.monster(element="thunder", hp=1))
     self.assertIn("（弱点を突いた）", day.events[-1])
-    del state["inventory"]["iron_sword"]  # 素手で弱点を突いても、名前を出さない（落ちない）
+    state["inventory"] = [
+      x for x in G.carried(state) if x["id"] != "iron_sword"
+    ]  # 素手で弱点を突いても、名前を出さない（落ちない）
     day = day_of(state)
     day.battle(self.monster(element="thunder", hp=1))
     self.assertIn("（弱点を突いた）", day.events[-1])
@@ -1320,8 +1327,8 @@ class BattleDepthTest(unittest.TestCase):
     state = self.hero_state(gold=10000)
     state["hero"]["potions"] = 3
     day_of(state).shop("salina")  # 兜はどちらも 1 点。値段の高い鉄の兜だけを買い、木の兜は買わない
-    self.assertIn("iron_helm", state["inventory"])
-    self.assertNotIn("wooden_helm", state["inventory"])
+    self.assertIn("iron_helm", ids(state))
+    self.assertNotIn("wooden_helm", ids(state))
     state = self.hero_state(gold=10000)
     state["hero"]["potions"] = 3
     state["inventory"] = {"wooden_helm": 1}  # 木の兜を持っていても、鉄の兜に買い替える
@@ -1330,18 +1337,18 @@ class BattleDepthTest(unittest.TestCase):
     poor = self.hero_state(gold=40)
     poor["hero"]["potions"] = 3
     day_of(poor).shop("salina")  # 50G の鉄の兜は買えないので、30G の木の兜
-    self.assertIn("wooden_helm", poor["inventory"])
+    self.assertIn("wooden_helm", ids(poor))
     rich = self.hero_state(gold=10000)
     rich["hero"]["potions"] = 3
     day_of(rich).shop("salina")
-    charms = [i for i in rich["inventory"] if WORLD["items"][i]["slot"] == "accessory"]
+    charms = [i for i in ids(rich) if WORLD["items"][i]["slot"] == "accessory"]
     self.assertEqual(len(charms), 1)  # 同じ点数・同じ値段の護符は 1 つだけ買う
 
   def test_shop_buys_weapons_with_new_elements(self):
     state = self.hero_state(gold=10000)
     state["inventory"] = {"x_heavy": 1}
     day_of(state).shop("eques")  # 騎兵の槍（雷）は大剣より弱いが、雷の武器を持っていないので買う
-    self.assertIn("x_lance", state["inventory"])
+    self.assertIn("x_lance", ids(state))
 
   def test_same_element_is_neutral(self):
     self.assertEqual(G.element_rate(WORLD, "flame", "flame"), 1.0)
@@ -1470,7 +1477,7 @@ class FallPathsTest(unittest.TestCase):
     self.assertEqual(state["season_stats"]["deaths"], 1)
     self.assertEqual(state["season_stats"]["quests_failed"], failed)
     self.assertEqual(state["hero"]["gold"], 123)  # お金・持ち物は減らない
-    self.assertEqual(state["inventory"], {"iron_sword": 1})
+    self.assertEqual(ids(state), ["iron_sword"])
     self.assertEqual(state["hero"]["hp"], G.stats(WORLD, state)["max_hp"])
     self.assertTrue(any("力尽きた" in e for e in state["last"]["events"]))
 
@@ -1683,6 +1690,32 @@ class PersonalityTest(unittest.TestCase):
         state["stay"] = bad
         G.save_state(state, path)
         self.assertIsNone(G.load_state(WORLD, path, "h1")["stay"])
+
+  def test_carry_limit_and_storage(self):
+    state = with_personality("careful")
+    state["inventory"] = G.instances({"iron_sword": 1, "iron_axe": 1, "wooden_helm": 1, "iron_helm": 1})
+    G.carried(state).extend({"id": "iron_sword", "skill": None} for _ in range(3))  # 剣を 4 本・斧を 1 本
+    day = day_of(state)
+    day.arrange(state["place"])
+    carry = WORLD["season"]["carry"]
+    self.assertEqual(sum(WORLD["items"][i]["slot"] == "weapon" for i in ids(state)), carry["weapon"])
+    self.assertEqual([i for i in ids(state) if WORLD["items"][i]["slot"] == "helmet"], ["iron_helm"])  # 強いほうを持つ
+    self.assertEqual(len(G.stored(state)), 3)  # 残りは保管庫（剣 2 本・木の兜）
+    self.assertIn("保管庫", day.events[-1])
+    self.assertTrue(G.owns(state, "wooden_helm"))  # 保管庫にあっても自分のもの（店で買い直さない）
+    G.start_season(WORLD, state, 2)
+    self.assertEqual(len(G.owned(state)), 7)  # 持ち物と保管庫はシーズンをまたいで残る
+
+  def test_old_inventory_format_is_read(self):
+    with tempfile.TemporaryDirectory() as d:
+      path = Path(d) / "h1.json"
+      state = G.new_state(WORLD, "h1")
+      state["inventory"] = {"iron_sword": 2, "gone": 1}
+      state.pop("storage")
+      G.save_state(state, path)
+      loaded = G.load_state(WORLD, path, "h1")
+    self.assertEqual(loaded["inventory"], [{"id": "iron_sword", "skill": None}] * 2)
+    self.assertEqual(loaded["storage"], [])
 
   def test_potion_is_used_below_the_rate_and_zero_hp_falls(self):
     state = with_personality("careful")  # 回復薬は HP 50% 未満

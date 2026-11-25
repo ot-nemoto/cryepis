@@ -697,6 +697,13 @@ def _check_personalities(c: _Check):
   price = inn.get("price") if isinstance(inn, dict) else None
   if not isinstance(price, int) or isinstance(price, bool) or price < 0:
     err('season.json: inn は {"price": 宿代（0 以上の整数）} にしてください')
+  carry = season.get("carry")
+  if (
+    not isinstance(carry, dict)
+    or any(k not in SLOTS or not isinstance(v, int) or isinstance(v, bool) or v < 1 for k, v in carry.items())
+    or set(carry) != set(SLOTS)
+  ):
+    err(f"season.json: carry（部位ごとに持てる数）は {'/'.join(SLOTS)} それぞれに 1 以上の整数を書いてください")
   stay = season.get("stay_days_max")
   if not isinstance(stay, int) or isinstance(stay, bool) or stay < 0:
     err("season.json: stay_days_max（同じ町にいられる日数。0 なら旅に出さない）は 0 以上の整数にしてください")

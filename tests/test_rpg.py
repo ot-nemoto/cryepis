@@ -87,7 +87,7 @@ class DisplayTest(unittest.TestCase):
 
   def test_detail_lists_items_and_past_seasons(self):
     state = play(3)
-    state["inventory"]["steel_sword"] = 1
+    game.carried(state).append({"id": "steel_sword", "skill": None})
     state["seasons"].append(
       {
         "season": 0,

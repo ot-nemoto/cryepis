@@ -134,7 +134,8 @@ def new_state(world: dict, hero_id: str = "h1", name: str = "勇者") -> dict:
     "day": 0,
     "last_date": None,
     "hero": new_hero(world),
-    "inventory": {},
+    "inventory": [],  # 持っている装備（1 つずつ {"id": アイテム, "skill": スキル}。部位ごとに carry の数まで）
+    "storage": [],  # 保管庫（どの町のギルドでも出し入れできる。持てる数を超えた分）
     "place": town,
     "home_town": town,
     "road": None,
@@ -174,7 +175,8 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
   state["season_stats"] = {**new_season_stats(), **state["season_stats"]}
   places = world["places"]
   fallback = start_town(world, state["id"], state["season"])
-  state["inventory"] = {k: v for k, v in state["inventory"].items() if k in world["items"]}
+  state["inventory"] = [x for x in carried(state) if x["id"] in world["items"]]
+  state["storage"] = [x for x in stored(state) if x["id"] in world["items"]]
   state["season_stats"]["rares"] = [i for i in state["season_stats"]["rares"] if i in world["items"]]
   if state["place"] not in world["towns"]:
     state.update(place=fallback, road=None)
@@ -273,15 +275,64 @@ def equip_key(world: dict, item: dict, rank: dict[str, int]) -> tuple:
   return (item_score(world, item), rank[item["rarity"]], -minus_points(world, item), item.get("price", 0))
 
 
-def equipment(world: dict, state: dict) -> dict[str, str | None]:
-  """部位ごとに、持ち物の中でいちばん強いアイテムの ID（なければ None）。比べ方は equip_key（すべて同じなら ID の順）。"""
+def instances(value) -> list[dict]:
+  """持ち物・保管庫を、1 つずつの {"id", "skill"} の一覧にする（前の形式 {ID: 個数} も読める。テストでも使う）。"""
+  if isinstance(value, dict):
+    return [{"id": k, "skill": None} for k, n in value.items() for _ in range(n if isinstance(n, int) and n > 0 else 1)]
+  if not isinstance(value, list):
+    return []
+  out = []
+  for x in value:
+    if isinstance(x, str):
+      out.append({"id": x, "skill": None})
+    elif isinstance(x, dict) and isinstance(x.get("id"), str):
+      out.append({"id": x["id"], "skill": x.get("skill") if isinstance(x.get("skill"), str) else None})
+  return out
+
+
+def carried(state: dict) -> list[dict]:
+  """持っている装備（前の形式なら、ここで 1 つずつの一覧に直す）。"""
+  if not (isinstance(state.get("inventory"), list) and all(isinstance(x, dict) for x in state["inventory"])):
+    state["inventory"] = instances(state.get("inventory"))
+  return state["inventory"]
+
+
+def stored(state: dict) -> list[dict]:
+  """保管庫の装備。"""
+  if not (isinstance(state.get("storage"), list) and all(isinstance(x, dict) for x in state["storage"])):
+    state["storage"] = instances(state.get("storage"))
+  return state["storage"]
+
+
+def owned(state: dict) -> list[dict]:
+  """持っている装備と保管庫の装備（どこにあっても自分のもの）。"""
+  return carried(state) + stored(state)
+
+
+def owns(state: dict, iid: str) -> bool:
+  return any(x["id"] == iid for x in owned(state))
+
+
+def carry_limit(world: dict, slot: str) -> int:
+  """部位ごとに持てる数（season.json の carry）。"""
+  return world["season"].get("carry", {}).get(slot, 99)
+
+
+def worn(world: dict, state: dict) -> dict[str, dict | None]:
+  """部位ごとに、持っている装備の中でいちばん強いもの（ふだん着けるもの。なければ None）。
+  比べ方は equip_key（すべて同じなら ID の順）。"""
   rank = {r: i for i, r in enumerate(world["rarities"])}
-  best: dict[str, str | None] = {slot: None for slot in W.SLOTS}
-  for iid in sorted(state["inventory"]):
-    item, cur = world["items"][iid], best[world["items"][iid]["slot"]]
-    if cur is None or equip_key(world, item, rank) > equip_key(world, world["items"][cur], rank):
-      best[item["slot"]] = iid
+  best: dict[str, dict | None] = {slot: None for slot in W.SLOTS}
+  for x in sorted(carried(state), key=lambda x: x["id"]):
+    item, cur = world["items"][x["id"]], best[world["items"][x["id"]]["slot"]]
+    if cur is None or equip_key(world, item, rank) > equip_key(world, world["items"][cur["id"]], rank):
+      best[item["slot"]] = x
   return best
+
+
+def equipment(world: dict, state: dict) -> dict[str, str | None]:
+  """部位ごとに、ふだん着ける装備の ID（なければ None。worn）。"""
+  return {slot: (x["id"] if x else None) for slot, x in worn(world, state).items()}
 
 
 def hero_trait(world: dict, state: dict) -> dict:
@@ -753,20 +804,19 @@ class Day:
     items, crit = self.world["items"], self.cfg["critical"]
     worn = equipment(self.world, self.state)
     usual, enemy = worn["accessory"], monster.get("element")
+    mine = sorted({x["id"] for x in carried(self.state)})
     accessories = [usual]
     accessories += [  # 弱点を突ける属性の装飾品
       i
-      for i in sorted(self.state["inventory"])
+      for i in mine
       if items[i]["slot"] == "accessory" and i != usual and element_rate(self.world, items[i].get("element"), enemy) > 1
     ]
     if usual and element_rate(self.world, items[usual].get("element"), enemy) < 1:  # 苦手な相手: 着け替えるか外す
-      accessories += sorted(
-        i for i in self.state["inventory"] if items[i]["slot"] == "accessory" and not items[i].get("element")
-      )
+      accessories += [i for i in mine if items[i]["slot"] == "accessory" and not items[i].get("element")]
       accessories.append(None)
     best = None
     for acc in accessories:
-      for iid in [*sorted(i for i in self.state["inventory"] if items[i]["slot"] == "weapon"), None]:
+      for iid in [*(i for i in mine if items[i]["slot"] == "weapon"), None]:
         s = stats(self.world, self.state, {"weapon": iid, "accessory": acc})
         rate = element_rate(self.world, attack_element(self.world, iid, acc), enemy)
         hits = 2 if s["spd"] >= 2 * monster.get("spd", s["spd"]) else 1
@@ -910,9 +960,11 @@ class Day:
     return None
 
   def obtain(self, iid: str, source: str) -> None:
-    item, inv = self.world["items"][iid], self.state["inventory"]
+    item = self.world["items"][iid]
     before = equipment(self.world, self.state)[item["slot"]]
-    inv[iid] = inv.get(iid, 0) + 1
+    carried(self.state).append(
+      {"id": iid, "skill": None}
+    )  # 手に入れた装備にスキルはない（持てる数を超えたら、町で保管庫へ）
     mark = rarity_mark(self.world, item["rarity"])
     if item["rarity"] != "common":
       self.state["season_stats"]["rares"].append(iid)
@@ -935,6 +987,32 @@ class Day:
     if not personality(self.world, state):  # 性格のない勇者だけ、町に着くと全回復する（性格があれば宿で休憩する）
       hero["hp"] = self.stats["max_hp"]
     self.shop(town)
+    self.arrange(town)
+
+  def arrange(self, town: str, quest: dict | None = None) -> None:
+    """町のギルドで、持ち物と保管庫を入れ替える（部位ごとに carry の数まで持ち、残りは保管庫。#232）。
+    持つ順は carry_key（いちばん強い装備は必ず持つ）。"""
+    state = self.state
+    pool = owned(state)
+    keep, store = [], []
+    for slot in W.SLOTS:
+      mine = sorted(
+        (x for x in pool if self.world["items"][x["id"]]["slot"] == slot),
+        key=lambda x: self.carry_key(x, quest),
+        reverse=True,
+      )
+      n = carry_limit(self.world, slot)
+      keep += mine[:n]
+      store += mine[n:]
+    moved = len([x for x in store if any(x is y for y in carried(state))])
+    state["inventory"], state["storage"] = keep, store
+    if moved:
+      self.log(f"{self.world['places'][town]['name']}のギルドの保管庫に、装備を {moved} つ預けた")
+
+  def carry_key(self, x: dict, quest: dict | None = None) -> tuple:
+    """持っておく装備の順（大きいほうを先に持つ）。今は装備の強さ（equip_key）→ ID。"""
+    rank = {r: i for i, r in enumerate(self.world["rarities"])}
+    return (equip_key(self.world, self.world["items"][x["id"]], rank), x["id"])
 
   def settle(self, quest: dict, status: str) -> None:
     """掲示板の依頼を、達成（done）か失敗（failed）にする（翌日の朝に入れ替わる・受付中に戻る）。"""
@@ -977,11 +1055,11 @@ class Day:
       item, cur = items[iid], worn[items[iid]["slot"]]
       better = cur is None or key(iid) > key(cur)
       # まだ持っていない属性の武器も買う（属性の弱点を突くために、戦いのたびに持ち替える）
-      owned = {items[i].get("element") for i in self.state["inventory"] if items[i]["slot"] == "weapon"}
-      better = better or (item["slot"] == "weapon" and item.get("element") and item["element"] not in owned)
-      if better and iid not in self.state["inventory"] and hero["gold"] >= item["price"] + reserve:
+      elements = {items[x["id"]].get("element") for x in owned(self.state) if items[x["id"]]["slot"] == "weapon"}
+      better = better or (item["slot"] == "weapon" and item.get("element") and item["element"] not in elements)
+      if better and not owns(self.state, iid) and hero["gold"] >= item["price"] + reserve:
         hero["gold"] -= item["price"]
-        self.state["inventory"][iid] = 1
+        carried(self.state).append({"id": iid, "skill": None})
         worn = equipment(self.world, self.state)
         bought.append(item["name"])
     while hero["potions"] < potion["keep"] and hero["gold"] >= potion["price"] + keep_after:  # 宿代は残す
