@@ -588,6 +588,10 @@ class ValidateTest(unittest.TestCase):
       lambda r: r["season"]["personalities"]["careful"]["quest"].update(order=["fast"]), ["careful", "quest.order"]
     )
     self.assertError(lambda r: r["season"]["personalities"]["brave"].update(spare="sleep"), ["brave", "spare"])
+    self.assertError(lambda r: r["season"]["personalities"]["brave"].update(gear="x"), ["brave", "gear"])
+    self.assertError(
+      lambda r: r["season"]["hero_traits"]["strong"].update(strong_stat="luck"), ["strong", "strong_stat"]
+    )
     self.assertError(
       lambda r: r["season"]["personalities"]["careful"].update(when_full="rest"), ["careful", "when_full"]
     )

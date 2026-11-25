@@ -431,12 +431,17 @@ class BattleAndItemTest(unittest.TestCase):
 
   def test_best_item_is_equipped(self):
     state = G.new_state(WORLD)
-    state["inventory"] = {"wooden_helm": 1, "iron_helm": 1, "steel_sword": 1}  # 兜はどちらも 1 点、鉄の兜のほうが高い
+    state.update(personality="diligent", trait="lucky")  # バランス: 同じ点数なら、マイナスのない安いもの
+    state["inventory"] = {"wooden_helm": 1, "iron_helm": 1, "steel_sword": 1}  # 兜はどちらも 1 点、木の兜のほうが安い
     worn = G.equipment(WORLD, state)
-    self.assertEqual((worn["weapon"], worn["helmet"], worn["accessory"]), ("steel_sword", "iron_helm", None))
+    self.assertEqual((worn["weapon"], worn["helmet"], worn["accessory"]), ("steel_sword", "wooden_helm", None))
     s = G.stats(WORLD, state)
-    self.assertEqual(s["def"], state["hero"]["base_def"] + 2)
+    self.assertEqual(s["def"], state["hero"]["base_def"] + 1)
     self.assertEqual(s["atk"], state["hero"]["base_atk"] + 2)  # 鋼鉄の剣は攻 +2
+    state.update(personality="brave", trait="guard")  # 鉄壁 × 伸ばす: 防の上がる鉄の兜（#244）
+    self.assertEqual(G.equipment(WORLD, state)["helmet"], "iron_helm")
+    state.update(personality="careful", trait="strong")  # 怪力 × 補う: 不得意な HP。兜には HP の品がないのでバランス
+    self.assertEqual(G.equipment(WORLD, state)["helmet"], "wooden_helm")
 
   def test_rare_item_is_recorded(self):
     state = G.new_state(WORLD)
@@ -1284,8 +1289,11 @@ class BattleDepthTest(unittest.TestCase):
   def test_elemental_accessory_is_swapped_in_against_its_weak_foe(self):
     state = self.hero_state(base_atk=20)
     state["inventory"] = {"iron_sword": 1, "silkvine_charm": 1, "x_flame_charm": 1}  # 試しの炎の護符は 1 点の ★
-    WORLD["items"]["x_flame_charm"].update(rarity="common", price=10)  # setUp で毎回作り直す仮の品
-    self.assertEqual(G.equipment(WORLD, state)["accessory"], "silkvine_charm")  # 同じ 1 点・同じ ★ なら値段の高いほう
+    WORLD["items"]["x_flame_charm"].update(rarity="common", price=100)  # setUp で毎回作り直す仮の品
+    state.update(personality="diligent", trait="lucky")
+    self.assertEqual(
+      G.equipment(WORLD, state)["accessory"], "silkvine_charm"
+    )  # 同じ 1 点・同じ ★ なら安いほう（バランス）
     day = day_of(state)
     _, rate, held, acc = day.pick_weapon(self.monster(element="thunder"), 0)  # 雷の相手: その戦いだけ着け替える
     self.assertEqual((acc, rate), ("x_flame_charm", WORLD["season"]["element_rates"]["strong"]))
@@ -1325,19 +1333,18 @@ class BattleDepthTest(unittest.TestCase):
 
   def test_shop_buys_the_best_item_it_can_afford(self):
     state = self.hero_state(gold=10000)
+    state.update(personality="diligent", trait="lucky")  # バランス
     state["hero"]["potions"] = 3
-    day_of(state).shop("salina")  # 兜はどちらも 1 点。値段の高い鉄の兜だけを買い、木の兜は買わない
-    self.assertIn("iron_helm", ids(state))
-    self.assertNotIn("wooden_helm", ids(state))
-    state = self.hero_state(gold=10000)
-    state["hero"]["potions"] = 3
-    state["inventory"] = {"wooden_helm": 1}  # 木の兜を持っていても、鉄の兜に買い替える
-    day_of(state).shop("salina")
-    self.assertEqual(G.equipment(WORLD, state)["helmet"], "iron_helm")
-    poor = self.hero_state(gold=40)
-    poor["hero"]["potions"] = 3
-    day_of(poor).shop("salina")  # 50G の鉄の兜は買えないので、30G の木の兜
-    self.assertIn("wooden_helm", ids(poor))
+    day_of(state).shop("salina")  # 兜はどちらも 1 点。安い木の兜だけを買い、鉄の兜は買わない（買い直さない。#244）
+    self.assertIn("wooden_helm", ids(state))
+    self.assertNotIn("iron_helm", ids(state))
+    guard = self.hero_state(gold=10000)
+    guard.update(personality="brave", trait="guard")  # 鉄壁 × 伸ばす: 防の上がる鉄の兜・鉄の盾を買う
+    guard["hero"]["potions"] = 3
+    day_of(guard).shop("salina")
+    self.assertIn("iron_helm", ids(guard))
+    self.assertIn("iron_shield", ids(guard))
+    self.assertNotIn("wooden_helm", ids(guard))
     rich = self.hero_state(gold=10000)
     rich["hero"]["potions"] = 3
     day_of(rich).shop("salina")
@@ -1692,17 +1699,48 @@ class PersonalityTest(unittest.TestCase):
         G.save_state(state, path)
         self.assertIsNone(G.load_state(WORLD, path, "h1")["stay"])
 
+  def test_gear_stat_follows_trait_and_personality(self):
+    state = with_personality("brave")  # 伸ばす
+    for trait, stat in (
+      ("strong", "atk"),
+      ("sturdy", "hp"),
+      ("guard", "def"),
+      ("swift", "spd"),
+      ("skilled", "dex"),
+      ("lucky", None),
+    ):
+      state["trait"] = trait
+      self.assertEqual(G.gear_stat(WORLD, state), stat, trait)
+    state["personality"] = "careful"  # 補う
+    for trait, stat in (("strong", "hp"), ("sturdy", "atk"), ("guard", None)):
+      state["trait"] = trait
+      self.assertEqual(G.gear_stat(WORLD, state), stat, trait)
+    state["personality"] = "thrifty"  # バランス
+    state["trait"] = "strong"
+    self.assertIsNone(G.gear_stat(WORLD, state))
+    charms = G.instances({"soaring_leaf_charm": 1, "silkvine_charm": 1, "lifeblood_charm": 1})
+    for pid, trait, want in (
+      ("brave", "swift", "soaring_leaf_charm"),
+      ("adventurous", "skilled", "silkvine_charm"),
+      ("careful", "strong", "lifeblood_charm"),
+    ):
+      state.update(personality=pid, trait=trait, inventory=[dict(x) for x in charms])
+      self.assertEqual(G.equipment(WORLD, state)["accessory"], want, (pid, trait))
+
   def test_carry_limit_and_storage(self):
-    state = with_personality("careful")
+    state = with_personality("diligent")  # バランス: 同じ点数なら、マイナスのない安いもの
+    state["trait"] = "lucky"
     state["inventory"] = G.instances({"iron_sword": 1, "iron_axe": 1, "wooden_helm": 1, "iron_helm": 1})
     G.carried(state).extend({"id": "iron_sword", "skill": None} for _ in range(3))  # 剣を 4 本・斧を 1 本
     day = day_of(state)
     day.arrange(state["place"])
     self.assertEqual([i for i in ids(state) if WORLD["items"][i]["slot"] == "weapon"], ["iron_axe", "iron_sword"])
-    self.assertEqual([i for i in ids(state) if WORLD["items"][i]["slot"] == "helmet"], ["iron_helm"])  # 強いほうを持つ
-    self.assertEqual([x["id"] for x in G.stored(state)], ["wooden_helm"])  # 残りは保管庫
+    self.assertEqual(
+      [i for i in ids(state) if WORLD["items"][i]["slot"] == "helmet"], ["wooden_helm"]
+    )  # 選ぶほうを持つ
+    self.assertEqual([x["id"] for x in G.stored(state)], ["iron_helm"])  # 残りは保管庫
     self.assertIn("同じ装備を 3 つ手放した", day.events)  # スキルなしの同じ剣は、2 本目から手放す
-    self.assertTrue(G.owns(state, "wooden_helm"))  # 保管庫にあっても自分のもの（店で買い直さない）
+    self.assertTrue(G.owns(state, "iron_helm"))  # 保管庫にあっても自分のもの（店で買い直さない）
     G.start_season(WORLD, state, 2)
     self.assertEqual(len(G.owned(state)), 4)  # 持ち物と保管庫はシーズンをまたいで残る
 
