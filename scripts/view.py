@@ -110,9 +110,9 @@ def location(world: dict, state: dict) -> str:
 def gear_text(world: dict, state: dict) -> str:
   """装備の名前を「/」でつなぐ（4 か所あるので、行が切れても見えるように ★ の多いものを先に、同じ ★ なら部位の順）。"""
   rank = {r: i for i, r in enumerate(world["rarities"])}
-  worn = [iid for iid in game.equipment(world, state).values() if iid]
-  worn.sort(key=lambda i: -rank[world["items"][i]["rarity"]])  # 安定ソートなので部位の順は保つ
-  return "/".join(item_label(world, i) for i in worn) or "なし"
+  worn = [x for x in game.worn(world, state).values() if x]
+  worn.sort(key=lambda x: -rank[world["items"][x["id"]]["rarity"]])  # 安定ソートなので部位の順は保つ
+  return "/".join(item_label(world, x["id"]) + skill_note(world, x) for x in worn) or "なし"
 
 
 def build_text(world: dict, state: dict) -> str:
