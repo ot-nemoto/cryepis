@@ -271,11 +271,6 @@ def minus_points(world: dict, item: dict) -> float:
   return -sum(weights.get(k, 0) * v for k, v in item.items() if k in W.REWARD_STATS and isinstance(v, int) and v < 0)
 
 
-def equip_key(world: dict, item: dict, rank: dict[str, int]) -> tuple:
-  """装備を比べる順: 点数 → 珍しさ → マイナスの少なさ（同じ点数なら、損のないものを選ぶ） → 値段の高さ。"""
-  return (item_score(world, item), rank[item["rarity"]], -minus_points(world, item), item.get("price", 0))
-
-
 def instances(value) -> list[dict]:
   """持ち物・保管庫を、1 つずつの {"id", "skill"} の一覧にする（前の形式 {ID: 個数} も読める。テストでも使う）。"""
   if isinstance(value, dict):
@@ -340,7 +335,7 @@ def gear_key(world: dict, item: dict, state: dict | None = None) -> tuple:
   （#237: ★ の多い装備を優先する。#244: 同じ点数なら、特性と性格で選ぶ。値段の高さでは比べない）"""
   rank = {r: i for i, r in enumerate(world["rarities"])}
   stat = gear_stat(world, state)
-  value = item.get("hp" if stat == "max_hp" else stat, 0) if stat else 0
+  value = item.get(stat, 0) if stat else 0  # stat は装備の能力の名前（hp・atk・def・spd・dex）
   return (rank[item["rarity"]], item_score(world, item), value, -minus_points(world, item), -item.get("price", 0))
 
 
@@ -1344,7 +1339,8 @@ class Day:
     # 強い品から順に見る（買える中でいちばん強い品を買い、それより弱い品は買わない）
     for iid in sorted(self.world["places"][town].get("shop", []), key=key, reverse=True):
       item, cur = items[iid], best_owned[items[iid]["slot"]]
-      better = cur is None or key(iid) > key(cur)
+      # 安さは、同じ強さの品をどれから見るかだけに使う。買い替えるのは、安さを除いて強いときだけ（同じ強さは買い直さない）
+      better = cur is None or key(iid)[:-1] > key(cur)[:-1]
       # まだ持っていない属性の武器も買う（属性の弱点を突くために、戦いのたびに持ち替える）
       elements = {items[x["id"]].get("element") for x in owned(self.state) if items[x["id"]]["slot"] == "weapon"}
       better = better or (item["slot"] == "weapon" and item.get("element") and item["element"] not in elements)

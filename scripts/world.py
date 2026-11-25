@@ -757,7 +757,7 @@ def _check_personalities(c: _Check):
     order = quest.get("order") if isinstance(quest, dict) else None
     if not isinstance(order, list) or any(o not in PERSONALITY_ORDER for o in order):
       err(f"{where}: quest.order は {'/'.join(PERSONALITY_ORDER)} の一覧にしてください")
-    if p.get("gear") not in ("grow", "cover", "balance"):
+    if "gear" in p and p["gear"] not in ("grow", "cover", "balance"):  # 書かなければバランス
       err(f"{where}: gear（同じ点数の装備の選び方）は grow（伸ばす）・cover（補う）・balance のどれかにしてください")
     if p.get("spare") not in PERSONALITY_SPARE:
       err(f"{where}: spare（その日の残りの行動）は {'/'.join(PERSONALITY_SPARE)} のどれかにしてください")

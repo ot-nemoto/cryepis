@@ -1345,6 +1345,23 @@ class BattleDepthTest(unittest.TestCase):
     self.assertIn("iron_helm", ids(guard))
     self.assertIn("iron_shield", ids(guard))
     self.assertNotIn("wooden_helm", ids(guard))
+    owner = self.hero_state(
+      gold=10000
+    )  # 同じ強さの品は、安くても買い直さない（宝箱で鉄の兜を拾っていても、木の兜を買わない）
+    owner.update(personality="diligent", trait="lucky")
+    owner["hero"]["potions"] = 3
+    owner["inventory"] = {"iron_helm": 1}
+    day_of(owner).shop("salina")
+    self.assertNotIn("wooden_helm", ids(owner))
+    poor = self.hero_state(gold=300)  # 鉄の兜（400G）は買えないので、次の木の兜（240G）
+    poor.update(personality="brave", trait="guard")
+    poor["hero"]["potions"] = 3
+    poor["inventory"] = {"iron_sword": 1, "iron_shield": 1, "soaring_leaf_charm": 1}  # 兜だけがない
+    day_of(poor).shop("salina")
+    self.assertIn("wooden_helm", ids(poor))
+    poor["hero"]["gold"] = 10000  # お金ができたら、防の上がる鉄の兜に買い替える
+    day_of(poor).shop("salina")
+    self.assertEqual(G.equipment(WORLD, poor)["helmet"], "iron_helm")
     rich = self.hero_state(gold=10000)
     rich["hero"]["potions"] = 3
     day_of(rich).shop("salina")
