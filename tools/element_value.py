@@ -31,7 +31,7 @@ def hero(world: dict, level: int) -> dict:
 
 
 def encounters(world: dict) -> Counter:
-  """開放した道で、魔物ごとに出会う割合（道ごとの重みを、その道の合計で割って足したもの）。"""
+  """開放した道で、物の怪ごとに出会う割合（道ごとの重みを、その道の合計で割って足したもの）。"""
   out: Counter = Counter()
   for info in world["road_info"].values():
     total = sum(x for _, x in info["monsters"])
@@ -48,7 +48,7 @@ def atk_equivalent(world: dict, monster: dict, level: int, limit: int = 60) -> i
 
 
 def road_points(world: dict, element: str) -> tuple[float, float, list[str]]:
-  """属性 element の道での点数（攻撃 +1 を 1 点）と、弱点を突ける魔物に出会う割合と、その魔物。"""
+  """属性 element の道での点数（攻撃 +1 を 1 点）と、弱点を突ける物の怪に出会う割合と、その物の怪。"""
   enc = encounters(world)
   weak_to = world["elements"][element]["strong"]
   weak = [mid for mid in enc if world["monsters"][mid].get("element") == weak_to]
@@ -76,7 +76,7 @@ def main() -> int:
   for eid, e in world["elements"].items():
     pts, share, weak = road_points(world, eid)
     names = "・".join(world["monsters"][m]["name"] for m in weak) or "なし"
-    print(f"  {e['name']}属性（弱点を突ける道の魔物: {names}、出会う割合 {share:.0%}）: {pts:.2f} 点")
+    print(f"  {e['name']}属性（弱点を突ける道の物の怪: {names}、出会う割合 {share:.0%}）: {pts:.2f} 点")
   print(f"今の属性の点数（season.json の item_points.element）: {world['season']['item_points']['element']:g}")
   return 0
 

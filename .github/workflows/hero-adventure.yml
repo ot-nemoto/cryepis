@@ -1,7 +1,7 @@
 name: Advance hero adventure (text RPG)
 
-# 現役の勇者（.state/heroes.json）を全員 1 日分進め、ランキングの Gist を更新する（1 日の行動回数は決まっていて、出来事が乱数で決まる。世界は world/ のデータ）。
-# 状態は .state/heroes/<id>.json に書き、最後に master にコミットする（勇者の詳細と地図はサイトで見る。pages.yml が公開する）。勇者は new-game.yml で増やす。
+# 現役のもののふ（.state/heroes.json）を全員 1 日分進め、ランキングの Gist を更新する（1 日の行動回数は決まっていて、出来事が乱数で決まる。世界は world/ のデータ）。
+# 状態は .state/heroes/<id>.json に書き、最後に master にコミットする（もののふの詳細と地図はサイトで見る。pages.yml が公開する）。もののふは new-game.yml で増やす。
 
 on:
   schedule:
@@ -34,8 +34,8 @@ jobs:
       - name: Test
         run: python -m unittest discover -s tests
 
-      # Test が失敗した日は実行しない（状態も作らない）。勇者がいなければ何もしない。
-      # 勇者ごとに失敗を隔離し、1 人でも失敗したらこのステップは失敗にする（ほかの勇者は進めて、状態もコミットする）。
+      # Test が失敗した日は実行しない（状態も作らない）。もののふがいなければ何もしない。
+      # もののふごとに失敗を隔離し、1 人でも失敗したらこのステップは失敗にする（ほかのもののふは進めて、状態もコミットする）。
       - name: Advance heroes
         if: ${{ success() }}
         env:

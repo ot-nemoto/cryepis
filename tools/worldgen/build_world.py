@@ -15,7 +15,7 @@ from places import DUNGEONS, LABEL, TOWNS
 STEP = 2
 kind = paths.kind()
 
-# 地形のマス → 魔物の地形（道の地形の割合に使う）
+# 地形のマス → 物の怪の地形（道の地形の割合に使う）
 TERRAIN = {
   "plain": "plain",
   "steppe": "plain",
@@ -78,7 +78,7 @@ TOWN_INFO = {
   "豊後府内": ("funai", "🏯", "豊後"),
   "鹿児島": ("kagoshima", "🏯", "薩摩"),
 }
-# ギルドの規模（掲示板の依頼の枠の数）。どの町にも書く（都 6、港や大きな町 5、ふつうの町 4、小さな町 3）
+# 口入れ屋の規模（高札の依頼の枠の数）。どの町にも書く（都 6、港や大きな町 5、ふつうの町 4、小さな町 3）
 QUESTS_PER_DAY = {
   "十三湊": 3,
   "酒田": 4,
@@ -106,7 +106,7 @@ QUESTS_PER_DAY = {
   "豊後府内": 4,
   "鹿児島": 4,
 }
-# ダンジョンの名前 → (ID, 地域)
+# 霊場の名前 → (ID, 地域)
 DUNGEON_INFO = {
   "八甲田山": ("hakkoda", "陸奥"),
   "平泉": ("hiraizumi", "陸奥"),
@@ -116,7 +116,7 @@ DUNGEON_INFO = {
   "剣山": ("tsurugi", "阿波"),
   "阿蘇山": ("aso", "肥後"),
 }
-# 開放した町（勇者が行ける範囲）。ほかの町は地図に出すが、道（陸路・航路・ダンジョンへの道）は出さず、行けない。
+# 開放した町（もののふが行ける範囲）。ほかの町は地図に出すが、道（陸路・航路・霊場への道）は出さず、行けない。
 # 少しずつ開放していく（今は坂東だけ）
 OPEN = ["江戸", "小田原", "甲府", "長野"]
 STARTS = ["江戸", "小田原", "長野"]  # 始まりの町（甲府からは始めない）
@@ -153,7 +153,7 @@ def terrain_mix(path):
 
 
 def build_places():
-  """町とダンジョン（world/map.json の places）。表（places.py・names.py・lore.py と、このファイルの表）から作る。"""
+  """町と霊場（world/map.json の places）。表（places.py・names.py・lore.py と、このファイルの表）から作る。"""
   area_of = {member: aid for aid, _, _, members in AREAS for member in members}
   places = []
   for name, x, y in TOWNS:
@@ -250,7 +250,7 @@ def main():
   with open(paths.REPO / "world" / "map.json", "w", encoding="utf-8") as f:
     f.write(text + "\n")
   shutil.copy(paths.BASE_SVG, paths.REPO / "world" / "map-base.svg")
-  print(f"  町・ダンジョン {len(places)}、道 {len(roads)}")
+  print(f"  町・霊場 {len(places)}、道 {len(roads)}")
 
 
 if __name__ == "__main__":

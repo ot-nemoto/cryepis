@@ -1,13 +1,13 @@
 name: Retire hero
 
-# 勇者を引退させる: 勇者の ID（h1 など）か名前を入れて手動実行すると、勇者管理シート（.state/heroes.json）で
-# その勇者が現役ではなくなり、毎日の更新の対象から外れる（状態は残り、サイトの詳細のページも残る。枠が 1 つ空く）。
+# もののふを引退させる: もののふの ID（h1 など）か名前を入れて手動実行すると、もののふ管理シート（.state/heroes.json）で
+# そのもののふが現役ではなくなり、毎日の更新の対象から外れる（状態は残り、サイトの詳細のページも残る。枠が 1 つ空く）。
 
 on:
   workflow_dispatch:
     inputs:
       hero:
-        description: "引退させる勇者の ID（h1 など）または名前"
+        description: "引退させるもののふの ID（h1 など）または名前"
         type: string
         required: true
 

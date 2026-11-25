@@ -2,11 +2,11 @@
 
 world/
   season.json   シーズンの長さ・初期ステータス・レベルアップ・1 日の行動回数（固定）など
-  map.json      地方（areas）、場所（町・ダンジョン）と道（陸路・航路・ダンジョンへの道）、開放した町（open）
+  map.json      地方（areas）、場所（町・霊場）と道（陸路・航路・霊場への道）、開放した町（open）
   map-base.svg  ベースの地図（地形の絵。map.json の layout.background）
   monsters.json 敵（出る地形と性質）と、性質の一覧
   items.json    アイテム（珍しさの一覧を含む）
-  quests.json   ギルドの依頼（レアリティ・共通のひな形・町ごとの依頼）
+  quests.json   口入れ屋の依頼（レアリティ・共通のひな形・町ごとの依頼）
 
 参照はすべて ID で行う。データに誤りがあれば validate() がその一覧を返し、load_world() は止まる。
 """
@@ -28,7 +28,7 @@ SLOTS = ("weapon", "helmet", "shield", "accessory")  # 鎧はない
 ELEMENT_SLOTS = ("weapon", "accessory")
 SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "shield": "盾", "accessory": "装飾品"}
 PLACE_TYPES = ("town", "dungeon")
-# 道の種類: 陸路・航路は町どうしを結び、勇者が通る。ダンジョンへの道は地図に描くだけ（第 2 段階で使う）
+# 道の種類: 陸路・航路は町どうしを結び、もののふが通る。霊場への道は地図に描くだけ（第 2 段階で使う）
 ROAD_KINDS = ("land", "sea", "trail")
 LABEL_SIDES = ("up", "down", "left", "right")  # 地図で場所の名前を置く向き
 TERRAINS = ("plain", "forest", "jungle", "desert", "wetland", "snow", "mountain", "volcano", "sea")
@@ -44,7 +44,7 @@ TERRAIN_NAMES = {
   "sea": "海",
 }
 TRAITS = ("first_strike", "poison", "swarm", "fierce", "armored", "thief")
-REWARD_STATS = ("hp", "atk", "def", "spd", "dex")  # 魔物の強さ点に使う能力（season.json の monster_reward）
+REWARD_STATS = ("hp", "atk", "def", "spd", "dex")  # 物の怪の強さ点に使う能力（season.json の monster_reward）
 QUEST_TYPES = ("hunt", "deliver")
 ROAD_EVENTS = ("battle", "treasure", "nothing")
 STROLL_EVENTS = ("battle", "strong_battle", "treasure", "nothing")
@@ -183,7 +183,7 @@ def stat_at(season: dict, stat: str, level: int) -> int:
 
 
 def open_towns(mp: dict) -> set:
-  """開放した町（勇者が行ける町）。map.json に open がなければ、全部の町。"""
+  """開放した町（もののふが行ける町）。map.json に open がなければ、全部の町。"""
   towns = {
     p.get("id")
     for p in _rows(mp.get("places"))
@@ -195,7 +195,7 @@ def open_towns(mp: dict) -> set:
 
 
 def road_open(r: dict, opened: set, places: dict) -> bool:
-  """道を使うか（両端の町が開放されている。ダンジョンへの道は、その町が開放されている）。"""
+  """道を使うか（両端の町が開放されている。霊場への道は、その町が開放されている）。"""
   return all(r.get(e) in opened or places.get(r.get(e), {}).get("type") == "dungeon" for e in ("from", "to"))
 
 
@@ -381,7 +381,7 @@ def _check_season(c: _Check):
     or not all(isinstance(v, int) and not isinstance(v, bool) for v in levels)
     or levels[0] > levels[1]
   ):
-    err("season.json: encounter_levels は [下, 上]（勇者の Lv との差。整数で、下 ≦ 上）にしてください")
+    err("season.json: encounter_levels は [下, 上]（もののふの Lv との差。整数で、下 ≦ 上）にしてください")
   events = season.get("road_events")
   if (
     not isinstance(events, dict)
@@ -422,8 +422,8 @@ def _check_areas(c: _Check) -> set | None:
       ):
         err(f"map.json の areas[{i}]: id（重複しない文字列）と name（文字列）を書いてください")
         continue
-      if a["id"].startswith("_") or a["id"] in places:  # サイトで、町・ダンジョンの ID と区別するため
-        err(f"map.json の areas[{i}]: id は _ で始めず、町・ダンジョンの ID と違うものにしてください")
+      if a["id"].startswith("_") or a["id"] in places:  # サイトで、町・霊場の ID と区別するため
+        err(f"map.json の areas[{i}]: id は _ で始めず、町・霊場の ID と違うものにしてください")
       if "en" in a and (not isinstance(a["en"], str) or not a["en"]):
         err(f"map.json の areas[{i}]: en（英語名）は空でない文字列にしてください")
       area_ids.add(a["id"])
@@ -455,7 +455,7 @@ def _check_open_and_starts(c: _Check) -> str | None:
 
 
 def _check_places(c: _Check, area_ids: set | None):
-  """map.json の places（名前・地方・座標・ギルドの規模・店）。area_ids が None なら、地方は調べない。"""
+  """map.json の places（名前・地方・座標・口入れ屋の規模・店）。area_ids が None なら、地方は調べない。"""
   err, places, items = c.err, c.places, c.items
   for pid, p in places.items():
     where = f"map.json の {pid}"
@@ -475,12 +475,12 @@ def _check_places(c: _Check, area_ids: set | None):
       or isinstance(p["quests_per_day"], bool)
       or not 1 <= p["quests_per_day"] <= 50
     ):
-      err(f"{where}: quests_per_day（ギルドの規模。掲示板の依頼の枠の数）は 1〜50 の整数にしてください")
+      err(f"{where}: quests_per_day（口入れ屋の規模。高札の依頼の枠の数）は 1〜50 の整数にしてください")
     if "label" in p and p["label"] not in LABEL_SIDES:
       err(f"{where}: label（名前を置く向き）は {'/'.join(LABEL_SIDES)} のどれかにしてください")
     if p.get("type") == "town":
       if "quests_per_day" not in p:
-        err(f"{where}: quests_per_day（ギルドの規模。掲示板の依頼の枠の数）を書いてください")
+        err(f"{where}: quests_per_day（口入れ屋の規模。高札の依頼の枠の数）を書いてください")
       if "shop" in p and not isinstance(p["shop"], list):
         err(f"{where}: shop は店で売るアイテムの ID の一覧にしてください")
       for iid in _rows(p.get("shop")):
@@ -535,7 +535,7 @@ def _check_roads(c: _Check):
       err(f"{where}: 同じ場所どうしをつないでいます")
     ends = sorted(str(places.get(r.get(e), {}).get("type") or "") for e in ("from", "to"))
     if kind == "trail" and ends != ["dungeon", "town"]:
-      err(f"{where}: ダンジョンへの道（trail）は町とダンジョンを結んでください")
+      err(f"{where}: 霊場への道（trail）は町と霊場を結んでください")
     if kind != "trail" and ends != ["town", "town"]:
       err(f"{where}: 陸路・航路は町どうしを結んでください")
     if not isinstance(r.get("distance"), int) or r["distance"] < 1:
@@ -546,7 +546,7 @@ def _check_roads(c: _Check):
     elif not _weights_ok(terrain) or any(t not in TERRAINS for t, _ in terrain):
       err(f"{where}: terrain は [地形, 正の重み] の一覧にしてください（地形は {'/'.join(TERRAINS)}）")
     elif not any(t in monster_terrains for t, _ in terrain):
-      err(f"{where}: terrain のどの地形にも、monsters.json の魔物がいません（ボス以外）")
+      err(f"{where}: terrain のどの地形にも、monsters.json の物の怪がいません（ボス以外）")
     path = r.get("path")
     if path is not None and (not isinstance(path, list) or len(path) < 2 or not all(_point_ok(p) for p in path)):
       err(f"{where}: path（地図に描く線）は [x, y] の一覧（2 点以上）にしてください")
@@ -648,9 +648,9 @@ def _check_element_rates(c: _Check):
 
 
 def _check_hero_traits(c: _Check):
-  """season.json の hero_traits（勇者の特性）。"""
+  """season.json の hero_traits（もののふの特性）。"""
   err, season = c.err, c.season
-  # 勇者の特性（season.json の hero_traits）。growth は Lv1 からの伸びにかける倍率、luck は引き直し
+  # もののふの特性（season.json の hero_traits）。growth は Lv1 からの伸びにかける倍率、luck は引き直し
   table = season.get("hero_traits")
   if not isinstance(table, dict) or not table:
     err("season.json: hero_traits を 1 つ以上書いてください（name・text、growth か luck）")
@@ -693,7 +693,7 @@ def _rate_ok(value) -> bool:
 
 
 def _check_personalities(c: _Check):
-  """season.json の宿（inn）・溜める行動力（stored_days）・散策の表・性格（personalities）。"""
+  """season.json の旅籠（inn）・溜める行動力（stored_days）・散策の表・性格（personalities）。"""
   err, season = c.err, c.season
   if not _weights_dict_ok(season.get("stroll_events"), STROLL_EVENTS):
     err(f"season.json: stroll_events は {'/'.join(STROLL_EVENTS)} の重み（0 以上、合計が正）にしてください")
@@ -706,11 +706,11 @@ def _check_personalities(c: _Check):
     or not all(isinstance(v, int) and not isinstance(v, bool) for v in levels)
     or levels[0] > levels[1]
   ):
-    err("season.json: stroll_strong_levels は [下, 上]（勇者の Lv との差。整数で、下 ≦ 上）にしてください")
+    err("season.json: stroll_strong_levels は [下, 上]（もののふの Lv との差。整数で、下 ≦ 上）にしてください")
   inn = season.get("inn")
   price = inn.get("price") if isinstance(inn, dict) else None
   if not isinstance(price, int) or isinstance(price, bool) or price < 0:
-    err('season.json: inn は {"price": 宿代（0 以上の整数）} にしてください')
+    err('season.json: inn は {"price": 旅籠代（0 以上の整数）} にしてください')
   carry = season.get("carry")
   if (
     not isinstance(carry, dict)
@@ -726,7 +726,7 @@ def _check_personalities(c: _Check):
     err("season.json: stored_days（行動力を溜められる日数）は 0 以上の整数にしてください")
   table = season.get("personalities")
   if not isinstance(table, dict) or not table:
-    err("season.json: personalities（勇者の性格）を 1 つ以上書いてください")
+    err("season.json: personalities（もののふの性格）を 1 つ以上書いてください")
     return
   for pid, p in table.items():
     where = f"season.json の personalities の {pid}"
@@ -743,7 +743,7 @@ def _check_personalities(c: _Check):
         err(f"{where}: {key} は 0〜1 の数（HP の割合）にしてください")
     first = p.get("potions_first")
     if not isinstance(first, int) or isinstance(first, bool) or first < 0:
-      err(f"{where}: potions_first（装備より先に買う回復薬の数）は 0 以上の整数にしてください")
+      err(f"{where}: potions_first（装備より先に買う丸薬の数）は 0 以上の整数にしてください")
     quest = p.get("quest")
     lv = quest.get("levels") if isinstance(quest, dict) else None
     if (
@@ -753,7 +753,7 @@ def _check_personalities(c: _Check):
       or not isinstance(lv[1], int)
       or (lv[0] is not None and lv[0] > lv[1])
     ):
-      err(f"{where}: quest.levels は [下, 上]（勇者の Lv との差。下は null で下限なし。下 ≦ 上）にしてください")
+      err(f"{where}: quest.levels は [下, 上]（もののふの Lv との差。下は null で下限なし。下 ≦ 上）にしてください")
     order = quest.get("order") if isinstance(quest, dict) else None
     if not isinstance(order, list) or any(o not in PERSONALITY_ORDER for o in order):
       err(f"{where}: quest.order は {'/'.join(PERSONALITY_ORDER)} の一覧にしてください")
@@ -836,11 +836,11 @@ def _check_skills(c: _Check):
       isinstance(counter, dict)
       and (counter.get("trait") in (raw.get("traits") or {}) or counter.get("element") is True)
     ):
-      err(f'{where}: counter は {{"trait": 魔物の性質}} か {{"element": true}} にしてください')
+      err(f'{where}: counter は {{"trait": 物の怪の性質}} か {{"element": true}} にしてください')
 
 
 def _check_monster_reward(c: _Check):
-  """season.json の monster_reward（魔物の経験値とお金の計算）。"""
+  """season.json の monster_reward（物の怪の経験値とお金の計算）。"""
   err, season = c.err, c.season
   reward_cfg = season.get("monster_reward")
   weights = reward_cfg.get("weights") if isinstance(reward_cfg, dict) else None
@@ -860,7 +860,7 @@ def _check_monster_reward(c: _Check):
 
 
 def _check_monster_traits(c: _Check):
-  """monsters.json の traits（魔物の性質）。"""
+  """monsters.json の traits（物の怪の性質）。"""
   err, raw = c.err, c.raw
   traits = raw.get("traits") or {}
   if not isinstance(traits, dict):
@@ -881,7 +881,7 @@ def _check_monster_traits(c: _Check):
 
 
 def _check_monsters(c: _Check):
-  """monsters.json の魔物（能力・地形・性質・属性・ボス・強敵）。"""
+  """monsters.json の物の怪（能力・地形・性質・属性・ボス・強敵）。"""
   err, places, monsters, opened, elements, raw = c.err, c.places, c.monsters, c.opened, c.elements, c.raw
   for mid, m in monsters.items():
     if not m.get("name"):
@@ -897,7 +897,7 @@ def _check_monsters(c: _Check):
       if key in m:
         err(f"monsters.json の {mid}: {key} は書かないでください（能力から計算する。season.json の monster_reward）")
     if "boss" in m and (not isinstance(m["boss"], str) or places.get(m["boss"], {}).get("type") != "dungeon"):
-      err(f"monsters.json の {mid}: boss は、そのボスがいるダンジョンの ID にしてください")
+      err(f"monsters.json の {mid}: boss は、そのボスがいる霊場の ID にしてください")
     if "elite" in m and (not isinstance(m["elite"], bool) or (m["elite"] and "boss" in m)):
       err(f"monsters.json の {mid}: elite（強敵。道に出ず、討伐の依頼で狙う）は true か false。ボスには付けない")
     elif m.get("elite") and not any(
@@ -1016,7 +1016,7 @@ def _check_quest_reward(c: _Check):
 def _check_hunt_ranks(c: _Check, ranks: list):
   """quests.json の hunt_ranks（共通の討伐の ★ の区切り）。"""
   err, raw = c.err, c.raw
-  # 共通の討伐の ★: 点数 = 魔物の Lv ×（数 + 1）が hunt_ranks[0] 以下なら ★、hunt_ranks[1] 以下なら ★★ …
+  # 共通の討伐の ★: 点数 = 物の怪の Lv ×（数 + 1）が hunt_ranks[0] 以下なら ★、hunt_ranks[1] 以下なら ★★ …
   hunt_ranks = raw.get("hunt_ranks")
   if (
     not isinstance(hunt_ranks, list)
@@ -1034,20 +1034,20 @@ def _check_quest_templates(c: _Check):
     where = f"quests.json の {q.get('id')}"
     if q.get("type") not in QUEST_TYPES:
       err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
-    if "rank" in q:  # 共通の依頼の ★ は計算で決める（討伐は魔物の Lv と数、配達は距離と危なさ）
-      err(f"{where}: rank は書かないでください（★ は、討伐は魔物の Lv と数、配達は距離と危なさで決まる）")
+    if "rank" in q:  # 共通の依頼の ★ は計算で決める（討伐は物の怪の Lv と数、配達は距離と危なさ）
+      err(f"{where}: rank は書かないでください（★ は、討伐は物の怪の Lv と数、配達は距離と危なさで決まる）")
     if not isinstance(q.get("weight"), (int, float)) or q["weight"] <= 0:
       err(f"{where}: weight は正の数にしてください")
     if q.get("type") == "hunt" and not _range_ok(q.get("count")):
       err(f"{where}: count は [最小, 最大]（1 以上）にしてください")
   if not raw["quests"]:
-    err("quests.json: 共通の依頼（templates）を 1 つ以上書いてください（掲示板の空いた枠に入る）")
+    err("quests.json: 共通の依頼（templates）を 1 つ以上書いてください（高札の空いた枠に入る）")
 
 
 def _check_deliveries(c: _Check, ranks: list):
   """quests.json の deliveries（配達の ★・危なさ・荷物）。"""
   err, places, raw = c.err, c.places, c.raw
-  # 配達（quests.json の deliveries）: ★ の区切り、危なさごとの魔物の Lv のずらし・受けられる Lv・説明の文、町ごとの荷物
+  # 配達（quests.json の deliveries）: ★ の区切り、危なさごとの物の怪の Lv のずらし・受けられる Lv・説明の文、町ごとの荷物
   if any(q.get("type") == "deliver" for q in raw["quests"]):
     deliveries_ok(raw.get("deliveries"), len(ranks), places, err)
 
@@ -1085,7 +1085,7 @@ def _check_hunt_texts(c: _Check):
 def _check_town_quests(c: _Check, ranks: list):
   """quests.json の towns（町の依頼）。"""
   err, places, monsters, opened, raw = c.err, c.places, c.monsters, c.opened, c.raw
-  # 町の依頼: 討伐は町から出る道（陸路・航路）と、その道に出る魔物。配達は別の町へ
+  # 町の依頼: 討伐は町から出る道（陸路・航路）と、その道に出る物の怪。配達は別の町へ
   road_terrain = {}
   for r in c.roads:
     if r.get("kind", "land") != "trail" and _weights_ok(r.get("terrain")) and road_open(r, opened, places):
@@ -1118,7 +1118,7 @@ def _check_town_quests(c: _Check, ranks: list):
         elif monsters.get(q.get("monster"), {}).get("terrain") not in road_terrain[(tid, to)] or monsters[
           q["monster"]
         ].get("boss"):
-          err(f"{where}: monster の {q.get('monster')!r} は、その道に出る魔物（ボス以外）にしてください")
+          err(f"{where}: monster の {q.get('monster')!r} は、その道に出る物の怪（ボス以外）にしてください")
         if not isinstance(q.get("count"), int) or q["count"] < 1:
           err(f"{where}: count は 1 以上の整数にしてください")
       elif q.get("type") == "deliver":
@@ -1223,7 +1223,7 @@ def background_uri(bg: dict | None) -> str | None:
 
 
 def road_monsters(terrain: list, monsters: list[dict]) -> list[tuple[str, float]]:
-  """道に出る魔物と重み（地形の割合を、その地形の魔物の数で分ける）。"""
+  """道に出る物の怪と重み（地形の割合を、その地形の物の怪の数で分ける）。"""
   pool = []
   for t, weight in terrain:
     here = [m["id"] for m in monsters if m["terrain"] == t and on_road(m)]  # ボス・強敵は道には出ない
@@ -1232,7 +1232,7 @@ def road_monsters(terrain: list, monsters: list[dict]) -> list[tuple[str, float]
 
 
 def on_road(monster: dict) -> bool:
-  """道で出会う魔物か（ボスと強敵は道に出ない。強敵は町の討伐の依頼で狙って戦う）。"""
+  """道で出会う物の怪か（ボスと強敵は道に出ない。強敵は町の討伐の依頼で狙って戦う）。"""
   return not monster.get("boss") and not monster.get("elite")
 
 
@@ -1265,7 +1265,7 @@ def deliveries_ok(dv, n_ranks: int, places: dict, err) -> None:
       isinstance(dg.get(k), int) and not isinstance(dg.get(k), bool) for k in ("shift", "min_level")
     )
     if not ints or dg["min_level"] < 0:
-      err(f"{where}: shift（魔物の Lv のずらし。整数）と min_level（受けられる Lv。0 以上の整数）を書いてください")
+      err(f"{where}: shift（物の怪の Lv のずらし。整数）と min_level（受けられる Lv。0 以上の整数）を書いてください")
     texts = dg.get("texts") if isinstance(dg, dict) else None
     if (
       not isinstance(texts, list)
@@ -1311,7 +1311,7 @@ def trait_effect(monster: dict) -> dict:
 
 
 def monster_score(monster: dict, traits: dict, cfg: dict) -> float:
-  """魔物の強さ点: 戦いで効く値（性質の効果のあと。攻撃は 1 回の番の合計）に、性質の score を足して、重みをかけて足す。"""
+  """物の怪の強さ点: 戦いで効く値（性質の効果のあと。攻撃は 1 回の番の合計）に、性質の score を足して、重みをかけて足す。"""
   e = trait_effect(monster)
   stats = {"hp": e["hp"], "atk": e["atk"] * e["hits"], "def": e["guard"], "spd": monster["spd"], "dex": monster["dex"]}
   bonus = traits.get(monster.get("trait"), {}).get("score", {})
@@ -1335,7 +1335,7 @@ def build(raw: dict) -> dict:
   mp = raw["map"]
   places = {p["id"]: p for p in mp["places"]}
   opened = open_towns(mp)
-  towns = [pid for pid, p in places.items() if p["type"] == "town" and pid in opened]  # 勇者が行ける町だけ
+  towns = [pid for pid, p in places.items() if p["type"] == "town" and pid in opened]  # もののふが行ける町だけ
   order = {pid: i for i, pid in enumerate(places)}
   roads, info, trails = {}, {}, []
   for r in mp["roads"]:

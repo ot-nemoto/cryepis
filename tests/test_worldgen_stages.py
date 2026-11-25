@@ -406,7 +406,7 @@ class BuildWorldMainTest(unittest.TestCase):
   def test_writes_map_json_and_copies_the_base_map(self):
     text, mp, raw, svg = self.run_main()
     self.assertEqual(svg, "<svg/>")
-    self.assertIn("町・ダンジョン 32、道 3", text)
+    self.assertIn("町・霊場 32、道 3", text)
     self.assertEqual([p["id"] for p in mp["places"]], [p["id"] for p in build_world.build_places()])
     self.assertEqual(mp["layout"], {"size": [1600, 1000], "background": "map-base.svg"})
     self.assertEqual(mp["open"], [build_world.pid(n) for n in build_world.OPEN])

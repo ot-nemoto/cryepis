@@ -3,17 +3,17 @@
 
 ページ:
   index.html          ホーム（いまの冒険の状況）
-  map.html            世界の地図（拡大・移動ができる。場所や勇者の印にマウスを乗せると説明が出る）
+  map.html            世界の地図（拡大・移動ができる。場所やもののふの印にマウスを乗せると説明が出る）
   ranking.html        今シーズンのランキングと、今日の出来事
-  heroes.html         旅をしている勇者の一覧（居場所・能力・装備・今日の出来事）
-  towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・ギルドの規模・特産品・店・レア・道。開放していない町は「-」）
+  heroes.html         旅をしているもののふの一覧（居場所・能力・装備・今日の出来事）
+  towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・口入れ屋の規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
-  monsters.html       開放した道に出る魔物とボス（地方ごとのタブ。街道の地形の割合・Lv・生息地・性質・属性・強さ。生息地で絞り込める）
-  guide.html          手引き（能力・勇者の特性・魔物の性質・属性と相性・戦いの決まりの説明）
-  guild.html          町ごとのギルドの掲示板（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
-  heroes/<id>.html    勇者ごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
+  monsters.html       開放した道に出る物の怪とボス（地方ごとのタブ。街道の地形の割合・Lv・生息地・性質・属性・強さ。生息地で絞り込める）
+  guide.html          手引き（能力・もののふの特性・物の怪の性質・属性と相性・戦いの決まりの説明）
+  guild.html          町ごとの口入れ屋の高札（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
+  heroes/<id>.html    もののふごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
 
-データは .state/（勇者の状態・ギルドの受けられた依頼）と world/ から読む。
+データは .state/（もののふの状態・口入れ屋の受けられた依頼）と world/ から読む。
 毎日の実行のあとに pages.yml が書き出して公開する（書き出したファイルはコミットしない）。
 
 使い方:
@@ -45,11 +45,11 @@ PAGES = (
   ("index.html", "ホーム"),
   ("map.html", "地図"),
   ("ranking.html", "ランキング"),
-  ("heroes.html", "勇者"),
+  ("heroes.html", "もののふ"),
   ("towns.html", "町"),
-  ("guild.html", "ギルド"),
+  ("guild.html", "口入れ屋"),
   ("items.html", "アイテム"),
-  ("monsters.html", "魔物"),
+  ("monsters.html", "物の怪"),
   ("guide.html", "手引き"),
 )
 
@@ -198,7 +198,7 @@ def updated(today: date) -> str:
 
 # ---- ホーム ---------------------------------------------------------------------------
 def build_home(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
-  """最初のページ: いまの冒険の状況（シーズン・勇者・開放した地方と町）。"""
+  """最初のページ: いまの冒険の状況（シーズン・もののふ・開放した地方と町）。"""
   season = game.season_of(world, today)
   first, last = game.season_range(world, season)
   day = "開幕前" if today < first else f"{(today - first).days + 1} 日目（{(last - first).days + 1} 日のうち）"
@@ -213,7 +213,7 @@ def build_home(world: dict, entries: list[tuple[dict, dict]], today: date) -> st
   status = (
     '<div class="card"><h3>いまの冒険</h3><table class="info"><colgroup><col style="width:11em"><col></colgroup>'
     f"<tr><th>シーズン</th><td>シーズン{season}（{first}〜{last}）・{day}</td></tr>"
-    f'<tr><th>旅をしている勇者</th><td>{len(entries)} 人（<a href="heroes.html">勇者の一覧</a>）</td></tr>'
+    f'<tr><th>旅をしているもののふ</th><td>{len(entries)} 人（<a href="heroes.html">もののふの一覧</a>）</td></tr>'
     f'<tr><th>旅のできる地方</th><td><ul class="plain">{"".join(areas)}</ul></td></tr>'
     "</table></div>"
   )
@@ -229,8 +229,8 @@ def build_map(world: dict, entries: list[tuple[dict, dict]], today: date) -> str
     body.append(
       '<div id="map">' + svg + '<div class="zoom"><button id="zin" title="拡大">＋</button>'
       '<button id="zout" title="縮小">－</button><button id="zhome" class="wide">全体</button></div></div>'
-      '<p class="note">ホイールやボタンで拡大、ドラッグで移動できます。町や勇者の印（赤い丸）にマウスを乗せると説明が出ます。'
-      f"道の上の数字は移動にかかる行動回数です（勇者は 1 日に {world['season']['actions_per_day']} 回行動します）。</p>"
+      '<p class="note">ホイールやボタンで拡大、ドラッグで移動できます。町やもののふの印（赤い丸）にマウスを乗せると説明が出ます。'
+      f"道の上の数字は移動にかかる行動回数です（もののふは 1 日に {world['season']['actions_per_day']} 回行動します）。</p>"
     )
   else:
     body.append('<p class="note">地図はありません（world/map.json に layout がありません）。</p>')
@@ -265,12 +265,12 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
   return page("ランキング", "".join(body), "ranking.html")
 
 
-# ---- 勇者 ---------------------------------------------------------------------------------
+# ---- もののふ ---------------------------------------------------------------------------------
 def build_heroes(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
-  """旅をしている勇者の一覧（居場所・能力・装備・今日の出来事。名前から詳細のページへ）。"""
+  """旅をしているもののふの一覧（居場所・能力・装備・今日の出来事。名前から詳細のページへ）。"""
   season = game.season_of(world, today)
   views = [(h, view.season_view(world, s, season)) for h, s in entries]
-  body = [f"<h2>勇者たち</h2>{updated(today)}"]
+  body = [f"<h2>もののふたち</h2>{updated(today)}"]
   heroes = []
   for h, s in views:
     hero, st = s["hero"], game.stats(world, s)
@@ -281,18 +281,18 @@ def build_heroes(world: dict, entries: list[tuple[dict, dict]], today: date) -> 
     heroes.append(
       f'<div class="card"><h3><a href="{hero_href(h["id"])}">{escape(h["name"])}</a> '
       f"Lv.{hero['level']}</h3><div>{escape(view.location(world, s))}</div>"
-      f"<div>HP {hero['hp']}/{st['max_hp']}　攻{st['atk']} 防{st['def']} 速{st['spd']} 器{st['dex']}　{hero['gold']}G</div>"
+      f"<div>HP {hero['hp']}/{st['max_hp']}　攻{st['atk']} 防{st['def']} 速{st['spd']} 器{st['dex']}　{hero['gold']}文</div>"
       f"<div>"
       f"特性: {escape(game.hero_trait(world, s).get('name', '-'))}　"
       f"性格: {escape(game.personality(world, s).get('name', '-'))}</div>"
       f"<div>装備: {escape(view.gear_text(world, s))}</div>"
       f'<div class="note">今日: {escape("、".join(events) or "—")}</div></div>'
     )
-  body.append('<div class="grid">' + ("".join(heroes) or '<p class="note">まだ勇者がいません。</p>') + "</div>")
-  return page("勇者", "".join(body), "heroes.html")
+  body.append('<div class="grid">' + ("".join(heroes) or '<p class="note">まだもののふがいません。</p>') + "</div>")
+  return page("もののふ", "".join(body), "heroes.html")
 
 
-# ---- タブと絞り込み（町・ギルド・アイテムのページで使う）------------------------------------------
+# ---- タブと絞り込み（町・口入れ屋・アイテムのページで使う）------------------------------------------
 # タブ（1 つずつ切り替える。URL の #タブの ID か、中の要素の ID（町など）で、開くタブを選べる。
 # JavaScript がなければタブは出さず、全部の中身を順に見せる）。切り替えると tabchange を送る
 TABS_JS = """
@@ -386,9 +386,9 @@ def name_html(name: str, en: str | None) -> str:
   return escape(name) + (f' <span class="en">{escape(en)}</span>' if en else "")
 
 
-# ---- ギルド -------------------------------------------------------------------------------
+# ---- 口入れ屋 -------------------------------------------------------------------------------
 def guild_status(world: dict, e: dict, today: date) -> str:
-  """掲示板の依頼の状態。誰かが受けた依頼は、名前を出さずに「ACCEPTED」のスタンプを押す。
+  """高札の依頼の状態。誰かが受けた依頼は、名前を出さずに「ACCEPTED」のスタンプを押す。
   受付中なら、受けられる残りの日数。"""
   if e["status"] in ("held", "done", "failed"):
     note = {"done": "明日入れ替え", "failed": "明日また受付"}.get(e["status"])
@@ -402,14 +402,14 @@ def guild_status(world: dict, e: dict, today: date) -> str:
 
 
 def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guild: dict) -> str:
-  """町ごとのギルドの掲示板（日をまたいで残る。早い者勝ち）。地方ごとのタブで、レアリティで絞り込める。"""
+  """町ごとの口入れ屋の高札（日をまたいで残る。早い者勝ち）。地方ごとのタブで、レアリティで絞り込める。"""
   season = game.season_of(world, today)
   if (
     not guild.get("towns")
     or guild.get("season") != season
     or any(guild.get("refreshed", {}).get(t, "") < today.isoformat() for t in world["towns"])
   ):
-    # まだ誰も進めていない・その日の掲示板になっていない: その日の朝の掲示板を見せる（保存はしない）
+    # まだ誰も進めていない・その日の高札になっていない: その日の朝の高札を見せる（保存はしない）
     guild = copy.deepcopy(guild) if guild.get("season") == season else game.new_guild()
     game.refresh_guild(world, guild, today, season)
   places = world["places"]
@@ -420,14 +420,14 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
     for e in guild.get("towns", {}).get(town, []):
       mark, _, rest = game.quest_text(world, e).partition(" ")
       notes = ([f"「{escape(e['text'])}」"] if e.get("text") else []) + (
-        ["前の勇者が失敗した依頼"] if e.get("returned") else []
+        ["前のもののふが失敗した依頼"] if e.get("returned") else []
       )
       exp_text = f"{e['reward']['exp']}EXP<br>" if e["reward"]["exp"] else ""  # 依頼の経験値は 0（お金だけ）
       rows.append(
         f'<tr data-f="{e["rank"]}"><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
         + "".join(f'<div class="note">{n}</div>' for n in notes)
         + f'</td><td class="num">{e["cost"]}</td>'
-        f'<td class="num">{exp_text}{e["reward"]["gold"]}G</td>'
+        f'<td class="num">{exp_text}{e["reward"]["gold"]}文</td>'
         f"<td>{guild_status(world, e, today)}</td></tr>"
       )
     return (
@@ -440,18 +440,18 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
 
   groups = area_groups(world, world["towns"])
   body = [
-    f"<h2>町のギルドの掲示板（{today.isoformat()}）</h2>",
+    f"<h2>町の口入れ屋の高札（{today.isoformat()}）</h2>",
     tab_bar([(aid, a["name"]) for aid, a, _ in groups]),
     rarity_filter([(str(i), r["mark"]) for i, r in enumerate(world["quest_ranks"], 1)], "条件に合う依頼はありません。"),
   ]
   for aid, area, members in groups:
     body.append(tab_panel(aid, name_html(area["name"], area.get("en")), "".join(card(t) for t in members)))
-  return page("ギルド", "".join(body), "guild.html", script=FILTER_JS + TABS_JS)
+  return page("口入れ屋", "".join(body), "guild.html", script=FILTER_JS + TABS_JS)
 
 
 # ---- 町 ---------------------------------------------------------------------------------
 def build_towns(world: dict) -> str:
-  """町の情報（説明・ギルドの規模・店の品ぞろえ・依頼で出るレア・道）。全部の町を地方ごとに出し
+  """町の情報（説明・口入れ屋の規模・店の品ぞろえ・依頼で出るレア・道）。全部の町を地方ごとに出し
   （開放した町のある地方が先）、開放していない町は、店の品ぞろえなどを「-」にする。"""
   places, items = world["places"], world["items"]
   opened = set(world["towns"])
@@ -464,16 +464,16 @@ def build_towns(world: dict) -> str:
       f'<span class="note">（{escape(view.item_power(it, world))}）</span>'
     )
 
-  p = world["season"]["potion"]  # 回復薬はどの町の店でも売る（装備のあとに出す）
+  p = world["season"]["potion"]  # 丸薬はどの町の店でも売る（装備のあとに出す）
   potion = (
-    f'回復薬<span class="note">（{p["price"]}G。戦いで HP が減ったときに使い（使う早さは性格で決まる）、最大 HP の {p["heal_rate"]:.0%} ぶん回復。'
+    f'丸薬<span class="note">（{p["price"]}文。戦いで HP が減ったときに使い（使う早さは性格で決まる）、最大 HP の {p["heal_rate"]:.0%} ぶん回復。'
     f"町で {p['keep']} 個まで買い足す）</span>"
   )
 
   def rows_of(town: str) -> list[tuple[str, str]]:
     size = f"依頼の枠 {game.quests_per_day(world, town)} 件"
     if town not in opened:
-      return [("ギルドの規模", size)] + [
+      return [("口入れ屋の規模", size)] + [
         (k, "-") for k in ("依頼の報酬で出るレア", "店の品ぞろえ", "道（行き先と行動回数）")
       ]
     # 店の品ぞろえは、アイテムの種類（武器・兜・盾・装飾品）の順に、同じ種類なら値段の高い順
@@ -491,12 +491,12 @@ def build_towns(world: dict) -> str:
       for b in world["neighbors"][town]
     ]
     roads += [
-      f"{escape(places[r['from'] if r['to'] == town else r['to']]['name'])}（ダンジョン・まだ入れない）"
+      f"{escape(places[r['from'] if r['to'] == town else r['to']]['name'])}（霊場・まだ入れない）"
       for r in world["trails"]
       if town in (r["from"], r["to"])
     ]
     return [
-      ("ギルドの規模", f'{size}（<a href="guild.html#{escape(town)}">掲示板を見る</a>）'),
+      ("口入れ屋の規模", f'{size}（<a href="guild.html#{escape(town)}">高札を見る</a>）'),
       (
         "依頼の報酬で出るレア",
         ("<br>".join(label(i) for i in rares) or "-")
@@ -594,7 +594,7 @@ def build_items(world: dict) -> str:
     "" if world["season"].get("rare_drops", True) else '<p class="note">今はレア（★★ 以上）の配布を止めています。</p>',
     (
       '<p class="note">★★ 以上の装備には、町の鍛冶屋でスキルを付けられる（'
-      + escape("・".join(f"{game.rarity_mark(world, r)} {p}G" for r, p in world["skill_prices"].items()))
+      + escape("・".join(f"{game.rarity_mark(world, r)} {p}文" for r, p in world["skill_prices"].items()))
       + "。くわしくは手引きの「装備のスキル」）</p>"
       if world.get("skill_prices")
       else ""
@@ -614,7 +614,7 @@ def build_items(world: dict) -> str:
         + "</td>"
         + element_cell(world, it.get("element"))
         + "".join(stat_cell(it.get(k, 0)) for k, _ in ITEM_STATS)
-        + f'<td class="num">{str(it["price"]) + "G" if it.get("price") else "—"}</td><td>{how}</td></tr>'
+        + f'<td class="num">{str(it["price"]) + "文" if it.get("price") else "—"}</td><td>{how}</td></tr>'
       )
     table = (
       '<div class="card board"><div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em">'
@@ -631,9 +631,9 @@ def build_items(world: dict) -> str:
   return page("アイテム", "".join(body), "items.html", script=FILTER_JS + TABS_JS)
 
 
-# ---- 魔物 ---------------------------------------------------------------------------------
-MONSTER_STATS = ("hp", "atk", "def", "spd", "dex", "exp", "gold")  # 魔物のページの強さの列（Lv は名前の右に出す）
-MONSTER_STAT_NAMES = ("HP", "攻", "防", "速", "器", "EXP", "G")
+# ---- 物の怪 ---------------------------------------------------------------------------------
+MONSTER_STATS = ("hp", "atk", "def", "spd", "dex", "exp", "gold")  # 物の怪のページの強さの列（Lv は名前の右に出す）
+MONSTER_STAT_NAMES = ("HP", "攻", "防", "速", "器", "EXP", "文")
 
 
 def terrain_label(terrain: str) -> str:
@@ -643,11 +643,11 @@ def terrain_label(terrain: str) -> str:
   )
 
 
-HABITATS = {"world": "WORLD", "raid": "RAID"}  # 道では出会わない魔物の生息地（強敵は WORLD、ボスは RAID）
+HABITATS = {"world": "WORLD", "raid": "RAID"}  # 道では出会わない物の怪の生息地（強敵は WORLD、ボスは RAID）
 
 
 def habitat(monster: dict) -> str:
-  """魔物の生息地（絞り込みの値）。道の魔物は地形、強敵は world、ボスは raid。"""
+  """物の怪の生息地（絞り込みの値）。道の物の怪は地形、強敵は world、ボスは raid。"""
   return "raid" if monster.get("boss") else "world" if monster.get("elite") else monster["terrain"]
 
 
@@ -659,7 +659,7 @@ def habitat_label(hid: str) -> str:
 
 
 def terrain_shares(monsters: dict, pool: list) -> list[tuple[str, float]]:
-  """道に出る魔物（[ID, 重み], ...）から、地形ごとの割合（戦いになったとき、その地形が選ばれる割合）。多い順。"""
+  """道に出る物の怪（[ID, 重み], ...）から、地形ごとの割合（戦いになったとき、その地形が選ばれる割合）。多い順。"""
   out: dict[str, float] = {}
   for mid, w in pool:
     out[monsters[mid]["terrain"]] = out.get(monsters[mid]["terrain"], 0) + w
@@ -694,23 +694,23 @@ def pie_svg(shares: list[tuple[str, float]]) -> str:
 
 
 def build_monsters(world: dict) -> str:
-  """開放した道に出る魔物の一覧（地方ごとのタブ。Lv・生息地・性質・属性・強さ）。並びは Lv の順（同じ Lv は地形の順）。
-  道で出会う魔物は勇者の Lv でも変わるので、魔物ごとの「出る道と割合」は出さない。道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
-  強敵（生息地 WORLD）とボス（RAID）も同じ表に、道の魔物のあとに出す（開放した町のある地方だけ。Lv は N/A）。"""
+  """開放した道に出る物の怪の一覧（地方ごとのタブ。Lv・生息地・性質・属性・強さ）。並びは Lv の順（同じ Lv は地形の順）。
+  道で出会う物の怪はもののふの Lv でも変わるので、物の怪ごとの「出る道と割合」は出さない。道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
+  強敵（生息地 WORLD）とボス（RAID）も同じ表に、道の物の怪のあとに出す（開放した町のある地方だけ。Lv は N/A）。"""
   places, monsters, traits = world["places"], world["monsters"], world["traits"]
   towns = [t for t, p in places.items() if p["type"] == "town"]
   order = {t: i for i, t in enumerate(W.TERRAINS)}
   place_order = {p: i for i, p in enumerate(places)}
 
-  shown: set[str] = set()  # 表に出した魔物の生息地（絞り込みのボタンは、表に出したものだけ）
+  shown: set[str] = set()  # 表に出した物の怪の生息地（絞り込みのボタンは、表に出したものだけ）
 
-  def boss_area(m: dict) -> str:  # ボスのいるダンジョンの地方（地方がない・知らない地方なら、その他のまとまり）
+  def boss_area(m: dict) -> str:  # ボスのいる霊場の地方（地方がない・知らない地方なら、その他のまとまり）
     area = places[m["boss"]].get("area")
     return area if area in world["areas"] else OTHER_AREA
 
   def table(aid: str, members: list[str]) -> str:
-    """この地方の魔物: 町につながる開放した道の魔物、町の討伐の依頼で狙う強敵（WORLD）、ダンジョンのボス（RAID）。
-    並びは道の魔物（Lv の順）→ 強敵 → ボス。強敵・ボスは、開放した町のある地方だけ。"""
+    """この地方の物の怪: 町につながる開放した道の物の怪、町の討伐の依頼で狙う強敵（WORLD）、霊場のボス（RAID）。
+    並びは道の物の怪（Lv の順）→ 強敵 → ボス。強敵・ボスは、開放した町のある地方だけ。"""
     seen: set[str] = set()
     for (a, b), info in world["road_info"].items():
       if place_order[a] > place_order[b] or not ({a, b} & set(members)):
@@ -733,12 +733,12 @@ def build_monsters(world: dict) -> str:
     return (
       monster_table(rows)
       + '<p class="note">HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
-      '道で出会うのは、その道の地形の魔物のうち、勇者の Lv に近い魔物です（<a href="guide.html">手引き</a>）。'
-      "生息地が WORLD の魔物（強敵）は道では出会わず、町の討伐の依頼で狙って戦います。"
-      "RAID の魔物（ボス）はダンジョンの奥にいます（まだ挑めません）。</p></div>"
+      '道で出会うのは、その道の地形の物の怪のうち、もののふの Lv に近い物の怪です（<a href="guide.html">手引き</a>）。'
+      "生息地が WORLD の物の怪（強敵）は道では出会わず、町の討伐の依頼で狙って戦います。"
+      "RAID の物の怪（ボス）は霊場の奥にいます（まだ挑めません）。</p></div>"
     )
 
-  def monster_row(mid: str) -> str:  # 魔物の 1 行（強敵・ボスの Lv は N/A。道の魔物と Lv の意味が違うので）
+  def monster_row(mid: str) -> str:  # 物の怪の 1 行（強敵・ボスの Lv は N/A。道の物の怪と Lv の意味が違うので）
     m = monsters[mid]
     trait = traits.get(m.get("trait"), {})
     hid = habitat(m)
@@ -754,7 +754,7 @@ def build_monsters(world: dict) -> str:
       + "</tr>"
     )
 
-  def monster_table(rows: list[str]) -> str:  # 魔物の表（カードを開いたまま返す）
+  def monster_table(rows: list[str]) -> str:  # 物の怪の表（カードを開いたまま返す）
     return (
       '<div class="card board"><div class="scroll"><table class="wide-table monsters"><colgroup><col style="width:7em">'
       '<col style="width:3em"><col style="width:5em"><col style="width:5em"><col style="width:5em">'
@@ -784,8 +784,8 @@ def build_monsters(world: dict) -> str:
     return (
       '<div class="card"><h3>街道</h3><div class="roads">'
       + "".join(items)
-      + '</div><p class="note">かっこの中は移動にかかる行動回数。円グラフは、道で戦いになったときに、どの地形の魔物が出るかの割合'
-      "（その地形の魔物のうち、勇者の Lv に近い魔物が出る）。</p></div>"
+      + '</div><p class="note">かっこの中は移動にかかる行動回数。円グラフは、道で戦いになったときに、どの地形の物の怪が出るかの割合'
+      "（その地形の物の怪のうち、もののふの Lv に近い物の怪が出る）。</p></div>"
     )
 
   groups = area_groups(world, towns)
@@ -801,13 +801,13 @@ def build_monsters(world: dict) -> str:
     )
   chips = [(h, habitat_label(h)) for h in (*W.TERRAINS, *HABITATS) if h in shown]  # 表に出した生息地だけ
   body = [
-    "<h2>魔物の情報</h2>",
-    chip_filter("生息地", chips, "条件に合う魔物はいません。"),
+    "<h2>物の怪の情報</h2>",
+    chip_filter("生息地", chips, "条件に合う物の怪はいません。"),
     tab_bar([(aid, a["name"]) for aid, a, _ in groups]),
     guide,
     *panels,
   ]
-  return page("魔物", "".join(body), "monsters.html", script=FILTER_JS + TABS_JS)
+  return page("物の怪", "".join(body), "monsters.html", script=FILTER_JS + TABS_JS)
 
 
 # ---- 手引き -------------------------------------------------------------------------------
@@ -832,8 +832,8 @@ def season_card(world: dict) -> tuple[str, str]:
   months = world["season"]["months"]
   return (
     "シーズン",
-    f"<p>シーズンは {escape(str(months))} か月ごと。シーズンが変わると、レベル・経験値・お金・回復薬・"
-    "居場所・依頼・溜めた行動力は最初に戻り、持ち物と保管庫の装備だけが残る。</p>",
+    f"<p>シーズンは {escape(str(months))} か月ごと。シーズンが変わると、レベル・経験値・お金・丸薬・"
+    "居場所・依頼・溜めた行動力は最初に戻り、持ち物と蔵の装備だけが残る。</p>",
   )
 
 
@@ -860,8 +860,8 @@ def skill_slots(world: dict, rarity: str) -> str:
   if rarity not in prices:
     return "なし"
   if rarity == min(prices, key=world["rarities"].index):
-    return f"1 つ（{prices[rarity]}G）"
-  return f"1 つ（{prices[rarity]}G。★★★ 以上は、あとで固定スキルも付ける予定）"
+    return f"1 つ（{prices[rarity]}文）"
+  return f"1 つ（{prices[rarity]}文。★★★ 以上は、あとで固定スキルも付ける予定）"
 
 
 def skill_tag(name: str) -> str:
@@ -926,24 +926,24 @@ def skill_logic(sk: dict) -> str:
 
 
 def skill_cards(world: dict, table) -> list[tuple[str, str]]:
-  """手引きの「装備のスキル」と「持てる数と保管庫」の節。"""
+  """手引きの「装備のスキル」と「持てる数と蔵」の節。"""
   skills, kinds = world.get("skills") or {}, world.get("skill_kinds") or {}
   cards = []
   carry = world["season"].get("carry")
   if carry:
     cards.append(
       (
-        "持てる数と保管庫",
+        "持てる数と蔵",
         table(("部位", "持てる数"), [(escape(W.SLOT_NAMES[s]), f"{carry[s]}") for s in W.SLOTS])
         + '<p class="note">着けるのは部位ごとに 1 つ（武器と装飾品は、戦いのたびに持っている中から選ぶ）。'
-        "持てる数を超えた分は、町のギルドの保管庫に預ける（どの町でも出し入れでき、依頼に合わせて入れ替える。"
-        "依頼の魔物の性質に効くスキル → 弱点を突ける属性 → 性格の優先スキル → ★ の多い装備、の順に持つ）。持ち物と保管庫はシーズンをまたいで残る</p>",
+        "持てる数を超えた分は、町の口入れ屋の蔵に預ける（どの町でも出し入れでき、依頼に合わせて入れ替える。"
+        "依頼の物の怪の性質に効くスキル → 弱点を突ける属性 → 性格の優先スキル → ★ の多い装備、の順に持つ）。持ち物と蔵はシーズンをまたいで残る</p>",
       )
     )
   if not skills:
     return cards
   prices = world.get("skill_prices") or {}
-  price_text = "・".join(f"{game.rarity_mark(world, r)} {p}G" for r, p in prices.items())
+  price_text = "・".join(f"{game.rarity_mark(world, r)} {p}文" for r, p in prices.items())
   body = (
     f"<p>スキルは {escape(game.rarity_mark(world, next(iter(prices), 'rare')))} 以上の装備に、町の鍛冶屋で付けられる"
     f"（代金 {escape(price_text)}。1 日 1 回まで、行動力は使わない）。部位ごとのスキルからランダムで 1 つ付き、"
@@ -962,7 +962,7 @@ def skill_cards(world: dict, table) -> list[tuple[str, str]]:
 
 
 def personality_table(world: dict, table) -> str:
-  """手引きの「勇者の性格」: 性格ごとの動き（宿・回復薬・買い物・依頼・残りの行動）を、性格を列にした表で。"""
+  """手引きの「もののふの性格」: 性格ごとの動き（旅籠・丸薬・買い物・依頼・残りの行動）を、性格を列にした表で。"""
   ps = list((world["season"].get("personalities") or {}).values())
   if not ps:
     return '<p class="note">性格はない</p>'
@@ -981,12 +981,12 @@ def personality_table(world: dict, table) -> str:
     return text
 
   rows = [
-    ("宿に泊まる", [f"HP {p['inn_below']:.0%} 未満" for p in ps]),
-    ("回復薬を使う", [f"HP {p['potion_below']:.0%} 未満" for p in ps]),
-    ("装備より先に買う回復薬", [f"{p['potions_first']} 個" for p in ps]),
+    ("旅籠に泊まる", [f"HP {p['inn_below']:.0%} 未満" for p in ps]),
+    ("丸薬を使う", [f"HP {p['potion_below']:.0%} 未満" for p in ps]),
+    ("装備より先に買う丸薬", [f"{p['potions_first']} 個" for p in ps]),
     (
       "選ぶ依頼（Lv は自分との差）",
-      [levels(p) + "。" + ("、".join(ORDER_NAMES[o] for o in p["quest"]["order"]) or "掲示板の上から") for p in ps],
+      [levels(p) + "。" + ("、".join(ORDER_NAMES[o] for o in p["quest"]["order"]) or "高札の上から") for p in ps],
     ),
     ("その日の残りの行動", [spare(p) for p in ps]),
     ("同じ点数の装備", [GEAR_NAMES.get(p.get("gear", "balance"), "") for p in ps]),
@@ -1029,15 +1029,15 @@ def personality_table(world: dict, table) -> str:
       [(escape(k), *(v if k.startswith("優先スキル") else escape(v) for v in vs)) for k, vs in rows],  # 札は HTML
     )
     + "".join(f'<p class="note">{escape(p["name"])}: {escape(p["text"])}</p>' for p in ps)
-    + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない。'
+    + '<p class="note">もののふを作るときにランダムで決まり、シーズンが変わっても変わらない。'
     "選ぶ依頼の Lv は討伐だけで見る（配達は Lv を見ず、どの性格の範囲にも入る。Lv を比べるときは自分と同じ Lv として数える）。"
-    "選ぶ依頼が同じ条件で並んだら、掲示板の上のものを選ぶ。Lv の範囲に合う依頼がなければ、範囲より弱い依頼のうち、"
+    "選ぶ依頼が同じ条件で並んだら、高札の上のものを選ぶ。Lv の範囲に合う依頼がなければ、範囲より弱い依頼のうち、"
     "範囲にいちばん近い Lv の依頼を受ける（範囲より強い依頼は受けない）。強敵の依頼は、どの性格も強敵の Lv 以上になってから受ける</p>"
   )
 
 
 def build_guide(world: dict) -> str:
-  """手引き: 能力・勇者の特性・魔物の性質・属性と相性・戦いの決まりの説明（値は world/ から）。"""
+  """手引き: 能力・もののふの特性・物の怪の性質・属性と相性・戦いの決まりの説明（値は world/ から）。"""
   cfg = world["season"]
   growth, lv_max = cfg["growth"], cfg["max_level"]
 
@@ -1085,7 +1085,7 @@ def build_guide(world: dict) -> str:
   elements, rates = world["elements"], cfg["element_rates"]
   element_rows = [(tag(f"{e['name']}属性"), escape(e.get("ore", "-"))) for e in elements.values()]  # 属性と鉱石
   potion = cfg["potion"]
-  shifts = "・".join(  # 危ない配達で上がる魔物の Lv（配達の設定がない世界では、行を出さない）
+  shifts = "・".join(  # 危ない配達で上がる物の怪の Lv（配達の設定がない世界では、行を出さない）
     f"危なさ {n} は +{d['shift']}"
     for n, d in enumerate((world.get("deliveries") or {}).get("dangers", []))
     if d.get("shift")
@@ -1094,23 +1094,23 @@ def build_guide(world: dict) -> str:
     ("ダメージ", "攻撃 − 相手の防御 ÷ 2（少しだけ上下する。1 より小さくはならない）"),
     (
       "会心の一撃",
-      f"器用さ ÷ {crit['dex_divisor']} の確率で、ダメージが {crit['multiplier']} 倍になる。魔物にも器用さがある",
+      f"器用さ ÷ {crit['dex_divisor']} の確率で、ダメージが {crit['multiplier']} 倍になる。物の怪にも器用さがある",
     ),
-    ("先に攻撃", "素早いほうが先に攻撃する。性質「先手」の魔物は、素早さに関係なく先に攻撃する"),
-    ("2 回攻撃", "相手の 2 倍以上素早ければ、1 回の番に 2 回攻撃する（魔物も同じ）"),
+    ("先に攻撃", "素早いほうが先に攻撃する。性質「先手」の物の怪は、素早さに関係なく先に攻撃する"),
+    ("2 回攻撃", "相手の 2 倍以上素早ければ、1 回の番に 2 回攻撃する（物の怪も同じ）"),
     (
       "何体かと戦う",
-      "討伐の依頼で魔物が何体かいたら、1 行動のなかで 1 体ずつ続けて戦う（HP は減ったまま次へ。道の戦いは 1 体だけ）。"
+      "討伐の依頼で物の怪が何体かいたら、1 行動のなかで 1 体ずつ続けて戦う（HP は減ったまま次へ。道の戦いは 1 体だけ）。"
       "倒すたびに経験値とお金が入り、途中で力尽きても倒した分は残る",
     ),
     (
-      "回復薬",
+      "丸薬",
       f"HP が性格で決まった割合を下回ったら、自動で使う。最大 HP の {potion['heal_rate']:.0%} ぶん回復する"
-      "（最大 HP は超えない）。HP が 0 になったら、回復薬があっても力尽きる",
+      "（最大 HP は超えない）。HP が 0 になったら、丸薬があっても力尽きる",
     ),
     (
       "武器の持ち替え",
-      "勇者は戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える。"
+      "もののふは戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える。"
       "苦手な属性の武器しかなく、持たないほうが効くときは、武器を持たずに戦う。"
       "装飾品は、弱点を突ける属性のものを持っていれば、その戦いだけ着け替える（苦手な属性なら外す）",
     ),
@@ -1118,21 +1118,21 @@ def build_guide(world: dict) -> str:
       [
         (
           "危ない配達",
-          f"危なさのある配達（高価な品・狙われる品）を運んでいる間は、道で出会う魔物の Lv が上がる（{shifts}）",
+          f"危なさのある配達（高価な品・狙われる品）を運んでいる間は、道で出会う物の怪の Lv が上がる（{shifts}）",
         )
       ]
       if shifts
       else []
     ),
     (
-      "道で出会う魔物",
-      "戦いになったら、まず道の地形（草原・森など。道ごとの割合は魔物のページの「街道」）を選び、その地形の魔物のうち、Lv が勇者の Lv "
+      "道で出会う物の怪",
+      "戦いになったら、まず道の地形（草原・森など。道ごとの割合は物の怪のページの「街道」）を選び、その地形の物の怪のうち、Lv がもののふの Lv "
       + "〜".join(f"{d:+d}" for d in cfg["encounter_levels"])
-      + " の魔物から出る（同じ地形の中では同じくらいずつ）。Lv の合う魔物のいない地形は出ず、その分ほかの地形が出る。"
-      "範囲に合う魔物がどの地形にもいなければ、いちばん近い Lv の魔物",
+      + " の物の怪から出る（同じ地形の中では同じくらいずつ）。Lv の合う物の怪のいない地形は出ず、その分ほかの地形が出る。"
+      "範囲に合う物の怪がどの地形にもいなければ、いちばん近い Lv の物の怪",
     ),
-    ("強敵", "道では出会わない。町の討伐の依頼で狙って戦う。依頼は、魔物のレベル以上の勇者だけが受けられる"),
-    ("ボス", "道では出会わない。ダンジョンの奥にいる"),
+    ("強敵", "道では出会わない。町の討伐の依頼で狙って戦う。依頼は、物の怪のレベル以上のもののふだけが受けられる"),
+    ("ボス", "道では出会わない。霊場の奥にいる"),
   ]
   reward = cfg["monster_reward"]
   names_all = {"hp": "HP", "atk": "攻", "def": "防", "spd": "速", "dex": "器"}
@@ -1156,7 +1156,7 @@ def build_guide(world: dict) -> str:
       escape(
         f"経験値 × {reward['gold_rate']:g}"
         + "".join(
-          f"（{t['name']}の魔物はさらに × {t['gold_rate']:g}）"
+          f"（{t['name']}の物の怪はさらに × {t['gold_rate']:g}）"
           for t in world["traits"].values()
           if t.get("gold_rate", 1) != 1
         )
@@ -1184,21 +1184,21 @@ def build_guide(world: dict) -> str:
       "能力",
       table(("能力", "説明"), stats)
       + f'<p class="note">{escape(stat_note)}</p>'
-      + '<h4 class="sub">レベルごとの能力（特性の倍率がかかる前の値。強運の勇者と同じ。ほかの特性と装備で変わる）と、'
+      + '<h4 class="sub">レベルごとの能力（特性の倍率がかかる前の値。強運のもののふと同じ。ほかの特性と装備で変わる）と、'
       "次のレベルまでに要る経験値</h4>" + level_table,
     ),
     (
-      "勇者の特性",
+      "もののふの特性",
       table(("特性", "効果", "得意", "不得意"), hero_traits)
-      + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない。'
+      + '<p class="note">もののふを作るときにランダムで決まり、シーズンが変わっても変わらない。'
       "得意・不得意は、同じ点数の装備のどれを選ぶかに使う（伸ばすか補うかは性格で決まる）</p>",
     ),
-    ("勇者の性格", personality_table(world, table)),
+    ("もののふの性格", personality_table(world, table)),
     *skill_cards(world, table),
     (
-      "魔物の性質",
+      "物の怪の性質",
       table(("性質", "効果"), monster_traits)
-      + '<p class="note">魔物のページの HP・攻・防は、性質の効果がかかる前の値</p>',
+      + '<p class="note">物の怪のページの HP・攻・防は、性質の効果がかかる前の値</p>',
     ),
   ]
   if elements:
@@ -1209,7 +1209,7 @@ def build_guide(world: dict) -> str:
         + element_triangle(world)
         + table(("属性", "鉱石"), element_rows)
         + f'<p class="note">強い相手を攻めるとダメージ {rates["strong"]} 倍、苦手な相手だと {rates["weak"]} 倍。'
-        "属性は魔物と一部の武器・装飾品にある（属性のない魔物・武器もある）。装飾品の属性は、武器に属性がないとき攻撃に付く。"
+        "属性は物の怪と一部の武器・装飾品にある（属性のない物の怪・武器もある）。装飾品の属性は、武器に属性がないとき攻撃に付く。"
         "属性の武器は、その属性の力を持つ鉱石から作られる</p>",
       )
     )
@@ -1243,8 +1243,8 @@ def build_guide(world: dict) -> str:
       + table(("能力", "+1 あたり", "1 点になる量"), weight_rows)
       + '<h4 class="sub">珍しさごとの点数</h4>'
       + table(("珍しさ", "点数の上限", "属性", "スキル"), rarity_rows)
-      + f'<p class="note">{escape(example)}。勇者は ★ の多いアイテムを装備し（★ が同じなら点数の高いもの。'
-      "それも同じなら、特性と性格で選ぶ。勇者の性格の「同じ点数の装備」）、店でもその順に買う（同じ強さの品は買い直さない）。"
+      + f'<p class="note">{escape(example)}。もののふは ★ の多いアイテムを装備し（★ が同じなら点数の高いもの。'
+      "それも同じなら、特性と性格で選ぶ。もののふの性格の「同じ点数の装備」）、店でもその順に買う（同じ強さの品は買い直さない）。"
       "スキルは点数に入らない</p>",
     )
   )
@@ -1254,7 +1254,7 @@ def build_guide(world: dict) -> str:
     (
       "HP の回復",
       f"町に着いても HP は回復しない。依頼を持っていないとき、HP が性格で決まった割合を下回っていたら、"
-      f"宿で休憩する（1 行動と {cfg['inn']['price']}G で全回復）。ほかに回復するのは、レベルアップと力尽きたときと回復薬だけ",
+      f"旅籠で休憩する（1 行動と {cfg['inn']['price']}文で全回復）。ほかに回復するのは、レベルアップと力尽きたときと丸薬だけ",
     ),
     *(
       [
@@ -1275,7 +1275,7 @@ def build_guide(world: dict) -> str:
     (
       "行動力を溜める",
       f"休むと、使わなかった行動力を {cfg['stored_days']} 日分（{game.stored_max(world)} 行動）まで溜められる（HP は回復しない）。"
-      "溜めた行動力は、依頼の途中でその日の行動回数を使い切ったときと、宿の休憩に使う。シーズンが変わると 0 に戻る",
+      "溜めた行動力は、依頼の途中でその日の行動回数を使い切ったときと、旅籠の休憩に使う。シーズンが変わると 0 に戻る",
     ),
     (
       "散策",
@@ -1285,7 +1285,7 @@ def build_guide(world: dict) -> str:
         for name, w in zip(
           (
             f"戦闘（Lv {cfg['encounter_levels'][0]:+d}〜{cfg['encounter_levels'][1]:+d}）",
-            f"強い魔物（Lv {cfg['stroll_strong_levels'][0]:+d}〜{cfg['stroll_strong_levels'][1]:+d}）",
+            f"強い物の怪（Lv {cfg['stroll_strong_levels'][0]:+d}〜{cfg['stroll_strong_levels'][1]:+d}）",
             "宝箱",
             "何もない",
           ),
@@ -1293,20 +1293,20 @@ def build_guide(world: dict) -> str:
           strict=True,
         )
       )
-      + "。宝箱は装備・回復薬・お金のどれか",
+      + "。宝箱は装備・丸薬・お金のどれか",
     ),
     (
       "力尽きた",
-      "最後に寄った町で目を覚ます（HP 全回復。お金・持ち物・回復薬は減らない）。受けていた依頼は失敗になり、その日はもう行動しない",
+      "最後に寄った町で目を覚ます（HP 全回復。お金・持ち物・丸薬は減らない）。受けていた依頼は失敗になり、その日はもう行動しない",
     ),
     (
       "依頼の失敗",
-      "報酬はもらえない（それまでの戦いの経験値・お金・アイテムは残る）。掲示板の依頼は翌朝、最初の状態で受付中に戻る",
+      "報酬はもらえない（それまでの戦いの経験値・お金・アイテムは残る）。高札の依頼は翌朝、最初の状態で受付中に戻る",
     ),
   ]
   cards.append(("依頼の進め方", table(("場面", "どうなるか"), quest_rows)))
   cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))
-  cards.append(("魔物の経験値とお金", table(("項目", "決め方"), reward_rows)))
+  cards.append(("物の怪の経験値とお金", table(("項目", "決め方"), reward_rows)))
   cards.append(season_card(world))
   nav = (
     '<p class="guide-nav">'
@@ -1321,12 +1321,12 @@ def build_guide(world: dict) -> str:
   return page("手引き", body, "guide.html")
 
 
-# ---- 勇者の詳細 ---------------------------------------------------------------------------
+# ---- もののふの詳細 ---------------------------------------------------------------------------
 def build_hero(world: dict, hero: dict, state: dict) -> str:
   body = (
     f"<h2>{escape(hero['name'])}（{escape(hero['id'])}）</h2>"
     f"<pre>{escape(view.build_text(world, state))}</pre>"
-    '<p><a href="../heroes.html">勇者の一覧へ戻る</a></p>'
+    '<p><a href="../heroes.html">もののふの一覧へ戻る</a></p>'
   )
   return page(hero["name"], body, "", depth=1)
 
@@ -1365,7 +1365,7 @@ def write_site(
   retired: list[tuple[dict, dict]] | None = None,
 ) -> list[Path]:
   """サイトを out に書き出す（out の中身は作り直す）。書き出したファイルの一覧を返す。
-  retired（引退した勇者）は、詳細のページだけを書き出す（一覧やランキングには出さない）。"""
+  retired（引退したもののふ）は、詳細のページだけを書き出す（一覧やランキングには出さない）。"""
   check_out(out)
   if out.exists():
     shutil.rmtree(out)
@@ -1392,7 +1392,7 @@ def write_site(
 
 
 def shown_day(entries: list[tuple[dict, dict]]) -> date:
-  """サイトに出す日付: 勇者を最後に進めた日（毎日の実行の前に公開されても、日付が先に進んで中身が空にならないように）。"""
+  """サイトに出す日付: もののふを最後に進めた日（毎日の実行の前に公開されても、日付が先に進んで中身が空にならないように）。"""
   days = [s["last_date"] for _, s in entries if s.get("last_date")]
   return date.fromisoformat(max(days)) if days else datetime.now(UTC).astimezone(common.JST).date()
 
@@ -1400,7 +1400,7 @@ def shown_day(entries: list[tuple[dict, dict]]) -> date:
 def main() -> int:
   ap = argparse.ArgumentParser(description="GitHub Pages に載せるサイトを書き出す")
   ap.add_argument("out", help="書き出す先のディレクトリ（中身は作り直す）")
-  ap.add_argument("--date", help="表示する日付（既定は勇者を最後に進めた日。まだ誰も進めていなければ今日の JST）")
+  ap.add_argument("--date", help="表示する日付（既定はもののふを最後に進めた日。まだ誰も進めていなければ今日の JST）")
   a = ap.parse_args()
   world = W.load_world()
   entries = store.current_entries(world)

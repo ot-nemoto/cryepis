@@ -169,7 +169,7 @@ class BattleSimToolTest(unittest.TestCase):
       B.main, "-n", "10", "--trait", "swift", "--gear", "iron_sword,iron_helm", "--potions", "1", "--level", "12"
     )
     self.assertIn("装備: 鉄の剣・", out)
-    self.assertIn("回復薬 1 個", out)
+    self.assertIn("丸薬 1 個", out)
     self.assertIn("Lv12", out)
     self.assertEqual(out.count("Lv12"), 1)  # 特性は 1 つだけ
 
@@ -200,7 +200,7 @@ class BattleSimToolTest(unittest.TestCase):
     self.assertIn("EXP", out)
 
   def test_bad_arguments_stop_with_a_message(self):
-    self.assertIn("魔物 'nobody' がいません", exits(B.main, "--monster", "nobody"))
+    self.assertIn("物の怪 'nobody' がいません", exits(B.main, "--monster", "nobody"))
     self.assertIn("装備 'nothing' がありません", exits(B.main, "--gear", "nothing"))
     self.assertIn("特性 'nothing' がありません", exits(B.main, "--trait", "nothing"))
     self.assertIn("使えません", exits(B.main, "--fit-hp-loss", "0.2", "--trait", "lucky"))

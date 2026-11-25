@@ -64,7 +64,7 @@ class DisplayTest(unittest.TestCase):
 
   def test_quest_marks_are_not_rare_items(self):
     events = [
-      "アウレアのギルドで依頼を受けた: ★ 王家の書状（カエルムへ荷物を届ける）",
+      "アウレアの口入れ屋で依頼を受けた: ★ 王家の書状（カエルムへ荷物を届ける）",
       "野犬を倒した (+9EXP)",
       "宝箱から★「木の剣」を手に入れた",
       "宝箱から★★「狩人の短剣」を手に入れた！",
@@ -120,7 +120,7 @@ class DisplayTest(unittest.TestCase):
       self.assertLessEqual(common.width(line), common.LINE_MAX, line)
     self.assertEqual(lines[5], "")
     first, last = game.season_range(WORLD, 1)
-    self.assertEqual(lines[0], f"🏆 シーズン1  Day 30/{(last - first).days + 1}  勇者4人")
+    self.assertEqual(lines[0], f"🏆 シーズン1  Day 30/{(last - first).days + 1}  もののふ4人")
     self.assertTrue(lines[1].startswith("Lv   🥇"))
     self.assertTrue(lines[2].startswith("討伐 🥇"))
     self.assertTrue(lines[4].startswith("📰 "))
@@ -128,21 +128,21 @@ class DisplayTest(unittest.TestCase):
     self.assertIn("ゴールドヒルデガルト", text)  # 本文は名前を切り詰めない
     self.assertIn(
       f"詳細: {rpg.page_url('h0')}", text
-    )  # 勇者ごとの欄と、詳細のページへのリンク（Actions では URL になる）
+    )  # もののふごとの欄と、詳細のページへのリンク（Actions では URL になる）
     self.assertIn("■ アリス  Lv.", text)
 
   def test_board_before_the_season_and_for_heroes_not_started(self):
     entries = [({"id": "h1", "name": "アリス"}, game.new_state(WORLD, "h1", "アリス"))]
     lines = rpg.build_board(WORLD, entries, DAY - timedelta(days=3)).splitlines()
     self.assertIn("開幕前", lines[0])
-    self.assertIn("今日も勇者たちは冒険中", lines[4])
+    self.assertIn("今日も、もののふたちは冒険中", lines[4])
 
   def test_same_level_gets_the_same_medal(self):
     entries = []
     for i, exp in enumerate((5, 30, 10)):
       state = play(1, f"h{i}")
       state["hero"].update(level=13, exp=exp)
-      entries.append(({"id": f"h{i}", "name": f"勇者{i}"}, state))
+      entries.append(({"id": f"h{i}", "name": f"もののふ{i}"}, state))
     line = rpg.build_board(WORLD, entries, DAY).splitlines()[1]
     self.assertEqual(line.count("🥇"), 3, line)
 
@@ -194,7 +194,7 @@ class DisplayTest(unittest.TestCase):
 
 
 class HeroesTest(unittest.TestCase):
-  """勇者管理シート（heroes.json）・状態・詳細のページを一時ディレクトリに向けて、main を動かす。"""
+  """もののふ管理シート（heroes.json）・状態・詳細のページを一時ディレクトリに向けて、main を動かす。"""
 
   def setUp(self):
     tmp = tempfile.TemporaryDirectory()
@@ -238,7 +238,7 @@ class HeroesTest(unittest.TestCase):
     self.assertEqual(rpg.clean_name("a" * 40), "a" * 32)  # 半角は 32 文字まで
 
   def test_long_names(self):
-    # 表示幅 32 の名前でも、ランキングのカードの出来事が読める。勇者の文章は詰めないので、名前も Lv・日も全部出る
+    # 表示幅 32 の名前でも、ランキングのカードの出来事が読める。もののふの文章は詰めないので、名前も Lv・日も全部出る
     name = "あいうえおかきくけこさしすせそた"
     world = WORLD
     state = game.new_state(world, "h1", name)
@@ -279,20 +279,20 @@ class HeroesTest(unittest.TestCase):
     with self.assertRaises(SystemExit):
       self.new_game("アリス")
     for i in range(2, rpg.MAX_HEROES + 1):
-      self.new_game(f"勇者{i}")
+      self.new_game(f"もののふ{i}")
     with self.assertRaises(SystemExit):
-      self.new_game("あふれた勇者")
+      self.new_game("あふれたもののふ")
     self.assertEqual(len(store.load_heroes()), rpg.MAX_HEROES)
 
   def test_retire_frees_a_slot_and_ids_are_not_reused(self):
     for i in range(1, rpg.MAX_HEROES + 1):
-      self.new_game(f"勇者{i}")
-    self.run_main(["--retire", "勇者2"])
+      self.new_game(f"もののふ{i}")
+    self.run_main(["--retire", "もののふ2"])
     self.assertEqual([h["active"] for h in store.load_heroes()], [True, False] + [True] * (rpg.MAX_HEROES - 2))
     self.new_game("新人")
     self.assertEqual(store.load_heroes()[-1]["id"], f"h{rpg.MAX_HEROES + 1}")
     with self.assertRaises(SystemExit):
-      self.run_main(["--retire", "勇者2"])  # 引退済み
+      self.run_main(["--retire", "もののふ2"])  # 引退済み
 
   def test_daily_advances_active_heroes_and_only_the_board_gist(self):
     self.new_game("アリス")
@@ -314,11 +314,11 @@ class HeroesTest(unittest.TestCase):
     with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "Alice/alice.github.io"}, clear=True):
       self.assertEqual(rpg.site_url(), "https://alice.github.io/")
     with mock.patch.dict("os.environ", {}, clear=True):
-      self.assertEqual(rpg.hero_link("h1"), "サイトの勇者のページ")  # サイトの URL が分からなければ、URL は出さない
+      self.assertEqual(rpg.hero_link("h1"), "サイトのもののふのページ")  # サイトの URL が分からなければ、URL は出さない
 
   def test_page_url_points_to_the_site(self):
     with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "O/r"}, clear=True):
-      self.assertEqual(rpg.page_url("h1"), "https://o.github.io/r/heroes/h1.html")  # サイトの勇者の詳細
+      self.assertEqual(rpg.page_url("h1"), "https://o.github.io/r/heroes/h1.html")  # サイトのもののふの詳細
     with mock.patch.dict("os.environ", {}, clear=True):
       self.assertEqual(rpg.page_url("h1"), "heroes/h1.html")
 
@@ -339,7 +339,7 @@ class HeroesTest(unittest.TestCase):
     warn.assert_called_once()
     self.assertEqual(load("h2")["day"], 1)
     board = self.create_board.call_args.args[2]
-    self.assertIn("■ ボブ", board)  # 進められた勇者だけでランキングを作る
+    self.assertIn("■ ボブ", board)  # 進められたもののふだけでランキングを作る
     self.assertNotIn("■ アリス", board)
 
   def test_a_hero_whose_state_cannot_be_saved_does_not_stop_the_others(self):
@@ -353,20 +353,20 @@ class HeroesTest(unittest.TestCase):
       original(state, path)
 
     with mock.patch.object(game, "save_state", side_effect=save), mock.patch.object(common, "warn") as warn:
-      self.assertEqual(self.daily(), 1)  # 失敗した勇者がいる
+      self.assertEqual(self.daily(), 1)  # 失敗したもののふがいる
     warn.assert_called_once()
     self.assertIn("アリス", warn.call_args.args[0])
     self.assertIn("ディスクがいっぱい", warn.call_args.args[0])
     self.assertEqual(load("h2")["day"], 1)  # ボブは進んで、保存された
     self.assertEqual(load("h1")["day"], 0)  # アリスは進んでいない（次の実行でやり直す）
     board = self.create_board.call_args.args[2]
-    self.assertIn("■ ボブ", board)  # 進められた勇者だけでランキングを作る
+    self.assertIn("■ ボブ", board)  # 進められたもののふだけでランキングを作る
     self.assertNotIn("■ アリス", board)
 
   def test_current_entries_skip_heroes_without_a_state_file(self):
     self.new_game("アリス")
     store.hero_state_path("h1").unlink()
-    self.assertEqual(store.current_entries(WORLD), [])  # サイトの書き出しは、状態のない勇者を飛ばす
+    self.assertEqual(store.current_entries(WORLD), [])  # サイトの書き出しは、状態のないもののふを飛ばす
 
   def test_hero_that_failed_stays_on_the_site_map(self):
     self.new_game("アリス")
@@ -386,7 +386,7 @@ class HeroesTest(unittest.TestCase):
     svg = ET.fromstring(html[html.index("<svg") : html.index("</svg>") + 6])
     titles = "、".join(
       g.find(f"{NS}title").text for g in svg.iter(f"{NS}g") if g.get("class") == "hero"
-    )  # 進められなかった勇者も、保存してある状態でサイトの地図の印（マウスを乗せたときの説明）に載る
+    )  # 進められなかったもののふも、保存してある状態でサイトの地図の印（マウスを乗せたときの説明）に載る
     self.assertIn("アリス Lv.", titles)
     self.assertIn("ボブ Lv.", titles)
 
@@ -401,7 +401,7 @@ class HeroesTest(unittest.TestCase):
     website.write_site(
       world, store.current_entries(world), DAY, game.new_guild(), out, store.current_entries(world, True)
     )
-    self.assertTrue((out / "heroes" / "h2.html").exists())  # 引退した勇者の詳細も残る
+    self.assertTrue((out / "heroes" / "h2.html").exists())  # 引退したもののふの詳細も残る
     self.assertNotIn("ボブ", (out / "heroes.html").read_text(encoding="utf-8"))  # 一覧には出さない
 
   def test_failed_heros_changes_to_the_guild_are_undone(self):
@@ -419,7 +419,7 @@ class HeroesTest(unittest.TestCase):
         rpg.load_world(), {"h1": ({"id": "h1"}, state, [date(2026, 12, 1)])}, date(2026, 12, 1), None, guild
       )
     self.assertIn("h1", errors)
-    self.assertEqual(guild, game.new_guild())  # 掲示板は進める前のまま
+    self.assertEqual(guild, game.new_guild())  # 高札は進める前のまま
 
   def test_broken_guild_file(self):
     store.GUILD_PATH.write_text("[]", encoding="utf-8")
@@ -436,12 +436,12 @@ class HeroesTest(unittest.TestCase):
     guild = json.loads((self.dir / "guild.json").read_text(encoding="utf-8"))
     held = [e for es in guild["towns"].values() for e in es if e["status"] == "held"]
     self.assertTrue(guild["towns"])
-    for e in held:  # 受注中の依頼は、受けた勇者がちょうどその依頼を持っている
+    for e in held:  # 受注中の依頼は、受けたもののふがちょうどその依頼を持っている
       self.assertEqual(load(e["holder"])["quest"]["id"], e["id"])
     ids = [e["id"] for e in held]
     self.assertEqual(len(ids), len(set(ids)))
     holding = [load(f"h{i}")["quest"] for i in range(1, 7)]
-    for q in holding:  # 勇者が持っている依頼（旅を除く）は、掲示板で受注中になっている
+    for q in holding:  # もののふが持っている依頼（旅を除く）は、高札で受注中になっている
       if q and q["type"] != "patrol":
         self.assertIn(q["id"], ids)
 
@@ -454,7 +454,7 @@ class HeroesTest(unittest.TestCase):
     self.daily("2026-12-01")
     guild = json.loads(store.GUILD_PATH.read_text(encoding="utf-8"))
     entry = next(e for es in guild["towns"].values() for e in es if e["status"] == "open")
-    entry.update(status="held", holder="h9")  # 引退した勇者（現役の一覧にいない）が持っていた依頼
+    entry.update(status="held", holder="h9")  # 引退したもののふ（現役の一覧にいない）が持っていた依頼
     store.GUILD_PATH.write_text(json.dumps(guild), encoding="utf-8")
     self.daily("2026-12-02")
 
@@ -473,7 +473,7 @@ class HeroesTest(unittest.TestCase):
     self.assertEqual(self.create_board.call_count, 1)
     (call,) = self.update_gist.call_args_list
     self.assertEqual(call.args[:3], ("board", "p", rpg.BOARD_FILENAME))
-    self.assertEqual(call.kwargs["description"], "勇者ランキング シーズン1")
+    self.assertEqual(call.kwargs["description"], "もののふランキング シーズン1")
 
   def test_board_is_recreated_when_the_gist_is_gone(self):
     self.new_game("アリス")
@@ -520,7 +520,7 @@ class HeroesTest(unittest.TestCase):
     store.hero_state_path("h1").unlink()
     with mock.patch.object(common, "warn") as warn:
       self.assertEqual(self.daily(), 1)
-    self.create_board.assert_not_called()  # 進められた勇者がいなければ、ランキングも作らない
+    self.create_board.assert_not_called()  # 進められたもののふがいなければ、ランキングも作らない
     warn.assert_called_once()
     self.assertFalse(store.hero_state_path("h1").exists())
 
