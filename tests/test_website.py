@@ -420,7 +420,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<a class="pill" href="#g0">能力</a>', html)  # 上の移動ボタン
     self.assertIn('<div class="card" id="g0">', html)
     self.assertIn(f'<td class="num">{game.exp_need(WORLD, 1)}</td>', html)  # 次の Lv までの経験値
-    self.assertIn("固定スキル（未定）＋ 1 つ", html)  # 珍しさごとのスキル
+    self.assertIn("あとで固定スキルも付ける予定", html)  # 珍しさごとのスキル
     self.assertIn('<span class="tag">鎧通し</span>', html)  # スキルも札で囲む
     self.assertIn("器用さ ÷ 150 の確率で、ダメージが 3 倍", html)
     self.assertIn("最大 HP の 50% ぶん回復", html)
@@ -436,11 +436,11 @@ class SiteTest(unittest.TestCase):
     self.assertIn("例: 鉄の斧（攻 +2・速 -2）は 2 − 1 = 1 点", item)  # マイナスも同じ点数で引く
     self.assertIn("<tr><td>★</td><td>1 点まで</td><td>なし</td><td>なし</td></tr>", item)
     self.assertIn(
-      "<tr><td>★★★</td><td>2 点まで</td><td>付くことがある（武器・装飾品）</td><td>固定スキル（未定）＋ 1 つ（800G）</td></tr>",
+      "<tr><td>★★★</td><td>2 点まで</td><td>付くことがある（武器・装飾品）</td><td>1 つ（800G。★★★ 以上は、あとで固定スキルも付ける予定）</td></tr>",
       item,
     )
     self.assertIn(
-      "<tr><td>★★★★</td><td>3 点まで</td><td>付くことがある（武器・装飾品）</td><td>固定スキル（未定）＋ 1 つ（1000G）</td></tr>",
+      "<tr><td>★★★★</td><td>3 点まで</td><td>付くことがある（武器・装飾品）</td><td>1 つ（1000G。★★★ 以上は、あとで固定スキルも付ける予定）</td></tr>",
       item,
     )
     self.assertIn("特性の倍率がかかる前の値。強運の勇者と同じ", html)  # 「ふつうの勇者」という特性はない
@@ -472,6 +472,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("防は Lv1 で 6、Lv20 で 40", html)
     self.assertIn("攻は Lv1 で 6、Lv20 で 30", html)
     self.assertNotIn('aria-label="属性の三すくみ"', html)  # 輪になっていなければ、三すくみの図は出さない
+    self.assertNotIn("属性の相性は、この関係そのもの", html)  # 三つの徳の話も出さない
 
   def test_boss_without_an_area_is_in_the_other_group(self):
     world = copy.deepcopy(WORLD)

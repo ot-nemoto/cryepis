@@ -924,12 +924,14 @@ ORDER_NAMES = {
 
 
 def skill_slots(world: dict, rarity: str) -> str:
-  """珍しさごとのスキルの数の説明（★ はなし、★★ は 1 つ、★★★ から固定スキル＋1 つ）。"""
+  """珍しさごとのスキルの数の説明（★ はなし。スキルの付く珍しさは 1 つ。★★★ 以上は、あとで固定スキルを足す予定）。
+  いちばん下の珍しさは、items.json の並びではなく rarities の順で決める。"""
   prices = world.get("skill_prices") or {}
   if rarity not in prices:
     return "なし"
-  first = next(iter(prices))
-  return f"1 つ（{prices[rarity]}G）" if rarity == first else f"固定スキル（未定）＋ 1 つ（{prices[rarity]}G）"
+  if rarity == min(prices, key=world["rarities"].index):
+    return f"1 つ（{prices[rarity]}G）"
+  return f"1 つ（{prices[rarity]}G。★★★ 以上は、あとで固定スキルも付ける予定）"
 
 
 def skill_tag(name: str) -> str:
@@ -946,15 +948,14 @@ def element_triangle(world: dict) -> str:
     cur = elements[cur]["strong"]
   if len(order) != 3 or len(elements) != 3 or cur != order[0]:
     return ""
-  import math as _m
-
-  pts = [(150 + 95 * _m.sin(2 * _m.pi * i / 3), 115 - 95 * _m.cos(2 * _m.pi * i / 3)) for i in range(3)]
+  # 中心 (150, 125)・半径 95 の三角形。上の円（半径 28 と線）が枠に収まるように、中心を下げている
+  pts = [(150 + 95 * math.sin(2 * math.pi * i / 3), 125 - 95 * math.cos(2 * math.pi * i / 3)) for i in range(3)]
   colors = {"flame": "#d9534f", "ice": "#4f8fd9", "thunder": "#b58ad9"}
   parts = []
   for i in range(3):
     (x1, y1), (x2, y2) = pts[i], pts[(i + 1) % 3]
     dx, dy = x2 - x1, y2 - y1
-    d = _m.hypot(dx, dy)
+    d = math.hypot(dx, dy)
     ux, uy = dx / d, dy / d
     sx, sy, ex, ey = x1 + ux * 34, y1 + uy * 34, x2 - ux * 38, y2 - uy * 38
     parts.append(
@@ -972,7 +973,7 @@ def element_triangle(world: dict) -> str:
       f"{escape(elements[eid]['name'])}</text>"
     )
   return (
-    '<svg viewBox="0 0 300 220" width="300" height="220" role="img" aria-label="属性の三すくみ" class="tri">'
+    '<svg viewBox="0 0 300 230" width="300" height="230" role="img" aria-label="属性の三すくみ" class="tri">'
     '<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
     '<path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>' + "".join(parts) + "</svg>"
   )
@@ -1272,9 +1273,13 @@ def build_guide(world: dict) -> str:
         + f'<p class="note">強い相手を攻めるとダメージ {rates["strong"]} 倍、苦手な相手だと {rates["weak"]} 倍。'
         "属性は魔物と一部の武器・装飾品にある（属性のない魔物・武器もある）。装飾品の属性は、武器に属性がないとき攻撃に付く。"
         "属性の武器は、その属性の力を持つ鉱石から作られる</p>"
-        + '<p class="note">竜は、いのち・かぎり・こころざしを一つに持っていたが、三つに分かれた、という。'
-        "かぎりはいのちを鎮め（氷→炎）、いのちはこころざしを焼き（炎→雷）、こころざしはかぎりを砕く（雷→氷）。"
-        "属性の相性は、この関係そのものと言われる</p>",
+        + (  # 三つの徳の話は、相性が三すくみ（図を描けるとき）だけ
+          '<p class="note">竜は、いのち・かぎり・こころざしを一つに持っていたが、三つに分かれた、という。'
+          "かぎりはいのちを鎮め（氷→炎）、いのちはこころざしを焼き（炎→雷）、こころざしはかぎりを砕く（雷→氷）。"
+          "属性の相性は、この関係そのものと言われる</p>"
+          if element_triangle(world)
+          else ""
+        ),
       )
     )
   points = world["season"]["item_points"]
