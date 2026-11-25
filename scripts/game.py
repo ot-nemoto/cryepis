@@ -600,27 +600,32 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random, ran
   return finish_quest(world, quest, town)
 
 
+def quest_gap(quest: dict, level: int) -> int:
+  """依頼の Lv と勇者の Lv の差。配達は Lv を見ない（道中の魔物は勇者の Lv で決まり、危なさは ★ に入っている。#228）ので 0。"""
+  return 0 if quest.get("type") == "deliver" else quest["level"][0] - level
+
+
 def suitable(quest: dict, level: int, levels: list | None = None) -> bool:
   """受けられる依頼か。levels（性格の [下, 上]。勇者の Lv との差。None は下限なし）があれば、依頼の Lv がその範囲のものだけ。
   なければ、依頼のレベルが自分のレベル＋3 を超える、強すぎる依頼だけを避ける（弱すぎる依頼も受ける）。
-  強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level。性格に関係なく同じ）。"""
+  配達は Lv を見ない（いつも範囲に入る）。強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level）。"""
   low, high = levels if levels else (None, 3)
-  gap = quest["level"][0] - level
+  gap = quest_gap(quest, level)
   return (low is None or gap >= low) and gap <= high and level >= quest.get("min_level", 0)
 
 
 def level_gap(quest: dict, level: int, levels: list) -> int:
   """依頼の Lv が、性格の範囲（levels。勇者の Lv との差 [下, 上]、下は None で下限なし）からどれだけ外れているか（範囲内は 0）。"""
   low, high = levels
-  gap = quest["level"][0] - level
+  gap = quest_gap(quest, level)
   return max(0 if low is None else low - gap, gap - high, 0)
 
 
-QUEST_ORDER = {  # 性格の依頼の選び方（quest.order）。小さいほうを先に選ぶ
-  "level_high": lambda q: -q["level"][0],
-  "level_low": lambda q: q["level"][0],
-  "rank_high": lambda q: -q.get("rank", 1),
-  "rank_low": lambda q: q.get("rank", 1),
+QUEST_ORDER = {  # 性格の依頼の選び方（quest.order）。小さいほうを先に選ぶ。配達の Lv は勇者の Lv と同じに数える
+  "level_high": lambda q, lv: -quest_gap(q, lv),
+  "level_low": lambda q, lv: quest_gap(q, lv),
+  "rank_high": lambda q, lv: -q.get("rank", 1),
+  "rank_low": lambda q, lv: q.get("rank", 1),
 }
 
 
@@ -988,7 +993,7 @@ class Day:
     if entries:
       if me:  # 性格の選び方で並べ、同じなら掲示板の上のもの（ランダムはなし）
         order = [QUEST_ORDER[k] for k in me["quest"]["order"]]
-        entry = min(entries, key=lambda e: tuple(f(e) for f in order))
+        entry = min(entries, key=lambda e: tuple(f(e, level) for f in order))
       else:
         entry = self.rng.choice(entries)
       entry.update(status="held", holder=self.state["id"])

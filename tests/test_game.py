@@ -1598,6 +1598,11 @@ class PersonalityTest(unittest.TestCase):
     town = state["place"]
     state["hero"]["level"] = 12
     G.refresh_guild(WORLD, guild, START, 1)
+    # 掲示板を討伐だけにする（配達は Lv を見ないので、いつも範囲に入る）
+    guild["towns"][town] = [
+      dict(common_hunt(town, seed=i), id=f"q{i}", posted=START.isoformat(), status="open", holder=None)
+      for i in range(5)
+    ]
     entries = guild["towns"][town]
     for e in entries:  # 範囲（Lv10〜12）に合う依頼がない
       e.update(level=[2, 2], rank=1, min_level=0)
@@ -1626,6 +1631,10 @@ class PersonalityTest(unittest.TestCase):
     self.assertIs(next(e for e in entries if e["status"] == "held"), entries[2])  # 同じ Lv5 なら ★ の多いもの
     self.assertNotEqual(state["quest"]["type"], "patrol")  # 旅には出ない
     self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [-2, 0]), 5)
+    deliver = {"type": "deliver", "level": [2, 2]}  # 配達は Lv を見ない（どの範囲にも入る）
+    self.assertTrue(G.suitable(deliver, 15, [-2, 0]))
+    self.assertEqual(G.level_gap(deliver, 15, [-1, 1]), 0)
+    self.assertEqual(G.QUEST_ORDER["level_high"](deliver, 15), 0)  # Lv を比べるときは自分と同じ Lv
     self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [None, 0]), 0)
 
   def test_potion_is_used_below_the_rate_and_zero_hp_falls(self):
