@@ -2,10 +2,11 @@
   "id": "h6",
   "name": "BRANTHOC",
   "trait": "skilled",
+  "personality": "brave",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-24",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-25",
   "hero": {
     "level": 2,
     "exp": 8,
@@ -15,39 +16,59 @@
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 15,
-    "potions": 3
+    "gold": 23,
+    "potions": 3,
+    "stored": 0
   },
-  "inventory": {
-    "wooden_helm": 1
-  },
-  "place": "salina",
-  "home_town": "salina",
+  "inventory": [
+    {
+      "id": "iron_sword",
+      "skill": null
+    },
+    {
+      "id": "wooden_helm",
+      "skill": null
+    }
+  ],
+  "storage": [],
+  "place": "eques",
+  "home_town": "eques",
   "road": null,
   "quest": null,
   "taken": [
-    "2026-11-24-patrol"
+    "2026-11-25-salina-1"
   ],
+  "stay": {
+    "town": "eques",
+    "since": "2026-11-25"
+  },
   "season_stats": {
-    "quests_done": 0,
+    "quests_done": 1,
     "quests_failed": 0,
     "kills": 3,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "エクエスのギルドには受けられる依頼がない。サリナへ旅に出る",
-      "遠くで羊の群れが草を食んでいる",
+      "サリナのギルドで依頼を受けた: ★ 弔いの白布の配達（エクエスへ弔いの白布を届ける）（行動力 2）",
+      "宝箱から26Gを見つけた",
       "霧の中でカエルが鳴いている",
-      "サリナに着いた",
-      "サリナの周りを散策した",
-      "野犬を倒した (+6EXP)"
+      "エクエスに着いた",
+      "依頼達成！★ 弔いの白布の配達（エクエスへ弔いの白布を届ける）（+32G）",
+      "エクエスで鉄の剣を買った",
+      "エクエスの周りを散策した",
+      "足元の泥がぬかるむ"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "サリナのギルドで依頼を受けた: ★ 弔いの白布の配達（エクエスへ弔いの白布を届ける）（行動力 2） / 宝箱から26Gを見つけた / 霧の中でカエルが鳴いている / エクエスに着いた / 依頼達成！★ 弔いの白布の配達（エクエスへ弔いの白布を届ける）（+32G） / エクエスで鉄の剣を買った / エクエスの周りを散策した / 足元の泥がぬかるむ"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,

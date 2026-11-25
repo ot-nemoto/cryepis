@@ -2,53 +2,68 @@
   "id": "h16",
   "name": "THALES",
   "trait": "skilled",
+  "personality": "tactician",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-24",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-25",
   "hero": {
-    "level": 1,
-    "exp": 5,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
+    "level": 2,
+    "exp": 9,
+    "max_hp": 38,
+    "hp": 33,
+    "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
-    "base_dex": 6,
-    "gold": 4,
-    "potions": 3
+    "base_dex": 7,
+    "gold": 15,
+    "potions": 3,
+    "stored": 0
   },
-  "inventory": {
-    "wooden_helm": 1
-  },
-  "place": "eques",
-  "home_town": "eques",
+  "inventory": [
+    {
+      "id": "wooden_helm",
+      "skill": null
+    }
+  ],
+  "storage": [],
+  "place": "karun",
+  "home_town": "karun",
   "road": null,
   "quest": null,
   "taken": [
-    "2026-11-24-patrol"
+    "2026-11-25-patrol"
   ],
+  "stay": {
+    "town": "karun",
+    "since": "2026-11-25"
+  },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 1,
+    "kills": 3,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "カルンで木の兜を買った",
-      "カルンのギルドには受けられる依頼がない。エクエスへ旅に出る",
-      "吐く息が白い",
-      "大ネズミ〔群れ〕を倒した (+5EXP)",
-      "エクエスに着いた",
-      "エクエスの周りを散策した",
-      "遠くで雪崩の音がした"
+      "エクエスのギルドには受けられる依頼がない。カルンへ旅に出る",
+      "ゴブリンを倒した (+8EXP)",
+      "レベルが上がった！ Lv.2",
+      "野犬を倒した (+6EXP)",
+      "カルンに着いた",
+      "カルンの周りを散策した",
+      "吐く息が白い"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "エクエスのギルドには受けられる依頼がない。カルンへ旅に出る / ゴブリンを倒した (+8EXP) / レベルが上がった！ Lv.2 / 野犬を倒した (+6EXP) / カルンに着いた / カルンの周りを散策した / 吐く息が白い"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,

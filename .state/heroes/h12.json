@@ -2,31 +2,34 @@
   "id": "h12",
   "name": "GAIUS PONTIDIUS STOLO",
   "trait": "strong",
+  "personality": "tactician",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-24",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-25",
   "hero": {
-    "level": 1,
-    "exp": 5,
-    "max_hp": 30,
-    "hp": 26,
-    "base_atk": 6,
+    "level": 2,
+    "exp": 14,
+    "max_hp": 36,
+    "hp": 30,
+    "base_atk": 9,
     "base_def": 6,
     "base_spd": 6,
-    "base_dex": 6,
-    "gold": 4,
-    "potions": 3
+    "base_dex": 7,
+    "gold": 18,
+    "potions": 3,
+    "stored": 0
   },
-  "inventory": {
-    "wooden_helm": 1
-  },
-  "place": "salina",
-  "home_town": "salina",
-  "road": {
-    "to": "muralis",
-    "left": 3
-  },
+  "inventory": [
+    {
+      "id": "wooden_helm",
+      "skill": null
+    }
+  ],
+  "storage": [],
+  "place": "muralis",
+  "home_town": "muralis",
+  "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
@@ -36,7 +39,7 @@
     "report": null,
     "monster": null,
     "count": 1,
-    "progress": 0,
+    "progress": 1,
     "level": [
       2,
       2
@@ -45,28 +48,36 @@
     "reward": null,
     "cost": 6
   },
-  "taken": [
-    "2026-11-24-patrol"
-  ],
+  "taken": [],
+  "stay": {
+    "town": "muralis",
+    "since": "2026-11-25"
+  },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 1,
+    "kills": 3,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "サリナで木の兜を買った",
-      "サリナのギルドには受けられる依頼がない。ムラリスへ旅に出る",
-      "大ネズミ〔群れ〕を倒した (+5EXP)",
-      "眼下に雲海が広がっている",
-      "眼下に雲海が広がっている"
+      "道端に小さな花が咲いている",
+      "ゴブリンを倒した (+8EXP)",
+      "レベルが上がった！ Lv.2",
+      "沼ヒル〔毒〕を倒した (+11EXP)",
+      "毒で HP が 3 減った",
+      "ムラリスに着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "道端に小さな花が咲いている / ゴブリンを倒した (+8EXP) / レベルが上がった！ Lv.2 / 沼ヒル〔毒〕を倒した (+11EXP) / 毒で HP が 3 減った / ムラリスに着いた"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,

@@ -2,31 +2,34 @@
   "id": "h17",
   "name": "TUKHORIS",
   "trait": "lucky",
+  "personality": "thrifty",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-24",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-25",
   "hero": {
-    "level": 1,
-    "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
+    "level": 2,
+    "exp": 6,
+    "max_hp": 38,
+    "hp": 38,
+    "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
-    "base_dex": 6,
-    "gold": 0,
-    "potions": 3
+    "base_dex": 7,
+    "gold": 12,
+    "potions": 4,
+    "stored": 0
   },
-  "inventory": {
-    "wooden_helm": 1
-  },
-  "place": "salina",
-  "home_town": "salina",
-  "road": {
-    "to": "muralis",
-    "left": 3
-  },
+  "inventory": [
+    {
+      "id": "wooden_helm",
+      "skill": null
+    }
+  ],
+  "storage": [],
+  "place": "muralis",
+  "home_town": "muralis",
+  "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
@@ -36,7 +39,7 @@
     "report": null,
     "monster": null,
     "count": 1,
-    "progress": 0,
+    "progress": 1,
     "level": [
       2,
       2
@@ -45,28 +48,35 @@
     "reward": null,
     "cost": 6
   },
-  "taken": [
-    "2026-11-24-patrol"
-  ],
+  "taken": [],
+  "stay": {
+    "town": "muralis",
+    "since": "2026-11-25"
+  },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 2,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "サリナで木の兜を買った",
-      "サリナのギルドには受けられる依頼がない。ムラリスへ旅に出る",
-      "眼下に雲海が広がっている",
-      "切り立った崖の細い道を進んだ",
-      "葦の間を小舟がすべっていった"
+      "ゴブリンを倒した (+8EXP)",
+      "宝箱から回復薬を見つけた",
+      "ゴブリンを倒した (+8EXP)",
+      "レベルが上がった！ Lv.2",
+      "ムラリスに着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "ゴブリンを倒した (+8EXP) / 宝箱から回復薬を見つけた / ゴブリンを倒した (+8EXP) / レベルが上がった！ Lv.2 / ムラリスに着いた"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,

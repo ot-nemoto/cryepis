@@ -2,53 +2,66 @@
   "id": "h10",
   "name": "AMBILLUS",
   "trait": "guard",
+  "personality": "diligent",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-24",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-25",
   "hero": {
     "level": 1,
-    "exp": 0,
+    "exp": 6,
     "max_hp": 30,
-    "hp": 30,
+    "hp": 28,
     "base_atk": 6,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 6,
-    "gold": 0,
-    "potions": 3
+    "gold": 5,
+    "potions": 3,
+    "stored": 1
   },
-  "inventory": {
-    "wooden_helm": 1
-  },
-  "place": "eques",
-  "home_town": "eques",
+  "inventory": [
+    {
+      "id": "wooden_helm",
+      "skill": null
+    }
+  ],
+  "storage": [],
+  "place": "karun",
+  "home_town": "karun",
   "road": null,
   "quest": null,
   "taken": [
-    "2026-11-24-patrol"
+    "2026-11-25-patrol"
   ],
+  "stay": {
+    "town": "karun",
+    "since": "2026-11-25"
+  },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 1,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "サリナで木の兜を買った",
-      "サリナのギルドには受けられる依頼がない。エクエスへ旅に出る",
-      "葦の間を小舟がすべっていった",
-      "遠くで羊の群れが草を食んでいる",
-      "エクエスに着いた",
-      "エクエスの周りを散策した",
-      "草原を風が吹き抜けていく"
+      "エクエスのギルドには受けられる依頼がない。カルンへ旅に出る",
+      "野犬を倒した (+6EXP)",
+      "道端に小さな花が咲いている",
+      "カルンに着いた",
+      "カルンで休んで、行動力を溜めた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "エクエスのギルドには受けられる依頼がない。カルンへ旅に出る / 野犬を倒した (+6EXP) / 道端に小さな花が咲いている / カルンに着いた / カルンで休んで、行動力を溜めた"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,

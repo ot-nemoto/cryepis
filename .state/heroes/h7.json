@@ -2,61 +2,81 @@
   "id": "h7",
   "name": "VLATTIA",
   "trait": "lucky",
+  "personality": "brave",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-24",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-25",
   "hero": {
     "level": 3,
-    "exp": 15,
+    "exp": 28,
     "max_hp": 46,
-    "hp": 46,
+    "hp": 41,
     "base_atk": 10,
     "base_def": 7,
     "base_spd": 7,
     "base_dex": 9,
-    "gold": 10,
-    "potions": 3
+    "gold": 20,
+    "potions": 3,
+    "stored": 0
   },
-  "inventory": {
-    "wooden_helm": 1,
-    "iron_helm": 1,
-    "wooden_shield": 1,
-    "iron_sword": 1
-  },
-  "place": "salina",
-  "home_town": "salina",
+  "inventory": [
+    {
+      "id": "iron_sword",
+      "skill": null
+    },
+    {
+      "id": "iron_helm",
+      "skill": null
+    },
+    {
+      "id": "wooden_shield",
+      "skill": null
+    }
+  ],
+  "storage": [
+    {
+      "id": "wooden_helm",
+      "skill": null
+    }
+  ],
+  "place": "eques",
+  "home_town": "eques",
   "road": null,
   "quest": null,
   "taken": [
-    "2026-11-22-eques-0"
+    "2026-11-25-patrol"
   ],
+  "stay": {
+    "town": "eques",
+    "since": "2026-11-25"
+  },
   "season_stats": {
     "quests_done": 2,
     "quests_failed": 0,
-    "kills": 5,
+    "kills": 7,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "草原を風が吹き抜けていく",
-      "エクエスに戻った",
-      "依頼達成！★ 討伐（エクエスとサリナの間の道でゴブリンを2体討伐）（+20EXP +32G）",
-      "報酬で★「鉄の兜」を手に入れた（装備した）",
-      "レベルが上がった！ Lv.3",
-      "エクエスで木の盾を買った",
-      "エクエスのギルドで依頼を受けた: ★ 配達（サリナへ荷物を届ける）（行動力 2）",
+      "サリナのギルドには受けられる依頼がない。エクエスへ旅に出る",
       "大ネズミ〔群れ〕を倒した (+5EXP)",
-      "野犬を倒した (+6EXP)",
-      "サリナに着いた",
-      "依頼達成！★ 配達（サリナへ荷物を届ける）（+32G）",
-      "サリナで鉄の剣を買った"
+      "ゴブリンを倒した (+8EXP)",
+      "エクエスに着いた",
+      "エクエスのギルドの保管庫に、装備を 1 つ預けた",
+      "エクエスの周りを散策した",
+      "草原を風が吹き抜けていく"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "サリナのギルドには受けられる依頼がない。エクエスへ旅に出る / 大ネズミ〔群れ〕を倒した (+5EXP) / ゴブリンを倒した (+8EXP) / エクエスに着いた / エクエスのギルドの保管庫に、装備を 1 つ預けた / エクエスの周りを散策した / 草原を風が吹き抜けていく"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,

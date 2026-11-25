@@ -2,10 +2,11 @@
   "id": "h20",
   "name": "EATHYROSS",
   "trait": "lucky",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "personality": "adventurous",
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-25",
   "hero": {
     "level": 1,
     "exp": 0,
@@ -15,15 +16,70 @@
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 6,
-    "gold": 60,
-    "potions": 1
+    "gold": 14,
+    "potions": 3,
+    "stored": 0
   },
-  "inventory": {},
-  "place": "karun",
-  "home_town": "karun",
-  "road": null,
-  "quest": null,
-  "taken": [],
+  "inventory": [
+    {
+      "id": "wooden_helm",
+      "skill": null
+    }
+  ],
+  "storage": [],
+  "place": "eques",
+  "home_town": "eques",
+  "road": {
+    "to": "salina",
+    "left": 1
+  },
+  "quest": {
+    "type": "deliver",
+    "place": "salina",
+    "report": "salina",
+    "monster": null,
+    "count": 1,
+    "rank": 1,
+    "danger": 0,
+    "cargo": "トナカイの干し肉",
+    "name": "トナカイの干し肉の配達",
+    "text": "トナカイの干し肉をサリナまで運んでほしい。待っている人がいるんだ",
+    "template": "deliver",
+    "town": "karun",
+    "progress": 0,
+    "level": [
+      2,
+      2
+    ],
+    "deadline": null,
+    "cost": 4,
+    "reward": {
+      "exp": 0,
+      "gold": 64,
+      "item": [
+        [
+          "none",
+          88
+        ],
+        [
+          "common",
+          10
+        ],
+        [
+          "rare",
+          2
+        ]
+      ]
+    },
+    "id": "2026-11-25-karun-0"
+  },
+  "taken": [
+    "2026-11-25-karun-0"
+  ],
+  "stay": {
+    "town": "eques",
+    "since": "2026-11-25"
+  },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
@@ -31,7 +87,24 @@
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-25",
+    "actions": 3,
+    "events": [
+      "カルンで木の兜を買った",
+      "カルンのギルドで依頼を受けた: ★ トナカイの干し肉の配達（サリナへトナカイの干し肉を届ける）（行動力 4）",
+      "遠くで雪崩の音がした",
+      "吐く息が白い",
+      "エクエスに着いた",
+      "宝箱から14Gを見つけた"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "カルンで木の兜を買った / カルンのギルドで依頼を受けた: ★ トナカイの干し肉の配達（サリナへトナカイの干し肉を届ける）（行動力 4） / 遠くで雪崩の音がした / 吐く息が白い / エクエスに着いた / 宝箱から14Gを見つけた"
+    }
+  ],
   "seasons": []
 }

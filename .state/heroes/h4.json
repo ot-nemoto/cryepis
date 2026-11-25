@@ -2,54 +2,89 @@
   "id": "h4",
   "name": "SPATALIA",
   "trait": "strong",
+  "personality": "adventurous",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-24",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-25",
   "hero": {
     "level": 2,
-    "exp": 13,
+    "exp": 23,
     "max_hp": 36,
-    "hp": 36,
+    "hp": 16,
     "base_atk": 9,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 18,
-    "potions": 3
+    "gold": 26,
+    "potions": 4,
+    "stored": 0
   },
-  "inventory": {
-    "wooden_helm": 1,
-    "wooden_shield": 1
-  },
+  "inventory": [
+    {
+      "id": "wooden_helm",
+      "skill": null
+    },
+    {
+      "id": "wooden_shield",
+      "skill": null
+    }
+  ],
+  "storage": [],
   "place": "salina",
   "home_town": "salina",
-  "road": null,
-  "quest": null,
+  "road": {
+    "to": "muralis",
+    "left": 3
+  },
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "muralis",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 0,
+    "level": [
+      2,
+      2
+    ],
+    "deadline": null,
+    "reward": null,
+    "cost": 6
+  },
   "taken": [
-    "2026-11-24-patrol"
+    "2026-11-25-patrol"
   ],
+  "stay": {
+    "town": "salina",
+    "since": "2026-11-25"
+  },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 3,
+    "kills": 4,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "エクエスのギルドには受けられる依頼がない。サリナへ旅に出る",
-      "野犬を倒した (+6EXP)",
-      "野犬を倒した (+6EXP)",
-      "サリナに着いた",
-      "サリナで木の盾を買った",
-      "サリナの周りを散策した",
-      "草原を風が吹き抜けていく"
+      "サリナのギルドには受けられる依頼がない。ムラリスへ旅に出る",
+      "鬼火を倒した (+10EXP)",
+      "道端に小さな花が咲いている",
+      "宝箱から回復薬を見つけた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "サリナのギルドには受けられる依頼がない。ムラリスへ旅に出る / 鬼火を倒した (+10EXP) / 道端に小さな花が咲いている / 宝箱から回復薬を見つけた"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,

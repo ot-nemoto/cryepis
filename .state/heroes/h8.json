@@ -2,103 +2,85 @@
   "id": "h8",
   "name": "TADALA",
   "trait": "lucky",
+  "personality": "diligent",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-24",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-25",
   "hero": {
-    "level": 3,
-    "exp": 6,
-    "max_hp": 46,
-    "hp": 46,
-    "base_atk": 10,
+    "level": 4,
+    "exp": 11,
+    "max_hp": 54,
+    "hp": 54,
+    "base_atk": 12,
     "base_def": 7,
-    "base_spd": 7,
-    "base_dex": 9,
-    "gold": 23,
-    "potions": 3
+    "base_spd": 8,
+    "base_dex": 10,
+    "gold": 7,
+    "potions": 2,
+    "stored": 0
   },
-  "inventory": {
-    "wooden_helm": 1,
-    "iron_sword": 1
-  },
+  "inventory": [
+    {
+      "id": "iron_sword",
+      "skill": null
+    },
+    {
+      "id": "iron_helm",
+      "skill": null
+    },
+    {
+      "id": "soaring_leaf_charm",
+      "skill": null
+    }
+  ],
+  "storage": [
+    {
+      "id": "wooden_helm",
+      "skill": null
+    }
+  ],
   "place": "salina",
   "home_town": "salina",
   "road": null,
-  "quest": {
-    "type": "hunt",
-    "place": "muralis",
-    "report": "salina",
-    "monster": "mud_golem",
-    "count": 3,
-    "rank": 1,
-    "name": "泥人形の討伐",
-    "text": "貝採りの干潟に泥人形が出て困っている。3体、追い払ってくれないか",
-    "template": "hunt",
-    "steps": [
-      [
-        "hunt",
-        1
-      ],
-      [
-        "back",
-        2
-      ]
-    ],
-    "away": 2,
+  "quest": null,
+  "taken": [],
+  "stay": {
     "town": "salina",
-    "progress": 0,
-    "level": [
-      3,
-      3
-    ],
-    "deadline": null,
-    "cost": 5,
-    "reward": {
-      "exp": 0,
-      "gold": 40,
-      "item": [
-        [
-          "none",
-          88
-        ],
-        [
-          "common",
-          10
-        ],
-        [
-          "rare",
-          2
-        ]
-      ]
-    },
-    "id": "2026-11-24-salina-0"
+    "since": "2026-11-25"
   },
-  "taken": [
-    "2026-11-24-salina-0"
-  ],
   "season_stats": {
-    "quests_done": 1,
+    "quests_done": 2,
     "quests_failed": 0,
-    "kills": 4,
+    "kills": 8,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "宝箱から22Gを見つけた",
+      "泥人形が3体現れた",
+      "泥人形を倒した (+17EXP)",
+      "回復薬を使った（HP 32/46）",
+      "泥人形を倒した (+17EXP)",
+      "泥人形を倒した (+17EXP)",
+      "レベルが上がった！ Lv.4",
+      "討伐の目標を果たした（3体）",
+      "野犬を倒した (+6EXP)",
+      "岩の間から竜の骨のような白い石がのぞく",
       "サリナに戻った",
-      "依頼達成！★ 討伐（サリナとエクエスの間の道で大ネズミを2体討伐）（+20EXP +32G）",
-      "サリナで鉄の剣を買った",
-      "サリナのギルドで依頼を受けた: ★ 泥人形の討伐（サリナとムラリスの間の道で泥人形を3体討伐）（行動力 5）",
-      "霧の中でカエルが鳴いている",
-      "ゴブリンを倒した (+8EXP)",
-      "レベルが上がった！ Lv.3"
+      "依頼達成！★ 泥人形の討伐（サリナとムラリスの間の道で泥人形を3体討伐）（+40G）",
+      "サリナで鉄の兜と翔天葉の護符を買った",
+      "サリナのギルドの保管庫に、装備を 1 つ預けた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "泥人形が3体現れた / 泥人形を倒した (+17EXP) / 回復薬を使った（HP 32/46） / 泥人形を倒した (+17EXP) / 泥人形を倒した (+17EXP) / レベルが上がった！ Lv.4 / 討伐の目標を果たした（3体） / 野犬を倒した (+6EXP) / 岩の間から竜の骨のような白い石がのぞく / サリナに戻った / 依頼達成！★ 泥人形の討伐（サリナとムラリスの間の道で泥人形を3体討伐）（+40G） / サリナで鉄の兜と翔天葉の護符を買った / サリナのギルドの保管庫に、装備を 1 つ預けた"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,

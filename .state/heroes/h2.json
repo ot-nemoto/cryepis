@@ -2,28 +2,43 @@
   "id": "h2",
   "name": "CASSIA",
   "trait": "swift",
+  "personality": "careful",
   "season": 1,
-  "season_day": 4,
-  "day": 4,
-  "last_date": "2026-11-24",
+  "season_day": 5,
+  "day": 5,
+  "last_date": "2026-11-25",
   "hero": {
-    "level": 5,
-    "exp": 98,
-    "max_hp": 62,
-    "hp": 62,
-    "base_atk": 14,
+    "level": 6,
+    "exp": 66,
+    "max_hp": 70,
+    "hp": 70,
+    "base_atk": 16,
     "base_def": 8,
-    "base_spd": 10,
-    "base_dex": 11,
-    "gold": 147,
-    "potions": 3
+    "base_spd": 11,
+    "base_dex": 12,
+    "gold": 230,
+    "potions": 4,
+    "stored": 0
   },
-  "inventory": {
-    "iron_sword": 1,
-    "iron_helm": 1,
-    "soaring_leaf_charm": 1,
-    "wooden_shield": 1
-  },
+  "inventory": [
+    {
+      "id": "iron_sword",
+      "skill": null
+    },
+    {
+      "id": "iron_helm",
+      "skill": null
+    },
+    {
+      "id": "soaring_leaf_charm",
+      "skill": null
+    },
+    {
+      "id": "wooden_shield",
+      "skill": null
+    }
+  ],
+  "storage": [],
   "place": "salina",
   "home_town": "salina",
   "road": null,
@@ -39,21 +54,13 @@
     "template": "hunt",
     "steps": [
       [
-        "go",
-        1
-      ],
-      [
-        "hunt",
-        1
-      ],
-      [
         "back",
-        2
+        1
       ]
     ],
     "away": 1,
     "town": "salina",
-    "progress": 0,
+    "progress": 5,
     "level": [
       5,
       5
@@ -84,38 +91,38 @@
     },
     "id": "2026-11-24-salina-1"
   },
-  "taken": [
-    "2026-11-24-salina-1"
-  ],
+  "taken": [],
+  "stay": null,
   "season_stats": {
     "quests_done": 2,
     "quests_failed": 0,
-    "kills": 14,
+    "kills": 19,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "野犬が6体現れた",
-      "野犬を倒した (+6EXP)",
-      "野犬を倒した (+6EXP)",
-      "野犬を倒した (+6EXP)",
-      "野犬を倒した (+6EXP)",
-      "野犬を倒した (+6EXP)",
-      "野犬を倒した (+6EXP)",
-      "レベルが上がった！ Lv.5",
-      "討伐の目標を果たした（6体）",
-      "ゴブリンを倒した (+8EXP)",
-      "サリナに戻った",
-      "依頼達成！★★ 大物討伐（サリナとエクエスの間の道で野犬を6体討伐）（+80EXP +128G）",
-      "サリナで木の盾を買った",
-      "サリナのギルドで依頼を受けた: ★★ 山賊の討伐（サリナとムラリスの間の道で山賊を5体討伐）（行動力 5）",
-      "ゴブリンを倒した (+8EXP)"
+      "切り立った崖の細い道を進んだ",
+      "山賊が5体現れた",
+      "山賊〔盗み〕を倒した (+16EXP)",
+      "レベルが上がった！ Lv.6",
+      "山賊〔盗み〕を倒した (+16EXP)",
+      "山賊〔盗み〕を倒した (+16EXP)",
+      "山賊〔盗み〕を倒した (+16EXP)",
+      "山賊〔盗み〕を倒した (+16EXP)",
+      "逃げ際に 7G 盗まれた",
+      "討伐の目標を果たした（5体）",
+      "宝箱から回復薬を見つけた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "切り立った崖の細い道を進んだ / 山賊が5体現れた / 山賊〔盗み〕を倒した (+16EXP) / レベルが上がった！ Lv.6 / 山賊〔盗み〕を倒した (+16EXP) / 山賊〔盗み〕を倒した (+16EXP) / 山賊〔盗み〕を倒した (+16EXP) / 山賊〔盗み〕を倒した (+16EXP) / 逃げ際に 7G 盗まれた / 討伐の目標を果たした（5体） / 宝箱から回復薬を見つけた"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,

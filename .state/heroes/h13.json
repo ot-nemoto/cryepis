@@ -2,60 +2,70 @@
   "id": "h13",
   "name": "MEDOCUS",
   "trait": "sturdy",
+  "personality": "diligent",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-24",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-25",
   "hero": {
     "level": 2,
-    "exp": 5,
+    "exp": 11,
     "max_hp": 41,
-    "hp": 41,
+    "hp": 39,
     "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 6,
-    "potions": 3
+    "gold": 11,
+    "potions": 3,
+    "stored": 1
   },
-  "inventory": {
-    "wooden_helm": 1,
-    "wooden_shield": 1
-  },
-  "place": "eques",
-  "home_town": "eques",
+  "inventory": [
+    {
+      "id": "wooden_helm",
+      "skill": null
+    },
+    {
+      "id": "wooden_shield",
+      "skill": null
+    }
+  ],
+  "storage": [],
+  "place": "salina",
+  "home_town": "salina",
   "road": null,
   "quest": null,
   "taken": [
-    "2026-11-24-eques-0"
+    "2026-11-25-patrol"
   ],
+  "stay": {
+    "town": "salina",
+    "since": "2026-11-25"
+  },
   "season_stats": {
     "quests_done": 1,
     "quests_failed": 0,
-    "kills": 3,
+    "kills": 4,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "エクエスで木の兜を買った",
-      "エクエスのギルドで依頼を受けた: ★ 大ネズミの討伐（エクエスとサリナの間の道で大ネズミを3体討伐）（行動力 3）",
-      "霧の中でカエルが鳴いている",
-      "大ネズミが3体現れた",
-      "大ネズミ〔群れ〕を倒した (+5EXP)",
-      "大ネズミ〔群れ〕を倒した (+5EXP)",
-      "レベルが上がった！ Lv.2",
-      "大ネズミ〔群れ〕を倒した (+5EXP)",
-      "討伐の目標を果たした（3体）",
-      "葦の間を小舟がすべっていった",
-      "エクエスに戻った",
-      "依頼達成！★ 大ネズミの討伐（エクエスとサリナの間の道で大ネズミを3体討伐）（+24G）",
-      "エクエスで木の盾を買った"
+      "エクエスのギルドには受けられる依頼がない。サリナへ旅に出る",
+      "野犬を倒した (+6EXP)",
+      "道端に小さな花が咲いている",
+      "サリナに着いた",
+      "サリナで休んで、行動力を溜めた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "エクエスのギルドには受けられる依頼がない。サリナへ旅に出る / 野犬を倒した (+6EXP) / 道端に小さな花が咲いている / サリナに着いた / サリナで休んで、行動力を溜めた"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,

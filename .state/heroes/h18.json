@@ -2,36 +2,76 @@
   "id": "h18",
   "name": "AKILIAS",
   "trait": "skilled",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "personality": "diligent",
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-25",
   "hero": {
-    "level": 1,
-    "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
+    "level": 2,
+    "exp": 6,
+    "max_hp": 38,
+    "hp": 38,
+    "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
-    "base_dex": 6,
-    "gold": 60,
-    "potions": 1
+    "base_dex": 7,
+    "gold": 26,
+    "potions": 3,
+    "stored": 1
   },
-  "inventory": {},
-  "place": "eques",
-  "home_town": "eques",
+  "inventory": [
+    {
+      "id": "iron_sword",
+      "skill": null
+    },
+    {
+      "id": "wooden_helm",
+      "skill": null
+    }
+  ],
+  "storage": [],
+  "place": "salina",
+  "home_town": "salina",
   "road": null,
   "quest": null,
-  "taken": [],
+  "taken": [
+    "2026-11-25-eques-1"
+  ],
+  "stay": {
+    "town": "salina",
+    "since": "2026-11-25"
+  },
   "season_stats": {
-    "quests_done": 0,
+    "quests_done": 1,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 2,
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-25",
+    "actions": 3,
+    "events": [
+      "エクエスで木の兜を買った",
+      "エクエスのギルドで依頼を受けた: ★★ 紫電鉄の塊の配達（サリナへ紫電鉄の塊を届ける）（行動力 2）",
+      "ゴブリンを倒した (+8EXP)",
+      "ゴブリンを倒した (+8EXP)",
+      "レベルが上がった！ Lv.2",
+      "サリナに着いた",
+      "依頼達成！★★ 紫電鉄の塊の配達（サリナへ紫電鉄の塊を届ける）（+64G）",
+      "報酬で★「木の兜」を手に入れた",
+      "サリナで鉄の剣を買った",
+      "同じ装備を 1 つ手放した",
+      "サリナで休んで、行動力を溜めた"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "エクエスで木の兜を買った / エクエスのギルドで依頼を受けた: ★★ 紫電鉄の塊の配達（サリナへ紫電鉄の塊を届ける）（行動力 2） / ゴブリンを倒した (+8EXP) / ゴブリンを倒した (+8EXP) / レベルが上がった！ Lv.2 / サリナに着いた / 依頼達成！★★ 紫電鉄の塊の配達（サリナへ紫電鉄の塊を届ける）（+64G） / 報酬で★「木の兜」を手に入れた / サリナで鉄の剣を買った / 同じ装備を 1 つ手放した / サリナで休んで、行動力を溜めた"
+    }
+  ],
   "seasons": []
 }

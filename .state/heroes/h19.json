@@ -2,36 +2,71 @@
   "id": "h19",
   "name": "IGRAINE",
   "trait": "lucky",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "personality": "brave",
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-25",
   "hero": {
-    "level": 1,
-    "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
+    "level": 2,
+    "exp": 11,
+    "max_hp": 38,
+    "hp": 38,
+    "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
-    "base_dex": 6,
-    "gold": 60,
-    "potions": 1
+    "base_dex": 7,
+    "gold": 26,
+    "potions": 0,
+    "stored": 0
   },
-  "inventory": {},
+  "inventory": [
+    {
+      "id": "iron_sword",
+      "skill": null
+    }
+  ],
+  "storage": [],
   "place": "eques",
   "home_town": "eques",
   "road": null,
   "quest": null,
-  "taken": [],
+  "taken": [
+    "2026-11-25-eques-3"
+  ],
+  "stay": {
+    "town": "eques",
+    "since": "2026-11-25"
+  },
   "season_stats": {
     "quests_done": 0,
-    "quests_failed": 0,
-    "kills": 0,
-    "deaths": 0,
+    "quests_failed": 1,
+    "kills": 2,
+    "deaths": 1,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-25",
+    "actions": 3,
+    "events": [
+      "エクエスで鉄の剣を買った",
+      "エクエスのギルドで依頼を受けた: ★ 氷の精の討伐（エクエスとカルンの間の道で氷の精を2体討伐）（行動力 3）",
+      "ゴブリンを倒した (+8EXP)",
+      "氷の精が2体現れた",
+      "回復薬を使った（HP 19/30）",
+      "氷の精を倒した (+13EXP)",
+      "レベルが上がった！ Lv.2",
+      "氷の精に敗れた",
+      "力尽きた… エクエスで目を覚ました",
+      "依頼失敗（力尽きた）: ★ 氷の精の討伐（エクエスとカルンの間の道で氷の精を2体討伐）"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "エクエスで鉄の剣を買った / エクエスのギルドで依頼を受けた: ★ 氷の精の討伐（エクエスとカルンの間の道で氷の精を2体討伐）（行動力 3） / ゴブリンを倒した (+8EXP) / 氷の精が2体現れた / 回復薬を使った（HP 19/30） / 氷の精を倒した (+13EXP) / レベルが上がった！ Lv.2 / 氷の精に敗れた / 力尽きた… エクエスで目を覚ました / 依頼失敗（力尽きた）: ★ 氷の精の討伐（エクエスとカルンの間の道で氷の精を2体討伐）"
+    }
+  ],
   "seasons": []
 }

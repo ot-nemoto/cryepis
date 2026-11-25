@@ -2,10 +2,11 @@
   "id": "h15",
   "name": "KASOS",
   "trait": "guard",
+  "personality": "tactician",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-24",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-25",
   "hero": {
     "level": 3,
     "exp": 0,
@@ -15,87 +16,89 @@
     "base_def": 7,
     "base_spd": 7,
     "base_dex": 9,
-    "gold": 28,
-    "potions": 2
+    "gold": 3,
+    "potions": 3,
+    "stored": 0
   },
-  "inventory": {
-    "wooden_helm": 1
-  },
+  "inventory": [
+    {
+      "id": "iron_sword",
+      "skill": null
+    },
+    {
+      "id": "iron_helm",
+      "skill": null
+    },
+    {
+      "id": "wooden_shield",
+      "skill": null
+    }
+  ],
+  "storage": [
+    {
+      "id": "wooden_helm",
+      "skill": null
+    }
+  ],
   "place": "karun",
   "home_town": "karun",
-  "road": null,
+  "road": {
+    "to": "eques",
+    "left": 1
+  },
   "quest": {
-    "type": "hunt",
-    "place": "muralis",
-    "report": "karun",
-    "monster": "ice_wolf",
-    "count": 2,
-    "rank": 1,
-    "name": "氷狼の討伐",
-    "text": "トナカイの放牧地に氷狼が出て困っている。2体、追い払ってくれないか",
-    "template": "hunt",
-    "steps": [
-      [
-        "back",
-        2
-      ]
-    ],
-    "away": 2,
-    "town": "karun",
-    "progress": 2,
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "eques",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 0,
     "level": [
-      4,
-      4
+      2,
+      2
     ],
     "deadline": null,
-    "cost": 5,
-    "reward": {
-      "exp": 0,
-      "gold": 40,
-      "item": [
-        [
-          "none",
-          88
-        ],
-        [
-          "common",
-          10
-        ],
-        [
-          "rare",
-          2
-        ]
-      ]
-    },
-    "id": "2026-11-24-karun-0"
+    "reward": null,
+    "cost": 2
   },
   "taken": [
-    "2026-11-24-karun-0"
+    "2026-11-25-patrol"
   ],
+  "stay": {
+    "town": "karun",
+    "since": "2026-11-25"
+  },
   "season_stats": {
-    "quests_done": 0,
+    "quests_done": 1,
     "quests_failed": 0,
     "kills": 3,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "actions": 3,
     "events": [
-      "カルンで木の兜を買った",
-      "カルンのギルドで依頼を受けた: ★ 氷狼の討伐（カルンとムラリスの間の道で氷狼を2体討伐）（行動力 5）",
-      "ゴブリンを倒した (+8EXP)",
-      "吐く息が白い",
-      "氷狼が2体現れた",
-      "氷狼〔群れ〕を倒した (+15EXP)",
-      "レベルが上がった！ Lv.2",
-      "氷狼〔群れ〕を倒した (+15EXP)",
-      "レベルが上がった！ Lv.3",
-      "討伐の目標を果たした（2体）"
+      "眼下に雲海が広がっている",
+      "雪原に獣の足跡が続いている",
+      "カルンに戻った",
+      "依頼達成！★ 氷狼の討伐（カルンとムラリスの間の道で氷狼を2体討伐）（+40G）",
+      "報酬で★「鉄の剣」を手に入れた（装備した）",
+      "カルンで鉄の兜を買った",
+      "カルンのギルドの保管庫に、装備を 1 つ預けた",
+      "カルンのギルドには受けられる依頼がない。エクエスへ旅に出る",
+      "宝箱から★「木の盾」を手に入れた（装備した）"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-25",
+      "actions": 3,
+      "text": "眼下に雲海が広がっている / 雪原に獣の足跡が続いている / カルンに戻った / 依頼達成！★ 氷狼の討伐（カルンとムラリスの間の道で氷狼を2体討伐）（+40G） / 報酬で★「鉄の剣」を手に入れた（装備した） / カルンで鉄の兜を買った / カルンのギルドの保管庫に、装備を 1 つ預けた / カルンのギルドには受けられる依頼がない。エクエスへ旅に出る / 宝箱から★「木の盾」を手に入れた（装備した）"
+    },
     {
       "date": "2026-11-24",
       "actions": 3,
