@@ -393,16 +393,10 @@ def exp_need(world: dict, level: int) -> int:
   return round(up["exp_base"] * level ** up["exp_power"])
 
 
-def monster_level(world: dict) -> int:
-  """魔物のいちばん多いレベル。魔物を決めない依頼（配達・旅）のレベルと、宝箱のお金の目安に使う。"""
-  levels = [m["level"] for m in world["monsters"].values()]
-  return max(set(levels), key=levels.count)
-
-
-def quest_level(world: dict, quest: dict) -> int:
-  """依頼のレベル。討伐は狙う魔物のレベル、それ以外は monster_level。"""
+def quest_level(world: dict, quest: dict) -> int | None:
+  """依頼のレベル。討伐は狙う魔物のレベル。配達は Lv を持たない（None。選ぶときも Lv を見ない。#150）。"""
   target = world["monsters"].get(quest.get("monster")) if quest.get("type") == "hunt" else None
-  return target["level"] if target else monster_level(world)
+  return target["level"] if target else None
 
 
 # ---- ギルドの依頼 ---------------------------------------------------------------------
@@ -493,7 +487,7 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
         continue  # 誰も受けないまま受付が終わった
       if e["status"] == "open":  # 魔物のレベルが変わったら、依頼のレベルも合わせる
         lv = quest_level(world, e)
-        e["level"] = [lv, lv]
+        e["level"] = [lv, lv] if lv is not None else None
       kept.append(e)
     exclude = {e["template"] for e in kept}
     new = draw_quests(world, town, d, season, max(0, quests_per_day(world, town) - len(kept)), exclude)
@@ -552,7 +546,7 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
   quest.update(
     town=town,
     progress=0,
-    level=[lvl, lvl],
+    level=[lvl, lvl] if lvl is not None else None,
     deadline=None,
     cost=cost,
     reward={
@@ -676,7 +670,9 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random, ran
 
 def quest_gap(quest: dict, level: int) -> int:
   """依頼の Lv と勇者の Lv の差。配達は Lv を見ない（道中の魔物は勇者の Lv で決まり、危なさは ★ に入っている。#228）ので 0。"""
-  return 0 if quest.get("type") == "deliver" else quest["level"][0] - level
+  if quest.get("type") == "deliver" or not quest.get("level"):  # Lv を持たない依頼（配達・旅）は、自分と同じ Lv
+    return 0
+  return quest["level"][0] - level
 
 
 def suitable(quest: dict, level: int, levels: list | None = None) -> bool:
@@ -731,7 +727,7 @@ def encounters(world: dict, monsters: list, level: int, window: list | None = No
 
 def patrol(world: dict, state: dict, rng: random.Random) -> dict:
   """合う依頼がないときの旅（報酬なし）。となりの町のどれかへ向かう。"""
-  lvl, to = monster_level(world), rng.choice(world["neighbors"][state["place"]])
+  to = rng.choice(world["neighbors"][state["place"]])
   return {
     "type": "patrol",
     "name": "旅",
@@ -742,7 +738,6 @@ def patrol(world: dict, state: dict, rng: random.Random) -> dict:
     "monster": None,
     "count": 1,
     "progress": 0,
-    "level": [lvl, lvl],
     "deadline": None,
     "reward": None,
     "cost": world["roads"][(state["place"], to)],
@@ -1488,7 +1483,7 @@ class Day:
         self.hero["potions"] += 1
         self.log("宝箱から回復薬を見つけた")
       else:  # 出せる装備がないときも、お金
-        gold = self.rng.randint(5, 15) * monster_level(self.world)
+        gold = self.rng.randint(*self.cfg["treasure_gold"])  # 宝箱のお金（Lv に関係なく決まった範囲。#150）
         self.hero["gold"] += gold
         self.log(f"宝箱から{gold}Gを見つけた")
     else:

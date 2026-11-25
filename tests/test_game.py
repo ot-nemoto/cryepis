@@ -311,7 +311,7 @@ class QuestTest(unittest.TestCase):
     state = play(1, actions=0)
     state["hero"]["level"] = 99  # どの依頼も合わない…ことがないよう、掲示板の依頼をすべて受けられるようにする
     quests = G.board(WORLD, TOWN, START, 1)
-    state["hero"]["level"] = max(q["level"][0] for q in quests)
+    state["hero"]["level"] = max((q["level"][0] for q in quests if q["level"]), default=1)
     day = day_of(state)
     ids = []
     for _ in range(len(quests) + 1):
@@ -965,7 +965,7 @@ class GuildBoardTest(unittest.TestCase):
     self.assertFalse(G.suitable(q, 1))  # Lv5 の魔物の討伐: Lv1 では受けない、Lv2 から受ける
     self.assertTrue(G.suitable(q, 2))
     deliver = next(q for q in G.board(WORLD, self.TOWN, START, 1) if q["type"] == "deliver")
-    self.assertEqual(deliver["level"], [G.monster_level(WORLD)] * 2)
+    self.assertIsNone(deliver["level"])  # 配達は Lv を持たない（#150）
 
   def test_open_quests_follow_the_monster_level(self):
     hunt = next(e for e in self.board if e["type"] == "hunt")
@@ -1642,6 +1642,7 @@ class PersonalityTest(unittest.TestCase):
     self.assertTrue(G.suitable(deliver, 15, [-2, 0]))
     self.assertEqual(G.level_gap(deliver, 15, [-1, 1]), 0)
     self.assertEqual(G.QUEST_ORDER["level_high"](deliver, 15), 0)  # Lv を比べるときは自分と同じ Lv
+    self.assertEqual(G.quest_gap({"type": "patrol"}, 15), 0)  # Lv を持たない旅でも落ちない
     self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [None, 0]), 0)
 
   def test_stay_too_long_and_travel(self):
@@ -1911,6 +1912,20 @@ class SkillTest(unittest.TestCase):
     gold = brave["hero"]["gold"]
     day.smith(brave["place"])
     self.assertEqual(brave["hero"]["gold"], gold)
+
+  def test_treasure_gold_is_a_fixed_range(self):
+    state = with_personality("brave")
+    state["hero"]["level"] = 18
+    world = copy.deepcopy(WORLD)
+    world["season"]["road_events"] = {"treasure": 1}
+    world["season"]["treasure"] = [["none", 1]]
+    day = G.Day(world, state, START, random.Random(0))
+    with mock.patch.object(day.rng, "random", return_value=0.9):  # 回復薬ではなくお金
+      for _ in range(30):
+        gold = state["hero"]["gold"]
+        day.road_event(TOWN, WORLD["neighbors"][TOWN][0])
+        low, high = WORLD["season"]["treasure_gold"]
+        self.assertTrue(low <= state["hero"]["gold"] - gold <= high)  # 勇者の Lv に関係なく 10〜30G
 
   def test_prefer_index(self):
     state = with_personality("brave")
