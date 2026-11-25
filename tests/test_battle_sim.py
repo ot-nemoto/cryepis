@@ -14,7 +14,7 @@ WORLD = W.load_world()
 class BattleSimTest(unittest.TestCase):
   def test_boss_is_not_on_roads(self):
     boss = WORLD["monsters"]["den_lord"]
-    self.assertEqual(boss["boss"], "wall_den")
+    self.assertEqual(boss["boss"], "fuji")
     self.assertFalse(any(m == "den_lord" for i in WORLD["road_info"].values() for m, _ in i["monsters"]))
 
   def test_make_hero_grows_by_trait(self):

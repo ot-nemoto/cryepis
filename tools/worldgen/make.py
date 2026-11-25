@@ -3,14 +3,14 @@
     python tools/worldgen/make.py
 
 手順（途中のファイルは tools/worldgen/.cache/ に置く）:
-1. terrain.py   陸と海（land.py。seed "e"・陸 45%）に地形を塗る → .cache/terrain.pkl（1 分ほどかかる）
-2. roads.py     町どうしの陸路と、ダンジョンへの道（地形の通りにくさの最短経路）→ .cache/roads.json
+1. terrain.py   日本の陸と海（japan.py）に地形を塗る → .cache/terrain.pkl（30 秒ほどかかる）
+2. roads.py     表の街道と、ダンジョンへの道（地形の通りにくさの最短経路）と長さ（km）→ .cache/roads.json
 3. sea.py       航路（海のマスだけを通る最短経路）→ .cache/sea.json
-4. actions.py   道の通りにくさを、移動にかかる行動回数に換算する
+4. actions.py   道の長さ（km）を、移動日数＝行動回数に換算する
 5. vectorize.py 地形を SVG にする → .cache/map-base.svg
 6. build_world.py world/map.json と world/map-base.svg を書き出す
 
-町・ダンジョン・航路は places.py、町の名前は names.py、町の店や ID は build_world.py、
+町・ダンジョン・道の表は places.py、町の呼び名は names.py、町の店や ID は build_world.py、
 山脈・地域・川は terrain.py に書いてある。乱数の種が同じなら、何度作り直しても同じ地図になる。
 """
 

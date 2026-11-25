@@ -1,10 +1,8 @@
-"""地形の通りにくさから、町どうしの陸路を作る。
+"""地形の通りにくさから、街道（places.LAND_ROADS）とダンジョンへの道（places.TRAILS）の線を作る。
 
-1. 町・ダンジョンごとに、地形のマス目でダイクストラ（通りにくさの合計が最小の道）
-2. 町どうしは「相対近傍グラフ」でつなぐ: i-j の間に、i と j のどちらからも近い町 k があればつながない
-   （近い町を順にたどる、自然な街道網になる）
-   ただし KEEP の道は、あとから近くに町を置いても残す
-3. ダンジョンは、いちばん近い町とだけつなぐ
+- 町・ダンジョンごとに、地形のマス目でダイクストラ（通りにくさの合計が最小の道）
+- 道の長さ（km）は、間引いた線の長さから出す（行動回数は actions.py が km から換算する）
+- 浅い海（海峡）は、とても通りにくいが渡れる（関門の海峡など）
 使い方: python roads.py  → .cache/roads.json
 """
 
@@ -12,8 +10,9 @@ import heapq
 import json
 import math
 
+import japan
 import paths
-from places import DUNGEONS, TOWNS
+from places import DUNGEONS, LAND_ROADS, TOWNS, TRAILS
 
 STEP = 2
 kind = paths.kind()
@@ -40,14 +39,38 @@ COST = {
   "snowcap": 30,
   "volcano": 6,
   "lava": 60,
-}  # 書いていない地形（海・氷）は通れない
+}  # 書いていない地形（海・湖・氷）は通れない
+# 渡し舟で渡れる海峡（経度, 緯度, 半径 px）。このまわりの浅い海だけ、通りにくいが渡れる
+STRAITS = [(130.95, 33.95, 12)]  # 関門の海峡
+STRAIT_COST = 40
 
 
-def cost(i, j):
-  return COST.get(kind[j][i])
+# ダンジョンへの道（山道）は、山を越えて行く（山・雪の通りにくさを下げる）
+TRAIL_COST = COST | {"mount": 2.5, "snowcap": 5, "hill": 1.5}
 
 
-def dijkstra(sx, sy, targets):
+def strait_cells():
+  cells = set()
+  for lon, lat, r in STRAITS:
+    x, y = japan.to_map(lon, lat)
+    for j in range(int(y - r) // STEP, int(y + r) // STEP + 1):
+      for i in range(int(x - r) // STEP, int(x + r) // STEP + 1):
+        if math.hypot(i * STEP + 1 - x, j * STEP + 1 - y) <= r:
+          cells.add((i, j))
+  return cells
+
+
+STRAIT_CELLS = strait_cells()
+
+
+def cost(i, j, table=None):
+  k = kind[j][i]
+  if k == "shallow" and (i, j) in STRAIT_CELLS:
+    return STRAIT_COST
+  return (table or COST).get(k)
+
+
+def dijkstra(sx, sy, targets, table=None):
   si, sj = sx // STEP, sy // STEP
   dist = {(si, sj): 0.0}
   prev = {}
@@ -65,7 +88,7 @@ def dijkstra(sx, sy, targets):
         ni, nj = i + di, j + dj
         if not (0 <= ni < GW and 0 <= nj < GH):
           continue
-        c = cost(ni, nj)
+        c = cost(ni, nj, table)
         if c is None:
           continue
         nd = d + c * (1.4142 if di and dj else 1)
@@ -99,51 +122,25 @@ def simplify(pts, eps=2.5):
   return simplify(pts[: idx + 1], eps)[:-1] + simplify(pts[idx:], eps)
 
 
-# 近くに町が増えても残す道（依頼や設定で使っている、昔からの街道）
-KEEP = {("干潟の港", "南壁の砦")}
-
-
 def cell(x, y):
   return (x // STEP, y // STEP)
 
 
+def length_km(pts):
+  return round(sum(math.hypot(bx - ax, by - ay) for (ax, ay), (bx, by) in zip(pts, pts[1:])) * japan.KM_PER_PX)
+
+
 def main():
-  nodes = [(n, x, y) for n, x, y in TOWNS]
-  cells = {n: cell(x, y) for n, x, y in nodes + [(n, x, y) for n, x, y in DUNGEONS]}
-  town_cells = [cells[n] for n, _, _ in nodes]
-  res = {}
-  for n, x, y in nodes:
-    res[n] = dijkstra(x, y, town_cells)
-
-  names = [n for n, _, _ in nodes]
-  D = {(a, b): res[a][0].get(cells[b]) for a in names for b in names if a != b}
+  spots = {n: (x, y) for n, x, y in TOWNS + DUNGEONS}
+  cells = {n: cell(x, y) for n, (x, y) in spots.items()}
   roads = []
-  for ai, a in enumerate(names):
-    for b in names[ai + 1 :]:
-      d = D[(a, b)]
-      if d is None:
-        continue  # 陸でつながっていない（別の大陸・島）
-      if (
-        (a, b) not in KEEP
-        and (b, a) not in KEEP
-        and any(
-          D[(a, k)] is not None and D[(k, b)] is not None and max(D[(a, k)], D[(k, b)]) < d
-          for k in names
-          if k not in (a, b)
-        )
-      ):
-        continue
-      pts = simplify(path(res[a][1], cells[a], cells[b]))
-      roads.append({"from": a, "to": b, "cost": round(d), "path": pts, "kind": "road"})
-
-  # ダンジョンは、いちばん近い町とつなぐ（FORCE は決まった町）
-  FORCE = {"始祖竜の頭骨": "天門の町", "氷牙の氷窟": "氷牙の砦"}
-  for n, x, y in DUNGEONS:
-    dist, prev = dijkstra(x, y, town_cells)
-    best = min((dist[cells[t]], t) for t in names if cells[t] in dist and FORCE.get(n, t) == t)
-    pts = simplify(path(prev, cells[n], cells[best[1]]))
-    roads.append({"from": n, "to": best[1], "cost": round(best[0]), "path": pts, "kind": "trail"})
-
+  for routes, kind in ((LAND_ROADS, "road"), (TRAILS, "trail")):
+    for a, b in routes:
+      dist, prev = dijkstra(*spots[a], [cells[b]], TRAIL_COST if kind == "trail" else None)
+      if cells[b] not in dist:
+        raise SystemExit(f"{a} から {b} へ陸で行けません")
+      pts = simplify(path(prev, cells[a], cells[b]))
+      roads.append({"from": a, "to": b, "cost": round(dist[cells[b]]), "km": length_km(pts), "path": pts, "kind": kind})
   with open(paths.ROADS, "w", encoding="utf-8") as f:
     json.dump(roads, f, ensure_ascii=False, indent=1)
 

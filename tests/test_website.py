@@ -149,9 +149,9 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("町ごとに決まった数の依頼", html)  # 説明文は出さない
     self.assertNotIn('data-town="', html)  # 町の絞り込みはない
     self.assertEqual(html.count('class="chip" data-f='), len(WORLD["quest_ranks"]))  # レアリティで絞り込める
-    self.assertIn('data-tab="austral_land" aria-selected="true" tabindex="0">南大陸</button>', html)  # 地方のタブ
-    self.assertIn('id="panel-austral_land"', html)
-    self.assertNotIn('id="panel-crownlands"', html)  # 開放した町のない地方のタブは出さない
+    self.assertIn('data-tab="bando" aria-selected="true" tabindex="0">坂東</button>', html)  # 地方のタブ
+    self.assertIn('id="panel-bando"', html)
+    self.assertNotIn('id="panel-kinai"', html)  # 開放した町のない地方のタブは出さない
     for town in WORLD["towns"]:  # 町の名前に英語名を添える
       p = WORLD["places"][town]
       self.assertIn(f'{p["name"]} <span class="en">{p["en"]}</span>', html)
@@ -207,7 +207,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<h2 class="area">💍 装飾品</h2>', html)
     self.assertEqual(html.count('class="chip" data-f='), 2)  # ★ と ★★
     charm = html.split("紅蓮草の護符")[1].split("</tr>")[0]  # ★★紅蓮草の護符（炎属性）
-    self.assertIn('<td><a class="pill" href="towns.html#muralis">🛡️ ムラリス</a></td>', charm)  # 依頼を出す町
+    self.assertIn('<td><a class="pill" href="towns.html#kofu">🏯 甲府</a></td>', charm)  # 依頼を出す町
     self.assertIn('<td class="icon"><span class="tag">炎属性</span></td>', charm)  # 属性の列（枠の札）
     head = '<th class="num">HP</th><th class="num">攻</th><th class="num">防</th><th class="num">速</th><th class="num">器</th>'
     self.assertIn(head + '<th class="num">値段</th><th>入手方法</th>', html)  # 能力ごとの列
@@ -251,8 +251,8 @@ class SiteTest(unittest.TestCase):
 
   def test_town_pill_and_stat_cell(self):
     world = copy.deepcopy(WORLD)
-    world["places"]["muralis"].pop("emoji")
-    self.assertEqual(website.town_pill(world, "muralis"), '<a class="pill" href="towns.html#muralis">ムラリス</a>')
+    world["places"]["kofu"].pop("emoji")
+    self.assertEqual(website.town_pill(world, "kofu"), '<a class="pill" href="towns.html#kofu">甲府</a>')
     self.assertEqual(website.stat_cell(3), '<td class="num">+3</td>')
     self.assertEqual(website.stat_cell(-2), '<td class="num minus">-2</td>')
     self.assertEqual(website.stat_cell(0), '<td class="num zero">0</td>')
@@ -268,28 +268,28 @@ class SiteTest(unittest.TestCase):
       self.assertIn(p["text"], html)
       self.assertIn(f"依頼の枠 {p['quests_per_day']} 件", html)  # ギルドの規模はどの町にもある
       self.assertEqual(f'href="guild.html#{town}"' in html, town in WORLD["towns"])
-    self.assertLess(html.index("南大陸 <span"), html.index("王領 <span"))  # 開放した地方が先
+    self.assertLess(html.index("坂東 <span"), html.index("畿内 <span"))  # 開放した地方が先
     self.assertNotIn("オルドラの町の一覧です", html)  # 説明文は出さない
     self.assertLess(html.index("<h2>町の情報</h2>"), html.index('class="tabs"'))  # タブは見出しのすぐ下
-    self.assertIn('data-tab="austral_land" aria-selected="true" tabindex="0">南大陸</button>', html)  # 最初は南大陸
+    self.assertIn('data-tab="bando" aria-selected="true" tabindex="0">坂東</button>', html)  # 最初は坂東
     for aid in WORLD["areas"]:  # 地方ごとのタブと、タブにつながる中身
       self.assertIn(f'id="tab-{aid}" aria-controls="panel-{aid}"', html)
       self.assertIn(f'role="tabpanel" id="panel-{aid}" aria-labelledby="tab-{aid}" data-tab="{aid}">', html)
     self.assertIn('<div class="tabs" role="tablist" hidden>', html)  # JavaScript がなければ全部の地方を見せる
-    self.assertNotIn('data-tab="crownlands" hidden', html)
+    self.assertNotIn('data-tab="kinai" hidden', html)
     for area in WORLD["areas"].values():
       self.assertIn(f'{area["name"]} <span class="en">{area["en"]}</span>', html)
-    self.assertIn('サリナ <span class="en">Salina</span>', html)
-    aurea = html[html.index('id="aurea"') : html.index('id="flumen"')]  # 開放していない町
-    self.assertIn("未開放", aurea)
-    self.assertIn("依頼の枠 6 件", aurea)
+    self.assertIn('江戸 <span class="en">Edo</span>', html)
+    kyoto = html[html.index('id="kyoto"') : html.index('id="azuchi"')]  # 開放していない町
+    self.assertIn("未開放", kyoto)
+    self.assertIn("依頼の枠 6 件", kyoto)
     self.assertNotIn("特産品", html)  # 町ごとの特産はない
-    self.assertNotIn("鉄の剣", aurea)
-    muralis = html[html.index('id="muralis"') : html.index('id="karun"')]  # 南大陸の中は places の順
-    self.assertIn("紅蓮草の護符", muralis.split("店の品ぞろえ")[0])  # レア
-    self.assertIn("南壁の巣穴（ダンジョン・まだ入れない）", muralis)
-    self.assertIn("カルン（陸路 6）", muralis)
-    shop = muralis.split("店の品ぞろえ</th><td>")[1].split("</td>")[0]  # 種類の順、同じ種類なら値段の高い順
+    self.assertNotIn("鉄の剣", kyoto)
+    kofu = html[html.index('id="kofu"') : html.index('id="nagano"')]  # 坂東の中は places の順
+    self.assertIn("紅蓮草の護符", kofu.split("店の品ぞろえ")[0])  # レア
+    self.assertIn("富士山（ダンジョン・まだ入れない）", kofu)
+    self.assertIn("長野（陸路 3）", kofu)
+    shop = kofu.split("店の品ぞろえ</th><td>")[1].split("</td>")[0]  # 種類の順、同じ種類なら値段の高い順
     *equips, potion = shop.split("<br>")  # 装備のあとに回復薬
     self.assertTrue(potion.startswith("回復薬<span"))
     names = [n.split("</span>")[1].split("<span")[0] for n in equips]
@@ -309,8 +309,8 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<h2 class="area">鉱石</h2>', html)  # 物語の背景の鉱石
     self.assertIn("<strong>熾焔鋼（しえんこう）</strong>【炎属性】", html)
     self.assertIn("旅をしている勇者</th><td>2 人", html)  # いまの冒険の状況
-    self.assertIn('南大陸 <span class="en">Austral Land</span>', html)
-    self.assertIn('href="towns.html#salina"', html)
+    self.assertIn('坂東 <span class="en">Bando</span>', html)
+    self.assertIn('href="towns.html#edo"', html)
     self.assertLess(html.index("いまの冒険"), html.index('<h2 class="area">世界オルドラ'))  # 最初の見出しの前
 
   def test_heroes_page(self):
@@ -325,21 +325,21 @@ class SiteTest(unittest.TestCase):
   def test_monsters_page(self):
     html = website.build_monsters(WORLD)
     self.assertIn('<a href="monsters.html" class="on">魔物</a>', html)
-    self.assertIn('data-tab="austral_land" aria-selected="true" tabindex="0">南大陸</button>', html)  # 地方のタブ
-    south = html[html.index('id="panel-austral_land"') :]
+    self.assertIn('data-tab="bando" aria-selected="true" tabindex="0">坂東</button>', html)  # 地方のタブ
+    south = html[html.index('id="panel-bando"') :]
     south = south[: south.index("</section>")]
     shown = {m for (a, b), i in WORLD["road_info"].items() for m, _ in i["monsters"]}
     for mid in shown:  # 開放した道に出る魔物
       self.assertIn(f"<td>{WORLD['monsters'][mid]['name']}</td>", south)
     self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の魔物は出さない
-    self.assertNotIn("サリナ〜エクエス（", south[south.index("<table") :])  # 魔物の表には出る道と割合を出さない
+    self.assertNotIn("江戸〜小田原（", south[south.index("<table") :])  # 魔物の表には出る道と割合を出さない
     self.assertIn(
       '<tr data-f="plain"><td>野犬</td><td class="num">1</td>'
       '<td><span class="tdot" style="background:var(--t-plain)"></span>草原</td>',
       south,
     )  # 名前の右に Lv と地形（街道の円グラフと同じ色の丸）
     head = html[: html.index('class="tabs"')]  # 地形の絞り込み（タブの上。開放した道と強敵・ボスにある地形だけ）
-    for t in ("plain", "wetland", "mountain", "forest", "snow"):
+    for t in ("plain", "mountain", "forest", "snow"):
       self.assertIn(f'class="chip" data-f="{t}"', head)
     self.assertNotIn('data-f="sea"', head)
     self.assertIn('data-f="world"', head)  # 強敵は WORLD、ボスは RAID で絞り込める
@@ -355,18 +355,18 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(south.count('<div class="card board">'), 1)  # 強敵・ボスも道の魔物と同じ表（別の枠は作らない）
     self.assertNotIn('<h3 class="sub">', south)
     rows = south[south.index("<table") :]
-    self.assertLess(rows.index("<td>ヒドラ</td>"), rows.index("<td>雪男</td>"))  # 道の魔物 → 強敵 → ボス
+    self.assertLess(rows.index("<td>野犬</td>"), rows.index("<td>雪男</td>"))  # 道の魔物 → 強敵 → ボス
     self.assertLess(rows.index("<td>雪男</td>"), rows.index("<td>巣穴の主</td>"))
     roads = south[: south.index("<table")]  # 魔物の表の上に、この地方の街道と地形の割合
     self.assertIn("<h3>街道</h3>", roads)
-    south_towns = {t for t, p in WORLD["places"].items() if p.get("area") == "austral_land"}
+    south_towns = {t for t, p in WORLD["places"].items() if p.get("area") == "bando"}
     roads_here = {
       frozenset(k) for k in WORLD["road_info"] if set(k) & south_towns
-    }  # 南大陸の町につながる道（向きは 1 つ）
+    }  # 坂東の町につながる道（向きは 1 つ）
     self.assertEqual(roads.count('<div class="road">'), len(roads_here))
-    self.assertIn("サリナ〜エクエス（2）", roads)  # 道の名前（行動回数）
-    self.assertIn('<span class="tdot" style="background:var(--t-plain)"></span>草原 83%</li>', roads)
-    self.assertIn('<span class="tdot" style="background:var(--t-wetland)"></span>湿地 17%</li>', roads)
+    self.assertIn("江戸〜小田原（2）", roads)  # 道の名前（行動回数）
+    self.assertIn('<span class="tdot" style="background:var(--t-plain)"></span>草原 88%</li>', roads)
+    self.assertIn('<span class="tdot" style="background:var(--t-snow)"></span>雪原 21%</li>', roads)
     self.assertLess(south.index("<td>野犬</td>"), south.index("<td>暴れ猪</td>"))  # Lv の順
     self.assertIn('<td class="icon"><span class="tag">群れ</span></td>', south)  # 性質は名前だけの枠の札
     self.assertNotIn("数が多く", south)  # 性質の説明は出さない
@@ -374,13 +374,13 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<th class="num">速</th><th class="num">器</th><th class="num">EXP</th>', html)  # 器用さ
     self.assertIn('<th>名前</th><th class="num">Lv</th><th>生息地</th><th class="icon">性質</th>', html)
     self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 氷狼（アイテムと同じ枠の札）
-    for name in ("雪男", "岩ゴーレム", "大鷲"):  # 強敵（カルン・ムラリスの討伐の依頼）も 1 度ずつ
+    for name in ("雪男", "岩ゴーレム", "大鷲"):  # 強敵（長野・甲府の討伐の依頼）も 1 度ずつ
       self.assertEqual(south.count(f"<td>{name}</td>"), 1)
     self.assertNotIn("属性の相性", html)  # 説明は手引きのページに
     self.assertIn('<a href="guide.html">手引き</a>', html)
     self.assertNotIn("性質の効果がかかる前", website.build_towns(WORLD))  # 魔物の注記は町のページに出さない
     self.assertIn("性質の効果がかかる前", html)
-    crown = html[html.index('id="panel-crownlands"') :]
+    crown = html[html.index('id="panel-kinai"') :]
     self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
     self.assertEqual(html.count("<td>巣穴の主</td>"), 1)  # ボスのいない地方・開放していない地方には出さない
 
@@ -476,7 +476,7 @@ class SiteTest(unittest.TestCase):
 
   def test_boss_without_an_area_is_in_the_other_group(self):
     world = copy.deepcopy(WORLD)
-    world["places"]["wall_den"].pop("area")
+    world["places"]["fuji"].pop("area")
     for t in world["towns"]:  # 開放した町も地方なし（その他のまとまり）
       world["places"][t].pop("area")
     html = website.build_monsters(world)
@@ -561,12 +561,12 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(website.share_text(0.126), "13%")
 
   def test_pie_and_terrain_shares(self):
-    shares = website.terrain_shares(WORLD["monsters"], WORLD["road_info"][("karun", "muralis")]["monsters"])
+    shares = website.terrain_shares(WORLD["monsters"], WORLD["road_info"][("nagano", "kofu")]["monsters"])
     self.assertAlmostEqual(sum(x for _, x in shares), 1.0)
-    self.assertEqual([t for t, _ in shares], ["plain", "mountain", "forest", "snow"])  # 多い順
+    self.assertEqual([t for t, _ in shares], ["forest", "mountain", "snow", "plain"])  # 多い順
     svg = website.pie_svg(shares)
     self.assertEqual(svg.count("<path"), 4)
-    self.assertIn("<title>草原 57%</title>", svg)
+    self.assertIn("<title>森 39%</title>", svg)
     one = website.pie_svg([("plain", 1.0)])  # 1 つだけなら円
     self.assertIn("<circle", one)
     self.assertNotIn("<path", one)
@@ -576,9 +576,9 @@ class SiteTest(unittest.TestCase):
     world["areas"] = {}  # 地方がなくても、その他のまとまりに魔物を出す
     self.assertNotIn("まだ開放されていません", website.build_monsters(world))
     world = copy.deepcopy(WORLD)
-    for key in (("salina", "eques"), ("eques", "salina")):
+    for key in (("edo", "odawara"), ("odawara", "edo")):
       world["road_info"][key]["monsters"] = [("wild_dog", 1.0), ("wild_dog", 1.0)]  # 同じ魔物が 2 度出ても 1 行
-    for key in [k for k in world["road_info"] if k not in (("salina", "eques"), ("eques", "salina"))]:
+    for key in [k for k in world["road_info"] if k not in (("edo", "odawara"), ("odawara", "edo"))]:
       del world["road_info"][key]
     html = website.build_monsters(world)
     self.assertEqual(html.count("<td>野犬</td>"), 1)
