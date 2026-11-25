@@ -566,6 +566,7 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["season"].update(stroll_strong_levels=[3, 2]), ["stroll_strong_levels"])
     self.assertError(lambda r: r["season"].update(inn={"price": -1}), ["inn"])
     self.assertError(lambda r: r["season"].update(stored_days=-1), ["stored_days"])
+    self.assertError(lambda r: r["season"].update(stay_days_max="7"), ["stay_days_max"])
     self.assertError(lambda r: r["season"].update(personalities={}), ["personalities"])
     self.assertError(lambda r: r["season"]["personalities"]["careful"].update(inn_below=2), ["careful", "inn_below"])
     self.assertError(

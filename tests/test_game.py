@@ -889,13 +889,13 @@ class BalanceTest(unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
-    cls.results = []
-    for i in range(30):
-      state, d = G.new_state(WORLD, f"b{i}"), START
-      while G.season_of(WORLD, d) == 1:
-        G.advance(WORLD, state, d)
-        d += timedelta(days=1)
-      cls.results.append(state)
+    # 本番と同じく、全員で 1 つの掲示板を取り合う（早い者勝ち。勇者を進める順は日ごとに混ぜる）
+    cls.results = [G.new_state(WORLD, f"b{i}") for i in range(30)]
+    guild, d = G.new_guild(), START
+    while G.season_of(WORLD, d) == 1:
+      for state in random.Random(d.isoformat()).sample(cls.results, len(cls.results)):
+        G.advance(WORLD, state, d, guild=guild)
+      d += timedelta(days=1)
 
   def median(self, values):
     return sorted(values)[len(values) // 2]
@@ -1591,6 +1591,98 @@ class PersonalityTest(unittest.TestCase):
     self.assertEqual((picked["level"][0], picked["rank"]), (5, 1))  # Lv の高いもの（自分以下）、★の少ないもの
     first = next(e for e in entries if e["level"][0] == 5 and e["rank"] == 1)
     self.assertIs(picked, first)  # 同じ条件なら掲示板の上のもの
+
+  def test_take_quest_falls_back_to_the_nearest_level(self):
+    guild = G.new_guild()
+    state = with_personality("diligent")  # Lv −2〜0。Lv の高いもの
+    town = state["place"]
+    state["hero"]["level"] = 12
+    G.refresh_guild(WORLD, guild, START, 1)
+    # 掲示板を討伐だけにする（配達は Lv を見ないので、いつも範囲に入る）
+    guild["towns"][town] = [
+      dict(common_hunt(town, seed=i), id=f"q{i}", posted=START.isoformat(), status="open", holder=None)
+      for i in range(5)
+    ]
+    entries = guild["towns"][town]
+    for e in entries:  # 範囲（Lv10〜12）に合う依頼がない
+      e.update(level=[2, 2], rank=1, min_level=0)
+    entries[0].update(level=[5, 5])
+    entries[1].update(level=[7, 7])
+    entries[2].update(level=[15, 15])  # 範囲より強い依頼は、近くても受けない
+    G.Day(WORLD, state, START, random.Random(0), guild).take_quest(town)
+    picked = next(e for e in entries if e["status"] == "held")
+    self.assertEqual(picked["level"][0], 7)  # 範囲より弱い依頼のうち、いちばん近い Lv7
+    # 強敵（min_level）は、範囲より弱い依頼でも Lv が足りなければ受けない
+    for e in entries:
+      e.update(status="open", holder=None)
+    entries[1].update(level=[9, 9], min_level=13)
+    entries[0].update(level=[7, 7])
+    state.update(quest=None, taken=[])
+    G.Day(WORLD, state, START, random.Random(0), guild).take_quest(town)
+    self.assertIs(next(e for e in entries if e["status"] == "held"), entries[0])
+    # 範囲からの外れが同じなら、性格の選び方（勤勉は Lv の高いもの）。Lv も同じなら掲示板の上
+    tactician = with_personality("tactician")  # Lv −1〜+1。★の多いもの
+    tactician["hero"]["level"] = 12
+    for e in entries:
+      e.update(status="open", holder=None, level=[2, 2], rank=1, min_level=0)
+    entries[1].update(level=[5, 5], rank=1)
+    entries[2].update(level=[5, 5], rank=3)
+    G.Day(WORLD, tactician, START, random.Random(0), guild).take_quest(town)
+    self.assertIs(next(e for e in entries if e["status"] == "held"), entries[2])  # 同じ Lv5 なら ★ の多いもの
+    self.assertNotEqual(tactician["quest"]["type"], "patrol")  # 旅には出ない
+    self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [-2, 0]), 5)
+    deliver = {"type": "deliver", "level": [2, 2]}  # 配達は Lv を見ない（どの範囲にも入る）
+    self.assertTrue(G.suitable(deliver, 15, [-2, 0]))
+    self.assertEqual(G.level_gap(deliver, 15, [-1, 1]), 0)
+    self.assertEqual(G.QUEST_ORDER["level_high"](deliver, 15), 0)  # Lv を比べるときは自分と同じ Lv
+    self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [None, 0]), 0)
+
+  def test_stay_too_long_and_travel(self):
+    limit = WORLD["season"]["stay_days_max"]
+    state = with_personality("diligent")
+    town = state["place"]
+    day = G.Day(WORLD, state, START + timedelta(days=limit - 1), random.Random(0))
+    state["stay"] = {"town": town, "since": START.isoformat()}
+    day.take_quest(town)
+    self.assertNotIn("長くいた", " ".join(day.events))  # 着いた日を 0 日目として、6 日目までは依頼を受ける
+    state.update(quest=None, taken=[])
+    day = G.Day(WORLD, state, START + timedelta(days=limit), random.Random(0))
+    day.take_quest(town)
+    self.assertEqual(state["quest"]["type"], "patrol")  # 7 日目（7 日たった日）は依頼を受けずに旅に出る
+    self.assertIn(state["quest"]["place"], WORLD["neighbors"][town])
+    self.assertIn("長くいたので", day.events[-1])
+    day.visit_town(town)  # 討伐から同じ町に戻っても数え直さない
+    self.assertEqual(state["stay"], {"town": town, "since": START.isoformat()})
+    other = WORLD["neighbors"][town][0]
+    day.visit_town(other)  # 別の町に着いたら、その日から数え直す
+    self.assertEqual(state["stay"], {"town": other, "since": (START + timedelta(days=limit)).isoformat()})
+
+  def test_stay_waits_until_the_morning_after_a_report(self):
+    limit = WORLD["season"]["stay_days_max"]
+    state = with_personality("diligent")
+    town = state["place"]
+    state["stay"] = {"town": town, "since": START.isoformat()}
+    day = G.Day(WORLD, state, START + timedelta(days=limit + 1), random.Random(0))
+    day.reported = True  # 今日、依頼から帰ってきた
+    day.take_quest(town)
+    self.assertIsNone(state["quest"])  # 今日は旅に出ない（残りの行動をする）
+    self.assertTrue(state["taken"])
+    state["stay"]["since"] = None  # 着いた日が壊れていても落ちない（今日から数え直す）
+    self.assertFalse(day.stayed_too_long(town))
+
+  def test_deliveries_fit_any_range(self):
+    deliver = {"type": "deliver", "level": [2, 2]}
+    self.assertTrue(G.suitable(deliver, 5, [1, 3]))  # 0 を含まない範囲でも入る
+    self.assertEqual(G.level_gap(deliver, 5, [1, 3]), 0)
+
+  def test_broken_stay_is_reset_on_load(self):
+    with tempfile.TemporaryDirectory() as d:
+      path = Path(d) / "h1.json"
+      for bad in ({"town": "nowhere", "since": "2026-12-01"}, {"town": "salina", "since": "x"}, "x"):
+        state = G.new_state(WORLD, "h1")
+        state["stay"] = bad
+        G.save_state(state, path)
+        self.assertIsNone(G.load_state(WORLD, path, "h1")["stay"])
 
   def test_potion_is_used_below_the_rate_and_zero_hp_falls(self):
     state = with_personality("careful")  # 回復薬は HP 50% 未満

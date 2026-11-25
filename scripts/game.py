@@ -111,7 +111,8 @@ def pick_personality(world: dict, hero_id: str) -> str | None:
 
 
 def personality(world: dict, state: dict) -> dict:
-  """勇者の性格（season.json の personalities）。性格のない勇者（シミュレーターなど）は空の dict（今までの動き）。"""
+  """勇者の性格（season.json の personalities）。性格のない勇者（シミュレーターなど）は空の dict（今までの動き。
+  ただし配達は、性格のない勇者も Lv を見ない。配達の Lv はいつも仮の値なので、前から Lv で外れることはなかった）。"""
   return (world["season"].get("personalities") or {}).get(state.get("personality"), {})
 
 
@@ -139,6 +140,7 @@ def new_state(world: dict, hero_id: str = "h1", name: str = "勇者") -> dict:
     "road": None,
     "quest": None,
     "taken": [],
+    "stay": None,  # 今の町に着いた日 {"town": 町, "since": 日付}（同じ町に stay_days_max 日いたら旅に出る）
     "season_stats": new_season_stats(),
     "last": None,
     "journal": [],
@@ -184,6 +186,13 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
   quest = state["quest"]
   if quest and not quest_ok(world, quest):
     state["quest"] = None
+  stay = state.get("stay")
+  try:  # 今の町に着いた日（壊れていたら数え直す）
+    ok = isinstance(stay, dict) and stay.get("town") == state["place"] and bool(date.fromisoformat(stay["since"]))
+  except (KeyError, TypeError, ValueError):
+    ok = False
+  if not ok:
+    state["stay"] = None
   hp_max = stats(world, state)["max_hp"]
   state["hero"]["hp"] = min(state["hero"]["hp"], hp_max)
   return state
@@ -600,20 +609,36 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random, ran
   return finish_quest(world, quest, town)
 
 
+def quest_gap(quest: dict, level: int) -> int:
+  """依頼の Lv と勇者の Lv の差。配達は Lv を見ない（道中の魔物は勇者の Lv で決まり、危なさは ★ に入っている。#228）ので 0。"""
+  return 0 if quest.get("type") == "deliver" else quest["level"][0] - level
+
+
 def suitable(quest: dict, level: int, levels: list | None = None) -> bool:
   """受けられる依頼か。levels（性格の [下, 上]。勇者の Lv との差。None は下限なし）があれば、依頼の Lv がその範囲のものだけ。
   なければ、依頼のレベルが自分のレベル＋3 を超える、強すぎる依頼だけを避ける（弱すぎる依頼も受ける）。
-  強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level。性格に関係なく同じ）。"""
+  配達は Lv を見ない（いつも範囲に入る）。強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level）。"""
+  if quest.get("type") == "deliver":  # 配達は Lv を見ない（どんな範囲でも入る）
+    return True
   low, high = levels if levels else (None, 3)
-  gap = quest["level"][0] - level
+  gap = quest_gap(quest, level)
   return (low is None or gap >= low) and gap <= high and level >= quest.get("min_level", 0)
 
 
-QUEST_ORDER = {  # 性格の依頼の選び方（quest.order）。小さいほうを先に選ぶ
-  "level_high": lambda q: -q["level"][0],
-  "level_low": lambda q: q["level"][0],
-  "rank_high": lambda q: -q.get("rank", 1),
-  "rank_low": lambda q: q.get("rank", 1),
+def level_gap(quest: dict, level: int, levels: list) -> int:
+  """依頼の Lv が、性格の範囲（levels。勇者の Lv との差 [下, 上]、下は None で下限なし）からどれだけ外れているか（範囲内は 0）。"""
+  if quest.get("type") == "deliver":  # 配達はいつも範囲に入る
+    return 0
+  low, high = levels
+  gap = quest_gap(quest, level)
+  return max(0 if low is None else low - gap, gap - high, 0)
+
+
+QUEST_ORDER = {  # 性格の依頼の選び方（quest.order）。小さいほうを先に選ぶ。配達の Lv は勇者の Lv と同じに数える
+  "level_high": lambda q, lv: -quest_gap(q, lv),
+  "level_low": lambda q, lv: quest_gap(q, lv),
+  "rank_high": lambda q, lv: -q.get("rank", 1),
+  "rank_low": lambda q, lv: q.get("rank", 1),
 }
 
 
@@ -694,6 +719,7 @@ class Day:
     self.events: list[str] = []
     self.fallen = False
     self.strolled = False
+    self.reported = False  # 今日、依頼を報告したか（長くいた町から旅に出るのは、次の日の朝にする）
     self.rested = False
     self.guild = guild if guild is not None else new_guild()  # 全員で共有する掲示板（None なら、この勇者だけの掲示板）
 
@@ -900,6 +926,7 @@ class Day:
     """町に着いた: 依頼の報告と買い物（HP は宿で休憩しないと回復しない）。"""
     state, hero = self.state, self.hero
     state["home_town"] = town
+    self.mark_stay(town)
     quest = state["quest"]
     if quest and quest["type"] in ("deliver", "patrol") and quest["place"] == town:
       quest["progress"] = quest["count"]
@@ -916,6 +943,7 @@ class Day:
       entry["status"] = status
 
   def report(self, quest: dict) -> None:
+    self.reported = True
     self.settle(quest, "done")
     reward = quest["reward"]
     self.hero["gold"] += reward["gold"]
@@ -963,19 +991,53 @@ class Day:
     if bought:
       self.log(f"{name}で{'と'.join(bought)}を買った")
 
+  def mark_stay(self, town: str) -> None:
+    """町にいる日を数え始める（別の町に着いたときだけ。同じ町に戻っても数え直さない）。"""
+    stay = self.state.get("stay")
+    try:
+      ok = isinstance(stay, dict) and stay.get("town") == town and bool(date.fromisoformat(stay["since"]))
+    except (KeyError, TypeError, ValueError):  # 着いた日が壊れていたら、今日から数え直す
+      ok = False
+    if not ok:
+      self.state["stay"] = {"town": town, "since": self.today.isoformat()}
+
+  def stayed_too_long(self, town: str) -> bool:
+    """町に着いた日から stay_days_max 日たったか（着いた日を 0 日目として数える。その日は依頼を受けず、となりの町へ旅に出る。#231）。"""
+    self.mark_stay(town)  # 数え始めていなければ、今日から
+    limit = self.cfg.get("stay_days_max")
+    since = date.fromisoformat(self.state["stay"]["since"])
+    return bool(limit) and (self.today - since).days >= limit
+
   def take_quest(self, town: str) -> None:
+    if self.stayed_too_long(town):  # 居ついたので、依頼を受けずに旅に出る（依頼の途中なら、帰ってきた次の日の朝）
+      if self.reported:  # 今日、依頼から帰ってきたばかり: 今日は残りの行動をして、旅は次の日の朝
+        self.state["taken"].append(f"{self.today.isoformat()}-back")
+        return
+      quest = patrol(self.world, self.state, self.rng)
+      self.state["taken"].append(f"{self.today.isoformat()}-patrol")
+      self.log(
+        f"{self.world['places'][town]['name']}に長くいたので、{self.world['places'][quest['place']]['name']}へ旅に出る"
+      )
+      self.state["quest"] = quest
+      return
     level, me = self.hero["level"], personality(self.world, self.state)
     refresh_guild(self.world, self.guild, self.today, season_of(self.world, self.today), [town])
     levels = me.get("quest", {}).get("levels")
-    entries = [
-      e
-      for e in self.guild["towns"].get(town, [])  # 受付中の依頼だけ（受注中のものは受けられない）
-      if e["status"] == "open" and suitable(e, level, levels) and e["id"] not in self.state["taken"]
+    open_ = [  # 受付中の依頼だけ（受注中のものは受けられない）
+      e for e in self.guild["towns"].get(town, []) if e["status"] == "open" and e["id"] not in self.state["taken"]
     ]
+    entries = [e for e in open_ if suitable(e, level, levels)]
+    if not entries and levels:
+      # 性格の範囲に合う依頼がなければ、範囲より弱い依頼のうち、範囲にいちばん近い Lv の依頼を受ける
+      # （範囲より強い依頼は受けない。強敵は Lv が足りなければ受けない）
+      others = [e for e in open_ if suitable(e, level, [None, levels[1]])]  # 下限だけを外して、ほかの決まりは同じ
+      if others:
+        near = min(level_gap(e, level, levels) for e in others)
+        entries = [e for e in others if level_gap(e, level, levels) == near]
     if entries:
       if me:  # 性格の選び方で並べ、同じなら掲示板の上のもの（ランダムはなし）
         order = [QUEST_ORDER[k] for k in me["quest"]["order"]]
-        entry = min(entries, key=lambda e: tuple(f(e) for f in order))
+        entry = min(entries, key=lambda e: tuple(f(e, level) for f in order))
       else:
         entry = self.rng.choice(entries)
       entry.update(status="held", holder=self.state["id"])
@@ -987,7 +1049,7 @@ class Day:
         f"{self.world['places'][town]['name']}のギルドで依頼を受けた: {quest_text(self.world, quest)}"
         f"（行動力 {quest['cost']}）"
       )
-    else:  # 受けられる依頼がない（ほかの勇者に取られた）ので、となりの町へ旅に出る
+    else:  # 受けられる依頼がない（どれも性格の範囲より強い・強敵の Lv が足りない・ほかの勇者に取られた）ので、旅に出る
       quest = patrol(self.world, self.state, self.rng)
       self.state["taken"].append(f"{self.today.isoformat()}-patrol")  # 旅もその日の 1 回に数える
       self.log(
@@ -1208,6 +1270,7 @@ def start_season(world: dict, state: dict, season: int) -> None:
     road=None,
     quest=None,
     season_stats=new_season_stats(),
+    stay=None,
   )
 
 
