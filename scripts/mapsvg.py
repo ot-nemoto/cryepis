@@ -2,8 +2,8 @@
 
 world/map.json の layout（大きさとベースの地図）と、場所ごとの pos（座標）、道ごとの path（線）を使う。
 layout.background にベースの地図（world/ の中の画像）があれば一番下に敷く。
-陸路・航路・ダンジョンへの道を描き、道の途中に移動にかかる行動回数の札を出す。
-勇者がいる町（道の途中なら、進んだ分だけ道の上）には、名前とレベルの札を出す。
+陸路・航路・霊場への道を描き、道の途中に移動にかかる行動回数の札を出す。
+もののふがいる町（道の途中なら、進んだ分だけ道の上）には、名前とレベルの札を出す。
 grid=True にすると、座標の目盛りと場所の ID を重ねた確認用の画像になる（pos を決めるときに使う）。
 """
 
@@ -79,7 +79,7 @@ def grid_lines(ox: float, oy: float, width: int, height: int) -> list[str]:
 
 def place_label(p: dict, x: float, y: float) -> list[str]:
   """場所の名前（町は呼び名を小さく添える）。p["label"] で置く向き（up/down/left/right）を変えられる。
-  ふだんは、町は上、ダンジョンは下。"""
+  ふだんは、町は上、霊場は下。"""
   town = p["type"] == "town"
   side = p.get("label") or ("up" if town else "down")
   alias = p.get("alias") if town else None
@@ -120,7 +120,7 @@ def road_lines(world: dict) -> list[dict]:
 
 
 def hero_spot(world: dict, state: dict) -> tuple[float, float] | None:
-  """勇者の今の位置（町なら町の座標、道の途中なら進んだ分だけ道の上）。"""
+  """もののふの今の位置（町なら町の座標、道の途中なら進んだ分だけ道の上）。"""
   places, place, road = world["places"], state["place"], state.get("road")
   if "pos" not in places.get(place, {}):
     return None
@@ -138,12 +138,12 @@ def place_title(p: dict) -> str:
   """マウスを乗せたときに出す、場所の説明（ブラウザで開いたとき）。"""
   if p["type"] == "town":
     return f"{p['name']}（{p.get('alias', '')}）{p.get('region', '')}"
-  return f"{p['name']}（ダンジョン・まだ入れない）{p.get('region', '')}"
+  return f"{p['name']}（霊場・まだ入れない）{p.get('region', '')}"
 
 
 def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) -> str | None:
   """SVG の文字列。map.json に layout がなければ None。entries は (heroes.json の行, 状態)。
-  勇者は、いる場所に赤い丸だけを出す（名前はマウスを乗せたときの説明）。"""
+  もののふは、いる場所に赤い丸だけを出す（名前はマウスを乗せたときの説明）。"""
   layout = world.get("layout")
   if not layout:
     return None
@@ -199,7 +199,7 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
       out.append(
         f'<text x="{x:.0f}" y="{y + 5:.0f}" text-anchor="middle" font-size="13">{escape(p.get("emoji", ""))}</text>'
       )
-    else:  # ダンジョン
+    else:  # 霊場
       out.append(
         f'<path d="M{x:.0f},{y - 12:.0f} L{x + 11:.0f},{y:.0f} L{x:.0f},{y + 12:.0f} '
         f'L{x - 11:.0f},{y:.0f} Z" fill="#3a1414" stroke="#e8c070" stroke-width="2.5"/>'
@@ -213,8 +213,8 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
       )
     out.append("</g>")
 
-  # 勇者のいる場所（同じ位置ごとに赤い丸を 1 つ。名前は出さず、マウスを乗せると名前と Lv が出る。
-  # 勇者の名前と居場所の一覧は、サイトの勇者のページ（heroes.html）で見る）
+  # もののふのいる場所（同じ位置ごとに赤い丸を 1 つ。名前は出さず、マウスを乗せると名前と Lv が出る。
+  # もののふの名前と居場所の一覧は、サイトのもののふのページ（heroes.html）で見る）
   here: dict[tuple[float, float], list[str]] = {}
   for hero, state in entries:
     spot = hero_spot(world, state)
@@ -223,7 +223,7 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
   for (sx, sy), names in here.items():
     x, y = at(sx, sy)
     out.append(f'<g class="hero"><title>{escape("、".join(names))}</title>')
-    # 丸の中（町の印の上）にマウスを乗せても勇者の説明が出るように、中も当たりにする（塗りは透明）
+    # 丸の中（町の印の上）にマウスを乗せてももののふの説明が出るように、中も当たりにする（塗りは透明）
     out.append(
       f'<circle cx="{x:.0f}" cy="{y:.0f}" r="18" fill="transparent" stroke="#dc2626" stroke-width="3" '
       'pointer-events="all"/>'
@@ -243,13 +243,17 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
       f'<path d="M100,{ly - 16} L110,{ly - 5} L100,{ly + 6} L90,{ly - 5} Z" fill="#3a1414" stroke="#e8c070" '
       'stroke-width="2"/>',
       118,
-      "ダンジョン（まだ入れない）",
+      "霊場（まだ入れない）",
     ),
     (f'<path d="M290,{ly - 5} H340" fill="none" {ROAD_STYLE["land"]}/>', 348, "陸路"),
     (f'<path d="M400,{ly - 5} H450" fill="none" {ROAD_STYLE["sea"]}/>', 458, "航路"),
-    (f'<path d="M510,{ly - 5} H560" fill="none" {ROAD_STYLE["trail"]}/>', 568, "ダンジョンへの道"),
+    (f'<path d="M510,{ly - 5} H560" fill="none" {ROAD_STYLE["trail"]}/>', 568, "霊場への道"),
     (badge(700, ly - 5, 3, "land", "legend"), 716, "移動にかかる行動回数"),
-    (f'<circle cx="890" cy="{ly - 5}" r="9" fill="none" stroke="#dc2626" stroke-width="3"/>', 906, "勇者がいる場所"),
+    (
+      f'<circle cx="890" cy="{ly - 5}" r="9" fill="none" stroke="#dc2626" stroke-width="3"/>',
+      906,
+      "もののふがいる場所",
+    ),
   ]
   for shape, tx, label in legend:
     out.append(shape)

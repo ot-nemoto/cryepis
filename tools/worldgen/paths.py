@@ -7,7 +7,7 @@ DIR = Path(__file__).resolve().parent
 REPO = DIR.parent.parent
 CACHE = DIR / ".cache"
 TERRAIN = CACHE / "terrain.pkl"  # 地形のマス目・高さ・川の線（terrain.py）
-ROADS = CACHE / "roads.json"  # 陸路とダンジョンへの道（roads.py）
+ROADS = CACHE / "roads.json"  # 陸路と霊場への道（roads.py）
 SEA = CACHE / "sea.json"  # 航路（sea.py）
 BASE_SVG = CACHE / "map-base.svg"  # ベースの地図（vectorize.py）
 

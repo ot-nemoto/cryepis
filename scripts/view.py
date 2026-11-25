@@ -1,4 +1,4 @@
-"""勇者の見た目（カードやページに出す文章・ランキングの並べ方）。状態を読むだけで、ファイルも API も触らない。
+"""もののふの見た目（カードやページに出す文章・ランキングの並べ方）。状態を読むだけで、ファイルも API も触らない。
 rpg.py（ランキングの Gist・毎日の実行）と website.py（サイト）の両方から使う。"""
 
 from __future__ import annotations
@@ -59,13 +59,13 @@ def item_label(world: dict, iid: str) -> str:
 
 
 def trait_text(world: dict, state: dict) -> str:
-  """特性（勇者を作るときにランダムで決まる）。"""
+  """特性（もののふを作るときにランダムで決まる）。"""
   t = game.hero_trait(world, state)
   return f"特性: {t.get('name', '-')}（{t.get('text', '')}）"
 
 
 def personality_text(world: dict, state: dict) -> str:
-  """性格（勇者を作るときにランダムで決まる）と、溜めた行動力。"""
+  """性格（もののふを作るときにランダムで決まる）と、溜めた行動力。"""
   p = game.personality(world, state)
   stored = f"  溜めた行動力: {state['hero'].get('stored', 0)}/{game.stored_max(world)}"
   return f"性格: {p.get('name', '-')}（{p.get('text', '')}）" + stored if p else "性格: -" + stored
@@ -116,7 +116,7 @@ def gear_text(world: dict, state: dict) -> str:
 
 
 def build_text(world: dict, state: dict) -> str:
-  """勇者の詳細の文章（サイトの勇者のページと、毎日の実行のログに出す。幅には詰めない）。
+  """もののふの詳細の文章（サイトのもののふのページと、毎日の実行のログに出す。幅には詰めない）。
   最初の 5 行は概要（名前と Lv・居場所・HP と能力・装備・今日の出来事）。"""
   hero, s = state["hero"], game.stats(world, state)
   hp_bar = common.bar(hero["hp"], s["max_hp"], 10).replace(" ", "░")
@@ -124,7 +124,7 @@ def build_text(world: dict, state: dict) -> str:
   gear = gear_text(world, state)
   season = f"S{state['season']}" if state["season"] else "旅立ち前"
   if state["last"] is None:
-    today = "新たな勇者が旅立とうとしている…"
+    today = "新たなもののふが旅立とうとしている…"
   elif state["last"]["events"]:
     today = "、".join(highlights(state["last"]["events"]))
   else:
@@ -132,7 +132,7 @@ def build_text(world: dict, state: dict) -> str:
   lines = [
     f"⚔️ {state['name']} Lv.{hero['level']}  {season} Day {state['season_day']}",
     location(world, state),
-    f"HP {hp_bar} {hero['hp']}/{s['max_hp']}  攻{s['atk']} 防{s['def']}  {hero['gold']}G",
+    f"HP {hp_bar} {hero['hp']}/{s['max_hp']}  攻{s['atk']} 防{s['def']}  {hero['gold']}文",
     f"装備: {gear}",
     f"今日: {today}",
   ]
@@ -147,7 +147,7 @@ def build_text(world: dict, state: dict) -> str:
       if hero["level"] >= world["season"]["max_level"]
       else f"EXP {hero['exp']}/{game.exp_need(world, hero['level'])}"
     )
-    + f"  回復薬: {hero['potions']}",
+    + f"  丸薬: {hero['potions']}",
     f"攻撃 {s['atk']}（基本 {hero['base_atk']}）  防御 {s['def']}（基本 {hero['base_def']}）  "
     f"最大HP {s['max_hp']}（基本 {hero['max_hp']}）  素早さ {s['spd']}  器用さ {s['dex']}",
     trait_text(world, state),
@@ -174,18 +174,18 @@ def build_text(world: dict, state: dict) -> str:
     return [item_label(world, x["id"]) + skill_note(world, x) for x in xs] or ["なし"]
 
   detail += ["", "── 持ち物（シーズンをまたいで持ち越す）──", *listing(game.carried(state))]
-  detail += ["", "── 保管庫（どの町のギルドでも出し入れできる）──", *listing(game.stored(state))]
+  detail += ["", "── 蔵（どの町の口入れ屋でも出し入れできる）──", *listing(game.stored(state))]
   quest = state["quest"]
   if quest and quest["type"] != "patrol":
     detail += ["", "── 受けている依頼 ──", game.quest_text(world, quest)]
     if quest.get("text"):
-      detail.append(f"「{quest['text']}」（{world['places'][quest['town']]['name']}のギルド）")
+      detail.append(f"「{quest['text']}」（{world['places'][quest['town']]['name']}の口入れ屋）")
     left = sum(n for _, n in quest["steps"]) if quest["type"] == "hunt" else None
     detail.append(
       f"必要な行動力 {quest.get('cost', '-')}"
       + (f"（残り {left}）" if left is not None else "")
       + f"  進み具合 {quest['progress']}/{quest['count']}  "
-      f"報酬 {quest['reward']['exp']}EXP {quest['reward']['gold']}G"
+      f"報酬 {quest['reward']['exp']}EXP {quest['reward']['gold']}文"
     )
   detail += [
     "",
@@ -212,14 +212,14 @@ def shorten(text: str, limit: int) -> str:
 
 
 def season_view(world: dict, state: dict, season: int) -> dict:
-  """ランキング用に、今のシーズンの状態を返す（まだ今のシーズンを進めていない勇者は最初の状態として扱う）。"""
+  """ランキング用に、今のシーズンの状態を返す（まだ今のシーズンを進めていないもののふは最初の状態として扱う）。"""
   if state["season"] == season:
     return state
   return {**state, "hero": game.new_hero(world), "season_stats": game.new_season_stats(), "season_day": 0}
 
 
 def ranked(entries: list[tuple[dict, dict]], key) -> list[tuple[int, dict, dict]]:
-  """(順位, 勇者, 状態) の一覧。同じ値は同じ順位（登録が早い順に並べる）。"""
+  """(順位, もののふ, 状態) の一覧。同じ値は同じ順位（登録が早い順に並べる）。"""
   rows = sorted(entries, key=lambda e: key(e[1]), reverse=True)
   out, prev, rank = [], None, 0
   for i, (hero, state) in enumerate(rows, 1):
@@ -230,7 +230,7 @@ def ranked(entries: list[tuple[dict, dict]], key) -> list[tuple[int, dict, dict]
 
 
 def news(entries: list[tuple[dict, dict]], today: date, name_width: int | None = None) -> list[str]:
-  """今日の出来事（勇者ごとに目立つものを 1 つ）。目立つ順。name_width を渡すと、名前をその表示幅に詰める
+  """今日の出来事（もののふごとに目立つものを 1 つ）。目立つ順。name_width を渡すと、名前をその表示幅に詰める
   （ランキングのカードで、名前が長くても出来事が読めるように）。"""
   picks = []
   for hero, state in entries:

@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
-"""シーズン制のテキスト RPG。勇者（最大 MAX_HEROES 人）を 1 日分ずつ進め、ランキングの Gist を更新する。
+"""シーズン制のテキスト RPG。もののふ（最大 MAX_HEROES 人）を 1 日分ずつ進め、ランキングの Gist を更新する。
 
-勇者は heroes.json（勇者管理シート）に登録する。世界（MAP・敵・アイテム・依頼）は world/ の下のデータで、
-1 日分の進め方は game.py にある。勇者は毎日、乱数で決まる回数だけ行動し、町のギルドの依頼をこなして育つ。
+もののふは heroes.json（もののふ管理シート）に登録する。世界（MAP・敵・アイテム・依頼）は world/ の下のデータで、
+1 日分の進め方は game.py にある。もののふは毎日、乱数で決まる回数だけ行動し、町の口入れ屋の依頼をこなして育つ。
 シーズン（world/season.json）が変わると、アイテム以外は最初に戻る。
 workflow が動かなかった日があれば、次の実行で最大 CATCH_UP_DAYS 日分までさかのぼって進める。
 
-状態は .state/heroes.json（勇者の一覧）と .state/heroes/<id>.json（勇者ごとの状態）に保存し、
-勇者ごとの詳細（ステータス・装備・持ち物・日誌）と地図は、サイト（scripts/website.py）で見る（Gist は作らない）。
+状態は .state/heroes.json（もののふの一覧）と .state/heroes/<id>.json（もののふごとの状態）に保存し、
+もののふごとの詳細（ステータス・装備・持ち物・日誌）と地図は、サイト（scripts/website.py）で見る（Gist は作らない）。
 ランキングの Gist の ID は .state/board.json に記録する（なければ毎日の実行で作る）。
 workflow の最後のステップで master にコミットする。
-乱数は「日付＋シーズン＋勇者の ID」を種にするので、同じ日に何度実行しても結果は同じ（その日の分が処理済みなら進めない）。
+乱数は「日付＋シーズン＋もののふの ID」を種にするので、同じ日に何度実行しても結果は同じ（その日の分が処理済みなら進めない）。
 
 環境変数:
   GIST_PAT   ランキングの Gist の作成・更新に使う（gist スコープの Classic PAT）
 
 使い方:
-  python scripts/rpg.py                          # 登録済みの勇者を全員 1 日分進めて Gist を更新する（毎日の workflow）
+  python scripts/rpg.py                          # 登録済みのもののふを全員 1 日分進めて Gist を更新する（毎日の workflow）
   python scripts/rpg.py --dry-run --actions 4    # 記録せずに 1 日分を試す
-  python scripts/rpg.py --new-game 名前                # 新しい勇者を登録する
-  python scripts/rpg.py --retire 名前または ID         # 勇者を引退させる（毎日の更新の対象から外れる）
+  python scripts/rpg.py --new-game 名前                # 新しいもののふを登録する
+  python scripts/rpg.py --retire 名前または ID         # もののふを引退させる（毎日の更新の対象から外れる）
 """
 
 from __future__ import annotations
@@ -44,10 +44,10 @@ import world as W  # noqa: E402
 
 BOARD_PATH = common.ROOT / ".state" / "board.json"
 BOARD_FILENAME = "hero-ranking.txt"
-MAX_HEROES = 30  # 同時に冒険できる（引退していない）勇者の数
+MAX_HEROES = 30  # 同時に冒険できる（引退していない）もののふの数
 BOARD_NAME_WIDTH = 8  # ランキングのカードに出す名前の表示幅
 MEDALS = ("🥇", "🥈", "🥉")
-NAME_WIDTH_MAX = 32  # 勇者の名前の表示幅（全角 = 2。全角 16 文字・半角 32 文字）
+NAME_WIDTH_MAX = 32  # もののふの名前の表示幅（全角 = 2。全角 16 文字・半角 32 文字）
 CATCH_UP_DAYS = 7  # 実行されなかった日をさかのぼって進める最大の日数
 
 
@@ -55,7 +55,7 @@ def load_world() -> dict:
   return W.load_world()
 
 
-# ---- 勇者管理シート（heroes.json）-----------------------------------------------------
+# ---- もののふ管理シート（heroes.json）-----------------------------------------------------
 
 
 def clean_name(raw: str) -> str:
@@ -65,9 +65,9 @@ def clean_name(raw: str) -> str:
     name = name[:-1]
   name = name.strip()
   if not name:
-    raise SystemExit("勇者の名前を指定してください")
+    raise SystemExit("もののふの名前を指定してください")
   if re.fullmatch(r"h\d+", name):  # 引退の指定で ID と取り違えないように
-    raise SystemExit(f"「{name}」は勇者の ID と紛らわしいので、名前には使えません")
+    raise SystemExit(f"「{name}」はもののふの ID と紛らわしいので、名前には使えません")
   return name
 
 
@@ -80,7 +80,7 @@ def md_escape(text: str) -> str:
 
 
 def page_url(hero_id: str) -> str:
-  """勇者の詳細のページ（サイトの heroes/<id>.html）の URL。GitHub Actions の外では、サイトの中のパス。"""
+  """もののふの詳細のページ（サイトの heroes/<id>.html）の URL。GitHub Actions の外では、サイトの中のパス。"""
   return f"{site_url() or ''}heroes/{hero_id}.html"
 
 
@@ -96,12 +96,12 @@ def site_url() -> str | None:
 
 
 def hero_link(hero_id: str) -> str:
-  """登録・引退のときの案内に出す、勇者の詳細のページへの案内（ページはサイトの次の公開で書き出される）。"""
+  """登録・引退のときの案内に出す、もののふの詳細のページへの案内（ページはサイトの次の公開で書き出される）。"""
   url = site_url()
   return (
-    f"サイトの勇者のページ（{url}heroes/{hero_id}.html。次のサイトの公開のあとに見られる）"
+    f"サイトのもののふのページ（{url}heroes/{hero_id}.html。次のサイトの公開のあとに見られる）"
     if url
-    else "サイトの勇者のページ"
+    else "サイトのもののふのページ"
   )
 
 
@@ -119,7 +119,7 @@ def write_map_grid(world: dict, out: str) -> int:
 
 
 def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
-  """Pin 用のランキングの Gist の中身。entries は現役の勇者の (heroes.json の行, 状態)。"""
+  """Pin 用のランキングの Gist の中身。entries は現役のもののふの (heroes.json の行, 状態)。"""
   season = game.season_of(world, today)
   first, last = game.season_range(world, season)
   views = [(hero, view.season_view(world, state, season)) for hero, state in entries]
@@ -127,7 +127,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
     when = "開幕前"
   else:
     when = f"Day {(today - first).days + 1}/{(last - first).days + 1}"
-  lines = [f"🏆 シーズン{season}  {when}  勇者{len(views)}人"]
+  lines = [f"🏆 シーズン{season}  {when}  もののふ{len(views)}人"]
   for _, label, key, value, _ in view.RANKINGS:
     if label is None:
       continue
@@ -137,12 +137,14 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
     ]
     lines.append(f"{label} " + (" ".join(top) or "まだいない"))
   today_news = view.news(views, today, BOARD_NAME_WIDTH)
-  lines.append("📰 " + (today_news[0] if today_news else "今日も勇者たちは冒険中…"))
+  lines.append("📰 " + (today_news[0] if today_news else "今日ももののふたちは冒険中…"))
   card = [view.fit(line) for line in lines]
 
   detail = ["", f"── シーズン{season}（{first}〜{last}）──"]
   if site_url():
-    detail.append(f"サイト「クリエピス戦記」（ホーム・地図・ランキング・勇者・町・ギルド・アイテム）: {site_url()}")
+    detail.append(
+      f"サイト「クリエピス戦記」（ホーム・地図・ランキング・もののふ・町・口入れ屋・アイテム）: {site_url()}"
+    )
   for title, _, key, value, unit in view.RANKINGS:
     detail += ["", f"── {title} ──"]
     detail += [
@@ -150,7 +152,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
       for r, h, s in view.ranked(views, key)[: view.RANKING_TOP]
     ]
   detail += ["", "── 今日の出来事 ──"] + (today_news or ["まだない"])
-  detail += ["", "── 勇者たち ──"]
+  detail += ["", "── もののふたち ──"]
   for hero, state in views:
     detail += [""] + hero_summary(world, hero, state, today)
   past = sorted({r["season"] for _, state in entries for r in state["seasons"]})
@@ -167,7 +169,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
 
 
 def hero_summary(world: dict, entry: dict, state: dict, today: date) -> list[str]:
-  """ランキングの本文に載せる、勇者ごとの短い欄（entry は heroes.json の行）。"""
+  """ランキングの本文に載せる、もののふごとの短い欄（entry は heroes.json の行）。"""
   hero, s = state["hero"], game.stats(world, state)
   rares = sorted(
     {x["id"] for x in game.owned(state) if world["items"][x["id"]]["rarity"] != "common"},
@@ -177,7 +179,7 @@ def hero_summary(world: dict, entry: dict, state: dict, today: date) -> list[str
   events = view.highlights(last["events"]) if last and last["date"] == today.isoformat() and last["events"] else []
   return [
     f"■ {entry['name']}  Lv.{hero['level']}  {view.location(world, state)}",
-    f"  HP {hero['hp']}/{s['max_hp']}  攻{s['atk']} 防{s['def']}  {hero['gold']}G  回復薬 {hero['potions']}",
+    f"  HP {hero['hp']}/{s['max_hp']}  攻{s['atk']} 防{s['def']}  {hero['gold']}文  丸薬 {hero['potions']}",
     f"  装備: {view.gear_text(world, state)}",
     f"  レア: {'、'.join(view.item_label(world, i) for i in rares) or 'まだない'}",
     f"  今日: {'、'.join(events) or '—'}",
@@ -186,7 +188,7 @@ def hero_summary(world: dict, entry: dict, state: dict, today: date) -> list[str
 
 
 def board_description(world: dict, today: date) -> str:
-  return f"勇者ランキング シーズン{game.season_of(world, today)}"
+  return f"もののふランキング シーズン{game.season_of(world, today)}"
 
 
 def load_board(path: Path | None = None) -> dict | None:
@@ -248,14 +250,14 @@ def write_summary(text: str) -> None:
 
 
 def new_game(world: dict, raw_name: str, today: date) -> int:
-  """新しい勇者を登録し、状態を作る（冒険は翌日から進む）。"""
+  """新しいもののふを登録し、状態を作る（冒険は翌日から進む）。"""
   name = clean_name(raw_name)
   heroes = store.load_heroes()
   active = [h for h in heroes if h["active"]]
   if len(active) >= MAX_HEROES:
-    raise SystemExit(f"勇者は最大 {MAX_HEROES} 人です。先に retire-hero で引退させてください")
+    raise SystemExit(f"もののふは最大 {MAX_HEROES} 人です。先に retire-hero で引退させてください")
   if any(h["name"] == name for h in active):
-    raise SystemExit(f"勇者「{name}」はすでにいます")
+    raise SystemExit(f"もののふ「{name}」はすでにいます")
   hero_id = f"h{max((int(h['id'][1:]) for h in heroes), default=0) + 1}"
   state = game.new_state(world, hero_id, name)
   heroes.append({"id": hero_id, "name": name, "created": today.isoformat(), "active": True})
@@ -264,36 +266,36 @@ def new_game(world: dict, raw_name: str, today: date) -> int:
   board = load_board()
   where = f"ランキングの Gist（{board['gist_url']}）" if board else "ランキングの Gist（次回の毎日の実行で作られます）"
   write_summary(
-    f"## 勇者「{md_escape(name)}」({hero_id}) が旅立ちます\n\n"
+    f"## もののふ「{md_escape(name)}」({hero_id}) が旅立ちます\n\n"
     f"冒険は次回の毎日の実行から進みます。様子は{where}と、{hero_link(hero_id)}で見られます。"
   )
   return 0
 
 
 def retire(key: str) -> int:
-  """ID か名前で勇者を引退させる（状態は残し、サイトの詳細のページも残る）。"""
+  """ID か名前でもののふを引退させる（状態は残し、サイトの詳細のページも残る）。"""
   heroes = store.load_heroes()
   active = [h for h in heroes if h["active"]]
-  # ID を優先して照合する（名前が ID と同じ勇者は作れない）
+  # ID を優先して照合する（名前が ID と同じもののふは作れない）
   for h in [h for h in active if h["id"] == key] + [h for h in active if h["name"] == key]:
     h["active"] = False
     store.save_heroes(heroes)
-    write_summary(f"勇者「{md_escape(h['name'])}」({h['id']}) を引退させました（記録: {hero_link(h['id'])}）")
+    write_summary(f"もののふ「{md_escape(h['name'])}」({h['id']}) を引退させました（記録: {hero_link(h['id'])}）")
     return 0
-  raise SystemExit(f"引退させられる勇者「{key}」がいません（ID か名前で、現役の勇者を指定してください）")
+  raise SystemExit(f"引退させられるもののふ「{key}」がいません（ID か名前で、現役のもののふを指定してください）")
 
 
 def load_hero(world: dict, hero: dict) -> dict:
   path = store.hero_state_path(hero["id"])
-  if not path.exists():  # 登録済みの勇者の状態が無いのは異常。黙って最初からにしない
+  if not path.exists():  # 登録済みのもののふの状態が無いのは異常。黙って最初からにしない
     raise SystemExit(f"{path} がありません（削除やマージで消えた可能性があります）")
   return game.load_state(world, path, hero["id"], hero["name"])
 
 
 def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, guild: dict) -> dict:
-  """勇者たちを 1 日ずつそろえて進める（loaded は勇者の ID → (heroes.json の行, 状態, 進める日)）。
-  ギルドの依頼は早い者勝ちなので、日ごとに勇者の順番を混ぜて、毎回同じ勇者が先にならないようにする。
-  進められなかった勇者は、その日以降は進めない。戻り値は失敗した勇者の ID → エラー。"""
+  """もののふたちを 1 日ずつそろえて進める（loaded はもののふの ID → (heroes.json の行, 状態, 進める日)）。
+  口入れ屋の依頼は早い者勝ちなので、日ごとにもののふの順番を混ぜて、毎回同じもののふが先にならないようにする。
+  進められなかったもののふは、その日以降は進めない。戻り値は失敗したもののふの ID → エラー。"""
   errors: dict = {}
   days = sorted({d for _, _, ds in loaded.values() for d in ds})
   if actions is not None:  # 試すとき: 今日の分だけ、指定した回数で進める
@@ -303,10 +305,10 @@ def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, 
     random.Random(f"order-{day.isoformat()}").shuffle(order)
     for hid in order:
       hero, state, _ = loaded[hid]
-      before = copy.deepcopy(guild)  # 失敗したら、その勇者が掲示板に加えた変更も取り消す
+      before = copy.deepcopy(guild)  # 失敗したら、そのもののふが高札に加えた変更も取り消す
       try:
         game.advance(world, state, day, actions, guild)
-      except (Exception, SystemExit) as e:  # noqa: BLE001  勇者ごとに失敗を隔離する
+      except (Exception, SystemExit) as e:  # noqa: BLE001  もののふごとに失敗を隔離する
         errors[hid] = e
         guild.clear()
         guild.update(before)
@@ -314,11 +316,11 @@ def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, 
 
 
 def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) -> int:
-  """現役の勇者を全員進めて、状態と、ランキングの Gist を更新する（詳細と地図はサイトで見る）。
+  """現役のもののふを全員進めて、状態と、ランキングの Gist を更新する（詳細と地図はサイトで見る）。
   1 人が失敗しても残りは続け、1 つでも失敗したら終了コード 1。"""
   heroes = [h for h in store.load_heroes() if h["active"]]
   if not heroes:
-    print("現役の勇者がいません（new-game で作れます）")
+    print("現役のもののふがいません（new-game で作れます）")
     return 0
   token = os.environ.get("GIST_PAT")
   if not token and not dry_run:
@@ -338,7 +340,7 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
       fail(hero, e)
   guild = store.load_guild()
   errors = advance_heroes(world, loaded, today, actions, guild)
-  # 引退した勇者などが持っていた依頼は、翌日の朝に受付中に戻す（読めなかった・進められなかった勇者の依頼は残す）
+  # 引退したもののふなどが持っていた依頼は、翌日の朝に受付中に戻す（読めなかった・進められなかったもののふの依頼は残す）
   game.release_orphans(
     guild,
     {hid: st for hid, (_, st, _) in loaded.items()},
@@ -379,8 +381,8 @@ def main() -> int:
     "--actions", type=int, help="その日の行動回数を指定する（試すとき用。ふだんは season.json の actions_per_day）"
   )
   mode = ap.add_mutually_exclusive_group()
-  mode.add_argument("--new-game", metavar="NAME", help="新しい勇者を登録する（冒険は進めない）")
-  mode.add_argument("--retire", metavar="NAME_OR_ID", help="勇者を引退させる")
+  mode.add_argument("--new-game", metavar="NAME", help="新しいもののふを登録する（冒険は進めない）")
+  mode.add_argument("--retire", metavar="NAME_OR_ID", help="もののふを引退させる")
   mode.add_argument(
     "--map-grid", metavar="OUT.svg", help="座標の目盛りを重ねた確認用の地図を書き出す（pos を決めるときに使う）"
   )

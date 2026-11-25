@@ -28,7 +28,7 @@ class RenderTest(unittest.TestCase):
     ids = {g.get("id") for g in root.iter(f"{NS}g") if g.get("id")}
     self.assertEqual(ids, {f"place-{pid}" for pid in WORLD["places"]})
     texts = [t.text or "" for t in root.iter(f"{NS}text")]
-    for p in WORLD["places"].values():  # 町は名前と呼び名、ダンジョンは名前
+    for p in WORLD["places"].values():  # 町は名前と呼び名、霊場は名前
       self.assertIn(p["name"], texts)
       if p.get("alias"):
         self.assertIn(p["alias"], texts)
@@ -82,10 +82,10 @@ class RenderTest(unittest.TestCase):
 
   def test_heroes_in_one_place_share_one_mark(self):
     place = WORLD["starts"][0]
-    entries = [hero(i, f"勇者{i}", place) for i in range(6)]
+    entries = [hero(i, f"もののふ{i}", place) for i in range(6)]
     marks = [g for g in ET.fromstring(mapsvg.render(WORLD, entries)).iter(f"{NS}g") if g.get("class") == "hero"]
     self.assertEqual(len(marks), 1)
-    self.assertEqual(marks[0].find(f"{NS}title").text.count("勇者"), 6)
+    self.assertEqual(marks[0].find(f"{NS}title").text.count("もののふ"), 6)
 
   def test_canvas_fits_the_map(self):
     root = ET.fromstring(mapsvg.render(WORLD, []))

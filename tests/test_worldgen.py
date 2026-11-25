@@ -1,5 +1,5 @@
 """地図の生成（tools/worldgen）のテスト。地形の生成（1 分ほどかかる）や .cache/ は使わず、次を確かめる。
-- 町・ダンジョン・名前・説明・店などの表どうしの整合性と、コミット済みの world/map.json との一致
+- 町・霊場・名前・説明・店などの表どうしの整合性と、コミット済みの world/map.json との一致
 - 小さな入力で確かめられる関数（行動回数の換算・線の間引き・ダイクストラ・地形の割合・図形・ノイズ）
 地形を読み込むモジュール（roads・sea・build_world・vectorize）は、小さな地形（TOY）を使って読み込む。"""
 
@@ -55,7 +55,7 @@ MAP_PLACES = {p["id"]: p for p in MAP["places"]}
 
 
 class TablesTest(unittest.TestCase):
-  """表どうしが食い違わない（町・ダンジョンを 1 つ足したとき、書き忘れた表が見つかる）。"""
+  """表どうしが食い違わない（町・霊場を 1 つ足したとき、書き忘れた表が見つかる）。"""
 
   TOWN_NAMES = [n for n, _, _ in places.TOWNS]
   DUNGEON_NAMES = [n for n, _, _ in places.DUNGEONS]
@@ -106,7 +106,7 @@ class TablesTest(unittest.TestCase):
       self.assertTrue(a in towns and b in towns and a != b, (a, b))
     for d, t in places.TRAILS:
       self.assertTrue(d in dungeons and t in towns, (d, t))
-    self.assertEqual({d for d, _ in places.TRAILS}, dungeons)  # どのダンジョンにも道がある
+    self.assertEqual({d for d, _ in places.TRAILS}, dungeons)  # どの霊場にも道がある
     pairs = [frozenset(p) for p in places.LAND_ROADS + places.TRAILS + places.SEA_ROUTES]
     self.assertEqual(len(pairs), len(set(pairs)))  # 同じ道を 2 度書かない
 
@@ -143,7 +143,7 @@ class CommittedMapTest(unittest.TestCase):
     self.assertEqual(MAP["layout"], {"size": [1600, 1000], "background": "map-base.svg"})
 
   def test_roads_match_the_route_tables(self):
-    """道の端点は表の町・ダンジョン・航路と合う（道の線そのものは、地形から作るので、ここでは見ない）。"""
+    """道の端点は表の町・霊場・航路と合う（道の線そのものは、地形から作るので、ここでは見ない）。"""
     pid = build_world.pid
     sea_roads = {frozenset((r["from"], r["to"])) for r in MAP["roads"] if r["kind"] == "sea"}
     self.assertEqual(sea_roads, {frozenset((pid(a), pid(b))) for a, b in places.SEA_ROUTES})
@@ -151,7 +151,7 @@ class CommittedMapTest(unittest.TestCase):
     self.assertEqual(land_roads, {frozenset((pid(a), pid(b))) for a, b in places.LAND_ROADS + places.TRAILS})
     dungeons = {pid(n) for n, _, _ in places.DUNGEONS}
     for r in MAP["roads"]:
-      self.assertEqual(r["kind"] == "trail", bool({r["from"], r["to"]} & dungeons), r)  # ダンジョンへの道だけ trail
+      self.assertEqual(r["kind"] == "trail", bool({r["from"], r["to"]} & dungeons), r)  # 霊場への道だけ trail
     self.assertEqual(len(MAP["roads"]), len({frozenset((r["from"], r["to"])) for r in MAP["roads"]}))  # 重複なし
 
 
@@ -165,7 +165,7 @@ class TownTextTest(unittest.TestCase):
 
   def test_texts_do_not_use_game_words(self):
     for name, text in lore.TEXT.items():
-      for banned in ("シーズン", "レベル", "勇者"):
+      for banned in ("シーズン", "レベル", "もののふ"):
         self.assertNotIn(banned, text, name)
 
   def test_world_md_lists_the_same_texts(self):
@@ -286,11 +286,11 @@ class TerrainMixTest(unittest.TestCase):
     self.assertTrue(all(v >= 10 for _, v in mix))  # 10% 未満は捨てる
 
   def test_unknown_terrain_falls_back_to_plain(self):
-    build_world.kind = [["sea"] * 400 for _ in range(250)]  # 魔物の地形に当たらない
+    build_world.kind = [["sea"] * 400 for _ in range(250)]  # 物の怪の地形に当たらない
     self.assertEqual(build_world.terrain_mix([(200, 200), (300, 200)]), [["plain", 100]])
 
   def test_terrain_cells_map_to_monster_terrains(self):
-    self.assertTrue(set(build_world.TERRAIN.values()) <= set(W.TERRAINS))  # 魔物の地形（world.py の TERRAINS）にある
+    self.assertTrue(set(build_world.TERRAIN.values()) <= set(W.TERRAINS))  # 物の怪の地形（world.py の TERRAINS）にある
 
 
 class GeometryTest(unittest.TestCase):

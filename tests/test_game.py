@@ -35,12 +35,12 @@ def day_of(state, d=START, seed="t"):
 
 
 def a_hunt(town=TOWN):
-  """town の掲示板から討伐の依頼を 1 つ。"""
+  """town の高札から討伐の依頼を 1 つ。"""
   return next(q for i in range(60) for q in G.board(WORLD, town, START + timedelta(days=i), 1) if q["type"] == "hunt")
 
 
 def common_hunt(town=TOWN, rank=1, seed=0):
-  """town の掲示板に出る共通の討伐を 1 つ（★ は rank）。"""
+  """town の高札に出る共通の討伐を 1 つ（★ は rank）。"""
   t = next(t for t in WORLD["quests"] if t["type"] == "hunt")
   return G.make_quest(WORLD, t, town, START, random.Random(seed), rank)
 
@@ -151,7 +151,7 @@ class AdvanceTest(unittest.TestCase):
 
   def test_first_day_shops_and_takes_a_quest(self):
     state = play(1, actions=1)
-    self.assertEqual(state["inventory"], [])  # 最初の手持ち（60G）では、★ の装備（240G〜）はまだ買えない（#245）
+    self.assertEqual(state["inventory"], [])  # 最初の手持ち（60文）では、★ の装備（240文〜）はまだ買えない（#245）
     self.assertIsNotNone(state["quest"])
 
   def test_journal_is_capped(self):
@@ -181,12 +181,12 @@ class QuestTest(unittest.TestCase):
           self.assertIsNone(q["deadline"])
           self.assertGreater(q["cost"], 0)
           self.assertTrue(G.quest_ok(WORLD, q))
-          if q["type"] == "hunt":  # 討伐は町から出る道で、その道に出る魔物（強敵は、その道の地形の強敵）
+          if q["type"] == "hunt":  # 討伐は町から出る道で、その道に出る物の怪（強敵は、その道の地形の強敵）
             self.assertEqual(q["report"], town)
             target = WORLD["monsters"][q["monster"]]
             if target.get("elite"):
               self.assertIn(target["terrain"], WORLD["road_info"][(town, q["place"])]["terrain"])
-              self.assertEqual(q["min_level"], target["level"])  # 魔物のレベル以上で受けられる
+              self.assertEqual(q["min_level"], target["level"])  # 物の怪のレベル以上で受けられる
             else:
               pool = [m for m, _ in WORLD["road_info"][(town, q["place"])]["monsters"]]
               self.assertIn(q["monster"], pool)
@@ -197,7 +197,7 @@ class QuestTest(unittest.TestCase):
     self.assertEqual(set(elites), {"yeti", "rock_golem", "great_eagle"})
     on_roads = {m for i in WORLD["road_info"].values() for m, _ in i["monsters"]}
     self.assertFalse(on_roads & set(elites))  # 道では出会わない
-    for town, quests in WORLD["town_quests"].items():  # どの強敵の依頼も、魔物のレベルから受けられる
+    for town, quests in WORLD["town_quests"].items():  # どの強敵の依頼も、物の怪のレベルから受けられる
       for quest in quests:
         if quest.get("monster") not in elites:
           continue
@@ -211,7 +211,7 @@ class QuestTest(unittest.TestCase):
     self.assertLessEqual(set(elites), targets)  # どの強敵も、町の依頼で狙える
     quest = next(q for q in WORLD["town_quests"]["nagano"] if q.get("monster") == "yeti")
     q = G.make_town_quest(WORLD, quest, "nagano", START)
-    # 強敵にする前に貼られた依頼（Lv の決まりがなく、数も多い）は捨てる（掲示板からも、勇者の状態からも）
+    # 強敵にする前に貼られた依頼（Lv の決まりがなく、数も多い）は捨てる（高札からも、もののふの状態からも）
     old = {k: v for k, v in q.items() if k != "min_level"} | {"count": 5, "level": [2, 2]}
     self.assertFalse(G.quest_ok(WORLD, old, steps=False))
     self.assertFalse(G.quest_ok(WORLD, q | {"count": 5}, steps=False))
@@ -235,7 +235,7 @@ class QuestTest(unittest.TestCase):
     self.assertEqual(per(b) / per(a), WORLD["quest_ranks"][2]["reward"] / WORLD["quest_ranks"][0]["reward"])
     self.assertEqual(b["reward"]["item"], WORLD["quest_ranks"][2]["item"])
     name = WORLD["monsters"][b["monster"]]["name"]
-    self.assertEqual(b["name"], f"{name}の討伐")  # 名前は「{魔物}の討伐」
+    self.assertEqual(b["name"], f"{name}の討伐")  # 名前は「{物の怪}の討伐」
     self.assertTrue(G.quest_text(WORLD, b).startswith(f"★★★ {name}の討伐（"))
     self.assertIn(name, b["text"])  # 説明は町の困りごとと ★ ごとの頼み方から作る
     hs = WORLD["hunts"]
@@ -243,7 +243,7 @@ class QuestTest(unittest.TestCase):
 
   def test_reward_is_gold_by_cost_and_delivery_pays_more(self):
     base, mult = WORLD["quest_reward"], [r["reward"] for r in WORLD["quest_ranks"]]
-    self.assertEqual(base["exp"], 0)  # 依頼の報酬はお金だけ（経験値は魔物を倒したときだけ）
+    self.assertEqual(base["exp"], 0)  # 依頼の報酬はお金だけ（経験値は物の怪を倒したときだけ）
     for town, qs in WORLD["town_quests"].items():
       for q in qs:
         x = G.make_town_quest(WORLD, q, town, START)
@@ -264,7 +264,7 @@ class QuestTest(unittest.TestCase):
         self.assertTrue(1 <= q["count"] <= 5)
     seen = {G.make_quest(WORLD, t, "edo", START, random.Random(i), 4)["rank"] for i in range(20)}
     self.assertEqual(seen, {3})  # ★★★★ は作れないので ★★★ に下げる（★★★★ は WORLD・RAID 用）
-    world = copy.deepcopy(WORLD)  # Lv8 以上の魔物しかいない道では ★ は作れないので、★★ に上げて作る
+    world = copy.deepcopy(WORLD)  # Lv8 以上の物の怪しかいない道では ★ は作れないので、★★ に上げて作る
     for info in world["road_info"].values():
       info["monsters"] = [(m, w) for m, w in info["monsters"] if world["monsters"][m]["level"] >= 8]
     self.assertEqual(G.make_quest(world, t, "edo", START, random.Random(0), 1)["rank"], 2)
@@ -309,7 +309,7 @@ class QuestTest(unittest.TestCase):
 
   def test_same_quest_is_not_taken_twice_a_day(self):
     state = play(1, actions=0)
-    state["hero"]["level"] = 99  # どの依頼も合わない…ことがないよう、掲示板の依頼をすべて受けられるようにする
+    state["hero"]["level"] = 99  # どの依頼も合わない…ことがないよう、高札の依頼をすべて受けられるようにする
     quests = G.board(WORLD, TOWN, START, 1)
     state["hero"]["level"] = max((q["level"][0] for q in quests if q["level"]), default=1)
     day = day_of(state)
@@ -331,7 +331,7 @@ class QuestTest(unittest.TestCase):
     posted = [e["id"] for e in guild["towns"][town]]
     self.assertEqual(len(posted), G.quests_per_day(WORLD, town))
     a["hero"]["level"] = b["hero"]["level"] = 99
-    a["personality"] = b["personality"] = None  # 性格の Lv の範囲で選り好みしない（掲示板の決まりだけを見る）
+    a["personality"] = b["personality"] = None  # 性格の Lv の範囲で選り好みしない（高札の決まりだけを見る）
     ids = []
     for state in [a, b] * len(posted):
       if len(ids) == len(posted):
@@ -343,7 +343,7 @@ class QuestTest(unittest.TestCase):
     held = {e["id"]: e["holder"] for e in guild["towns"][town]}
     self.assertEqual(set(held.values()), {"a", "b"})
     self.assertTrue(all(e["status"] == "held" for e in guild["towns"][town]))
-    self.assertTrue(all(k not in a["quest"] for k in G.GUILD_FIELDS))  # 勇者の依頼には掲示板の項目を持たせない
+    self.assertTrue(all(k not in a["quest"] for k in G.GUILD_FIELDS))  # もののふの依頼には高札の項目を持たせない
     a["quest"] = None
     day = G.Day(WORLD, a, START, random.Random(0), guild)
     day.take_quest(town)  # もう残っていない
@@ -385,7 +385,7 @@ class QuestTest(unittest.TestCase):
     q = {"level": [10, 10]}
     self.assertFalse(G.suitable(q, 1))
     self.assertTrue(G.suitable(q, 10))
-    self.assertTrue(G.suitable(q, 30))  # 魔物の強さはどこでも同じなので、弱い依頼も受ける
+    self.assertTrue(G.suitable(q, 30))  # 物の怪の強さはどこでも同じなので、弱い依頼も受ける
 
 
 class BattleAndItemTest(unittest.TestCase):
@@ -407,7 +407,7 @@ class BattleAndItemTest(unittest.TestCase):
     return state
 
   def test_keeps_going_on_the_road_when_hp_is_low(self):
-    # 甲府 →（3 行動）→ 長野 の 1 歩目。HP 1・回復薬なしでも引き返さずに進む
+    # 甲府 →（3 行動）→ 長野 の 1 歩目。HP 1・丸薬なしでも引き返さずに進む
     state = self.low_hp_on_road("kofu", "nagano", 3)
     day = day_of(state)
     day.road_event = lambda a, b, stroll=False: True  # 道の出来事は何も起きない
@@ -556,11 +556,11 @@ class RoadTest(unittest.TestCase):
       levels = {lv[m]["level"] for m, _ in got}
       if level <= 18:  # Lv18 なら Lv15〜19（Lv15 がいる）
         self.assertTrue(levels and all(level - 3 <= x <= level + 1 for x in levels), (level, levels))
-      else:  # 道の魔物は Lv15 まで。Lv17〜21 にはいないので、いちばん近い Lv15
+      else:  # 道の物の怪は Lv15 まで。Lv17〜21 にはいないので、いちばん近い Lv15
         self.assertEqual(levels, {15})
       self.assertEqual([m for m, _ in got], [m for m, _ in road if m in dict(got)])  # 道の並びのまま
 
-      def share(pairs, got=got):  # 地形ごとの割合（残った魔物のいる地形だけで比べる）
+      def share(pairs, got=got):  # 地形ごとの割合（残った物の怪のいる地形だけで比べる）
         terrains = {lv[m]["terrain"] for m, _ in got}
         out = {}
         for m, w in pairs:
@@ -572,15 +572,15 @@ class RoadTest(unittest.TestCase):
     self.assertEqual({lv[m]["level"] for m, _ in G.encounters(WORLD, road, 1)}, {1, 2})
 
   def test_hunt_targets_spread_over_levels(self):
-    # 共通の討伐の依頼で狙う魔物の Lv は、その ★ になる Lv から均等に選ぶ（平原に多い Lv にかたよらない）
+    # 共通の討伐の依頼で狙う物の怪の Lv は、その ★ になる Lv から均等に選ぶ（平原に多い Lv にかたよらない）
     t = next(t for t in WORLD["quests"] if t["type"] == "hunt")
     levels = {G.make_quest(WORLD, t, "edo", START, random.Random(i), 2)["monster"] for i in range(300)}
     lv = {WORLD["monsters"][m]["level"] for m in levels}
-    self.assertGreater(len(lv), 5)  # ★★ になる Lv（3〜20 の点数になる Lv）の魔物がいろいろ出る
+    self.assertGreater(len(lv), 5)  # ★★ になる Lv（3〜20 の点数になる Lv）の物の怪がいろいろ出る
 
   def test_every_road_has_monsters_for_every_level(self):
     top = max(WORLD["monsters"][m]["level"] for i in WORLD["road_info"].values() for m, _ in i["monsters"])
-    for (a, b), info in WORLD["road_info"].items():  # 平原はどの道にもあるので、Lv1〜15 のどの勇者にも相手がいる
+    for (a, b), info in WORLD["road_info"].items():  # 平原はどの道にもあるので、Lv1〜15 のどのもののふにも相手がいる
       for level in range(1, top + 1):
         levels = {WORLD["monsters"][m]["level"] for m, _ in G.encounters(WORLD, info["monsters"], level)}
         self.assertTrue(all(level - 3 <= x <= level + 1 for x in levels), (a, b, level, levels))
@@ -687,7 +687,7 @@ class RoadTest(unittest.TestCase):
     state.update(season=1, place="edo", quest=quest)
     state["hero"]["level"] = 6
     day = G.Day(WORLD, state, START, random.Random(0))
-    self.assertEqual(day.danger_shift(), 4)  # 運んでいる間は、出会う魔物の Lv を 4 上げる
+    self.assertEqual(day.danger_shift(), 4)  # 運んでいる間は、出会う物の怪の Lv を 4 上げる
     quest["progress"] = 1
     self.assertEqual(day.danger_shift(), 0)  # 届けたあとは上げない
     state["quest"] = None
@@ -708,7 +708,7 @@ class RoadTest(unittest.TestCase):
 
 
 class TraitTest(unittest.TestCase):
-  """魔物の性質の効き方（会心の運で結果がぶれないよう、勇者と魔物の器用さを 0 にして、会心を出さずに確かめる）。"""
+  """物の怪の性質の効き方（会心の運で結果がぶれないよう、もののふと物の怪の器用さを 0 にして、会心を出さずに確かめる）。"""
 
   def test_critical_hits(self):
     day = day_of(G.new_state(WORLD))
@@ -769,7 +769,7 @@ class TraitTest(unittest.TestCase):
     self.assertGreater(hp_lost("fierce"), plain)  # 凶暴は攻撃が強い
     self.assertGreater(hp_lost("swarm"), plain)  # 群れは攻撃の回数が多い
     guards = {}
-    for trait in (None, "armored"):  # 硬い: 勇者の攻撃を受ける守りが固い
+    for trait in (None, "armored"):  # 硬い: もののふの攻撃を受ける守りが固い
       state = G.new_state(WORLD)
       state["hero"]["base_dex"] = 0
       day = day_of(state)
@@ -782,7 +782,7 @@ class TraitTest(unittest.TestCase):
 
       with mock.patch.object(day, "damage", side_effect=spy):
         day.battle(dict(WORLD["monsters"]["wild_dog"], dex=0) | ({"trait": trait} if trait else {}))
-      guards[trait] = min(seen)  # 勇者の攻撃を受けたときの守り（魔物の攻撃を受ける勇者の守り 6 より低い）
+      guards[trait] = min(seen)  # もののふの攻撃を受けたときの守り（物の怪の攻撃を受けるもののふの守り 6 より低い）
     self.assertGreater(guards["armored"], guards[None])
 
 
@@ -870,9 +870,9 @@ class StateFileTest(unittest.TestCase):
     cases = [
       ({"type": "hunt", "place": near, "monster": "wild_dog"}, True),
       ({"type": "hunt", "place": far, "monster": "wild_dog"}, False),  # 道がない
-      ({"type": "hunt", "place": near, "monster": "slime"}, False),  # 魔物がいない
+      ({"type": "hunt", "place": near, "monster": "slime"}, False),  # 物の怪がいない
       ({"type": "hunt", "place": near, "monster": "den_lord"}, False),  # ボスは道に出ない
-      ({"type": "deliver", "place": "kumano", "monster": None}, False),  # ダンジョンへは配達しない
+      ({"type": "deliver", "place": "kumano", "monster": None}, False),  # 霊場へは配達しない
       ({"type": "deliver", "place": far, "monster": None}, True),
       ({"type": "teleport", "place": near, "monster": None}, False),
     ]
@@ -895,11 +895,11 @@ class StateFileTest(unittest.TestCase):
 
 
 class BalanceTest(unittest.TestCase):
-  """勇者を何人か 1 シーズン動かして、狙いの範囲に収まるか確かめる（数値は world/ で調整する）。"""
+  """もののふを何人か 1 シーズン動かして、狙いの範囲に収まるか確かめる（数値は world/ で調整する）。"""
 
   @classmethod
   def setUpClass(cls):
-    # 本番と同じく、全員で 1 つの掲示板を取り合う（早い者勝ち。勇者を進める順は日ごとに混ぜる）
+    # 本番と同じく、全員で 1 つの高札を取り合う（早い者勝ち。もののふを進める順は日ごとに混ぜる）
     cls.results = [G.new_state(WORLD, f"b{i}") for i in range(30)]
     guild, d = G.new_guild(), START
     while G.season_of(WORLD, d) == 1:
@@ -967,14 +967,14 @@ class GuildBoardTest(unittest.TestCase):
           lv = WORLD["monsters"][quest["monster"]]["level"]
           self.assertEqual(G.make_town_quest(WORLD, quest, town, START)["level"], [lv, lv], quest["id"])
     q = next(q for i in range(200) for q in [common_hunt("kofu", 2, i)] if q["level"] == [5, 5])
-    self.assertFalse(G.suitable(q, 1))  # Lv5 の魔物の討伐: Lv1 では受けない、Lv2 から受ける
+    self.assertFalse(G.suitable(q, 1))  # Lv5 の物の怪の討伐: Lv1 では受けない、Lv2 から受ける
     self.assertTrue(G.suitable(q, 2))
     deliver = next(q for q in G.board(WORLD, self.TOWN, START, 1) if q["type"] == "deliver")
     self.assertIsNone(deliver["level"])  # 配達は Lv を持たない（#150）
 
   def test_open_quests_follow_the_monster_level(self):
     hunt = next(e for e in self.board if e["type"] == "hunt")
-    hunt["level"] = [99, 99]  # 魔物のレベルを変える前に貼られた依頼
+    hunt["level"] = [99, 99]  # 物の怪のレベルを変える前に貼られた依頼
     lv = WORLD["monsters"][hunt["monster"]]["level"]
     self.assertEqual(self.next_day()[hunt["id"]]["level"], [lv, lv])
 
@@ -1021,7 +1021,7 @@ class GuildBoardTest(unittest.TestCase):
     for e in self.board:  # この討伐だけを受けられるようにする
       e["status"] = "open" if e is hunt else "done"
     fresh = [list(p) for p in hunt["steps"]]
-    hunt["steps"] = [["back", 1]]  # 前に受けた勇者が進めたまま保存された段取り
+    hunt["steps"] = [["back", 1]]  # 前に受けたもののふが進めたまま保存された段取り
     state = play(1, "h1", actions=0)
     state["place"], state["hero"]["level"] = self.TOWN, 99
     day = G.Day(WORLD, state, START, random.Random(0), self.guild)
@@ -1030,7 +1030,7 @@ class GuildBoardTest(unittest.TestCase):
     self.assertEqual(quest["id"], hunt["id"])
     self.assertEqual(quest["steps"], fresh)  # 段取りは最初から作り直す
     self.assertEqual((quest["progress"], quest["away"]), (0, 0))
-    quest["steps"][0][1] -= 1  # 勇者が進めても、掲示板の依頼は変わらない
+    quest["steps"][0][1] -= 1  # もののふが進めても、高札の依頼は変わらない
     self.assertEqual(hunt["steps"], [["back", 1]])
     self.assertIsNot(quest["reward"], hunt["reward"])
 
@@ -1053,7 +1053,7 @@ class GuildBoardTest(unittest.TestCase):
       dict(quest, steps=[["hunt", 1], ["back", 1]], progress=quest["count"]),  # 倒し終えたのに討伐が残っている
     ):
       self.assertFalse(G.quest_ok(WORLD, broken), broken["steps"])
-      self.assertTrue(G.quest_ok(WORLD, broken, steps=False))  # 掲示板では段取りを見ない
+      self.assertTrue(G.quest_ok(WORLD, broken, steps=False))  # 高札では段取りを見ない
       state["quest"] = broken
       with tempfile.TemporaryDirectory() as d:
         path = Path(d) / "h1.json"
@@ -1118,7 +1118,7 @@ class GuildBoardTest(unittest.TestCase):
   def test_older_days_do_not_rewind_the_board(self):
     board = self.next_day(2)
     snapshot = json.dumps(self.guild, sort_keys=True)
-    G.refresh_guild(WORLD, self.guild, START + timedelta(days=1), 1)  # 遅れている勇者がさかのぼって進める
+    G.refresh_guild(WORLD, self.guild, START + timedelta(days=1), 1)  # 遅れているもののふがさかのぼって進める
     G.refresh_guild(WORLD, self.guild, START, 0)  # 前のシーズンの日
     self.assertEqual(json.dumps(self.guild, sort_keys=True), snapshot)
     self.assertTrue(board)
@@ -1194,14 +1194,14 @@ class BattleDepthTest(unittest.TestCase):
     self.assertIn("騎兵の槍で弱点を突いた", day.events[-1])
 
   def count_first(self, monster, spd, inventory=None):
-    """勇者と魔物の、最初の数回の攻撃の順番（"h" / "m"）。"""
+    """もののふと物の怪の、最初の数回の攻撃の順番（"h" / "m"）。"""
     state = self.hero_state(base_spd=spd)
     state["inventory"] = G.instances(inventory or {})
     day = day_of(state)
     order = []
 
     def damage(attack, guard, dex=0):
-      who = "m" if attack == 3 else "h"  # 魔物の攻撃は 3
+      who = "m" if attack == 3 else "h"  # 物の怪の攻撃は 3
       order.append(who)
       return 1 if who == "m" else 10
 
@@ -1210,11 +1210,11 @@ class BattleDepthTest(unittest.TestCase):
     return "".join(order)
 
   def test_speed_decides_order_and_double_attacks(self):
-    self.assertEqual(self.count_first(self.monster(spd=6), 6), "hmhmh")  # 同じなら勇者が先
-    self.assertEqual(self.count_first(self.monster(spd=7), 6), "mhmhmh")  # 魔物が速ければ魔物が先
+    self.assertEqual(self.count_first(self.monster(spd=6), 6), "hmhmh")  # 同じならもののふが先
+    self.assertEqual(self.count_first(self.monster(spd=7), 6), "mhmhmh")  # 物の怪が速ければ物の怪が先
     self.assertEqual(self.count_first(self.monster(spd=3), 6), "hhmh")  # 2 倍以上なら 2 回攻撃
-    self.assertEqual(self.count_first(self.monster(spd=13), 6), "mmhmmhmmh")  # 魔物も 2 倍以上なら 2 回
-    # 先手の魔物は、勇者のほうが速くても先に攻撃する（2 回攻撃は素早さで決まる）
+    self.assertEqual(self.count_first(self.monster(spd=13), 6), "mmhmmhmmh")  # 物の怪も 2 倍以上なら 2 回
+    # 先手の物の怪は、もののふのほうが速くても先に攻撃する（2 回攻撃は素早さで決まる）
     self.assertEqual(self.count_first(self.monster(spd=3, trait="first_strike"), 6), "mhhmh")
 
   def test_speed_follows_the_weapon_in_hand(self):
@@ -1231,13 +1231,13 @@ class BattleDepthTest(unittest.TestCase):
     state = self.hero_state(base_atk=3)
     state["inventory"] = {"x_heavy": 1, "x_lance": 1}  # 攻 3+7=10（属性なし）と 3+6=9（雷）
     day = day_of(state)
-    # 守りが高い氷の魔物: 大剣 (10 - 8) = 2、騎兵の槍 (9 - 8) × 1.3 = 1.3 → 大剣のほうが効く
+    # 守りが高い氷の物の怪: 大剣 (10 - 8) = 2、騎兵の槍 (9 - 8) × 1.3 = 1.3 → 大剣のほうが効く
     self.assertEqual(day.pick_weapon(self.monster(element="ice"), 16)[0], "x_heavy")
     self.assertEqual(day.pick_weapon(self.monster(element="ice"), 0)[0], "x_lance")
 
   def test_hero_fights_barehanded_rather_than_with_a_weak_element(self):
     state = self.hero_state(base_atk=20)
-    state["inventory"] = {"x_flame": 1}  # 試しの炎の剣（攻 +2・炎・★★）は、氷の魔物には 0.8 倍
+    state["inventory"] = {"x_flame": 1}  # 試しの炎の剣（攻 +2・炎・★★）は、氷の物の怪には 0.8 倍
     day = day_of(state)
     self.assertEqual(day.pick_weapon(self.monster(element="ice"), 0)[:2], (None, 1.0))  # 22×0.8 < 20
     self.assertEqual(day.pick_weapon(self.monster(element="thunder"), 0)[0], "x_flame")
@@ -1353,7 +1353,7 @@ class BattleDepthTest(unittest.TestCase):
     owner["inventory"] = {"iron_helm": 1}
     day_of(owner).shop("edo")
     self.assertNotIn("wooden_helm", ids(owner))
-    poor = self.hero_state(gold=300)  # 鉄の兜（400G）は買えないので、次の木の兜（240G）
+    poor = self.hero_state(gold=300)  # 鉄の兜（400文）は買えないので、次の木の兜（240文）
     poor.update(personality="brave", trait="guard")
     poor["hero"]["potions"] = 3
     poor["inventory"] = {"iron_sword": 1, "iron_shield": 1, "soaring_leaf_charm": 1}  # 兜だけがない
@@ -1380,7 +1380,7 @@ class BattleDepthTest(unittest.TestCase):
   def test_exp_does_not_shrink_with_level_gap(self):
     dog = WORLD["monsters"]["wild_dog"]
     state = G.new_state(WORLD)
-    state["hero"]["level"] = 15  # 魔物（Lv1）よりずっと高くても、経験値は減らない
+    state["hero"]["level"] = 15  # 物の怪（Lv1）よりずっと高くても、経験値は減らない
     G.set_base_stats(WORLD, state)
     state["hero"]["hp"] = G.stats(WORLD, state)["max_hp"]
     day = day_of(state)
@@ -1578,14 +1578,14 @@ class FallPathsTest(unittest.TestCase):
 
 
 def with_personality(pid, hero_id="h1"):
-  """性格 pid の勇者（最初の町にいる。シーズン 1 の途中なので、advance で持ち物や溜めた行動力が戻らない）。"""
+  """性格 pid のもののふ（最初の町にいる。シーズン 1 の途中なので、advance で持ち物や溜めた行動力が戻らない）。"""
   state = G.new_state(WORLD, hero_id)
   state.update(personality=pid, season=G.season_of(WORLD, START), season_day=1)
   return state
 
 
 class PersonalityTest(unittest.TestCase):
-  """性格（season.json の personalities）と、宿・行動力を溜める・散策の表（Issue #95・#226）。"""
+  """性格（season.json の personalities）と、旅籠・行動力を溜める・散策の表（Issue #95・#226）。"""
 
   def test_personality_is_random_kept_and_repaired(self):
     kinds = {G.pick_personality(WORLD, f"h{i}") for i in range(60)}
@@ -1615,15 +1615,15 @@ class PersonalityTest(unittest.TestCase):
     state["hero"]["level"] = 5
     G.refresh_guild(WORLD, guild, START, 1)
     entries = guild["towns"][town]
-    hunt = next(e for e in entries if e["type"] == "hunt")  # 討伐 4 件の掲示板にする（配達は Lv を見ないので）
+    hunt = next(e for e in entries if e["type"] == "hunt")  # 討伐 4 件の高札にする（配達は Lv を見ないので）
     entries[:] = [dict(copy.deepcopy(hunt), id=f"{hunt['id']}-{i}") for i in range(4)]
     for i, e in enumerate(entries):  # Lv と ★ を作り直して、選び方だけを見る
       e.update(level=[[5, 5], [4, 4], [5, 5], [6, 6]][i % 4], rank=[2, 1, 1, 1][i % 4], min_level=0)
     G.Day(WORLD, state, START, random.Random(0), guild).take_quest(town)
-    picked = next(e for e in entries if e["status"] == "held")  # 受けた依頼（勇者の写しは、Lv を作り直す）
+    picked = next(e for e in entries if e["status"] == "held")  # 受けた依頼（もののふの写しは、Lv を作り直す）
     self.assertEqual((picked["level"][0], picked["rank"]), (5, 1))  # Lv の高いもの（自分以下）、★の少ないもの
     first = next(e for e in entries if e["level"][0] == 5 and e["rank"] == 1)
-    self.assertIs(picked, first)  # 同じ条件なら掲示板の上のもの
+    self.assertIs(picked, first)  # 同じ条件なら高札の上のもの
 
   def test_take_quest_falls_back_to_the_nearest_level(self):
     guild = G.new_guild()
@@ -1631,7 +1631,7 @@ class PersonalityTest(unittest.TestCase):
     town = state["place"]
     state["hero"]["level"] = 12
     G.refresh_guild(WORLD, guild, START, 1)
-    # 掲示板を討伐だけにする（配達は Lv を見ないので、いつも範囲に入る）
+    # 高札を討伐だけにする（配達は Lv を見ないので、いつも範囲に入る）
     guild["towns"][town] = [
       dict(common_hunt(town, seed=i), id=f"q{i}", posted=START.isoformat(), status="open", holder=None)
       for i in range(5)
@@ -1653,7 +1653,7 @@ class PersonalityTest(unittest.TestCase):
     state.update(quest=None, taken=[])
     G.Day(WORLD, state, START, random.Random(0), guild).take_quest(town)
     self.assertIs(next(e for e in entries if e["status"] == "held"), entries[0])
-    # 範囲からの外れが同じなら、性格の選び方（勤勉は Lv の高いもの）。Lv も同じなら掲示板の上
+    # 範囲からの外れが同じなら、性格の選び方（勤勉は Lv の高いもの）。Lv も同じなら高札の上
     tactician = with_personality("tactician")  # Lv −1〜+1。★の多いもの
     tactician["hero"]["level"] = 12
     for e in entries:
@@ -1757,11 +1757,11 @@ class PersonalityTest(unittest.TestCase):
     self.assertEqual(
       [i for i in ids(state) if WORLD["items"][i]["slot"] == "helmet"], ["wooden_helm"]
     )  # 選ぶほうを持つ
-    self.assertEqual([x["id"] for x in G.stored(state)], ["iron_helm"])  # 残りは保管庫
+    self.assertEqual([x["id"] for x in G.stored(state)], ["iron_helm"])  # 残りは蔵
     self.assertIn("同じ装備を 3 つ手放した", day.events)  # スキルなしの同じ剣は、2 本目から手放す
-    self.assertTrue(G.owns(state, "iron_helm"))  # 保管庫にあっても自分のもの（店で買い直さない）
+    self.assertTrue(G.owns(state, "iron_helm"))  # 蔵にあっても自分のもの（店で買い直さない）
     G.start_season(WORLD, state, 2)
-    self.assertEqual(len(G.owned(state)), 4)  # 持ち物と保管庫はシーズンをまたいで残る
+    self.assertEqual(len(G.owned(state)), 4)  # 持ち物と蔵はシーズンをまたいで残る
 
   def test_old_inventory_format_is_read(self):
     with tempfile.TemporaryDirectory() as d:
@@ -1775,7 +1775,7 @@ class PersonalityTest(unittest.TestCase):
     self.assertEqual(loaded["storage"], [])
 
   def test_potion_is_used_below_the_rate_and_zero_hp_falls(self):
-    state = with_personality("careful")  # 回復薬は HP 50% 未満
+    state = with_personality("careful")  # 丸薬は HP 50% 未満
     day = day_of(state)
     max_hp = day.stats["max_hp"]
     state["hero"].update(hp=max_hp // 2 - 1, potions=1)
@@ -1784,20 +1784,20 @@ class PersonalityTest(unittest.TestCase):
     self.assertEqual(state["hero"]["hp"], min(max_hp, max_hp // 2 - 1 + int(max_hp * 0.5)))
     strong = dict(WORLD["monsters"]["wild_dog"], atk=999, hp=999, spd=1)
     state["hero"].update(hp=max_hp, potions=3)
-    self.assertFalse(day.battle(strong))  # 一撃で 0 になったら、回復薬があっても力尽きる
+    self.assertFalse(day.battle(strong))  # 一撃で 0 になったら、丸薬があっても力尽きる
     self.assertEqual(state["hero"]["potions"], 3)
 
   def test_town_does_not_heal_but_the_inn_does(self):
-    state = with_personality("careful")  # 宿は HP 70% 未満
+    state = with_personality("careful")  # 旅籠は HP 70% 未満
     day = day_of(state)
     max_hp = day.stats["max_hp"]
     state["hero"].update(hp=1, gold=100)
     day.visit_town(state["place"])
     self.assertEqual(state["hero"]["hp"], 1)  # 町に着いても回復しない
-    self.assertTrue(day.act())  # 依頼を持っていないので、宿で休憩する（1 行動）
+    self.assertTrue(day.act())  # 依頼を持っていないので、旅籠で休憩する（1 行動）
     self.assertEqual(state["hero"]["hp"], max_hp)
     self.assertLessEqual(state["hero"]["gold"], 100 - WORLD["season"]["inn"]["price"])
-    self.assertIn("宿で休んだ", " ".join(day.events))
+    self.assertIn("旅籠で休んだ", " ".join(day.events))
 
   def test_spare_actions(self):
     town = TOWN
@@ -1854,7 +1854,7 @@ class PersonalityTest(unittest.TestCase):
     price = WORLD["season"]["potion"]["price"]
     state["hero"].update(potions=0, gold=price * 3)
     day_of(state).shop(state["place"])
-    self.assertEqual(state["hero"]["potions"], 3)  # 回復薬の分のお金を二重に残さない
+    self.assertEqual(state["hero"]["potions"], 3)  # 丸薬の分のお金を二重に残さない
 
   def test_stored_actions_reset_each_season(self):
     state = with_personality("careful")
@@ -1876,7 +1876,7 @@ class PersonalityTest(unittest.TestCase):
     window = [5 + d for d in WORLD["season"]["stroll_strong_levels"]]
     levels = {WORLD["monsters"][m]["level"] for m, _ in road}
     if any(window[0] <= lv <= window[1] for lv in levels):
-      self.assertTrue(all(window[0] <= lv <= window[1] for lv in seen), seen)  # 強い魔物は Lv +2〜+3
+      self.assertTrue(all(window[0] <= lv <= window[1] for lv in seen), seen)  # 強い物の怪は Lv +2〜+3
     world["season"]["stroll_events"] = {"treasure": 1}
     world["season"]["stroll_treasure"] = {"potion": 1}
     day = G.Day(world, state, START, random.Random(0))
@@ -1885,13 +1885,13 @@ class PersonalityTest(unittest.TestCase):
     self.assertEqual(state["hero"]["potions"], potions + 1)
 
   def test_shop_buys_potions_first_and_keeps_inn_money(self):
-    state = with_personality("careful")  # 先に 3 個、宿は HP 70% 未満
+    state = with_personality("careful")  # 先に 3 個、旅籠は HP 70% 未満
     state["hero"].update(potions=0, gold=WORLD["season"]["potion"]["price"] * 3 + WORLD["season"]["inn"]["price"], hp=1)
     day = day_of(state)
     day.shop(state["place"])
     self.assertEqual(state["hero"]["potions"], 3)
-    self.assertEqual(state["hero"]["gold"], WORLD["season"]["inn"]["price"])  # 宿代は残す
-    brave = with_personality("brave")  # 先に買う回復薬は 0 個（装備を先に買う）
+    self.assertEqual(state["hero"]["gold"], WORLD["season"]["inn"]["price"])  # 旅籠代は残す
+    brave = with_personality("brave")  # 先に買う丸薬は 0 個（装備を先に買う）
     brave["hero"].update(potions=0, gold=10_000)
     day_of(brave).shop(brave["place"])
     self.assertTrue(brave["inventory"])
@@ -1928,7 +1928,7 @@ class SkillTest(unittest.TestCase):
     self.assertEqual(brave["hero"]["gold"], 10_000 - price)
     poor = with_personality("brave")
     poor["inventory"] = gear(("steel_sword", None))
-    poor["hero"]["gold"] = price  # 宿代・回復薬の分を残すと足りない
+    poor["hero"]["gold"] = price  # 旅籠代・丸薬の分を残すと足りない
     day_of(poor).smith(poor["place"])
     self.assertIsNone(G.carried(poor)[0]["skill"])
     careful = with_personality("careful")  # ★★★ 以上なので、★★ には付けない
@@ -1977,12 +1977,12 @@ class SkillTest(unittest.TestCase):
     world["season"]["road_events"] = {"treasure": 1}
     world["season"]["treasure"] = [["none", 1]]
     day = G.Day(world, state, START, random.Random(0))
-    with mock.patch.object(day.rng, "random", return_value=0.9):  # 回復薬ではなくお金
+    with mock.patch.object(day.rng, "random", return_value=0.9):  # 丸薬ではなくお金
       for _ in range(30):
         gold = state["hero"]["gold"]
         day.road_event(TOWN, WORLD["neighbors"][TOWN][0])
         low, high = WORLD["season"]["treasure_gold"]
-        self.assertTrue(low <= state["hero"]["gold"] - gold <= high)  # 勇者の Lv に関係なく 10〜30G
+        self.assertTrue(low <= state["hero"]["gold"] - gold <= high)  # もののふの Lv に関係なく 10〜30文
 
   def test_prefer_index(self):
     state = with_personality("brave")
@@ -1998,7 +1998,7 @@ class SkillTest(unittest.TestCase):
     quest = {"type": "hunt", "monster": poison["id"]}
     day = day_of(state)
     day.arrange(state["place"], quest)
-    self.assertEqual(G.carried(state)[0]["skill"], "antidote")  # 毒の魔物の討伐なので、毒よけの兜を持つ
+    self.assertEqual(G.carried(state)[0]["skill"], "antidote")  # 毒の物の怪の討伐なので、毒よけの兜を持つ
 
   def test_review_fixes(self):
     # ふだん着ける装備は ★ の多いもの。★ と点数が同じなら、性格の優先スキルの付いたもの
@@ -2008,14 +2008,14 @@ class SkillTest(unittest.TestCase):
     state["inventory"] = gear(("silkvine_charm", None), ("silkvine_charm", "haggle"))
     self.assertEqual(G.worn(WORLD, state)["accessory"]["skill"], "haggle")
     self.assertEqual(day_of(state).price(100), 90)
-    # 鍛冶屋は、保管庫の装備には付けない
+    # 鍛冶屋は、蔵の装備には付けない
     state = with_personality("brave")
     state["inventory"], state["storage"] = [], gear(("steel_sword", None))
     state["hero"]["gold"] = 10_000
     day_of(state).smith(state["place"])
     self.assertIsNone(G.stored(state)[0]["skill"])
     self.assertEqual(state["hero"]["gold"], 10_000)
-    # 店は、保管庫のもっと強い品より弱い品を買わない
+    # 店は、蔵のもっと強い品より弱い品を買わない
     state = with_personality("brave")
     state["inventory"], state["storage"] = gear(("wooden_helm", "antidote")), gear(("iron_helm", None))
     state["hero"]["gold"] = 10_000
@@ -2031,7 +2031,7 @@ class SkillTest(unittest.TestCase):
       self.assertEqual(G.load_state(WORLD, path, "h1")["inventory"], gear(("iron_sword", None)))
 
   def test_review_fixes_2(self):
-    # 依頼がないときは、対策スキルのために強い盾を保管庫にしまわない
+    # 依頼がないときは、対策スキルのために強い盾を蔵にしまわない
     state = with_personality("brave")
     world = copy.deepcopy(WORLD)
     world["items"]["x_leg_shield"] = {
@@ -2044,7 +2044,7 @@ class SkillTest(unittest.TestCase):
     state["inventory"] = gear(("x_leg_shield", None), ("steel_shield", "swarm_guard"))
     G.Day(world, state, START, random.Random(0)).arrange(state["place"])
     self.assertEqual(G.carried(state)[0]["id"], "x_leg_shield")
-    # 今の依頼の魔物に効く対策スキルは、鍛冶屋で付け直さない
+    # 今の依頼の物の怪に効く対策スキルは、鍛冶屋で付け直さない
     careful = with_personality("brave")
     poison = next(m for m in WORLD["monsters"].values() if m.get("trait") == "poison")
     careful["quest"] = {"type": "hunt", "monster": poison["id"]}
@@ -2081,9 +2081,9 @@ class SkillTest(unittest.TestCase):
     ice = next(f"x_e{i}" for i, el in enumerate(("flame", "ice", "thunder")) if G.element_rate(world, el, "flame") > 1)
     state["inventory"] = gear(("x_big", None), ("iron_sword", None), ("iron_axe", None), (ice, None))  # 武器 4 本
     day = G.Day(world, state, START, random.Random(0))
-    day.quest_foes = lambda q: [{"element": "flame", "trait": None}]  # 炎の魔物の依頼
+    day.quest_foes = lambda q: [{"element": "flame", "trait": None}]  # 炎の物の怪の依頼
     day.arrange(state["place"], {"type": "hunt"})
-    self.assertIn(ice, {x["id"] for x in G.carried(state)})  # 弱点を突ける属性の武器は、保管庫にしまわない
+    self.assertIn(ice, {x["id"] for x in G.carried(state)})  # 弱点を突ける属性の武器は、蔵にしまわない
     self.assertEqual(len(G.stored(state)), 1)
 
   def test_battle_skills(self):

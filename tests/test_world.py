@@ -54,7 +54,7 @@ class DataTest(unittest.TestCase):
     for pid in world["towns"]:  # 町にはどこからでも陸路・航路で行ける
       self.assertIn(pid, world["dist"][start])
     self.assertEqual(world["dist"][start][start], 0)
-    for pid in world["dungeons"]:  # ダンジョンへは（まだ）行けない
+    for pid in world["dungeons"]:  # 霊場へは（まだ）行けない
       self.assertNotIn(pid, world["dist"][start])
 
   def test_every_road_has_monsters(self):
@@ -76,7 +76,7 @@ class DataTest(unittest.TestCase):
 
 
 class MonsterRewardTest(unittest.TestCase):
-  """魔物の経験値とお金は、能力から計算する（強さ点² ÷ exp_divisor、お金は経験値 × gold_rate）。"""
+  """物の怪の経験値とお金は、能力から計算する（強さ点² ÷ exp_divisor、お金は経験値 × gold_rate）。"""
 
   def test_rewards_follow_the_stats(self):
     cfg, traits, monsters = WORLD["season"]["monster_reward"], WORLD["traits"], WORLD["monsters"]
@@ -135,7 +135,7 @@ class ValidateTest(unittest.TestCase):
     def change(r):
       r["monsters"] = [m for m in r["monsters"] if m["terrain"] != "sea"]
 
-    self.assertError(change, ["terrain", "魔物がいません"])
+    self.assertError(change, ["terrain", "物の怪がいません"])
 
   def test_duplicate_id(self):
     self.assertError(lambda r: r["monsters"].append(dict(r["monsters"][0])), ["重複", "wild_dog"])
@@ -163,7 +163,7 @@ class ValidateTest(unittest.TestCase):
     def trail_between_towns(r):
       r["map"]["roads"].append({"from": "kyoto", "to": "osaka", "distance": 1, "kind": "trail"})
 
-    self.assertError(trail_between_towns, ["trail", "ダンジョン"])
+    self.assertError(trail_between_towns, ["trail", "霊場"])
 
   def test_start_must_be_a_town(self):
     def change(r):
@@ -179,9 +179,7 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["map"]["places"][0].update(area=["kinai"]), ["area", "地方"])
 
   def test_area_ids_do_not_clash_with_places(self):
-    self.assertError(
-      lambda r: r["map"]["areas"].append({"id": "odawara", "name": "x"}), ["areas", "町・ダンジョンの ID"]
-    )
+    self.assertError(lambda r: r["map"]["areas"].append({"id": "odawara", "name": "x"}), ["areas", "町・霊場の ID"])
     self.assertError(lambda r: r["map"]["areas"].append({"id": "_other", "name": "x"}), ["areas", "_"])
 
   def test_elements_speed_and_personas_are_checked(self):
@@ -260,13 +258,13 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["map"]["places"][0].update(en=""), ["en"])
     world = W.load_world()
     self.assertEqual(len(world["areas"]), 7)
-    for p in world["places"].values():  # どの町・ダンジョンにも地方と英語名がある
+    for p in world["places"].values():  # どの町・霊場にも地方と英語名がある
       self.assertIn(p["area"], world["areas"])
       self.assertTrue(p["en"])
     self.assertEqual({world["places"][t]["area"] for t in world["towns"]}, {"bando"})
 
   def test_every_town_has_a_guild_size(self):
-    self.assertError(lambda r: r["map"]["places"][0].pop("quests_per_day"), ["quests_per_day", "ギルドの規模"])
+    self.assertError(lambda r: r["map"]["places"][0].pop("quests_per_day"), ["quests_per_day", "口入れ屋の規模"])
 
   def test_open_must_be_towns(self):
     self.assertError(lambda r: r["map"].update(open=["kumano"]), ["open", "kumano"])
@@ -281,7 +279,7 @@ class ValidateTest(unittest.TestCase):
     for r in world["trails"]:
       self.assertTrue({r["from"], r["to"]} & opened, r)
     self.assertFalse(any(i["kind"] == "sea" for i in world["road_info"].values()))  # 江戸からの航路は出さない
-    self.assertEqual(len(world["places"]), len(RAW["map"]["places"]))  # 町・ダンジョンは地図に出す
+    self.assertEqual(len(world["places"]), len(RAW["map"]["places"]))  # 町・霊場は地図に出す
 
   def test_without_open_every_town_is_open(self):
     raw = copy.deepcopy(RAW)
@@ -356,7 +354,7 @@ class ValidateTest(unittest.TestCase):
 
     self.assertEqual(errors_after(town_quest()), [])  # 町の討伐も書ける（今は強敵だけ）
     self.assertError(town_quest(to="edo"), ["nagano_x", "直接つながる"])  # 道がない
-    self.assertError(town_quest(monster="marsh_leech"), ["nagano_x", "その道に出る"])  # その道にいない魔物
+    self.assertError(town_quest(monster="marsh_leech"), ["nagano_x", "その道に出る"])  # その道にいない物の怪
     self.assertError(town_quest(rank=9), ["nagano_x", "rank"])
     self.assertError(town_quest(count=0), ["nagano_x", "count"])
     self.assertError(town_quest(type="deliver", to="nagano"), ["nagano_x", "別の町"])

@@ -1,4 +1,4 @@
-"""勇者管理シート・勇者の状態・ギルドの掲示板（.state/）の読み書き。
+"""もののふ管理シート・もののふの状態・口入れ屋の高札（.state/）の読み書き。
 rpg.py（毎日の実行）と website.py（サイトの書き出し）の両方から使う。"""
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import game
 
 HEROES_PATH = common.ROOT / ".state" / "heroes.json"
 HERO_DIR = common.ROOT / ".state" / "heroes"
-GUILD_PATH = common.ROOT / ".state" / "guild.json"  # 全員で共有する、町ごとのギルドの掲示板（早い者勝ち）
+GUILD_PATH = common.ROOT / ".state" / "guild.json"  # 全員で共有する、町ごとの口入れ屋の高札（早い者勝ち）
 
 
 def hero_state_path(hero_id: str) -> Path:
@@ -35,7 +35,7 @@ def save_heroes(heroes: list[dict], path: Path | None = None) -> None:
 
 
 def current_entries(world: dict, retired: bool = False) -> list[tuple[dict, dict]]:
-  """現役の勇者（retired なら引退した勇者）の今の状態（冒険は進めない）。"""
+  """現役のもののふ（retired なら引退したもののふ）の今の状態（冒険は進めない）。"""
   entries = []
   for hero in [h for h in load_heroes() if h["active"] != retired]:
     path = hero_state_path(hero["id"])
@@ -45,7 +45,7 @@ def current_entries(world: dict, retired: bool = False) -> list[tuple[dict, dict
 
 
 def load_guild(path: Path | None = None) -> dict:
-  """町ごとのギルドの掲示板（日をまたいで持ち越す）。前の形式（受けられた依頼の一覧だけ）なら、新しく貼り直す。"""
+  """町ごとの口入れ屋の高札（日をまたいで持ち越す）。前の形式（受けられた依頼の一覧だけ）なら、新しく貼り直す。"""
   path = path or GUILD_PATH
   try:
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -59,7 +59,7 @@ def load_guild(path: Path | None = None) -> dict:
 
 
 def save_guild(guild: dict) -> None:
-  """掲示板を保存する（毎日コミットするので、差分が読みやすいよう依頼 1 件を 1 行にする）。"""
+  """高札を保存する（毎日コミットするので、差分が読みやすいよう依頼 1 件を 1 行にする）。"""
   one = lambda v: json.dumps(v, ensure_ascii=False, separators=(",", ":"))  # noqa: E731
   towns = ",\n".join(
     f" {one(t)}: [\n" + ",\n".join(f"  {one(e)}" for e in es) + "\n ]" for t, es in guild.get("towns", {}).items()

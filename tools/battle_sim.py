@@ -1,14 +1,14 @@
 """戦いを何度も試して、勝率を出す（強さの調整に使う。ゲームの状態は変えない）。
 
-勇者はレベルアップの伸び（特性つき）だけで作り、装備は指定したものだけを持たせる。戦いの処理はゲームと同じ（game.Day.battle）。
+もののふはレベルアップの伸び（特性つき）だけで作り、装備は指定したものだけを持たせる。戦いの処理はゲームと同じ（game.Day.battle）。
 
 使い方:
-  python tools/battle_sim.py                          # 巣穴の主に、Lv15・装備なし・回復薬 3 個で、特性ごとの勝率
+  python tools/battle_sim.py                          # 巣穴の主に、Lv15・装備なし・丸薬 3 個で、特性ごとの勝率
   python tools/battle_sim.py --level 16 --gear steel_sword,cavalry_lance
   python tools/battle_sim.py --reach                  # 特性ごとに、勝率 50% に届くレベル（とレベルごとの勝率）
   python tools/battle_sim.py --strength               # 特性ごとに、五分（勝率 50%）で戦えるボスの強さ（HP と攻撃の倍率）
-  python tools/battle_sim.py --monster wild_dog --level 1 --potions 0 --hp-loss  # 勝ったときに減る HP（道の魔物の調整）
-  python tools/battle_sim.py --monster road --fit-hp-loss 0.2   # 道の魔物の HP・攻撃・防御を、減る HP 20% に合わせて探す
+  python tools/battle_sim.py --monster wild_dog --level 1 --potions 0 --hp-loss  # 勝ったときに減る HP（道の物の怪の調整）
+  python tools/battle_sim.py --monster road --fit-hp-loss 0.2   # 道の物の怪の HP・攻撃・防御を、減る HP 20% に合わせて探す
   python tools/battle_sim.py --monster rock_golem -n 5000
 """
 
@@ -29,10 +29,10 @@ DAY = date(2026, 12, 1)
 
 
 def make_hero(world: dict, trait: str, level: int, gear: list[str], potions: int) -> dict:
-  """特性 trait の勇者を、レベルアップの伸びだけで level まで育てる（装備は gear、回復薬は potions 個）。"""
+  """特性 trait のもののふを、レベルアップの伸びだけで level まで育てる（装備は gear、丸薬は potions 個）。"""
   state = game.new_state(world, "sim", "試し")
   state["trait"] = trait
-  state["personality"] = None  # 強敵・ボスの強さは、性格のない勇者（倒れる前に回復薬を使う）で測る
+  state["personality"] = None  # 強敵・ボスの強さは、性格のないもののふ（倒れる前に丸薬を使う）で測る
   state["hero"]["level"] = level
   game.set_base_stats(world, state)  # レベルと特性で決まる能力（レベルアップを繰り返したのと同じ）
   state["inventory"] = [{"id": iid, "skill": None} for iid in gear]
@@ -45,7 +45,7 @@ def fight(
 ) -> tuple[float, float | None]:
   """n 回戦って、(勝った割合, 勝ったときに減った HP の割合の平均。1 回も勝てなければ None)。
   乱数の種は 0〜n-1 なので、同じ条件なら何度やっても同じ結果。
-  減った HP は戦いの前後の差なので、回復薬を使うと、回復した分だけ少なく出る（道の魔物は --potions 0 で測る）。"""
+  減った HP は戦いの前後の差なので、丸薬を使うと、回復した分だけ少なく出る（道の物の怪は --potions 0 で測る）。"""
   wins, lost = 0, 0.0
   hero = make_hero(world, trait, level, gear, potions)
   max_hp = game.stats(world, hero)["max_hp"]
@@ -65,13 +65,13 @@ def win_rate(world: dict, monster: dict, trait: str, level: int, gear: list[str]
 
 
 def scaled(monster: dict, factor: float) -> dict:
-  """HP と攻撃を factor 倍にした魔物。"""
+  """HP と攻撃を factor 倍にした物の怪。"""
   return monster | {"hp": max(1, round(monster["hp"] * factor)), "atk": max(1, round(monster["atk"] * factor))}
 
 
 def even_strength(world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int) -> float:
-  """勝率がちょうど 50% になる、魔物の強さの倍率（HP と攻撃を同じ倍率で変える。二分探索）。
-  1.0 より大きいほど、元の魔物より強い相手と五分に戦える。
+  """勝率がちょうど 50% になる、物の怪の強さの倍率（HP と攻撃を同じ倍率で変える。二分探索）。
+  1.0 より大きいほど、元の物の怪より強い相手と五分に戦える。
   探す範囲（LOW〜HIGH 倍）の外なら、端の値を返す（is_capped で確かめられる）。"""
   low, high = LOW, HIGH
   for _ in range(14):
@@ -91,21 +91,21 @@ def is_capped(factor: float) -> bool:
   return factor < LOW * 1.01 or factor > HIGH * 0.99
 
 
-ROAD_SHAPE = {"hp": 20, "atk": 7, "def": 2}  # 道の魔物の HP・攻撃・防御の比（この比のまま大きさだけを変える）
+ROAD_SHAPE = {"hp": 20, "atk": 7, "def": 2}  # 道の物の怪の HP・攻撃・防御の比（この比のまま大きさだけを変える）
 FIT_SEARCH_N, FIT_PICK_N = 300, 1000  # fit_hp_loss で、倍率を探すときと、候補を比べるときに戦う回数
 
 
 def shaped(monster: dict, factor: float) -> dict:
-  """HP・攻撃・防御を、ROAD_SHAPE の factor 倍（四捨五入した整数）にした魔物。ほかの値（速さ・性質など）はそのまま。"""
+  """HP・攻撃・防御を、ROAD_SHAPE の factor 倍（四捨五入した整数）にした物の怪。ほかの値（速さ・性質など）はそのまま。"""
   return monster | {k: max(1 if k != "def" else 0, W.half_up(v * factor)) for k, v in ROAD_SHAPE.items()}
 
 
 FIT_LOW, FIT_HIGH = 0.2, 6.0  # fit_hp_loss が探す倍率の範囲
-FIT_MIN_WIN = 0.99  # fit_hp_loss で選ぶ魔物は、この勝率以上で勝てる強さ
+FIT_MIN_WIN = 0.99  # fit_hp_loss で選ぶ物の怪は、この勝率以上で勝てる強さ
 
 
 def fit_hp_loss(world: dict, monster: dict, level: int, goal: float) -> tuple[dict, bool]:
-  """基準の勇者（強運・装備なし・回復薬なし）が Lv level で戦うと、勝ったときに減る HP が goal に近くなる魔物と、
+  """基準のもののふ（強運・装備なし・丸薬なし）が Lv level で戦うと、勝ったときに減る HP が goal に近くなる物の怪と、
   探す範囲（FIT_LOW〜FIT_HIGH 倍）の端に当たったか（当たったら、目標に届いていない）。
   1. ROAD_SHAPE に掛ける倍率を二分探索する（勝率 99% 以上で、減る HP が goal 未満なら、もっと強くする）
   2. 探し終えた範囲の両端（goal 未満のいちばん強い倍率と、そのすぐ上の倍率）を整数にして、
@@ -142,33 +142,33 @@ def main() -> int:
   ap.add_argument(
     "--monster",
     default="den_lord",
-    help="戦う魔物の ID（既定: 巣穴の主）。--fit-hp-loss では road＝開放した道の魔物すべて",
+    help="戦う物の怪の ID（既定: 巣穴の主）。--fit-hp-loss では road＝開放した道の物の怪すべて",
   )
-  ap.add_argument("--level", type=int, help="勇者のレベル（既定: 15。--fit-hp-loss では魔物のレベル）")
+  ap.add_argument("--level", type=int, help="もののふのレベル（既定: 15。--fit-hp-loss では物の怪のレベル）")
   ap.add_argument("--trait", help="特性の ID（既定: 全部の特性）")
   ap.add_argument("--gear", default="", help="装備の ID を , でつなぐ（既定: 装備なし）")
-  ap.add_argument("--potions", type=int, help="回復薬の数（既定: 3）")
+  ap.add_argument("--potions", type=int, help="丸薬の数（既定: 3）")
   ap.add_argument("-n", type=int, default=2000, help="戦う回数（既定: 2000）")
   ap.add_argument("--reach", action="store_true", help="特性ごとに、勝率 50%% に届くレベルを出す（Lv10〜最大レベル）")
-  ap.add_argument("--strength", action="store_true", help="特性ごとに、五分で戦える魔物の強さの倍率を出す")
+  ap.add_argument("--strength", action="store_true", help="特性ごとに、五分で戦える物の怪の強さの倍率を出す")
   ap.add_argument("--hp-loss", action="store_true", help="特性ごとに、勝率と、勝ったときに減る HP の平均を出す")
   ap.add_argument(
     "--fit-hp-loss",
     type=float,
     metavar="GOAL",
-    help="同じ Lv の勇者（強運・装備なし・回復薬なし）が勝ったときに減る HP が GOAL（0.2 なら 20%%）になる HP・攻撃・防御を探す",
+    help="同じ Lv のもののふ（強運・装備なし・丸薬なし）が勝ったときに減る HP が GOAL（0.2 なら 20%%）になる HP・攻撃・防御を探す",
   )
   a = ap.parse_args()
   world = W.load_world()
   if a.fit_hp_loss is not None:
     if a.trait is not None or a.gear or a.potions is not None:
-      raise SystemExit("--fit-hp-loss は強運・装備なし・回復薬なしで測るので、--trait・--gear・--potions は使えません")
+      raise SystemExit("--fit-hp-loss は強運・装備なし・丸薬なしで測るので、--trait・--gear・--potions は使えません")
     return fit_main(world, a)
   a.level = 15 if a.level is None else a.level
   a.trait = "all" if a.trait is None else a.trait
   a.potions = 3 if a.potions is None else a.potions
   if a.monster not in world["monsters"]:
-    raise SystemExit(f"魔物 {a.monster!r} がいません")
+    raise SystemExit(f"物の怪 {a.monster!r} がいません")
   gear = [g for g in a.gear.split(",") if g]
   for g in gear:
     if g not in world["items"]:
@@ -180,7 +180,7 @@ def main() -> int:
   names = world["season"]["hero_traits"]
   print(
     f"{monster['name']} と戦う（装備: {'・'.join(world['items'][g]['name'] for g in gear) or 'なし'}、"
-    f"回復薬 {a.potions} 個、{a.n} 回ずつ）"
+    f"丸薬 {a.potions} 個、{a.n} 回ずつ）"
   )
   if a.strength:
     base = even_strength(world, monster, "lucky", a.level, gear, a.potions, a.n)  # 強運＝能力が伸びない（ふつう）
@@ -214,7 +214,7 @@ def main() -> int:
 
 
 def fit_main(world: dict, a: argparse.Namespace) -> int:
-  """--fit-hp-loss: 魔物ごとに、目標に合う HP・攻撃・防御と、そのときの経験値・お金を出す（データは書き換えない）。"""
+  """--fit-hp-loss: 物の怪ごとに、目標に合う HP・攻撃・防御と、そのときの経験値・お金を出す（データは書き換えない）。"""
   if not 0 < a.fit_hp_loss < 1:
     raise SystemExit("--fit-hp-loss は 0 より大きく 1 より小さい値にしてください（0.2 なら 20%）")
   if a.monster == "road":
@@ -222,11 +222,11 @@ def fit_main(world: dict, a: argparse.Namespace) -> int:
     ids.sort(key=lambda m: (world["monsters"][m]["level"], m))
   elif a.monster in world["monsters"]:
     if not W.on_road(world["monsters"][a.monster]):  # 強敵・ボスは 20:7:2 の比ではない
-      raise SystemExit(f"{world['monsters'][a.monster]['name']} は強敵かボスです（--fit-hp-loss は道の魔物だけ）")
+      raise SystemExit(f"{world['monsters'][a.monster]['name']} は強敵かボスです（--fit-hp-loss は道の物の怪だけ）")
     ids = [a.monster]
   else:
-    raise SystemExit(f"魔物 {a.monster!r} がいません（道の魔物すべては road）")
-  print(f"勝ったときに減る HP {a.fit_hp_loss:.0%} に合わせる（強運・装備なし・回復薬なし、{a.n} 回で確かめる）")
+    raise SystemExit(f"物の怪 {a.monster!r} がいません（道の物の怪すべては road）")
+  print(f"勝ったときに減る HP {a.fit_hp_loss:.0%} に合わせる（強運・装備なし・丸薬なし、{a.n} 回で確かめる）")
   for mid in ids:
     m = world["monsters"][mid]
     level = m["level"] if a.level is None else a.level
@@ -237,7 +237,7 @@ def fit_main(world: dict, a: argparse.Namespace) -> int:
     shown = "—" if lost is None else f"{lost:.0%}"
     print(
       f"  Lv{level} {m['name']}（{mid}）: HP{fit['hp']} 攻{fit['atk']} 防{fit['def']}  "
-      f"勝率 {rate:.1%} 減る HP {shown}  EXP{exp} G{gold}"
+      f"勝率 {rate:.1%} 減る HP {shown}  EXP{exp} 文{gold}"
       + ("" if same else f"  ← 今は HP{m['hp']} 攻{m['atk']} 防{m['def']}")
       + ("  （探す範囲の端。目標に届いていない）" if capped else "")
     )

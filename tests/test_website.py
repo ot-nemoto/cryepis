@@ -24,8 +24,10 @@ DAY = date.fromisoformat(WORLD["season"]["start"])
 
 
 def party(n=3, days=5):
-  """n 人の勇者を、ギルドを共有して days 日進める。(entries, guild, 最後の日)"""
-  entries = [({"id": f"h{i}", "name": f"勇者{i}"}, game.new_state(WORLD, f"h{i}", f"勇者{i}")) for i in range(1, n + 1)]
+  """n 人のもののふを、口入れ屋を共有して days 日進める。(entries, guild, 最後の日)"""
+  entries = [
+    ({"id": f"h{i}", "name": f"もののふ{i}"}, game.new_state(WORLD, f"h{i}", f"もののふ{i}")) for i in range(1, n + 1)
+  ]
   guild = game.new_guild()
   for k in range(days):
     for _, state in entries:
@@ -85,7 +87,7 @@ class SiteTest(unittest.TestCase):
     (self.out / "old.html").write_text("x")
     website.write_site(WORLD, [], DAY, {}, self.out)
     self.assertFalse((self.out / "old.html").exists())
-    self.assertIn("まだ勇者がいません", (self.out / "heroes.html").read_text(encoding="utf-8"))
+    self.assertIn("まだもののふがいません", (self.out / "heroes.html").read_text(encoding="utf-8"))
 
   def test_does_not_delete_other_directories(self):
     other = self.out.parent / "other"
@@ -103,7 +105,7 @@ class SiteTest(unittest.TestCase):
   def test_shown_day_is_the_last_advanced_day(self):
     entries, _, last = party(2, 3)
     self.assertEqual(website.shown_day(entries), last)
-    entries[0][1]["last_date"] = None  # まだ進めていない勇者がいても、最後に進めた日
+    entries[0][1]["last_date"] = None  # まだ進めていないもののふがいても、最後に進めた日
     self.assertEqual(website.shown_day(entries), last)
 
   def test_map_is_inline_svg_with_hero_marks(self):
@@ -113,11 +115,13 @@ class SiteTest(unittest.TestCase):
     root = ET.fromstring(svg)  # 正しい SVG として埋め込まれている
     self.assertEqual(list(root.iter("{http://www.w3.org/2000/svg}a")), [])  # 地図に名札（リンク）は出さない
     self.assertEqual(len([g for g in root.iter("{http://www.w3.org/2000/svg}g") if g.get("class") == "hero"]), 1)
-    self.assertNotIn("勇者の居場所", html)  # 地図のページに勇者の一覧は出さない（勇者のページで見る）
+    self.assertNotIn("もののふの居場所", html)  # 地図のページにもののふの一覧は出さない（もののふのページで見る）
     self.assertNotIn('href="heroes/h1.html"', html)
 
   def test_ranking_shows_top_ten(self):
-    entries = [({"id": f"h{i}", "name": f"勇者{i}"}, game.new_state(WORLD, f"h{i}", f"勇者{i}")) for i in range(1, 15)]
+    entries = [
+      ({"id": f"h{i}", "name": f"もののふ{i}"}, game.new_state(WORLD, f"h{i}", f"もののふ{i}")) for i in range(1, 15)
+    ]
     for i, (_, state) in enumerate(entries):  # Lv が違う 14 人（1 人だけ 10 位と同じ Lv）
       state["season"] = 1
       state["hero"]["level"] = 20 - i if i != 10 else 11
@@ -125,9 +129,9 @@ class SiteTest(unittest.TestCase):
     level = html[html.index("<h3>レベル</h3>") :]
     level = level[: level.index("</table>")]
     self.assertEqual(level.count("<tr>"), 10)  # 10 人で切る（同じ 10 位が 2 人でも、登録の早い 1 人だけ）
-    self.assertIn("勇者10<", level)
-    self.assertNotIn("勇者11<", level)
-    self.assertNotIn("勇者12<", level)
+    self.assertIn("もののふ10<", level)
+    self.assertNotIn("もののふ11<", level)
+    self.assertNotIn("もののふ12<", level)
     kills = html[html.index("<h3>討伐数</h3>") :]
     self.assertEqual(kills[: kills.index("</table>")].count("<tr>"), 10)  # 全員 0 体（同率 1 位）でも 10 人
     board = rpg.build_board(WORLD, entries, DAY)
@@ -141,7 +145,7 @@ class SiteTest(unittest.TestCase):
     taken = [e for es in guild["towns"].values() for e in es if e["status"] != "open"]
     self.assertTrue(taken)
     self.assertEqual(html.count('<span class="stamp">ACCEPTED</span>'), len(taken))
-    self.assertNotIn("heroes/", html.split("<main")[1])  # 受けた勇者の名前は出さない
+    self.assertNotIn("heroes/", html.split("<main")[1])  # 受けたもののふの名前は出さない
     self.assertNotIn("滞在中", html)
     total = sum(len(es) for es in guild["towns"].values())
     self.assertEqual(html.count("<tr data-f="), total)
@@ -154,7 +158,7 @@ class SiteTest(unittest.TestCase):
     for town in WORLD["towns"]:  # 町の名前に英語名を添える
       p = WORLD["places"][town]
       self.assertIn(f'{p["name"]} <span class="en">{p["en"]}</span>', html)
-      # 町のページの「掲示板を見る」（guild.html#町の ID）が、その地方のタブの中の掲示板を指す
+      # 町のページの「高札を見る」（guild.html#町の ID）が、その地方のタブの中の高札を指す
       panel = html[html.index(f'id="panel-{p["area"]}"') :]
       panel = panel[: panel.index("</section>")]
       self.assertIn(f'<div class="card board" id="{town}">', panel)
@@ -168,9 +172,9 @@ class SiteTest(unittest.TestCase):
     entries, guild, today = party(2, 2)
     later = today + timedelta(days=WORLD["season"]["quest_open_days"] + 2)
     html = website.build_guild(WORLD, entries, later, guild)
-    self.assertNotIn("受付終了", html)  # その日の朝の掲示板に貼り替えて見せる
+    self.assertNotIn("受付終了", html)  # その日の朝の高札に貼り替えて見せる
     self.assertIn(f"あと {WORLD['season']['quest_open_days'] - 1} 日", html)
-    self.assertEqual(guild["refreshed"][WORLD["towns"][0]], today.isoformat())  # 元の掲示板は変えない
+    self.assertEqual(guild["refreshed"][WORLD["towns"][0]], today.isoformat())  # 元の高札は変えない
     e = {"posted": (today - timedelta(days=10)).isoformat(), "status": "open"}
     self.assertIn("受付終了", website.guild_status(WORLD, e, today))
 
@@ -198,7 +202,7 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn('data-tab="armor"', html)  # 鎧の部位はない
     self.assertNotIn("data-slot=", html)  # 装備の種類の絞り込みはない
     self.assertNotIn("手に入る装備です", html)  # 説明文は出さない
-    self.assertNotIn("回復薬", html)  # 回復薬は町の店の品ぞろえに出す
+    self.assertNotIn("丸薬", html)  # 丸薬は町の店の品ぞろえに出す
     for slot in ("weapon", "helmet", "shield", "accessory"):  # 装備の種類ごとのタブ
       self.assertIn(f'role="tab" id="tab-{slot}"', html)
       self.assertIn(f'id="panel-{slot}"', html)
@@ -265,7 +269,7 @@ class SiteTest(unittest.TestCase):
       p = WORLD["places"][town]
       self.assertIn(f'id="{town}"', html)
       self.assertIn(p["text"], html)
-      self.assertIn(f"依頼の枠 {p['quests_per_day']} 件", html)  # ギルドの規模はどの町にもある
+      self.assertIn(f"依頼の枠 {p['quests_per_day']} 件", html)  # 口入れ屋の規模はどの町にもある
       self.assertEqual(f'href="guild.html#{town}"' in html, town in WORLD["towns"])
     self.assertLess(html.index("坂東 <span"), html.index("畿内 <span"))  # 開放した地方が先
     self.assertNotIn("オルドラの町の一覧です", html)  # 説明文は出さない
@@ -286,11 +290,11 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("鉄の剣", kyoto)
     kofu = html[html.index('id="kofu"') : html.index('id="nagano"')]  # 坂東の中は places の順
     self.assertIn("紅蓮草の護符", kofu.split("店の品ぞろえ")[0])  # レア
-    self.assertIn("富士山（ダンジョン・まだ入れない）", kofu)
+    self.assertIn("富士山（霊場・まだ入れない）", kofu)
     self.assertIn("長野（陸路 3）", kofu)
     shop = kofu.split("店の品ぞろえ</th><td>")[1].split("</td>")[0]  # 種類の順、同じ種類なら値段の高い順
-    *equips, potion = shop.split("<br>")  # 装備のあとに回復薬
-    self.assertTrue(potion.startswith("回復薬<span"))
+    *equips, potion = shop.split("<br>")  # 装備のあとに丸薬
+    self.assertTrue(potion.startswith("丸薬<span"))
     names = [n.split("</span>")[1].split("<span")[0] for n in equips]
     by_name = {it["name"]: it for it in WORLD["items"].values()}
     keys = [(W.SLOTS.index(by_name[n]["slot"]), -by_name[n]["price"]) for n in names]
@@ -302,7 +306,7 @@ class SiteTest(unittest.TestCase):
     html = website.build_home(WORLD, entries, today)
     self.assertIn("<title>ホーム | クリエピス戦記</title>", html)
     self.assertIn('<a href="index.html" class="on">ホーム</a><a href="map.html">地図</a>', html)  # 地図の前
-    self.assertIn("旅をしている勇者</th><td>2 人", html)  # いまの冒険の状況
+    self.assertIn("旅をしているもののふ</th><td>2 人", html)  # いまの冒険の状況
     self.assertIn('坂東 <span class="en">Bando</span>', html)
     self.assertIn('href="towns.html#edo"', html)
     for word in ("オルドラ", "星の巡り"):  # 物語はいったん外した（#249）
@@ -311,23 +315,23 @@ class SiteTest(unittest.TestCase):
   def test_heroes_page(self):
     entries, _, today = party(2, 2)
     html = website.build_heroes(WORLD, entries, today)
-    self.assertIn('<a href="ranking.html">ランキング</a><a href="heroes.html" class="on">勇者</a>', html)
-    for h, _ in entries:  # 勇者の一覧（詳細のページへのリンク）
+    self.assertIn('<a href="ranking.html">ランキング</a><a href="heroes.html" class="on">もののふ</a>', html)
+    for h, _ in entries:  # もののふの一覧（詳細のページへのリンク）
       self.assertIn(f'<a href="heroes/{h["id"]}.html">{h["name"]}</a>', html)
-    self.assertNotIn("<h2>勇者たち</h2>", website.build_ranking(WORLD, entries, today))  # ランキングからは移した
-    self.assertIn("まだ勇者がいません", website.build_heroes(WORLD, [], today))
+    self.assertNotIn("<h2>もののふたち</h2>", website.build_ranking(WORLD, entries, today))  # ランキングからは移した
+    self.assertIn("まだもののふがいません", website.build_heroes(WORLD, [], today))
 
   def test_monsters_page(self):
     html = website.build_monsters(WORLD)
-    self.assertIn('<a href="monsters.html" class="on">魔物</a>', html)
+    self.assertIn('<a href="monsters.html" class="on">物の怪</a>', html)
     self.assertIn('data-tab="bando" aria-selected="true" tabindex="0">坂東</button>', html)  # 地方のタブ
     south = html[html.index('id="panel-bando"') :]
     south = south[: south.index("</section>")]
     shown = {m for (a, b), i in WORLD["road_info"].items() for m, _ in i["monsters"]}
-    for mid in shown:  # 開放した道に出る魔物
+    for mid in shown:  # 開放した道に出る物の怪
       self.assertIn(f"<td>{WORLD['monsters'][mid]['name']}</td>", south)
-    self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の魔物は出さない
-    self.assertNotIn("江戸〜小田原（", south[south.index("<table") :])  # 魔物の表には出る道と割合を出さない
+    self.assertNotIn("<td>大ダコ</td>", html)  # 開放していない航路の物の怪は出さない
+    self.assertNotIn("江戸〜小田原（", south[south.index("<table") :])  # 物の怪の表には出る道と割合を出さない
     self.assertIn(
       '<tr data-f="plain"><td>野犬</td><td class="num">1</td>'
       '<td><span class="tdot" style="background:var(--t-plain)"></span>草原</td>',
@@ -347,12 +351,12 @@ class SiteTest(unittest.TestCase):
     )
     self.assertIn('<span class="f-label">生息地</span>', head)
     self.assertIn('id="f-none"', html)
-    self.assertEqual(south.count('<div class="card board">'), 1)  # 強敵・ボスも道の魔物と同じ表（別の枠は作らない）
+    self.assertEqual(south.count('<div class="card board">'), 1)  # 強敵・ボスも道の物の怪と同じ表（別の枠は作らない）
     self.assertNotIn('<h3 class="sub">', south)
     rows = south[south.index("<table") :]
-    self.assertLess(rows.index("<td>野犬</td>"), rows.index("<td>雪男</td>"))  # 道の魔物 → 強敵 → ボス
+    self.assertLess(rows.index("<td>野犬</td>"), rows.index("<td>雪男</td>"))  # 道の物の怪 → 強敵 → ボス
     self.assertLess(rows.index("<td>雪男</td>"), rows.index("<td>巣穴の主</td>"))
-    roads = south[: south.index("<table")]  # 魔物の表の上に、この地方の街道と地形の割合
+    roads = south[: south.index("<table")]  # 物の怪の表の上に、この地方の街道と地形の割合
     self.assertIn("<h3>街道</h3>", roads)
     south_towns = {t for t, p in WORLD["places"].items() if p.get("area") == "bando"}
     roads_here = {
@@ -373,7 +377,7 @@ class SiteTest(unittest.TestCase):
       self.assertEqual(south.count(f"<td>{name}</td>"), 1)
     self.assertNotIn("属性の相性", html)  # 説明は手引きのページに
     self.assertIn('<a href="guide.html">手引き</a>', html)
-    self.assertNotIn("性質の効果がかかる前", website.build_towns(WORLD))  # 魔物の注記は町のページに出さない
+    self.assertNotIn("性質の効果がかかる前", website.build_towns(WORLD))  # 物の怪の注記は町のページに出さない
     self.assertIn("性質の効果がかかる前", html)
     crown = html[html.index('id="panel-kinai"') :]
     self.assertIn("まだ開放されていません", crown[: crown.index("</section>")])
@@ -382,12 +386,12 @@ class SiteTest(unittest.TestCase):
   def test_guide_shows_skills_and_storage(self):
     html = website.build_guide(WORLD)
     self.assertIn("<h3>装備のスキル</h3>", html)
-    self.assertIn("<h3>持てる数と保管庫</h3>", html)
+    self.assertIn("<h3>持てる数と蔵</h3>", html)
     self.assertIn("鎧通し", html)
     self.assertIn("会心の倍率を 4 倍にする", html)  # しくみの value は値に置き換える
     self.assertIn("最大 HP の 5% 回復", html)  # HP の割合は %
     self.assertIn("スキルを付ける余裕", html)  # 性格の表にスキルの行
-    self.assertIn("★★ 500G", html)
+    self.assertIn("★★ 500文", html)
     items = website.build_items(WORLD)
     self.assertIn("鍛冶屋でスキルを付けられる", items)
 
@@ -397,15 +401,15 @@ class SiteTest(unittest.TestCase):
     state["storage"] = [{"id": "iron_sword", "skill": None}]
     text = view.build_text(WORLD, state)
     self.assertIn("鋼鉄の剣〔鎧通し〕", text)
-    self.assertIn("── 保管庫", text)
+    self.assertIn("── 蔵", text)
 
   def test_guide_page(self):
     html = website.build_guide(WORLD)
     self.assertIn('<a href="guide.html" class="on">手引き</a>', html)
-    self.assertIn('<a href="monsters.html">魔物</a><a href="guide.html" class="on">手引き</a>', html)  # 魔物の次
-    for t in WORLD["season"]["hero_traits"].values():  # 勇者の特性
+    self.assertIn('<a href="monsters.html">物の怪</a><a href="guide.html" class="on">手引き</a>', html)  # 物の怪の次
+    for t in WORLD["season"]["hero_traits"].values():  # もののふの特性
       self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
-    for t in WORLD["traits"].values():  # 魔物の性質（説明はここだけに出す）
+    for t in WORLD["traits"].values():  # 物の怪の性質（説明はここだけに出す）
       self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
     self.assertIn("相性（左が右に強い）: 炎→雷→氷→炎", html)
     self.assertIn(
@@ -422,7 +426,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("<h3>依頼の進め方</h3>", html)
     self.assertIn("引き返さない。HP が減っても、依頼が終わるか力尽きるまで進む", html)
     self.assertIn("Lv20 で 182。特性で変わる", html)
-    self.assertIn("<h3>魔物の経験値とお金</h3>", html)
+    self.assertIn("<h3>物の怪の経験値とお金</h3>", html)
     item = html.split("<h3>アイテムの強さ</h3>")[1].split("</div></div>")[0]  # 点数の重みと、珍しさごとの点数
     self.assertIn("<tr><td>HP</td><td>0.2 点</td><td>5</td></tr>", item)
     self.assertIn("<tr><td>防</td><td>0.5 点</td><td>2</td></tr>", item)
@@ -431,14 +435,14 @@ class SiteTest(unittest.TestCase):
     self.assertIn("例: 鉄の斧（攻 +2・速 -2）は 2 − 1 = 1 点", item)  # マイナスも同じ点数で引く
     self.assertIn("<tr><td>★</td><td>1 点まで</td><td>なし</td><td>なし</td></tr>", item)
     self.assertIn(
-      "<tr><td>★★★</td><td>2 点まで</td><td>付くことがある（武器・装飾品）</td><td>1 つ（800G。★★★ 以上は、あとで固定スキルも付ける予定）</td></tr>",
+      "<tr><td>★★★</td><td>2 点まで</td><td>付くことがある（武器・装飾品）</td><td>1 つ（800文。★★★ 以上は、あとで固定スキルも付ける予定）</td></tr>",
       item,
     )
     self.assertIn(
-      "<tr><td>★★★★</td><td>3 点まで</td><td>付くことがある（武器・装飾品）</td><td>1 つ（1000G。★★★ 以上は、あとで固定スキルも付ける予定）</td></tr>",
+      "<tr><td>★★★★</td><td>3 点まで</td><td>付くことがある（武器・装飾品）</td><td>1 つ（1000文。★★★ 以上は、あとで固定スキルも付ける予定）</td></tr>",
       item,
     )
-    self.assertIn("特性の倍率がかかる前の値。強運の勇者と同じ", html)  # 「ふつうの勇者」という特性はない
+    self.assertIn("特性の倍率がかかる前の値。強運のもののふと同じ", html)  # 「ふつうのもののふ」という特性はない
     levels = html.split('<table class="levels">')[1].split("</table>")[0]  # Lv1〜20 の能力の表
     self.assertEqual(levels.count('<td class="num">Lv'), 20)
     self.assertIn('<tr><td class="num">Lv1</td><td class="num">30</td><td class="num">6</td>', levels)
@@ -456,7 +460,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("先手は速 +10・毒は攻 +2として数える", html)
     self.assertIn("強さ点 × 強さ点 ÷ 700", html)
     rate = WORLD["traits"]["thief"]["gold_rate"]
-    self.assertIn(f"経験値 × 0.75（盗みの魔物はさらに × {rate:g}）。最後に四捨五入", html)
+    self.assertIn(f"経験値 × 0.75（盗みの物の怪はさらに × {rate:g}）。最後に四捨五入", html)
     self.assertIn("攻は Lv1 で 6、Lv20 で 30・防は Lv1 で 6", html)  # 能力ごとの値
 
   def test_guide_page_follows_the_data(self):
@@ -535,11 +539,11 @@ class SiteTest(unittest.TestCase):
 
   def test_monsters_page_edge_cases(self):
     world = copy.deepcopy(WORLD)
-    world["areas"] = {}  # 地方がなくても、その他のまとまりに魔物を出す
+    world["areas"] = {}  # 地方がなくても、その他のまとまりに物の怪を出す
     self.assertNotIn("まだ開放されていません", website.build_monsters(world))
     world = copy.deepcopy(WORLD)
     for key in (("edo", "odawara"), ("odawara", "edo")):
-      world["road_info"][key]["monsters"] = [("wild_dog", 1.0), ("wild_dog", 1.0)]  # 同じ魔物が 2 度出ても 1 行
+      world["road_info"][key]["monsters"] = [("wild_dog", 1.0), ("wild_dog", 1.0)]  # 同じ物の怪が 2 度出ても 1 行
     for key in [k for k in world["road_info"] if k not in (("edo", "odawara"), ("odawara", "edo"))]:
       del world["road_info"][key]
     html = website.build_monsters(world)
@@ -567,8 +571,8 @@ class SiteTest(unittest.TestCase):
     world = copy.deepcopy(WORLD)
     for item in world["items"].values():  # 名前を長くして、装備の行を長くする
       item["name"] *= 3
-    hero = {"id": "h1", "name": "勇者"}
-    state = game.new_state(world, "h1", "勇者")
+    hero = {"id": "h1", "name": "もののふ"}
+    state = game.new_state(world, "h1", "もののふ")
     state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "iron_shield": 1, "lifeblood_charm": 1}
     gear = "装備: " + view.gear_text(world, state)
     self.assertGreater(rpg.common.width(gear), rpg.common.LINE_MAX)  # Gist のカードの幅より長い行
@@ -585,7 +589,7 @@ class SiteTest(unittest.TestCase):
 
 class ImportsTest(unittest.TestCase):
   def test_website_does_not_depend_on_rpg(self):
-    """サイトの書き出しは、勇者の登録やランキングの Gist の更新（rpg.py）を読み込まない（表示は view.py、状態は store.py）。"""
+    """サイトの書き出しは、もののふの登録やランキングの Gist の更新（rpg.py）を読み込まない（表示は view.py、状態は store.py）。"""
     tree = ast.parse(Path(website.__file__).read_text(encoding="utf-8"))
     imported = {a.name.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
     imported |= {n.module.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module}
@@ -602,9 +606,9 @@ class MapTitleTest(unittest.TestCase):
 
   def test_no_links_without_links(self):
     town = WORLD["starts"][0]
-    state = game.new_state(WORLD, "h1", "勇者")
+    state = game.new_state(WORLD, "h1", "もののふ")
     state["place"] = town
-    self.assertNotIn("<a ", mapsvg.render(WORLD, [({"id": "h1", "name": "勇者"}, state)]))
+    self.assertNotIn("<a ", mapsvg.render(WORLD, [({"id": "h1", "name": "もののふ"}, state)]))
 
 
 if __name__ == "__main__":
