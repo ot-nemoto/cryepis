@@ -351,7 +351,8 @@ def build_heroes(world: dict, entries: list[tuple[dict, dict]], today: date) -> 
       f"Lv.{hero['level']}</h3><div>{escape(view.location(world, s))}</div>"
       f"<div>HP {hero['hp']}/{st['max_hp']}　攻{st['atk']} 防{st['def']} 速{st['spd']} 器{st['dex']}　{hero['gold']}G</div>"
       f"<div>"
-      f"特性: {escape(game.hero_trait(world, s).get('name', '-'))}</div>"
+      f"特性: {escape(game.hero_trait(world, s).get('name', '-'))}　"
+      f"性格: {escape(game.personality(world, s).get('name', '-'))}</div>"
       f"<div>装備: {escape(view.gear_text(world, s))}</div>"
       f'<div class="note">今日: {escape("、".join(events) or "—")}</div></div>'
     )
@@ -533,7 +534,7 @@ def build_towns(world: dict) -> str:
 
   p = world["season"]["potion"]  # 回復薬はどの町の店でも売る（装備のあとに出す）
   potion = (
-    f'回復薬<span class="note">（{p["price"]}G。戦いで倒れそうになったときに使い、最大 HP の {p["heal_rate"]:.0%} まで回復。'
+    f'回復薬<span class="note">（{p["price"]}G。戦いで HP が減ったときに使い（使う早さは性格で決まる）、最大 HP の {p["heal_rate"]:.0%} ぶん回復。'
     f"町で {p['keep']} 個まで買い足す）</span>"
   )
 
@@ -963,6 +964,52 @@ def build_myth_cards(world, table):
   return cards
 
 
+SPARE_NAMES = {"rest": "休む（溜める）", "stroll": "散策する", "move": "となりの町へ移動する"}
+ORDER_NAMES = {
+  "level_high": "Lv の高いもの",
+  "level_low": "Lv の低いもの",
+  "rank_high": "★の多いもの",
+  "rank_low": "★の少ないもの",
+}
+
+
+def personality_table(world: dict, table) -> str:
+  """手引きの「勇者の性格」: 性格ごとの動き（宿・回復薬・買い物・依頼・残りの行動）を、性格を列にした表で。"""
+  ps = list((world["season"].get("personalities") or {}).values())
+  if not ps:
+    return '<p class="note">性格はない</p>'
+
+  def levels(p):
+    low, high = p["quest"]["levels"]
+    lo = "下限なし" if low is None else f"Lv {low:+d}"
+    return f"{lo}〜Lv {high:+d}"
+
+  def spare(p):
+    text = SPARE_NAMES[p["spare"]]
+    if "stroll_hp" in p:
+      text = f"HP {p['stroll_hp']:.0%} 以上なら散策、未満なら{text}"
+    if p["spare"] == "rest":  # 溜まりきったときの行動は、休む性格だけ
+      text += f"。溜まりきったら{SPARE_NAMES[p.get('when_full', 'stroll')]}"
+    return text
+
+  rows = [
+    ("宿に泊まる", [f"HP {p['inn_below']:.0%} 未満" for p in ps]),
+    ("回復薬を使う", [f"HP {p['potion_below']:.0%} 未満" for p in ps]),
+    ("装備より先に買う回復薬", [f"{p['potions_first']} 個" for p in ps]),
+    (
+      "選ぶ依頼（Lv は自分との差）",
+      [levels(p) + "。" + ("、".join(ORDER_NAMES[o] for o in p["quest"]["order"]) or "掲示板の上から") for p in ps],
+    ),
+    ("その日の残りの行動", [spare(p) for p in ps]),
+  ]
+  return (
+    table(("項目", *(p["name"] for p in ps)), [(escape(k), *(escape(v) for v in vs)) for k, vs in rows])
+    + "".join(f'<p class="note">{escape(p["name"])}: {escape(p["text"])}</p>' for p in ps)
+    + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない。'
+    "選ぶ依頼が同じ条件で並んだら、掲示板の上のものを選ぶ。強敵の依頼は、どの性格も強敵の Lv 以上になってから受ける</p>"
+  )
+
+
 def build_guide(world: dict) -> str:
   """手引き: 能力・勇者の特性・魔物の性質・属性と相性・戦いの決まりの説明（値は world/ から）。"""
   cfg = world["season"]
@@ -1032,7 +1079,11 @@ def build_guide(world: dict) -> str:
       "討伐の依頼で魔物が何体かいたら、1 行動のなかで 1 体ずつ続けて戦う（HP は減ったまま次へ。道の戦いは 1 体だけ）。"
       "倒すたびに経験値とお金が入り、途中で力尽きても倒した分は残る",
     ),
-    ("回復薬", f"HP が 0 になりそうなとき、自動で使う。最大 HP の {potion['heal_rate']:.0%} まで回復する"),
+    (
+      "回復薬",
+      f"HP が性格で決まった割合を下回ったら、自動で使う。最大 HP の {potion['heal_rate']:.0%} ぶん回復する"
+      "（最大 HP は超えない）。HP が 0 になったら、回復薬があっても力尽きる",
+    ),
     (
       "武器の持ち替え",
       "勇者は戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える。"
@@ -1116,6 +1167,7 @@ def build_guide(world: dict) -> str:
       table(("特性", "効果"), hero_traits)
       + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない</p>',
     ),
+    ("勇者の性格", personality_table(world, table)),
     (
       "魔物の性質",
       table(("性質", "効果"), monster_traits)
@@ -1169,6 +1221,39 @@ def build_guide(world: dict) -> str:
   quest_rows = [
     ("期限", "なし。必要な行動力をこなせば終わる。ふつう、失敗するのは力尽きたときだけ"),
     ("引き返す", "引き返さない。HP が減っても、依頼が終わるか力尽きるまで進む"),
+    (
+      "HP の回復",
+      f"町に着いても HP は回復しない。依頼を持っていないとき、HP が性格で決まった割合を下回っていたら、"
+      f"宿で休憩する（1 行動と {cfg['inn']['price']}G で全回復）。ほかに回復するのは、レベルアップと力尽きたときと回復薬だけ",
+    ),
+    (
+      "残りの行動",
+      "依頼は 1 日 1 回だけ受ける。依頼が終わって行動回数が残ったら、性格で決まった行動をする: "
+      "休む（行動力を溜める）・町の周りを散策する・となりの町へ移動する",
+    ),
+    (
+      "行動力を溜める",
+      f"休むと、使わなかった行動力を {cfg['stored_days']} 日分（{game.stored_max(world)} 行動）まで溜められる（HP は回復しない）。"
+      "溜めた行動力は、依頼の途中でその日の行動回数を使い切ったときと、宿の休憩に使う。シーズンが変わると 0 に戻る",
+    ),
+    (
+      "散策",
+      "町から動かずに、となりの道の出来事を引く。"
+      + "・".join(
+        f"{name} {w / sum(cfg['stroll_events'].values()):.0%}"
+        for name, w in zip(
+          (
+            f"戦闘（Lv {cfg['encounter_levels'][0]:+d}〜{cfg['encounter_levels'][1]:+d}）",
+            f"強い魔物（Lv {cfg['stroll_strong_levels'][0]:+d}〜{cfg['stroll_strong_levels'][1]:+d}）",
+            "宝箱",
+            "何もない",
+          ),
+          (cfg["stroll_events"].get(k, 0) for k in ("battle", "strong_battle", "treasure", "nothing")),
+          strict=True,
+        )
+      )
+      + "。宝箱は装備・回復薬・お金のどれか",
+    ),
     (
       "力尽きた",
       "最後に寄った町で目を覚ます（HP 全回復。お金・持ち物・回復薬は減らない）。受けていた依頼は失敗になり、その日はもう行動しない",

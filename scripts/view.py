@@ -64,6 +64,13 @@ def trait_text(world: dict, state: dict) -> str:
   return f"特性: {t.get('name', '-')}（{t.get('text', '')}）"
 
 
+def personality_text(world: dict, state: dict) -> str:
+  """性格（勇者を作るときにランダムで決まる）と、溜めた行動力。"""
+  p = game.personality(world, state)
+  stored = f"  溜めた行動力: {state['hero'].get('stored', 0)}/{game.stored_max(world)}"
+  return f"性格: {p.get('name', '-')}（{p.get('text', '')}）" + stored if p else "性格: -" + stored
+
+
 def item_power(item: dict, world: dict | None = None) -> str:
   """装備の性能（攻+5 防+1 HP+8 速-1 炎 など）。world を渡すと、属性を名前で出す。"""
   names = {"atk": "攻", "def": "防", "hp": "HP"}
@@ -138,6 +145,7 @@ def build_text(world: dict, state: dict) -> str:
     f"攻撃 {s['atk']}（基本 {hero['base_atk']}）  防御 {s['def']}（基本 {hero['base_def']}）  "
     f"最大HP {s['max_hp']}（基本 {hero['max_hp']}）  素早さ {s['spd']}  器用さ {s['dex']}",
     trait_text(world, state),
+    personality_text(world, state),
     "",
     "── 装備 ──",
   ]

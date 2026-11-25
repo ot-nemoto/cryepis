@@ -32,6 +32,7 @@ def make_hero(world: dict, trait: str, level: int, gear: list[str], potions: int
   """特性 trait の勇者を、レベルアップの伸びだけで level まで育てる（装備は gear、回復薬は potions 個）。"""
   state = game.new_state(world, "sim", "試し")
   state["trait"] = trait
+  state["personality"] = None  # 強敵・ボスの強さは、性格のない勇者（倒れる前に回復薬を使う）で測る
   state["hero"]["level"] = level
   game.set_base_stats(world, state)  # レベルと特性で決まる能力（レベルアップを繰り返したのと同じ）
   state["inventory"] = {iid: 1 for iid in gear}

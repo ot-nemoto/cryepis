@@ -86,6 +86,7 @@ def new_hero(world: dict) -> dict:
     **{f"base_{stat}": base[stat] for stat in GROWN},
     "gold": h["gold"],
     "potions": h["potions"],
+    "stored": 0,  # 溜めた行動力（町で休んで溜める。シーズンが変わると 0 に戻る）
   }
 
 
@@ -103,12 +104,30 @@ def pick_trait(world: dict, hero_id: str) -> str:
   return random.Random(f"trait-{hero_id}").choice(sorted(world["season"]["hero_traits"]))
 
 
+def pick_personality(world: dict, hero_id: str) -> str | None:
+  """勇者を作るときにランダムで付ける性格（season.json の personalities）。勇者の ID で決まる（シーズンが変わっても同じ）。"""
+  table = world["season"].get("personalities") or {}
+  return random.Random(f"personality-{hero_id}").choice(sorted(table)) if table else None
+
+
+def personality(world: dict, state: dict) -> dict:
+  """勇者の性格（season.json の personalities）。性格のない勇者（シミュレーターなど）は空の dict（今までの動き）。"""
+  return (world["season"].get("personalities") or {}).get(state.get("personality"), {})
+
+
+def stored_max(world: dict) -> int:
+  """溜められる行動力の上限（stored_days 日分）。"""
+  cfg = world["season"]
+  return cfg.get("stored_days", 0) * cfg["actions_per_day"]
+
+
 def new_state(world: dict, hero_id: str = "h1", name: str = "勇者") -> dict:
   town = start_town(world, hero_id, None)
   return {
     "id": hero_id,
     "name": name,
     "trait": pick_trait(world, hero_id),
+    "personality": pick_personality(world, hero_id),
     "season": None,
     "season_day": 0,
     "day": 0,
@@ -142,6 +161,12 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "勇者
   state["hero"] = {**new_hero(world), **state["hero"]}
   if state.get("trait") not in world["season"]["hero_traits"]:  # 前の形式・world/ から消えた特性は、付け直す
     state["trait"] = pick_trait(world, state["id"])
+  if state.get("personality") not in (world["season"].get("personalities") or {}):  # 前の形式・消えた性格は付け直す
+    state["personality"] = pick_personality(world, state["id"])
+  hero = state["hero"]
+  if not isinstance(hero.get("stored"), int) or isinstance(hero["stored"], bool):
+    hero["stored"] = 0
+  hero["stored"] = max(0, min(hero["stored"], stored_max(world)))
   state["hero"]["level"] = max(1, min(state["hero"]["level"], world["season"]["max_level"]))
   set_base_stats(world, state)  # 能力の伸び方が変わっても、今のレベルと特性に合わせる
   state["season_stats"] = {**new_season_stats(), **state["season_stats"]}
@@ -575,17 +600,29 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random, ran
   return finish_quest(world, quest, town)
 
 
-def suitable(quest: dict, level: int) -> bool:
-  """受けられる依頼か（依頼のレベルが自分のレベル＋3 を超える、強すぎる依頼だけを避ける。弱すぎる依頼も受ける）。
-  強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level）。"""
-  return quest["level"][0] <= level + 3 and level >= quest.get("min_level", 0)
+def suitable(quest: dict, level: int, levels: list | None = None) -> bool:
+  """受けられる依頼か。levels（性格の [下, 上]。勇者の Lv との差。None は下限なし）があれば、依頼の Lv がその範囲のものだけ。
+  なければ、依頼のレベルが自分のレベル＋3 を超える、強すぎる依頼だけを避ける（弱すぎる依頼も受ける）。
+  強敵の討伐は、勇者のレベルが魔物のレベル以上のときだけ受ける（min_level。性格に関係なく同じ）。"""
+  low, high = levels if levels else (None, 3)
+  gap = quest["level"][0] - level
+  return (low is None or gap >= low) and gap <= high and level >= quest.get("min_level", 0)
 
 
-def encounters(world: dict, monsters: list, level: int) -> list:
+QUEST_ORDER = {  # 性格の依頼の選び方（quest.order）。小さいほうを先に選ぶ
+  "level_high": lambda q: -q["level"][0],
+  "level_low": lambda q: q["level"][0],
+  "rank_high": lambda q: -q.get("rank", 1),
+  "rank_low": lambda q: q.get("rank", 1),
+}
+
+
+def encounters(world: dict, monsters: list, level: int, window: list | None = None) -> list:
   """道で出会う魔物（[ID, 重み], ...）のうち、勇者の Lv に合うもの。Lv が「勇者の Lv + encounter_levels」の範囲
   （season.json。[-3, 1] なら Lv −3〜+1）の魔物だけにする。範囲に 1 体もいなければ、範囲にいちばん近い Lv の魔物。
-  地形ごとの割合は道のまま（残った魔物で、その地形の重みを分け直す。残った魔物のいない地形は出ない）。"""
-  low, high = (level + d for d in world["season"]["encounter_levels"])
+  地形ごとの割合は道のまま（残った魔物で、その地形の重みを分け直す。残った魔物のいない地形は出ない）。
+  window（[下, 上]）を渡すと、encounter_levels の代わりにその範囲を使う（散策の強い魔物）。"""
+  low, high = (level + d for d in (window or world["season"]["encounter_levels"]))
   lv = world["monsters"]
 
   def gap(mid: str) -> int:
@@ -657,6 +694,7 @@ class Day:
     self.events: list[str] = []
     self.fallen = False
     self.strolled = False
+    self.rested = False
     self.guild = guild if guild is not None else new_guild()  # 全員で共有する掲示板（None なら、この勇者だけの掲示板）
 
   def log(self, text: str) -> None:
@@ -740,15 +778,17 @@ class Day:
           continue
         for _ in range(hits):
           hero["hp"] -= self.damage(atk, s["def"], monster.get("dex", 6))
-          if hero["hp"] <= 0:
-            if hero["potions"]:  # 倒れる前に回復薬を使う
-              hero["potions"] -= 1
-              # 回復の量は、ふだんの装備の最大 HP で決める（持ち替えた武器・装飾品の HP は、その戦いだけ）
-              hero["hp"] = max(1, int(self.stats["max_hp"] * self.cfg["potion"]["heal_rate"]))
-              continue
+          below = personality(self.world, self.state).get("potion_below")
+          if below is None and hero["hp"] <= 0 and hero["potions"]:  # 性格がなければ、倒れる前に回復薬を使う
+            hero["potions"] -= 1
+            # 回復の量は、ふだんの装備の最大 HP で決める（持ち替えた武器・装飾品の HP は、その戦いだけ）
+            hero["hp"] = max(1, int(self.stats["max_hp"] * self.cfg["potion"]["heal_rate"]))
+            continue
+          if hero["hp"] <= 0:  # 性格があれば、HP が 0 になったら回復薬があっても力尽きる
             hero["hp"] = 0
             self.log(f"{self.monster_name(monster)}に敗れた")
             return False
+          self.use_potion()
       if hp <= 0:
         break
     exp = monster["exp"]
@@ -768,12 +808,22 @@ class Day:
       if lost > 0:
         hero["hp"] -= lost
         self.log(f"毒で HP が {lost} 減った")
+        self.use_potion()
     elif trait == "thief" and hero["gold"] > 0 and self.rng.random() < 0.4:  # 盗み
       stolen = min(hero["gold"], self.rng.randint(5, 20))
       hero["gold"] -= stolen
       self.log(f"逃げ際に {stolen}G 盗まれた")
     self.gain_exp(exp)
     return True
+
+  def use_potion(self) -> None:
+    """性格の potion_below（HP の割合）を下回ったら、回復薬を 1 個使う（最大 HP の heal_rate ぶん回復。最大 HP は超えない）。"""
+    below, hero = personality(self.world, self.state).get("potion_below"), self.hero
+    max_hp = self.stats["max_hp"]
+    if below is not None and hero["potions"] and 0 < hero["hp"] < max_hp * below:
+      hero["potions"] -= 1
+      hero["hp"] = min(max_hp, hero["hp"] + int(max_hp * self.cfg["potion"]["heal_rate"]))
+      self.log(f"回復薬を使った（HP {hero['hp']}/{max_hp}）")
 
   def monster_name(self, monster: dict) -> str:
     trait = self.world["traits"].get(monster.get("trait"), {})
@@ -847,7 +897,7 @@ class Day:
 
   # 町 --------------------------------------------------------------------------------
   def visit_town(self, town: str) -> None:
-    """町に着いた: 依頼の報告、全回復、買い物。"""
+    """町に着いた: 依頼の報告と買い物（HP は宿で休憩しないと回復しない）。"""
     state, hero = self.state, self.hero
     state["home_town"] = town
     quest = state["quest"]
@@ -855,7 +905,8 @@ class Day:
       quest["progress"] = quest["count"]
     if quest and quest["report"] == town and quest["progress"] >= quest["count"]:
       self.report(quest)
-    hero["hp"] = self.stats["max_hp"]
+    if not personality(self.world, state):  # 性格のない勇者だけ、町に着くと全回復する（性格があれば宿で休憩する）
+      hero["hp"] = self.stats["max_hp"]
     self.shop(town)
 
   def settle(self, quest: dict, status: str) -> None:
@@ -879,8 +930,17 @@ class Day:
 
   def shop(self, town: str) -> None:
     hero, items, bought = self.hero, self.world["items"], []
-    potion = self.cfg["potion"]
-    reserve = potion["price"] * max(0, potion["keep"] - hero["potions"])  # 回復薬の分は残して装備を買う
+    potion, me = self.cfg["potion"], personality(self.world, self.state)
+    if me:
+      # 性格の順: 宿（泊まるなら、その分のお金を残す）→ 回復薬を potions_first 個まで → 装備 → 回復薬を keep 個まで
+      inn = self.cfg["inn"]["price"] if self.wants_inn() else 0
+      while hero["potions"] < min(me["potions_first"], potion["keep"]) and hero["gold"] >= potion["price"] + inn:
+        hero["gold"] -= potion["price"]
+        hero["potions"] += 1
+      reserve = keep_after = inn
+    else:
+      reserve = potion["price"] * max(0, potion["keep"] - hero["potions"])  # 回復薬の分は残して装備を買う
+      keep_after = 0
     worn = equipment(self.world, self.state)
     rank = {r: n for n, r in enumerate(self.world["rarities"])}
     key = lambda i: equip_key(self.world, items[i], rank)  # noqa: E731  装備を選ぶときと同じ比べ方
@@ -896,7 +956,7 @@ class Day:
         self.state["inventory"][iid] = 1
         worn = equipment(self.world, self.state)
         bought.append(item["name"])
-    while hero["potions"] < potion["keep"] and hero["gold"] >= potion["price"]:
+    while hero["potions"] < potion["keep"] and hero["gold"] >= potion["price"] + keep_after:  # 宿代は残す
       hero["gold"] -= potion["price"]
       hero["potions"] += 1
     name = self.world["places"][town]["name"]
@@ -904,15 +964,20 @@ class Day:
       self.log(f"{name}で{'と'.join(bought)}を買った")
 
   def take_quest(self, town: str) -> None:
-    level = self.hero["level"]
+    level, me = self.hero["level"], personality(self.world, self.state)
     refresh_guild(self.world, self.guild, self.today, season_of(self.world, self.today), [town])
+    levels = me.get("quest", {}).get("levels")
     entries = [
       e
       for e in self.guild["towns"].get(town, [])  # 受付中の依頼だけ（受注中のものは受けられない）
-      if e["status"] == "open" and suitable(e, level) and e["id"] not in self.state["taken"]
+      if e["status"] == "open" and suitable(e, level, levels) and e["id"] not in self.state["taken"]
     ]
     if entries:
-      entry = self.rng.choice(entries)
+      if me:  # 性格の選び方で並べ、同じなら掲示板の上のもの（ランダムはなし）
+        order = [QUEST_ORDER[k] for k in me["quest"]["order"]]
+        entry = min(entries, key=lambda e: tuple(f(e) for f in order))
+      else:
+        entry = self.rng.choice(entries)
       entry.update(status="held", holder=self.state["id"])
       # 深く写す（掲示板の依頼と段取りの一覧を共有しない）。段取り・進み・行動力・報酬は最初の状態から作り直す
       # （前に受けた勇者が力尽きて戻ってきた依頼でも、今の world/ の道の長さで、最初の状態で受ける）
@@ -949,23 +1014,32 @@ class Day:
     danger = quest.get("danger", 0)
     return dangers[danger]["shift"] if 0 <= danger < len(dangers) else 0
 
-  def road_event(self, a: str, b: str) -> bool:
-    """道を 1 行動進んだときの出来事。力尽きたら False。"""
+  def road_event(self, a: str, b: str, stroll: bool = False) -> bool:
+    """道を 1 行動進んだときの出来事。力尽きたら False。
+    stroll（散策）なら散策の表（stroll_events・stroll_treasure）。強い魔物（strong_battle）は、勇者の Lv + stroll_strong_levels の魔物。"""
     info = self.world["road_info"][(a, b)]
-    kinds, weights = zip(*self.cfg["road_events"].items())
+    kinds, weights = zip(*self.cfg["stroll_events" if stroll else "road_events"].items())
     kind = self.rng.choices(kinds, weights)[0]
-    if kind == "battle":  # 道の戦いは 1 体だけ（何体かと戦うのは討伐の依頼だけ）
-      mids, mw = zip(*encounters(self.world, info["monsters"], self.hero["level"] + self.danger_shift()))
+    if kind in ("battle", "strong_battle"):  # 道の戦いは 1 体だけ（何体かと戦うのは討伐の依頼だけ）
+      level = self.hero["level"] + self.danger_shift()
+      window = self.cfg["stroll_strong_levels"] if kind == "strong_battle" else None
+      mids, mw = zip(*encounters(self.world, info["monsters"], level, window))
       if not self.battle(self.world["monsters"][self.rng.choices(mids, mw)[0]]):
         return False
     elif kind == "treasure":
-      iid = self.draw(self.cfg["treasure"])
+      if stroll:  # 散策の宝箱: 装備・回復薬・お金の重み（stroll_treasure）
+        found, fw = zip(*self.cfg["stroll_treasure"].items())
+        found = self.rng.choices(found, fw)[0]
+        iid = self.draw([[W.COMMON, 1]]) if found == "item" else None
+      else:
+        iid = self.draw(self.cfg["treasure"])
+        found = "item" if iid else ("potion" if self.rng.random() < 0.3 else "gold")
       if iid:
         self.obtain(iid, "宝箱から")
-      elif self.rng.random() < 0.3:
+      elif found == "potion":
         self.hero["potions"] += 1
         self.log("宝箱から回復薬を見つけた")
-      else:
+      else:  # 出せる装備がないときも、お金
         gold = self.rng.randint(5, 15) * monster_level(self.world)
         self.hero["gold"] += gold
         self.log(f"宝箱から{gold}Gを見つけた")
@@ -1045,7 +1119,39 @@ class Day:
     if not self.strolled:
       self.strolled = True
       self.log(f"{self.world['places'][town]['name']}の周りを散策した")
-    return self.road_event(town, self.rng.choice(self.world["neighbors"][town]))
+    return self.road_event(town, self.rng.choice(self.world["neighbors"][town]), stroll=True)
+
+  def wants_inn(self) -> bool:
+    """性格の inn_below（HP の割合）を下回っていて、宿代があるか。"""
+    below = personality(self.world, self.state).get("inn_below")
+    hero = self.hero
+    return below is not None and hero["hp"] < self.stats["max_hp"] * below and hero["gold"] >= self.cfg["inn"]["price"]
+
+  def rest_at_inn(self, town: str) -> bool:
+    """宿で休憩する（1 行動と宿代で HP が全回復する）。"""
+    self.hero["gold"] -= self.cfg["inn"]["price"]
+    self.hero["hp"] = self.stats["max_hp"]
+    self.log(f"{self.world['places'][town]['name']}の宿で休んだ（-{self.cfg['inn']['price']}G、HP 全回復）")
+    return True
+
+  def spare(self, town: str) -> bool:
+    """その日の依頼が終わったあとの 1 行動（性格の spare）。休む（行動力を溜める）・散策する・となりの町へ移動する。
+    溜まりきっていたら、休む代わりに when_full。策士（stroll_hp）は HP がその割合以上なら散策する。"""
+    me, hero = personality(self.world, self.state), self.hero
+    choice = me.get("spare", "stroll")
+    if "stroll_hp" in me and hero["hp"] >= self.stats["max_hp"] * me["stroll_hp"]:
+      choice = "stroll"
+    if choice == "rest":
+      if hero["stored"] < stored_max(self.world):
+        hero["stored"] += 1
+        if not self.rested:
+          self.rested = True
+          self.log(f"{self.world['places'][town]['name']}で休んで、行動力を溜めた")
+        return True
+      choice = me.get("when_full", "stroll")
+    if choice == "move":
+      return self.go(self.rng.choice(self.world["neighbors"][town]))
+    return self.stroll(town)
 
   def act(self) -> bool:
     """1 行動。力尽きたら False。依頼を受けるのは 1 日 1 回で、受けるのに行動回数は使わない。"""
@@ -1055,8 +1161,10 @@ class Day:
         return self.step(state["road"])
       place, quest = state["place"], state["quest"]
       if quest is None:
+        if self.wants_inn():  # 依頼を持っていないときだけ、宿で休憩する
+          return self.rest_at_inn(place)
         if state["taken"]:  # 今日はもう依頼を受けた（旅に出た）
-          return self.stroll(place)
+          return self.spare(place)
         self.take_quest(place)
         continue
       if quest["type"] == "hunt":
@@ -1134,6 +1242,25 @@ def advance(world: dict, state: dict, today: date, actions: int | None = None, g
     if not day.act():
       day.fall()
       break
+  else:
+    # 溜めた行動力: 依頼の途中で今日の行動回数を使い切ったら使う（宿の休憩にも使う）。1 日に使う量に上限はない。
+    # 旅（受けられる依頼がないとき）や、残りの行動でとなりの町へ向かう道には使わない。休みの日（行動回数 0）も使わない
+    hero, rest_day = state["hero"], actions == 0
+
+    def on_quest() -> bool:
+      quest = state["quest"]
+      return bool(quest) and quest["type"] != "patrol"
+
+    while (
+      not rest_day
+      and hero.get("stored", 0) > 0
+      and (on_quest() or (personality(world, state) and not state["road"] and day.wants_inn()))
+    ):
+      hero["stored"] -= 1
+      actions += 1
+      if not day.act():
+        day.fall()
+        break
   state["last"] = {"date": today.isoformat(), "actions": actions, "events": day.events}
   state["journal"] = (
     [{"date": today.isoformat(), "actions": actions, "text": " / ".join(day.events)}] + state["journal"]

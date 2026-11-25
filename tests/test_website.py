@@ -394,7 +394,7 @@ class SiteTest(unittest.TestCase):
       '<td><span class="tag">雷属性</span></td><td>氷</td><td>炎</td><td>紫電鉄</td>', html
     )  # 強い相手・苦手な相手・鉱石
     self.assertIn("器用さ ÷ 150 の確率で、ダメージが 3 倍", html)
-    self.assertIn("最大 HP の 50% まで回復", html)
+    self.assertIn("最大 HP の 50% ぶん回復", html)
     self.assertIn("<h3>依頼の進め方</h3>", html)
     self.assertIn("引き返さない。HP が減っても、依頼が終わるか力尽きるまで進む", html)
     self.assertIn("Lv20 で 182。特性で変わる", html)

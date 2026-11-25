@@ -326,6 +326,7 @@ class QuestTest(unittest.TestCase):
     posted = [e["id"] for e in guild["towns"][town]]
     self.assertEqual(len(posted), G.quests_per_day(WORLD, town))
     a["hero"]["level"] = b["hero"]["level"] = 99
+    a["personality"] = b["personality"] = None  # 性格の Lv の範囲で選り好みしない（掲示板の決まりだけを見る）
     ids = []
     for state in [a, b] * len(posted):
       if len(ids) == len(posted):
@@ -404,7 +405,7 @@ class BattleAndItemTest(unittest.TestCase):
     # ムラリス →（6 行動）→ カルン の 1 歩目。HP 1・回復薬なしでも引き返さずに進む
     state = self.low_hp_on_road("muralis", "karun", 5)
     day = day_of(state)
-    day.road_event = lambda a, b: True  # 道の出来事は何も起きない
+    day.road_event = lambda a, b, stroll=False: True  # 道の出来事は何も起きない
     day.act()
     self.assertEqual((state["place"], state["road"]), ("muralis", {"to": "karun", "left": 4}))
     self.assertFalse(any("引き返" in e for e in day.events))
@@ -1369,7 +1370,7 @@ class BattleDepthTest(unittest.TestCase):
     self.assertGreater(len(traits), 2)
     state = G.new_state(WORLD, "h7")
     self.assertEqual(state["trait"], G.pick_trait(WORLD, "h7"))
-    self.assertNotIn("personality", state)  # 性格は保留
+    self.assertEqual(state["personality"], G.pick_personality(WORLD, "h7"))
     nxt = START
     while G.season_of(WORLD, nxt) == 1:
       nxt += timedelta(days=1)
@@ -1509,7 +1510,7 @@ class FallPathsTest(unittest.TestCase):
     # 地図が変わって、依頼の届け先の町に戻されたときなど
     state = self.hero_state(self.deliver("salina", "eques"), "eques")
     day = day_of(state)
-    day.road_event = lambda a, b: True
+    day.road_event = lambda a, b, stroll=False: True
     self.assertTrue(day.act())
     self.assertEqual(state["season_stats"]["quests_done"], 1)
     self.assertTrue(any("依頼達成" in e for e in day.events))
@@ -1520,7 +1521,7 @@ class FallPathsTest(unittest.TestCase):
     quest["progress"] = quest["count"]
     state = self.hero_state(quest, "eques")
     day = day_of(state)
-    day.road_event = lambda a, b: True
+    day.road_event = lambda a, b, stroll=False: True
     self.assertTrue(day.act())
     self.assertEqual(state["season_stats"]["quests_done"], 1)
 
@@ -1530,7 +1531,7 @@ class FallPathsTest(unittest.TestCase):
     quest.update(place="salina", report="eques", progress=1)
     state = self.hero_state(quest, "salina")
     day = day_of(state)
-    day.road_event = lambda a, b: True
+    day.road_event = lambda a, b, stroll=False: True
     self.assertTrue(day.act())
     self.assertEqual(state["road"]["to"], "eques")
 
@@ -1540,9 +1541,178 @@ class FallPathsTest(unittest.TestCase):
     quest.update(place="eques", progress=quest["count"])  # 旅は報告しない（着いたら終わり）
     state.update(quest=quest, taken=["今日はもう受けた"])
     day = day_of(state)
-    day.road_event = lambda a, b: True
+    day.road_event = lambda a, b, stroll=False: True
     self.assertTrue(day.act())
     self.assertIsNone(state["quest"])
+
+
+def with_personality(pid, hero_id="h1"):
+  """性格 pid の勇者（最初の町にいる。シーズン 1 の途中なので、advance で持ち物や溜めた行動力が戻らない）。"""
+  state = G.new_state(WORLD, hero_id)
+  state.update(personality=pid, season=G.season_of(WORLD, START), season_day=1)
+  return state
+
+
+class PersonalityTest(unittest.TestCase):
+  """性格（season.json の personalities）と、宿・行動力を溜める・散策の表（Issue #95・#226）。"""
+
+  def test_personality_is_random_kept_and_repaired(self):
+    kinds = {G.pick_personality(WORLD, f"h{i}") for i in range(60)}
+    self.assertEqual(kinds, set(WORLD["season"]["personalities"]))  # どの性格も付く
+    with tempfile.TemporaryDirectory() as d:
+      path = Path(d) / "h3.json"
+      state = G.new_state(WORLD, "h3")
+      state.pop("personality")
+      state["hero"]["stored"] = 99
+      G.save_state(state, path)
+      loaded = G.load_state(WORLD, path, "h3")
+    self.assertEqual(loaded["personality"], G.pick_personality(WORLD, "h3"))  # ない・消えた性格は付け直す
+    self.assertEqual(loaded["hero"]["stored"], G.stored_max(WORLD))  # 溜めた行動力は上限まで
+
+  def test_suitable_uses_the_level_range(self):
+    q = {"level": [5, 5]}
+    self.assertTrue(G.suitable(q, 5, [None, 0]))
+    self.assertFalse(G.suitable(q, 4, [None, 0]))  # 自分より強い依頼は受けない（慎重）
+    self.assertTrue(G.suitable(q, 2, [None, 3]))
+    self.assertFalse(G.suitable(q, 8, [-2, 0]))  # 弱すぎる依頼も受けない（勤勉）
+    self.assertFalse(G.suitable({"level": [5, 5], "min_level": 6}, 5, [None, 3]))  # 強敵は Lv 以上から
+
+  def test_take_quest_follows_the_order(self):
+    guild = G.new_guild()
+    state = with_personality("careful")
+    town = state["place"]
+    state["hero"]["level"] = 5
+    G.refresh_guild(WORLD, guild, START, 1)
+    entries = guild["towns"][town]
+    for i, e in enumerate(entries):  # Lv と ★ を作り直して、選び方だけを見る
+      e.update(level=[[5, 5], [4, 4], [5, 5], [6, 6]][i % 4], rank=[2, 1, 1, 1][i % 4], min_level=0)
+    G.Day(WORLD, state, START, random.Random(0), guild).take_quest(town)
+    picked = next(e for e in entries if e["status"] == "held")  # 受けた依頼（勇者の写しは、Lv を作り直す）
+    self.assertEqual((picked["level"][0], picked["rank"]), (5, 1))  # Lv の高いもの（自分以下）、★の少ないもの
+    first = next(e for e in entries if e["level"][0] == 5 and e["rank"] == 1)
+    self.assertIs(picked, first)  # 同じ条件なら掲示板の上のもの
+
+  def test_potion_is_used_below_the_rate_and_zero_hp_falls(self):
+    state = with_personality("careful")  # 回復薬は HP 50% 未満
+    day = day_of(state)
+    max_hp = day.stats["max_hp"]
+    state["hero"].update(hp=max_hp // 2 - 1, potions=1)
+    day.use_potion()
+    self.assertEqual(state["hero"]["potions"], 0)
+    self.assertEqual(state["hero"]["hp"], min(max_hp, max_hp // 2 - 1 + int(max_hp * 0.5)))
+    strong = dict(WORLD["monsters"]["wild_dog"], atk=999, hp=999, spd=1)
+    state["hero"].update(hp=max_hp, potions=3)
+    self.assertFalse(day.battle(strong))  # 一撃で 0 になったら、回復薬があっても力尽きる
+    self.assertEqual(state["hero"]["potions"], 3)
+
+  def test_town_does_not_heal_but_the_inn_does(self):
+    state = with_personality("careful")  # 宿は HP 70% 未満
+    day = day_of(state)
+    max_hp = day.stats["max_hp"]
+    state["hero"].update(hp=1, gold=100)
+    day.visit_town(state["place"])
+    self.assertEqual(state["hero"]["hp"], 1)  # 町に着いても回復しない
+    self.assertTrue(day.act())  # 依頼を持っていないので、宿で休憩する（1 行動）
+    self.assertEqual(state["hero"]["hp"], max_hp)
+    self.assertLessEqual(state["hero"]["gold"], 100 - WORLD["season"]["inn"]["price"])
+    self.assertIn("宿で休んだ", " ".join(day.events))
+
+  def test_spare_actions(self):
+    town = TOWN
+    state = with_personality("careful")  # 休む（溜める）→ 溜まりきったら散策
+    state.update(place=town, taken=["x"])
+    day = day_of(state)
+    day.spare(town)
+    self.assertEqual(state["hero"]["stored"], 1)
+    state["hero"]["stored"] = G.stored_max(WORLD)
+    day.road_event = lambda a, b, stroll=False: stroll or self.fail("散策ではない")
+    self.assertTrue(day.spare(town))
+    self.assertEqual(state["hero"]["stored"], G.stored_max(WORLD))
+    mover = with_personality("adventurous")  # となりの町へ移動する
+    mover.update(place=town, taken=["x"])
+    mday = day_of(mover)
+    mday.road_event = lambda a, b, stroll=False: True
+    mday.spare(town)
+    self.assertTrue(mover["road"] or mover["place"] in WORLD["neighbors"][town])
+    tactician = with_personality("tactician")  # HP 70% 以上なら散策、未満なら溜める
+    tactician.update(place=town, taken=["x"])
+    tday = day_of(tactician)
+    tday.road_event = lambda a, b, stroll=False: True
+    tactician["hero"]["hp"] = 1
+    tday.spare(town)
+    self.assertEqual(tactician["hero"]["stored"], 1)
+
+  def test_stored_actions_finish_a_quest(self):
+    per_day = WORLD["season"]["actions_per_day"]
+    state = with_personality("diligent")
+    state["hero"]["stored"] = 6
+    quest = common_hunt()
+    G.finish_quest(WORLD, quest, TOWN)
+    with mock.patch.object(G.Day, "act", lambda self: state.update(quest=quest) or True):  # 依頼が終わらない
+      G.advance(WORLD, state, START)
+    self.assertEqual((state["last"]["actions"], state["hero"]["stored"]), (per_day + 6, 0))  # 溜めた分を全部使う
+    for trip, road in (
+      ({"type": "patrol"}, None),
+      (None, {"to": "eques", "left": 5}),
+    ):  # 旅・残りの行動の道には使わない
+      walker = with_personality("diligent")
+      walker["hero"]["stored"] = 6
+      with mock.patch.object(G.Day, "act", lambda self, w=walker, t=trip, r=road: w.update(quest=t, road=r) or True):
+        G.advance(WORLD, walker, START)
+      self.assertEqual((walker["last"]["actions"], walker["hero"]["stored"]), (per_day, 6))
+    rest = with_personality("diligent")  # 休みの日（行動回数 0）は使わない
+    rest.update(quest=quest)
+    rest["hero"]["stored"] = 6
+    G.advance(WORLD, rest, START, actions=0)
+    self.assertEqual(rest["hero"]["stored"], 6)
+
+  def test_shop_without_personality_still_buys_potions(self):
+    state = G.new_state(WORLD, "h1")
+    state["personality"] = None
+    price = WORLD["season"]["potion"]["price"]
+    state["hero"].update(potions=0, gold=price * 3)
+    day_of(state).shop(state["place"])
+    self.assertEqual(state["hero"]["potions"], 3)  # 回復薬の分のお金を二重に残さない
+
+  def test_stored_actions_reset_each_season(self):
+    state = with_personality("careful")
+    state["hero"]["stored"] = 4
+    G.start_season(WORLD, state, 2)
+    self.assertEqual(state["hero"]["stored"], 0)
+
+  def test_stroll_uses_its_own_table(self):
+    state = with_personality("brave")
+    state["hero"]["level"] = 5
+    world = copy.deepcopy(WORLD)
+    world["season"]["stroll_events"] = {"strong_battle": 1}
+    day = G.Day(world, state, START, random.Random(0))
+    seen = []
+    day.battle = lambda m: seen.append(m["level"]) or True
+    for _ in range(20):
+      day.road_event(TOWN, WORLD["neighbors"][TOWN][0], stroll=True)
+    road = WORLD["road_info"][(TOWN, WORLD["neighbors"][TOWN][0])]["monsters"]
+    window = [5 + d for d in WORLD["season"]["stroll_strong_levels"]]
+    levels = {WORLD["monsters"][m]["level"] for m, _ in road}
+    if any(window[0] <= lv <= window[1] for lv in levels):
+      self.assertTrue(all(window[0] <= lv <= window[1] for lv in seen), seen)  # 強い魔物は Lv +2〜+3
+    world["season"]["stroll_events"] = {"treasure": 1}
+    world["season"]["stroll_treasure"] = {"potion": 1}
+    day = G.Day(world, state, START, random.Random(0))
+    potions = state["hero"]["potions"]
+    day.road_event(TOWN, WORLD["neighbors"][TOWN][0], stroll=True)
+    self.assertEqual(state["hero"]["potions"], potions + 1)
+
+  def test_shop_buys_potions_first_and_keeps_inn_money(self):
+    state = with_personality("careful")  # 先に 3 個、宿は HP 70% 未満
+    state["hero"].update(potions=0, gold=WORLD["season"]["potion"]["price"] * 3 + WORLD["season"]["inn"]["price"], hp=1)
+    day = day_of(state)
+    day.shop(state["place"])
+    self.assertEqual(state["hero"]["potions"], 3)
+    self.assertEqual(state["hero"]["gold"], WORLD["season"]["inn"]["price"])  # 宿代は残す
+    brave = with_personality("brave")  # 先に買う回復薬は 0 個（装備を先に買う）
+    brave["hero"].update(potions=0, gold=10_000)
+    day_of(brave).shop(brave["place"])
+    self.assertTrue(brave["inventory"])
 
 
 if __name__ == "__main__":
