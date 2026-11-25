@@ -75,6 +75,9 @@ class SiteTest(unittest.TestCase):
       parser = Links()
       parser.feed(path.read_text(encoding="utf-8"))
       for href in parser.hrefs:
+        if href.startswith("#"):  # 同じページの中の移動（手引きの項目へのボタン）は、その id があること
+          self.assertIn(f'id="{href[1:]}"', path.read_text(encoding="utf-8"), f"{path.name} → {href}")
+          continue
         target = (path.parent / href.split("#")[0]).resolve()
         self.assertTrue(target.is_file(), f"{path.name} → {href}")
 
@@ -411,8 +414,14 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
     self.assertIn("相性（左が右に強い）: 炎→雷→氷→炎", html)
     self.assertIn(
-      '<td><span class="tag">雷属性</span></td><td>氷</td><td>炎</td><td>紫電鉄</td>', html
-    )  # 強い相手・苦手な相手・鉱石
+      '<td><span class="tag">雷属性</span></td><td>紫電鉄</td>', html
+    )  # 属性と鉱石（強い・苦手は図で見せる）
+    self.assertIn('aria-label="属性の三すくみ"', html)
+    self.assertIn('<a class="pill" href="#g0">能力</a>', html)  # 上の移動ボタン
+    self.assertIn('<div class="card" id="g0">', html)
+    self.assertIn(f'<td class="num">{game.exp_need(WORLD, 1)}</td>', html)  # 次の Lv までの経験値
+    self.assertIn("固定スキル（未定）＋ 1 つ", html)  # 珍しさごとのスキル
+    self.assertIn('<span class="tag">鎧通し</span>', html)  # スキルも札で囲む
     self.assertIn("器用さ ÷ 150 の確率で、ダメージが 3 倍", html)
     self.assertIn("最大 HP の 50% ぶん回復", html)
     self.assertIn("<h3>依頼の進め方</h3>", html)
@@ -425,21 +434,27 @@ class SiteTest(unittest.TestCase):
     self.assertIn("<tr><td>速</td><td>0.5 点</td><td>2</td></tr>", item)
     self.assertIn("<tr><td>属性</td><td>1 点</td><td>属性 1 つ</td></tr>", item)
     self.assertIn("例: 鉄の斧（攻 +2・速 -2）は 2 − 1 = 1 点", item)  # マイナスも同じ点数で引く
-    self.assertIn("<tr><td>★</td><td>1 点まで</td><td>なし</td></tr>", item)
-    self.assertIn("<tr><td>★★★</td><td>2 点まで</td><td>付くことがある（武器・装飾品）</td></tr>", item)
-    self.assertIn("<tr><td>★★★★</td><td>3 点まで</td><td>付くことがある（武器・装飾品）</td></tr>", item)
+    self.assertIn("<tr><td>★</td><td>1 点まで</td><td>なし</td><td>なし</td></tr>", item)
+    self.assertIn(
+      "<tr><td>★★★</td><td>2 点まで</td><td>付くことがある（武器・装飾品）</td><td>固定スキル（未定）＋ 1 つ（800G）</td></tr>",
+      item,
+    )
+    self.assertIn(
+      "<tr><td>★★★★</td><td>3 点まで</td><td>付くことがある（武器・装飾品）</td><td>固定スキル（未定）＋ 1 つ（1000G）</td></tr>",
+      item,
+    )
     self.assertIn("特性の倍率がかかる前の値。強運の勇者と同じ", html)  # 「ふつうの勇者」という特性はない
     levels = html.split('<table class="levels">')[1].split("</table>")[0]  # Lv1〜20 の能力の表
     self.assertEqual(levels.count('<td class="num">Lv'), 20)
     self.assertIn('<tr><td class="num">Lv1</td><td class="num">30</td><td class="num">6</td>', levels)
     self.assertIn(
       '<tr><td class="num">Lv20</td><td class="num">182</td><td class="num">30</td><td class="num">30</td>'
-      '<td class="num">30</td><td class="num">30</td></tr>',
+      '<td class="num">30</td><td class="num">30</td><td class="num">—</td></tr>',  # 最大 Lv は次の経験値なし
       levels,
     )
     self.assertIn(
       '<tr><td class="num">Lv10</td><td class="num">102</td><td class="num">22</td><td class="num">13</td>'
-      '<td class="num">17</td><td class="num">17</td></tr>',
+      '<td class="num">17</td><td class="num">17</td><td class="num">316</td></tr>',  # 次の Lv まで 10×10^1.5
       levels,
     )
     self.assertIn("HP + 攻 × 4 + 防 × 4 + 速 × 2 + 器 × 2", html)
@@ -456,8 +471,7 @@ class SiteTest(unittest.TestCase):
     html = website.build_guide(world)
     self.assertIn("防は Lv1 で 6、Lv20 で 40", html)
     self.assertIn("攻は Lv1 で 6、Lv20 で 30", html)
-    self.assertIn('<td><span class="tag">雷属性</span></td><td>氷</td><td>炎・氷</td>', html)
-    self.assertIn('<td><span class="tag">炎属性</span></td><td>雷</td><td>-</td>', html)
+    self.assertNotIn('aria-label="属性の三すくみ"', html)  # 輪になっていなければ、三すくみの図は出さない
 
   def test_boss_without_an_area_is_in_the_other_group(self):
     world = copy.deepcopy(WORLD)

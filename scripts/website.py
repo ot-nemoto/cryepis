@@ -132,6 +132,8 @@ td.icon .tag{margin-left:0}
 .pill{display:inline-block;margin:2px 6px 2px 0;padding:1px 10px;border:1.5px solid #f0a868;border-radius:999px;
   background:var(--card);color:var(--ink);text-decoration:none;font-size:13px;white-space:nowrap}
 .pill:hover{border-color:#e8833a}
+.guide-nav{margin:4px 0 12px}
+svg.tri{display:block;max-width:100%;height:auto;color:var(--ink);margin:6px 0}
 .tag{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #e8833a;border-radius:4px;color:#c2621c;font-size:11px}
 .chip{font:inherit;font-size:14px;font-weight:bold;color:var(--ink);background:var(--card);border:1.5px solid #f0a868;
 border-radius:999px;padding:4px 14px;cursor:pointer;box-shadow:0 0 0 2px rgba(240,168,104,.15)}
@@ -980,6 +982,61 @@ ORDER_NAMES = {
 }
 
 
+def skill_slots(world: dict, rarity: str) -> str:
+  """珍しさごとのスキルの数の説明（★ はなし、★★ は 1 つ、★★★ から固定スキル＋1 つ）。"""
+  prices = world.get("skill_prices") or {}
+  if rarity not in prices:
+    return "なし"
+  first = next(iter(prices))
+  return f"1 つ（{prices[rarity]}G）" if rarity == first else f"固定スキル（未定）＋ 1 つ（{prices[rarity]}G）"
+
+
+def skill_tag(name: str) -> str:
+  """スキルの名前の札（特性と同じ枠）。"""
+  return f'<span class="tag">{escape(name)}</span>'
+
+
+def element_triangle(world: dict) -> str:
+  """属性の三すくみの図（SVG）。強い相手へ矢印を引く（炎→雷→氷→炎）。3 つでなければ出さない。"""
+  elements = world.get("elements") or {}
+  order, cur = [], next(iter(elements), None)
+  while cur in elements and cur not in order:
+    order.append(cur)
+    cur = elements[cur]["strong"]
+  if len(order) != 3 or len(elements) != 3 or cur != order[0]:
+    return ""
+  import math as _m
+
+  pts = [(150 + 95 * _m.sin(2 * _m.pi * i / 3), 115 - 95 * _m.cos(2 * _m.pi * i / 3)) for i in range(3)]
+  colors = {"flame": "#d9534f", "ice": "#4f8fd9", "thunder": "#b58ad9"}
+  parts = []
+  for i in range(3):
+    (x1, y1), (x2, y2) = pts[i], pts[(i + 1) % 3]
+    dx, dy = x2 - x1, y2 - y1
+    d = _m.hypot(dx, dy)
+    ux, uy = dx / d, dy / d
+    sx, sy, ex, ey = x1 + ux * 34, y1 + uy * 34, x2 - ux * 38, y2 - uy * 38
+    parts.append(
+      f'<line x1="{sx:.1f}" y1="{sy:.1f}" x2="{ex:.1f}" y2="{ey:.1f}" stroke="currentColor" stroke-width="2.5" marker-end="url(#arrow)"/>'
+    )
+    mx, my = (x1 + x2) / 2 - uy * 14, (y1 + y2) / 2 + ux * 14
+    parts.append(f'<text x="{mx:.1f}" y="{my:.1f}" font-size="12" text-anchor="middle" fill="currentColor">強い</text>')
+  for eid, (x, y) in zip(order, pts, strict=True):
+    color = colors.get(eid, "#888")
+    parts.append(
+      f'<circle cx="{x:.1f}" cy="{y:.1f}" r="28" fill="{color}" fill-opacity="0.18" stroke="{color}" stroke-width="2"/>'
+    )
+    parts.append(
+      f'<text x="{x:.1f}" y="{y + 5:.1f}" font-size="15" font-weight="bold" text-anchor="middle" fill="currentColor">'
+      f"{escape(elements[eid]['name'])}</text>"
+    )
+  return (
+    '<svg viewBox="0 0 300 220" width="300" height="220" role="img" aria-label="属性の三すくみ" class="tri">'
+    '<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
+    '<path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>' + "".join(parts) + "</svg>"
+  )
+
+
 def skill_logic(sk: dict) -> str:
   """スキルのしくみの説明（logic の value を、値に置き換える。確率・HP の割合は %）。"""
   text, v = sk["logic"], sk.get("value")
@@ -1023,7 +1080,7 @@ def skill_cards(world: dict, table) -> list[tuple[str, str]]:
   )
   for slot in W.SLOTS:
     rows = [
-      (escape(kinds.get(sk["kind"], sk["kind"])), escape(sk["name"]), escape(sk["text"]), escape(skill_logic(sk)))
+      (escape(kinds.get(sk["kind"], sk["kind"])), skill_tag(sk["name"]), escape(sk["text"]), escape(skill_logic(sk)))
       for sk in skills.values()
       if sk["slot"] == slot
     ]
@@ -1078,7 +1135,11 @@ def personality_table(world: dict, table) -> str:
           (
             f"優先スキル（{W.SLOT_NAMES[slot]}）",
             [
-              "・".join(world["skills"][i]["name"] for i in p["skill"]["prefer"][slot] if i in world.get("skills", {}))
+              "".join(
+                skill_tag(world["skills"][i]["name"])
+                for i in p["skill"]["prefer"][slot]
+                if i in world.get("skills", {})
+              )
               for p in ps
             ],
           )
@@ -1090,7 +1151,10 @@ def personality_table(world: dict, table) -> str:
     ),
   ]
   return (
-    table(("項目", *(p["name"] for p in ps)), [(escape(k), *(escape(v) for v in vs)) for k, vs in rows])
+    table(
+      ("項目", *(p["name"] for p in ps)),
+      [(escape(k), *(v if k.startswith("優先スキル") else escape(v) for v in vs)) for k, vs in rows],  # 札は HTML
+    )
     + "".join(f'<p class="note">{escape(p["name"])}: {escape(p["text"])}</p>' for p in ps)
     + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない。'
     "選ぶ依頼の Lv は討伐だけで見る（配達は Lv を見ず、どの性格の範囲にも入る。Lv を比べるときは自分と同じ Lv として数える）。"
@@ -1137,18 +1201,7 @@ def build_guide(world: dict) -> str:
   hero_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in cfg["hero_traits"].values()]
   monster_traits = [(tag(t["name"]), escape(t.get("text", ""))) for t in world["traits"].values()]
   elements, rates = world["elements"], cfg["element_rates"]
-  weak_to: dict[str, list[str]] = {}  # その属性に強い属性（いくつあってもよい）
-  for eid, e in elements.items():
-    weak_to.setdefault(e["strong"], []).append(eid)
-  element_rows = [
-    (
-      tag(f"{e['name']}属性"),
-      escape(element_label(world, e["strong"])),
-      escape("・".join(element_label(world, w) for w in weak_to.get(eid, [])) or "-"),
-      escape(e.get("ore", "-")),
-    )
-    for eid, e in elements.items()
-  ]
+  element_rows = [(tag(f"{e['name']}属性"), escape(e.get("ore", "-"))) for e in elements.values()]
   potion = cfg["potion"]
   shifts = "・".join(  # 危ない配達で上がる魔物の Lv（配達の設定がない世界では、行を出さない）
     f"危なさ {n} は +{d['shift']}"
@@ -1232,13 +1285,14 @@ def build_guide(world: dict) -> str:
   level_rows = "".join(
     f'<tr><td class="num">Lv{lv}</td>'
     + "".join(f'<td class="num">{v}</td>' for v in (b["max_hp"], b["atk"], b["def"], b["spd"], b["dex"]))
+    + f'<td class="num">{game.exp_need(world, lv) if lv < lv_max else "—"}</td>'
     + "</tr>"
     for lv in range(1, lv_max + 1)
     for b in [game.base_stats(world, None, lv)]
   )
   level_table = (
     '<div class="scroll"><table class="levels"><tr><th class="num">Lv</th>'
-    + "".join(f'<th class="num">{h}</th>' for h in ("HP", "攻", "防", "速", "器"))
+    + "".join(f'<th class="num">{h}</th>' for h in ("HP", "攻", "防", "速", "器", "次の Lv まで"))
     + "</tr>"
     + level_rows
     + "</table></div>"
@@ -1248,8 +1302,8 @@ def build_guide(world: dict) -> str:
       "能力",
       table(("能力", "説明"), stats)
       + f'<p class="note">{escape(stat_note)}</p>'
-      + '<h4 class="sub">レベルごとの能力（特性の倍率がかかる前の値。強運の勇者と同じ。ほかの特性と装備で変わる）</h4>'
-      + level_table,
+      + '<h4 class="sub">レベルごとの能力（特性の倍率がかかる前の値。強運の勇者と同じ。ほかの特性と装備で変わる）と、'
+      "次のレベルまでに要る経験値</h4>" + level_table,
     ),
     (
       "勇者の特性",
@@ -1269,7 +1323,8 @@ def build_guide(world: dict) -> str:
       (
         "属性と相性",
         f"<p>相性（左が右に強い）: {element_chart(world)}</p>"
-        + table(("属性", "強い相手", "苦手な相手", "鉱石"), element_rows)
+        + element_triangle(world)
+        + table(("属性", "鉱石"), element_rows)
         + f'<p class="note">強い相手を攻めるとダメージ {rates["strong"]} 倍、苦手な相手だと {rates["weak"]} 倍。'
         "属性は魔物と一部の武器・装飾品にある（属性のない魔物・武器もある）。装飾品の属性は、武器に属性がないとき攻撃に付く。"
         "属性の武器は、その属性の力を持つ鉱石から作られる</p>",
@@ -1285,6 +1340,7 @@ def build_guide(world: dict) -> str:
       escape(game.rarity_mark(world, r)),
       escape(f"{points['max'][r]:g} 点まで"),
       escape("なし" if r == W.COMMON else "付くことがある（武器・装飾品）"),
+      escape(skill_slots(world, r)),
     )
     for r in world["rarities"]
   ]
@@ -1303,9 +1359,9 @@ def build_guide(world: dict) -> str:
       "<p>アイテムの強さは点数で決まる。能力の増減に、能力ごとの点数を掛けて足す（マイナスの能力も同じ点数で引く）</p>"
       + table(("能力", "+1 あたり", "1 点になる量"), weight_rows)
       + '<h4 class="sub">珍しさごとの点数</h4>'
-      + table(("珍しさ", "点数の上限", "属性"), rarity_rows)
-      + f'<p class="note">{escape(example)}。勇者は点数の高いアイテムを装備し、店でも点数の高いものを買う'
-      "（同じ点数なら、マイナスの能力のないもの）</p>",
+      + table(("珍しさ", "点数の上限", "属性", "スキル"), rarity_rows)
+      + f'<p class="note">{escape(example)}。勇者は ★ の多いアイテムを装備し（★ が同じなら点数の高いもの。'
+      "それも同じなら、マイナスの能力のないもの）、店でもその順に買う。スキルは点数に入らない</p>",
     )
   )
   quest_rows = [
@@ -1368,7 +1424,16 @@ def build_guide(world: dict) -> str:
   cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))
   cards.append(("魔物の経験値とお金", table(("項目", "決め方"), reward_rows)))
   cards.extend(build_myth_cards(world, table))
-  body = "<h2>手引き</h2>" + "".join(f'<div class="card"><h3>{escape(h)}</h3>{inner}</div>' for h, inner in cards)
+  nav = (
+    '<p class="guide-nav">'
+    + "".join(f'<a class="pill" href="#g{i}">{escape(h)}</a>' for i, (h, _) in enumerate(cards))
+    + "</p>"
+  )
+  body = (
+    "<h2>手引き</h2>"
+    + nav
+    + "".join(f'<div class="card" id="g{i}"><h3>{escape(h)}</h3>{inner}</div>' for i, (h, inner) in enumerate(cards))
+  )
   return page("手引き", body, "guide.html")
 
 
