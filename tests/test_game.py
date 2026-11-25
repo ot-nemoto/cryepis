@@ -794,6 +794,19 @@ class StateFileTest(unittest.TestCase):
       G.save_state(state, path)
       self.assertEqual(G.load_state(WORLD, path), state)
 
+  def test_load_renews_quest_texts_with_old_monster_names(self):
+    """物の怪の名前を変える前（#253）に受けた依頼は、読み込むときに今の名前の文にする。"""
+    state = play(1)
+    quest = common_hunt()
+    quest.update(name="野犬の討伐", text="道に野犬が出る。雪男の牙も運べ")
+    state["quest"] = quest
+    with tempfile.TemporaryDirectory() as d:
+      path = Path(d) / "h1.json"
+      G.save_state(state, path)
+      loaded = G.load_state(WORLD, path)
+    self.assertEqual(loaded["quest"]["name"], "送り犬の討伐")
+    self.assertEqual(loaded["quest"]["text"], "道に送り犬が出る。雪女の簪も運べ")  # 長い名前（雪男の牙）から置き換える
+
   def test_load_repairs_references_removed_from_the_world(self):
     state = play(5)
     state.update(place="gone", home_town="gone", road={"to": "gone", "left": 1})
@@ -943,6 +956,22 @@ class GuildBoardTest(unittest.TestCase):
     G.refresh_guild(WORLD, self.guild, START + timedelta(days=n), 1)
     self.board = self.guild["towns"][self.TOWN]
     return {e["id"]: e for e in self.board}
+
+  def test_old_monster_names_on_the_board_are_renewed(self):
+    """名前を変える前（#253）に貼られた依頼は、翌朝の貼り替えで今の文にする（町の決まった依頼は quests.json から）。"""
+    town_q = next(q for q in WORLD["town_quests"]["nagano"] if q["monster"] == "yeti")
+    entry = G.make_town_quest(WORLD, town_q, "nagano", START)
+    entry.update(id="old-1", posted=START.isoformat(), status="held", holder="h1", returned=False)
+    entry.update(name="吹雪の雪男", text="牙の冷たさを持ち出したものだ")
+    common = common_hunt()
+    common.update(id="old-2", posted=START.isoformat(), status="held", holder="h2", returned=False)
+    common.update(name="ゴブリンの討伐", text="ゴブリンを追い払ってくれ")
+    self.guild["towns"]["nagano"].append(entry)
+    self.guild["towns"][self.TOWN].append(common)
+    self.next_day()
+    byid = {e["id"]: e for es in self.guild["towns"].values() for e in es}
+    self.assertEqual((byid["old-1"]["name"], byid["old-1"]["text"]), (town_q["name"], town_q["text"]))
+    self.assertEqual((byid["old-2"]["name"], byid["old-2"]["text"]), ("小鬼の討伐", "小鬼を追い払ってくれ"))
 
   def test_every_town_is_filled(self):
     for town in WORLD["towns"]:

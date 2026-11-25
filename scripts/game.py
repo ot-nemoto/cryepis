@@ -15,6 +15,7 @@ import copy
 import json
 import math
 import random
+import re
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -189,6 +190,8 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "もの
   quest = state["quest"]
   if quest and not quest_ok(world, quest):
     state["quest"] = None
+  if state["quest"]:
+    renew_quest_texts(world, state["quest"])
   stay = state.get("stay")
   try:  # 今の町に着いた日（壊れていたら数え直す）
     ok = isinstance(stay, dict) and stay.get("town") == state["place"] and bool(date.fromisoformat(stay["since"]))
@@ -199,6 +202,68 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "もの
   hp_max = stats(world, state)["max_hp"]
   state["hero"]["hp"] = min(state["hero"]["hp"], hp_max)
   return state
+
+
+# 物の怪の前の名前 → 今の名前（#253）。名前を変える前に貼られた・受けられた依頼の文を直す（長い名前から順に置き換える）
+OLD_NAMES = {
+  "ケンタウロス": "鎌鼬",
+  "溶岩スライム": "火車",
+  "リザードマン": "河童",
+  "吸血コウモリ": "野衾",
+  "草原の大蛇": "野槌",
+  "荒くれ野牛": "輪入道",
+  "グリフォン": "以津真天",
+  "森オオカミ": "山犬",
+  "岩ゴーレム": "がしゃどくろ",
+  "雪原の白熊": "鬼熊",
+  "密林の大蛇": "うわばみ",
+  "砂漠の盗賊": "砂かけ婆",
+  "雪男の牙": "雪女の簪",
+  "大ネズミ": "鉄鼠",
+  "ゴブリン": "小鬼",
+  "人食い花": "人面樹",
+  "霜の巨人": "霜の大入道",
+  "サハギン": "七人ミサキ",
+  "火トカゲ": "火鼠",
+  "沼トカゲ": "大山椒魚",
+  "毒ガエル": "大蝦蟇",
+  "砂サソリ": "砂蠍",
+  "岩トカゲ": "石蜥蜴",
+  "暴れ猪": "猪笹王",
+  "野盗団": "野伏せり",
+  "オーク": "赤鬼",
+  "オーガ": "青鬼",
+  "大蜘蛛": "女郎蜘蛛",
+  "氷の精": "雪ん子",
+  "大ダコ": "蛸入道",
+  "炎の鳥": "青鷺火",
+  "沼ヒル": "沼蛭",
+  "泥人形": "泥田坊",
+  "ヒドラ": "蛟",
+  "野犬": "送り犬",
+  "地竜": "塗壁",
+  "山賊": "狒々",
+  "雷鳥": "雷獣",
+  "大鷲": "大天狗",
+  "雪男": "雪女",
+  "氷狼": "雪狼",
+  "海賊": "船幽霊",
+}
+_OLD_NAMES_RE = re.compile("|".join(re.escape(k) for k in OLD_NAMES))
+
+
+def renew_quest_texts(world: dict, quest: dict) -> None:
+  """依頼の名前・説明・荷物を、今の world/ の言葉に合わせる。町の決まった依頼は quests.json から作り直し、
+  共通の依頼は、物の怪の前の名前（OLD_NAMES）を今の名前に置き換える。"""
+  template = next(
+    (q for q in world["town_quests"].get(quest.get("town"), []) if q["id"] == quest.get("template")), None
+  )
+  if template is not None:
+    quest.update(name=template["name"], text=template.get("text", ""))
+    return
+  for key in ("name", "text", "cargo"):
+    if isinstance(quest.get(key), str):
+      quest[key] = _OLD_NAMES_RE.sub(lambda m: OLD_NAMES[m.group(0)], quest[key])
 
 
 QUEST_TYPES = ("hunt", "deliver", "patrol")
@@ -493,6 +558,7 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
         continue  # 達成された依頼（と、world/ から消えた依頼）ははがす
       if e["status"] == "open" and last_open_day(world, e) < d:
         continue  # 誰も受けないまま受付が終わった
+      renew_quest_texts(world, e)  # 物の怪の名前が変わったら、文も合わせる
       if e["status"] == "open":  # 物の怪のレベルが変わったら、依頼のレベルも合わせる
         lv = quest_level(world, e)
         e["level"] = [lv, lv] if lv is not None else None
@@ -766,7 +832,7 @@ def quest_detail(world: dict, quest: dict) -> str:
 
 
 def quest_text(world: dict, quest: dict) -> str:
-  """依頼の表示。レアリティと名前があれば「★★ 砂かけ婆団（〜を 6 体討伐）」の形にする。"""
+  """依頼の表示。レアリティと名前があれば「★★ 砂かけ婆の討伐（〜を 6 体討伐）」の形にする。"""
   detail = quest_detail(world, quest)
   if quest["type"] == "patrol":
     return detail
