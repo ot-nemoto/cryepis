@@ -311,7 +311,7 @@ class QuestTest(unittest.TestCase):
     state = play(1, actions=0)
     state["hero"]["level"] = 99  # どの依頼も合わない…ことがないよう、掲示板の依頼をすべて受けられるようにする
     quests = G.board(WORLD, TOWN, START, 1)
-    state["hero"]["level"] = max(q["level"][0] for q in quests if q["level"])
+    state["hero"]["level"] = max((q["level"][0] for q in quests if q["level"]), default=1)
     day = day_of(state)
     ids = []
     for _ in range(len(quests) + 1):
@@ -1642,6 +1642,7 @@ class PersonalityTest(unittest.TestCase):
     self.assertTrue(G.suitable(deliver, 15, [-2, 0]))
     self.assertEqual(G.level_gap(deliver, 15, [-1, 1]), 0)
     self.assertEqual(G.QUEST_ORDER["level_high"](deliver, 15), 0)  # Lv を比べるときは自分と同じ Lv
+    self.assertEqual(G.quest_gap({"type": "patrol"}, 15), 0)  # Lv を持たない旅でも落ちない
     self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [None, 0]), 0)
 
   def test_stay_too_long_and_travel(self):

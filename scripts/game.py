@@ -670,7 +670,9 @@ def make_quest(world: dict, t: dict, town: str, d: date, rng: random.Random, ran
 
 def quest_gap(quest: dict, level: int) -> int:
   """依頼の Lv と勇者の Lv の差。配達は Lv を見ない（道中の魔物は勇者の Lv で決まり、危なさは ★ に入っている。#228）ので 0。"""
-  return 0 if quest.get("type") == "deliver" else quest["level"][0] - level
+  if quest.get("type") == "deliver" or not quest.get("level"):  # Lv を持たない依頼（配達・旅）は、自分と同じ Lv
+    return 0
+  return quest["level"][0] - level
 
 
 def suitable(quest: dict, level: int, levels: list | None = None) -> bool:
