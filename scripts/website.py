@@ -1006,7 +1006,8 @@ def personality_table(world: dict, table) -> str:
     table(("項目", *(p["name"] for p in ps)), [(escape(k), *(escape(v) for v in vs)) for k, vs in rows])
     + "".join(f'<p class="note">{escape(p["name"])}: {escape(p["text"])}</p>' for p in ps)
     + '<p class="note">勇者を作るときにランダムで決まり、シーズンが変わっても変わらない。'
-    "選ぶ依頼が同じ条件で並んだら、掲示板の上のものを選ぶ。強敵の依頼は、どの性格も強敵の Lv 以上になってから受ける</p>"
+    "選ぶ依頼が同じ条件で並んだら、掲示板の上のものを選ぶ。Lv の範囲に合う依頼がなければ、範囲より弱い依頼のうち、"
+    "範囲にいちばん近い Lv の依頼を受ける（範囲より強い依頼は受けない）。強敵の依頼は、どの性格も強敵の Lv 以上になってから受ける</p>"
   )
 
 

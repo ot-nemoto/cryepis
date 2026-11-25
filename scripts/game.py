@@ -609,6 +609,13 @@ def suitable(quest: dict, level: int, levels: list | None = None) -> bool:
   return (low is None or gap >= low) and gap <= high and level >= quest.get("min_level", 0)
 
 
+def level_gap(quest: dict, level: int, levels: list) -> int:
+  """依頼の Lv が、性格の範囲（levels。勇者の Lv との差 [下, 上]、下は None で下限なし）からどれだけ外れているか（範囲内は 0）。"""
+  low, high = levels
+  gap = quest["level"][0] - level
+  return max(0 if low is None else low - gap, gap - high, 0)
+
+
 QUEST_ORDER = {  # 性格の依頼の選び方（quest.order）。小さいほうを先に選ぶ
   "level_high": lambda q: -q["level"][0],
   "level_low": lambda q: q["level"][0],
@@ -967,11 +974,17 @@ class Day:
     level, me = self.hero["level"], personality(self.world, self.state)
     refresh_guild(self.world, self.guild, self.today, season_of(self.world, self.today), [town])
     levels = me.get("quest", {}).get("levels")
-    entries = [
-      e
-      for e in self.guild["towns"].get(town, [])  # 受付中の依頼だけ（受注中のものは受けられない）
-      if e["status"] == "open" and suitable(e, level, levels) and e["id"] not in self.state["taken"]
+    open_ = [  # 受付中の依頼だけ（受注中のものは受けられない）
+      e for e in self.guild["towns"].get(town, []) if e["status"] == "open" and e["id"] not in self.state["taken"]
     ]
+    entries = [e for e in open_ if suitable(e, level, levels)]
+    if not entries and levels:
+      # 性格の範囲に合う依頼がなければ、範囲より弱い依頼のうち、範囲にいちばん近い Lv の依頼を受ける
+      # （範囲より強い依頼は受けない。強敵は Lv が足りなければ受けない）
+      others = [e for e in open_ if level >= e.get("min_level", 0) and e["level"][0] - level <= levels[1]]
+      if others:
+        near = min(level_gap(e, level, levels) for e in others)
+        entries = [e for e in others if level_gap(e, level, levels) == near]
     if entries:
       if me:  # 性格の選び方で並べ、同じなら掲示板の上のもの（ランダムはなし）
         order = [QUEST_ORDER[k] for k in me["quest"]["order"]]

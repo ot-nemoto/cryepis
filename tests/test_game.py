@@ -889,13 +889,13 @@ class BalanceTest(unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
-    cls.results = []
-    for i in range(30):
-      state, d = G.new_state(WORLD, f"b{i}"), START
-      while G.season_of(WORLD, d) == 1:
-        G.advance(WORLD, state, d)
-        d += timedelta(days=1)
-      cls.results.append(state)
+    # 本番と同じく、全員で 1 つの掲示板を取り合う（早い者勝ち。勇者を進める順は日ごとに混ぜる）
+    cls.results = [G.new_state(WORLD, f"b{i}") for i in range(30)]
+    guild, d = G.new_guild(), START
+    while G.season_of(WORLD, d) == 1:
+      for state in random.Random(d.isoformat()).sample(cls.results, len(cls.results)):
+        G.advance(WORLD, state, d, guild=guild)
+      d += timedelta(days=1)
 
   def median(self, values):
     return sorted(values)[len(values) // 2]
@@ -1591,6 +1591,25 @@ class PersonalityTest(unittest.TestCase):
     self.assertEqual((picked["level"][0], picked["rank"]), (5, 1))  # Lv の高いもの（自分以下）、★の少ないもの
     first = next(e for e in entries if e["level"][0] == 5 and e["rank"] == 1)
     self.assertIs(picked, first)  # 同じ条件なら掲示板の上のもの
+
+  def test_take_quest_falls_back_to_the_nearest_level(self):
+    guild = G.new_guild()
+    state = with_personality("diligent")  # Lv −2〜0。Lv の高いもの
+    town = state["place"]
+    state["hero"]["level"] = 12
+    G.refresh_guild(WORLD, guild, START, 1)
+    entries = guild["towns"][town]
+    for e in entries:  # 範囲（Lv10〜12）に合う依頼がない
+      e.update(level=[2, 2], rank=1, min_level=0)
+    entries[0].update(level=[5, 5])
+    entries[1].update(level=[7, 7])
+    entries[2].update(level=[15, 15])  # 範囲より強い依頼は、近くても受けない
+    G.Day(WORLD, state, START, random.Random(0), guild).take_quest(town)
+    picked = next(e for e in entries if e["status"] == "held")
+    self.assertEqual(picked["level"][0], 7)  # 範囲より弱い依頼のうち、いちばん近い Lv7
+    self.assertNotEqual(state["quest"]["type"], "patrol")  # 旅には出ない
+    self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [-2, 0]), 5)
+    self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [None, 0]), 0)
 
   def test_potion_is_used_below_the_rate_and_zero_hp_falls(self):
     state = with_personality("careful")  # 回復薬は HP 50% 未満
