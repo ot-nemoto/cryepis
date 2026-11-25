@@ -574,11 +574,10 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["skill_prices"].update(common=1), ["skill_prices"])
     self.assertError(lambda r: r["skills"][1].pop("value"), ["skills", "value"])  # しくみに value を使うのに値がない
     self.assertError(
-      lambda r: r["season"]["personalities"]["brave"]["skill"].update(style="x"), ["brave", "skill.style"]
+      lambda r: r["season"]["personalities"]["brave"]["skill"]["prefer"].update(weapon=["haggle"]),
+      ["brave", "skill.prefer"],
     )
-    self.assertError(
-      lambda r: r["season"]["personalities"]["brave"]["skill"].update(kinds=["attack"]), ["brave", "skill.kinds"]
-    )
+    self.assertError(lambda r: r["season"]["personalities"]["brave"]["skill"].pop("prefer"), ["brave", "skill.prefer"])
     self.assertError(lambda r: r["season"].update(personalities={}), ["personalities"])
     self.assertError(lambda r: r["season"]["personalities"]["careful"].update(inn_below=2), ["careful", "inn_below"])
     self.assertError(

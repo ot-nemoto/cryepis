@@ -1885,22 +1885,39 @@ class SkillTest(unittest.TestCase):
     day_of(common).smith(common["place"])
     self.assertIsNone(G.carried(common)[0]["skill"])
 
-  def test_smith_keeps_the_better_skill(self):
-    brave = with_personality("brave")  # 攻めがいちばん
-    brave["inventory"] = gear(("steel_sword", "crit_art"))
-    brave["hero"]["gold"] = 10_000
-    day = day_of(brave)
-    with mock.patch.object(day.rng, "choice", return_value="hunter"):  # お金の系統（勇猛では下）
-      day.smith(brave["place"])
-    self.assertEqual(G.carried(brave)[0]["skill"], "crit_art")  # 元のほうを残す
-    self.assertIn("元の", day.events[-1])
-
-  def test_rank_puts_useless_counters_last(self):
-    state = with_personality("diligent")  # 対策がいちばん
+  def test_smith_skips_gear_with_a_preferred_skill(self):
+    brave = with_personality("brave")  # 武器の優先スキル: 会心の心得・連撃・修練
     world = copy.deepcopy(WORLD)
-    world["skills"]["pierce"]["counter"] = {"trait": "nobody_has_this"}
-    self.assertGreater(G.skill_rank(world, state, "pierce"), G.skill_rank(world, state, "hunter"))
-    self.assertGreater(G.skill_rank(WORLD, state, None), G.skill_rank(WORLD, state, "hunter"))  # スキルなしは最後
+    world["items"]["x_epic_sword"] = {
+      "id": "x_epic_sword",
+      "name": "試しの剣",
+      "slot": "weapon",
+      "rarity": "epic",
+      "atk": 1,
+    }
+    brave["inventory"] = gear(("steel_sword", None), ("x_epic_sword", "crit_art"))  # ★ の多い剣には優先スキル
+    brave["hero"]["gold"] = 10_000
+    day = G.Day(world, brave, START, random.Random(0))
+    with mock.patch.object(day.rng, "choice", return_value="hunter"):
+      day.smith(brave["place"])
+    skills = {x["id"]: x["skill"] for x in G.carried(brave)}
+    self.assertEqual(skills, {"x_epic_sword": "crit_art", "steel_sword": "hunter"})  # 優先スキルの剣は変えず、次の剣に
+    self.assertNotIn("（優先スキル）", day.events[-1])
+    day.smithed = False  # 次の日: 優先スキルでない狩人の剣は、また付け直す
+    with mock.patch.object(day.rng, "choice", return_value="combo"):
+      day.smith(brave["place"])
+    self.assertEqual({x["id"]: x["skill"] for x in G.carried(brave)}["steel_sword"], "combo")
+    self.assertIn("（優先スキル）", day.events[-1])
+    day.smithed = False  # 全部に優先スキルが付いたら、もう付けない
+    gold = brave["hero"]["gold"]
+    day.smith(brave["place"])
+    self.assertEqual(brave["hero"]["gold"], gold)
+
+  def test_prefer_index(self):
+    state = with_personality("brave")
+    self.assertEqual(G.prefer_index(WORLD, state, {"id": "steel_sword", "skill": "crit_art"}), 0)
+    self.assertEqual(G.prefer_index(WORLD, state, {"id": "steel_sword", "skill": "hunter"}), 99)
+    self.assertEqual(G.prefer_index(WORLD, state, {"id": "steel_sword", "skill": None}), 99)
 
   def test_arrange_brings_counters_for_the_quest(self):
     state = with_personality("tactician")
@@ -1913,9 +1930,11 @@ class SkillTest(unittest.TestCase):
     self.assertEqual(G.carried(state)[0]["skill"], "antidote")  # 毒の魔物の討伐なので、毒よけの兜を持つ
 
   def test_review_fixes(self):
-    # ふだん着ける装飾品は、役に立つスキルの付いたもの（町や道で効くスキルのため）
-    state = with_personality("brave")
-    state["inventory"] = gear(("lifeblood_charm", None), ("silkvine_charm", "haggle"))
+    # ふだん着ける装備は ★ の多いもの。★ と点数が同じなら、性格の優先スキルの付いたもの
+    state = with_personality("thrifty")  # 装飾品の優先スキル: 値切り
+    state["inventory"] = gear(("crimson_grass_charm", None), ("lifeblood_charm", "haggle"))
+    self.assertEqual(G.worn(WORLD, state)["accessory"]["id"], "crimson_grass_charm")  # ★★ を先に
+    state["inventory"] = gear(("silkvine_charm", None), ("silkvine_charm", "haggle"))
     self.assertEqual(G.worn(WORLD, state)["accessory"]["skill"], "haggle")
     self.assertEqual(day_of(state).price(100), 90)
     # 鍛冶屋は、保管庫の装備には付けない

@@ -762,11 +762,14 @@ def _check_personalities(c: _Check):
       margin = sk.get("margin")
       if not isinstance(margin, (int, float)) or isinstance(margin, bool) or margin < 1:
         err(f"{where}: skill.margin は 1 以上の数（余裕の倍率）にしてください")
-      if sk.get("style") not in ("new", "reroll", "auto"):
-        err(f"{where}: skill.style は new（新しく用意する）・reroll（付け替える）・auto のどれかにしてください")
-      kinds = sk.get("kinds")
-      if not isinstance(kinds, list) or sorted(kinds) != sorted(SKILL_KINDS):
-        err(f"{where}: skill.kinds は、スキルの系統 {'/'.join(SKILL_KINDS)} を 1 つずつ並べた順にしてください")
+      prefer = sk.get("prefer")
+      slots_of = {k["id"]: k.get("slot") for k in (c.raw.get("skills") or []) if isinstance(k, dict)}
+      if not isinstance(prefer, dict) or set(prefer) != set(SLOTS):
+        err(f"{where}: skill.prefer は {'/'.join(SLOTS)} ごとの優先スキルの一覧にしてください")
+      else:
+        for slot, ids in prefer.items():
+          if not isinstance(ids, list) or not ids or any(slots_of.get(i) != slot for i in ids):
+            err(f"{where}: skill.prefer の {slot} は、その部位のスキルの ID の一覧（1 つ以上）にしてください")
 
 
 SKILL_KINDS = ("counter", "attack", "guard", "heal", "travel", "money", "growth")

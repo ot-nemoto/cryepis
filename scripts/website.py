@@ -980,13 +980,6 @@ ORDER_NAMES = {
 }
 
 
-STYLE_NAMES = {
-  "new": "スキルのない装備にだけ付ける（今あるスキルは失いたくない）",
-  "reroll": "いちばん要らないスキルの装備に付け替える",
-  "auto": "スキルのない装備があればそれに、なければいちばん要らないスキルの装備に",
-}
-
-
 def skill_logic(sk: dict) -> str:
   """スキルのしくみの説明（logic の value を、値に置き換える。確率・HP の割合は %）。"""
   text, v = sk["logic"], sk.get("value")
@@ -1015,7 +1008,7 @@ def skill_cards(world: dict, table) -> list[tuple[str, str]]:
         table(("部位", "持てる数"), [(escape(W.SLOT_NAMES[s]), f"{carry[s]}") for s in W.SLOTS])
         + '<p class="note">着けるのは部位ごとに 1 つ（武器と装飾品は、戦いのたびに持っている中から選ぶ）。'
         "持てる数を超えた分は、町のギルドの保管庫に預ける（どの町でも出し入れでき、依頼に合わせて入れ替える。"
-        "依頼の魔物の性質に効くスキル → 性格の欲しいスキル → 装備の強さ、の順に持つ）。持ち物と保管庫はシーズンをまたいで残る</p>",
+        "依頼の魔物の性質に効くスキル → 弱点を突ける属性 → 性格の優先スキル → ★ の多い装備、の順に持つ）。持ち物と保管庫はシーズンをまたいで残る</p>",
       )
     )
   if not skills:
@@ -1025,7 +1018,7 @@ def skill_cards(world: dict, table) -> list[tuple[str, str]]:
   body = (
     f"<p>スキルは {escape(game.rarity_mark(world, next(iter(prices), 'rare')))} 以上の装備に、町の鍛冶屋で付けられる"
     f"（代金 {escape(price_text)}。1 日 1 回まで、行動力は使わない）。部位ごとのスキルからランダムで 1 つ付き、"
-    "元のスキルがあれば、性格の欲しい順で上のほうを残す。スキルは点数（アイテムの強さ）には入らない。"
+    "持っている装備を ★ の多い順に見て、性格の優先スキルの付いていない最初の装備に付ける（優先スキルが付いた装備は、もう変えない）。スキルは点数（アイテムの強さ）には入らない。"
     "★★★ 以上の固定スキルは、まだない</p>"
   )
   for slot in W.SLOTS:
@@ -1081,10 +1074,15 @@ def personality_table(world: dict, table) -> str:
           "スキルを付ける余裕",
           [("余裕があれば" if p["skill"]["margin"] <= 1 else f"代金の {p['skill']['margin']} 倍以上") for p in ps],
         ),
-        ("付け替えるか、新しく用意するか", [STYLE_NAMES[p["skill"]["style"]] for p in ps]),
-        (
-          "欲しいスキル（系統の順）",
-          [" → ".join(world.get("skill_kinds", {}).get(k, k) for k in p["skill"]["kinds"]) for p in ps],
+        *(
+          (
+            f"優先スキル（{W.SLOT_NAMES[slot]}）",
+            [
+              "・".join(world["skills"][i]["name"] for i in p["skill"]["prefer"][slot] if i in world.get("skills", {}))
+              for p in ps
+            ],
+          )
+          for slot in W.SLOTS
         ),
       ]
       if all("skill" in p for p in ps)
