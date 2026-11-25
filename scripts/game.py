@@ -293,14 +293,20 @@ def instances(value) -> list[dict]:
 
 def carried(state: dict) -> list[dict]:
   """持っている装備（前の形式なら、ここで 1 つずつの一覧に直す）。"""
-  if not (isinstance(state.get("inventory"), list) and all(isinstance(x, dict) for x in state["inventory"])):
+  if not (
+    isinstance(state.get("inventory"), list)
+    and all(isinstance(x, dict) and isinstance(x.get("id"), str) for x in state["inventory"])
+  ):
     state["inventory"] = instances(state.get("inventory"))
   return state["inventory"]
 
 
 def stored(state: dict) -> list[dict]:
   """保管庫の装備。"""
-  if not (isinstance(state.get("storage"), list) and all(isinstance(x, dict) for x in state["storage"])):
+  if not (
+    isinstance(state.get("storage"), list)
+    and all(isinstance(x, dict) and isinstance(x.get("id"), str) for x in state["storage"])
+  ):
     state["storage"] = instances(state.get("storage"))
   return state["storage"]
 
@@ -319,15 +325,33 @@ def carry_limit(world: dict, slot: str) -> int:
   return world["season"].get("carry", {}).get(slot, 99)
 
 
+def useful_skill(world: dict, state: dict, x: dict) -> tuple:
+  """装備 x のスキルの欲しさ（大きいほど欲しい）。役に立つスキル（地方にいない性質の対策でない）があれば先、
+  その中では性格の欲しい順（skill_rank）。スキルがない・役に立たないものは (False,)。"""
+  sid = x.get("skill")
+  if not sid or sid not in (world.get("skills") or {}):
+    return (False,)
+  want = skill_rank(world, state, sid)
+  kinds = len(personality(world, state).get("skill", {}).get("kinds") or world.get("skill_kinds") or {})
+  if want[0] > kinds:  # 地方に 1 体もいない性質の対策
+    return (False,)
+  return (True, *(-v for v in want))
+
+
 def worn(world: dict, state: dict) -> dict[str, dict | None]:
-  """部位ごとに、持っている装備の中でいちばん強いもの（ふだん着けるもの。なければ None）。
-  比べ方は equip_key（すべて同じなら ID の順）。"""
+  """部位ごとに、ふだん着ける装備（なければ None）。役に立つスキルの付いた装備を先に選び（町や道で効くスキルのため。
+  #237 のレビュー）、同じなら強いもの（equip_key）、すべて同じなら ID の順。戦いの武器と装飾品は、戦いごとに選び直す（pick_gear）。"""
   rank = {r: i for i, r in enumerate(world["rarities"])}
   best: dict[str, dict | None] = {slot: None for slot in W.SLOTS}
-  for x in sorted(carried(state), key=lambda x: x["id"]):
-    item, cur = world["items"][x["id"]], best[world["items"][x["id"]]["slot"]]
-    if cur is None or equip_key(world, item, rank) > equip_key(world, world["items"][cur["id"]], rank):
-      best[item["slot"]] = x
+  best_key: dict[str, tuple] = {}
+
+  def key(x: dict) -> tuple:
+    return (useful_skill(world, state, x), equip_key(world, world["items"][x["id"]], rank))
+
+  for x in sorted(carried(state), key=lambda x: (x["id"], x.get("skill") or "")):
+    slot, k = world["items"][x["id"]]["slot"], key(x)
+    if best[slot] is None or k > best_key[slot]:
+      best[slot], best_key[slot] = x, k
   return best
 
 
@@ -1212,13 +1236,26 @@ class Day:
       self.log(f"{self.world['places'][town]['name']}のギルドの保管庫に、装備を {moved} つ預けた")
 
   def carry_key(self, x: dict, foes: list[dict] | None = None) -> tuple:
-    """持っておく装備の順（大きいほうを先に持つ）: 依頼の魔物（foes）に効く対策スキルの割合 → 性格の欲しいスキル
+    """持っておく装備の順（大きいほうを先に持つ）: 依頼の魔物（foes。依頼がなければ開放した道の魔物）に効く
+    対策スキルの割合 → 弱点を突ける属性の割合（属性の武器・装飾品を保管庫にしまい込まない）→ 性格の欲しいスキル
     （skill_rank が小さいほど先）→ 装備の強さ（equip_key）→ ID。"""
     rank = {r: i for i, r in enumerate(self.world["rarities"])}
+    foes = foes or self.region_foes()
     sk = (self.world.get("skills") or {}).get(x.get("skill"))
-    hit = counter_share(self.world, sk, foes or []) if sk else 0.0
+    hit = counter_share(self.world, sk, foes) if sk else 0.0
+    element = self.world["items"][x["id"]].get("element")
+    weak = (
+      sum(element_rate(self.world, element, m.get("element")) > 1 for m in foes) / len(foes)
+      if foes and element
+      else 0.0
+    )
     want = tuple(-v for v in skill_rank(self.world, self.state, x.get("skill")))
-    return (hit, want, equip_key(self.world, self.world["items"][x["id"]], rank), x["id"])
+    return (hit, weak, want, equip_key(self.world, self.world["items"][x["id"]], rank), x["id"])
+
+  def region_foes(self) -> list[dict]:
+    """開放した道に出る魔物（依頼のないときの入れ替えに使う）。"""
+    monsters = self.world["monsters"]
+    return [monsters[mid] for info in self.world["road_info"].values() for mid, _ in info["monsters"]]
 
   def quest_foes(self, quest: dict | None) -> list[dict]:
     """依頼で戦う魔物（討伐はその魔物、配達は通る道の魔物）。入れ替えでスキルを選ぶのに使う（#234）。"""
@@ -1249,9 +1286,9 @@ class Day:
       return
     rarities, items = self.world["rarities"], self.world["items"]
     low = rarities.index(cfg["from"]) if cfg["from"] in rarities else len(rarities)
-    able = [
+    able = [  # 持っている装備だけ（保管庫の装備には付けない。#237 のレビュー）
       x
-      for x in owned(self.state)
+      for x in carried(self.state)
       if items[x["id"]]["rarity"] in prices and rarities.index(items[x["id"]]["rarity"]) >= low
     ]
     bare = [x for x in able if not x.get("skill")]
@@ -1329,12 +1366,16 @@ class Day:
     else:
       reserve = potion["price"] * max(0, potion["keep"] - hero["potions"])  # 回復薬の分は残して装備を買う
       keep_after = 0
-    worn = equipment(self.world, self.state)
     rank = {r: n for n, r in enumerate(self.world["rarities"])}
     key = lambda i: equip_key(self.world, items[i], rank)  # noqa: E731  装備を選ぶときと同じ比べ方
+    best_owned: dict[str, str | None] = {slot: None for slot in W.SLOTS}  # 保管庫も含めて、部位ごとにいちばん強い品
+    for x in owned(self.state):
+      slot = items[x["id"]]["slot"]
+      if best_owned[slot] is None or key(x["id"]) > key(best_owned[slot]):
+        best_owned[slot] = x["id"]
     # 強い品から順に見る（買える中でいちばん強い品を買い、それより弱い品は買わない）
     for iid in sorted(self.world["places"][town].get("shop", []), key=key, reverse=True):
-      item, cur = items[iid], worn[items[iid]["slot"]]
+      item, cur = items[iid], best_owned[items[iid]["slot"]]
       better = cur is None or key(iid) > key(cur)
       # まだ持っていない属性の武器も買う（属性の弱点を突くために、戦いのたびに持ち替える）
       elements = {items[x["id"]].get("element") for x in owned(self.state) if items[x["id"]]["slot"] == "weapon"}
@@ -1342,7 +1383,7 @@ class Day:
       if better and not owns(self.state, iid) and hero["gold"] >= self.price(item["price"]) + reserve:
         hero["gold"] -= self.price(item["price"])
         carried(self.state).append({"id": iid, "skill": None})
-        worn = equipment(self.world, self.state)
+        best_owned[item["slot"]] = iid
         bought.append(item["name"])
     while hero["potions"] < potion["keep"] and hero["gold"] >= self.price(potion["price"]) + keep_after:  # 宿代は残す
       hero["gold"] -= self.price(potion["price"])
@@ -1465,11 +1506,11 @@ class Day:
       mids, mw = zip(*encounters(self.world, info["monsters"], level, window))
       monster = self.world["monsters"][self.rng.choices(mids, mw)[0]]
       if kind == "strong_battle" and self.skill("escape") and self.rng.random() < self.skill("escape"):  # 逃げ足
-        self.log(f"{monster['name']}から逃げた")
+        self.log(f"{self.monster_name(monster)}から逃げた")
         return True
       gap = self.skill("clear_path")
       if gap and monster["level"] <= self.hero["level"] - gap:  # 露払い: 弱い魔物は戦わずに追い払う
-        self.log(f"{monster['name']}を追い払った")
+        self.log(f"{self.monster_name(monster)}を追い払った")
         return True
       if not self.battle(monster):
         return False

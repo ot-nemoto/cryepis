@@ -1912,6 +1912,55 @@ class SkillTest(unittest.TestCase):
     day.arrange(state["place"], quest)
     self.assertEqual(G.carried(state)[0]["skill"], "antidote")  # 毒の魔物の討伐なので、毒よけの兜を持つ
 
+  def test_review_fixes(self):
+    # ふだん着ける装飾品は、役に立つスキルの付いたもの（町や道で効くスキルのため）
+    state = with_personality("brave")
+    state["inventory"] = gear(("lifeblood_charm", None), ("silkvine_charm", "haggle"))
+    self.assertEqual(G.worn(WORLD, state)["accessory"]["skill"], "haggle")
+    self.assertEqual(day_of(state).price(100), 90)
+    # 鍛冶屋は、保管庫の装備には付けない
+    state = with_personality("brave")
+    state["inventory"], state["storage"] = [], gear(("steel_sword", None))
+    state["hero"]["gold"] = 10_000
+    day_of(state).smith(state["place"])
+    self.assertIsNone(G.stored(state)[0]["skill"])
+    self.assertEqual(state["hero"]["gold"], 10_000)
+    # 店は、保管庫のもっと強い品より弱い品を買わない
+    state = with_personality("brave")
+    state["inventory"], state["storage"] = gear(("wooden_helm", "antidote")), gear(("iron_helm", None))
+    state["hero"]["gold"] = 10_000
+    day_of(state).shop(state["place"])
+    self.assertFalse(G.owns(state, "x_none"))
+    self.assertEqual(sum(WORLD["items"][x["id"]]["slot"] == "helmet" for x in G.owned(state)), 2)  # 兜は買わない
+    # id のない持ち物は、読み込むときに捨てる
+    with tempfile.TemporaryDirectory() as d:
+      path = Path(d) / "h1.json"
+      bad = G.new_state(WORLD, "h1")
+      bad["inventory"] = [{"skill": "pierce"}, {"id": "iron_sword", "skill": None}]
+      G.save_state(bad, path)
+      self.assertEqual(G.load_state(WORLD, path, "h1")["inventory"], gear(("iron_sword", None)))
+
+  def test_arrange_keeps_element_weapons(self):
+    world = copy.deepcopy(WORLD)
+    for i, el in enumerate(("flame", "ice", "thunder")):
+      world["items"][f"x_e{i}"] = {
+        "id": f"x_e{i}",
+        "name": f"試し{i}",
+        "slot": "weapon",
+        "rarity": "rare",
+        "atk": 1,
+        "element": el,
+      }
+    world["items"]["x_big"] = {"id": "x_big", "name": "大剣", "slot": "weapon", "rarity": "rare", "atk": 2}
+    state = with_personality("brave")
+    ice = next(f"x_e{i}" for i, el in enumerate(("flame", "ice", "thunder")) if G.element_rate(world, el, "flame") > 1)
+    state["inventory"] = gear(("x_big", None), ("iron_sword", None), ("iron_axe", None), (ice, None))  # 武器 4 本
+    day = G.Day(world, state, START, random.Random(0))
+    day.quest_foes = lambda q: [{"element": "flame", "trait": None}]  # 炎の魔物の依頼
+    day.arrange(state["place"], {"type": "hunt"})
+    self.assertIn(ice, {x["id"] for x in G.carried(state)})  # 弱点を突ける属性の武器は、保管庫にしまわない
+    self.assertEqual(len(G.stored(state)), 1)
+
   def test_battle_skills(self):
     state = with_personality("brave")
     day = day_of(state)

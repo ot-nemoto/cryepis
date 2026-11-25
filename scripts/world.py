@@ -811,6 +811,8 @@ def _check_skills(c: _Check):
       err(f"{where}: kind は {'/'.join(SKILL_KINDS)} のどれかにしてください")
     if "value" in k and (not isinstance(k["value"], (int, float)) or isinstance(k["value"], bool)):
       err(f"{where}: value は数にしてください")
+    if "value" not in k and "value" in str(k.get("logic", "")):  # しくみに value を使うスキルは、値がいる
+      err(f"{where}: logic に value を使うので、value（数）を書いてください")
     counter = k.get("counter")
     if counter is not None and not (
       isinstance(counter, dict)
