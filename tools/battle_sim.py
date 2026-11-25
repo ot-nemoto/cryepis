@@ -237,7 +237,7 @@ def fit_main(world: dict, a: argparse.Namespace) -> int:
     shown = "—" if lost is None else f"{lost:.0%}"
     print(
       f"  Lv{level} {m['name']}（{mid}）: HP{fit['hp']} 攻{fit['atk']} 防{fit['def']}  "
-      f"勝率 {rate:.1%} 減る HP {shown}  EXP{exp} 文{gold}"
+      f"勝率 {rate:.1%} 減る HP {shown}  EXP{exp} {gold}文"
       + ("" if same else f"  ← 今は HP{m['hp']} 攻{m['atk']} 防{m['def']}")
       + ("  （探す範囲の端。目標に届いていない）" if capped else "")
     )

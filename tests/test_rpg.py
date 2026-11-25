@@ -135,7 +135,7 @@ class DisplayTest(unittest.TestCase):
     entries = [({"id": "h1", "name": "アリス"}, game.new_state(WORLD, "h1", "アリス"))]
     lines = rpg.build_board(WORLD, entries, DAY - timedelta(days=3)).splitlines()
     self.assertIn("開幕前", lines[0])
-    self.assertIn("今日ももののふたちは冒険中", lines[4])
+    self.assertIn("今日も、もののふたちは冒険中", lines[4])
 
   def test_same_level_gets_the_same_medal(self):
     entries = []

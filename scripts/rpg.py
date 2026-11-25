@@ -137,13 +137,13 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
     ]
     lines.append(f"{label} " + (" ".join(top) or "まだいない"))
   today_news = view.news(views, today, BOARD_NAME_WIDTH)
-  lines.append("📰 " + (today_news[0] if today_news else "今日ももののふたちは冒険中…"))
+  lines.append("📰 " + (today_news[0] if today_news else "今日も、もののふたちは冒険中…"))
   card = [view.fit(line) for line in lines]
 
   detail = ["", f"── シーズン{season}（{first}〜{last}）──"]
   if site_url():
     detail.append(
-      f"サイト「クリエピス戦記」（ホーム・地図・ランキング・もののふ・町・口入れ屋・アイテム）: {site_url()}"
+      f"サイト「クリエピス戦記」（ホーム・地図・ランキング・もののふ・町・口入れ屋・アイテム・物の怪・手引き）: {site_url()}"
     )
   for title, _, key, value, unit in view.RANKINGS:
     detail += ["", f"── {title} ──"]

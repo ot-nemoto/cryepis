@@ -1045,7 +1045,7 @@ class Day:
     elif trait == "thief" and not sk("anti_theft") and hero["gold"] > 0 and self.rng.random() < 0.4:  # 盗み
       stolen = min(hero["gold"], self.rng.randint(5, 20))
       hero["gold"] -= stolen
-      self.log(f"逃げ際に {stolen}文 盗まれた")
+      self.log(f"逃げ際に {stolen}文盗まれた")
     self.gain_exp(exp)
     return True
 

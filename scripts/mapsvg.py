@@ -223,7 +223,7 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
   for (sx, sy), names in here.items():
     x, y = at(sx, sy)
     out.append(f'<g class="hero"><title>{escape("、".join(names))}</title>')
-    # 丸の中（町の印の上）にマウスを乗せてももののふの説明が出るように、中も当たりにする（塗りは透明）
+    # 丸の中（町の印の上）にマウスを乗せても、もののふの説明が出るように、中も当たりにする（塗りは透明）
     out.append(
       f'<circle cx="{x:.0f}" cy="{y:.0f}" r="18" fill="transparent" stroke="#dc2626" stroke-width="3" '
       'pointer-events="all"/>'
