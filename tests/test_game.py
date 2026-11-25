@@ -1607,6 +1607,23 @@ class PersonalityTest(unittest.TestCase):
     G.Day(WORLD, state, START, random.Random(0), guild).take_quest(town)
     picked = next(e for e in entries if e["status"] == "held")
     self.assertEqual(picked["level"][0], 7)  # 範囲より弱い依頼のうち、いちばん近い Lv7
+    # 強敵（min_level）は、範囲より弱い依頼でも Lv が足りなければ受けない
+    for e in entries:
+      e.update(status="open", holder=None)
+    entries[1].update(level=[9, 9], min_level=13)
+    entries[0].update(level=[7, 7])
+    state.update(quest=None, taken=[])
+    G.Day(WORLD, state, START, random.Random(0), guild).take_quest(town)
+    self.assertIs(next(e for e in entries if e["status"] == "held"), entries[0])
+    # 範囲からの外れが同じなら、性格の選び方（勤勉は Lv の高いもの）。Lv も同じなら掲示板の上
+    tactician = with_personality("tactician")  # Lv −1〜+1。★の多いもの
+    tactician["hero"]["level"] = 12
+    for e in entries:
+      e.update(status="open", holder=None, level=[2, 2], rank=1, min_level=0)
+    entries[1].update(level=[5, 5], rank=1)
+    entries[2].update(level=[5, 5], rank=3)
+    G.Day(WORLD, tactician, START, random.Random(0), guild).take_quest(town)
+    self.assertIs(next(e for e in entries if e["status"] == "held"), entries[2])  # 同じ Lv5 なら ★ の多いもの
     self.assertNotEqual(state["quest"]["type"], "patrol")  # 旅には出ない
     self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [-2, 0]), 5)
     self.assertEqual(G.level_gap({"level": [5, 5]}, 12, [None, 0]), 0)

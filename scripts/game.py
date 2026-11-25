@@ -981,7 +981,7 @@ class Day:
     if not entries and levels:
       # 性格の範囲に合う依頼がなければ、範囲より弱い依頼のうち、範囲にいちばん近い Lv の依頼を受ける
       # （範囲より強い依頼は受けない。強敵は Lv が足りなければ受けない）
-      others = [e for e in open_ if level >= e.get("min_level", 0) and e["level"][0] - level <= levels[1]]
+      others = [e for e in open_ if suitable(e, level, [None, levels[1]])]  # 下限だけを外して、ほかの決まりは同じ
       if others:
         near = min(level_gap(e, level, levels) for e in others)
         entries = [e for e in others if level_gap(e, level, levels) == near]
@@ -1000,7 +1000,7 @@ class Day:
         f"{self.world['places'][town]['name']}のギルドで依頼を受けた: {quest_text(self.world, quest)}"
         f"（行動力 {quest['cost']}）"
       )
-    else:  # 受けられる依頼がない（ほかの勇者に取られた）ので、となりの町へ旅に出る
+    else:  # 受けられる依頼がない（どれも性格の範囲より強い・強敵の Lv が足りない・ほかの勇者に取られた）ので、旅に出る
       quest = patrol(self.world, self.state, self.rng)
       self.state["taken"].append(f"{self.today.isoformat()}-patrol")  # 旅もその日の 1 回に数える
       self.log(
