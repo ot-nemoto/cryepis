@@ -1697,14 +1697,13 @@ class PersonalityTest(unittest.TestCase):
     G.carried(state).extend({"id": "iron_sword", "skill": None} for _ in range(3))  # 剣を 4 本・斧を 1 本
     day = day_of(state)
     day.arrange(state["place"])
-    carry = WORLD["season"]["carry"]
-    self.assertEqual(sum(WORLD["items"][i]["slot"] == "weapon" for i in ids(state)), carry["weapon"])
+    self.assertEqual([i for i in ids(state) if WORLD["items"][i]["slot"] == "weapon"], ["iron_axe", "iron_sword"])
     self.assertEqual([i for i in ids(state) if WORLD["items"][i]["slot"] == "helmet"], ["iron_helm"])  # 強いほうを持つ
-    self.assertEqual(len(G.stored(state)), 3)  # 残りは保管庫（剣 2 本・木の兜）
-    self.assertIn("保管庫", day.events[-1])
+    self.assertEqual([x["id"] for x in G.stored(state)], ["wooden_helm"])  # 残りは保管庫
+    self.assertIn("同じ装備を 3 つ手放した", day.events)  # スキルなしの同じ剣は、2 本目から手放す
     self.assertTrue(G.owns(state, "wooden_helm"))  # 保管庫にあっても自分のもの（店で買い直さない）
     G.start_season(WORLD, state, 2)
-    self.assertEqual(len(G.owned(state)), 7)  # 持ち物と保管庫はシーズンをまたいで残る
+    self.assertEqual(len(G.owned(state)), 4)  # 持ち物と保管庫はシーズンをまたいで残る
 
   def test_old_inventory_format_is_read(self):
     with tempfile.TemporaryDirectory() as d:
@@ -1958,6 +1957,41 @@ class SkillTest(unittest.TestCase):
       bad["inventory"] = [{"skill": "pierce"}, {"id": "iron_sword", "skill": None}]
       G.save_state(bad, path)
       self.assertEqual(G.load_state(WORLD, path, "h1")["inventory"], gear(("iron_sword", None)))
+
+  def test_review_fixes_2(self):
+    # 依頼がないときは、対策スキルのために強い盾を保管庫にしまわない
+    state = with_personality("brave")
+    world = copy.deepcopy(WORLD)
+    world["items"]["x_leg_shield"] = {
+      "id": "x_leg_shield",
+      "name": "伝説の盾",
+      "slot": "shield",
+      "rarity": "legendary",
+      "def": 1,
+    }
+    state["inventory"] = gear(("x_leg_shield", None), ("steel_shield", "swarm_guard"))
+    G.Day(world, state, START, random.Random(0)).arrange(state["place"])
+    self.assertEqual(G.carried(state)[0]["id"], "x_leg_shield")
+    # 今の依頼の魔物に効く対策スキルは、鍛冶屋で付け直さない
+    careful = with_personality("brave")
+    poison = next(m for m in WORLD["monsters"].values() if m.get("trait") == "poison")
+    careful["quest"] = {"type": "hunt", "monster": poison["id"]}
+    careful["inventory"] = gear(("steel_helm", "antidote"))
+    careful["hero"]["gold"] = 10_000
+    day = day_of(careful)
+    day.smith(careful["place"])
+    self.assertEqual(G.carried(careful)[0]["skill"], "antidote")
+    # 耐えの修行は、途中で回復しても、受けたダメージの合計で見る
+    hard = with_personality("careful")
+    hard["inventory"] = gear(("steel_shield", "hardship"))
+    day = day_of(hard)
+    max_hp = day.stats["max_hp"]
+    foe = dict(WORLD["monsters"]["wild_dog"], hp=40, atk=0, spd=1, exp=10)
+    hits = iter([max_hp // 2, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    with mock.patch.object(day, "damage", side_effect=lambda a, g, d=0, **k: next(hits, 0) if a == 0 else 5):
+      hard["hero"]["potions"] = 3
+      day.battle(foe)
+    self.assertIn("+12EXP", " ".join(day.events))  # 10 × 1.2
 
   def test_arrange_keeps_element_weapons(self):
     world = copy.deepcopy(WORLD)

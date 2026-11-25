@@ -755,7 +755,7 @@ def _check_personalities(c: _Check):
     sk = p.get("skill")
     rarities = c.raw.get("rarities") if isinstance(c.raw.get("rarities"), list) else []
     if not isinstance(sk, dict):
-      err(f"{where}: skill（スキルを付ける条件。from・margin・style・kinds）を書いてください")
+      err(f"{where}: skill（スキルを付ける条件。from・margin・prefer）を書いてください")
     else:
       if sk.get("from") not in rarities or sk.get("from") == COMMON:
         err(f"{where}: skill.from は、スキルを付ける装備の珍しさの下限（common 以外）にしてください")
@@ -763,7 +763,9 @@ def _check_personalities(c: _Check):
       if not isinstance(margin, (int, float)) or isinstance(margin, bool) or margin < 1:
         err(f"{where}: skill.margin は 1 以上の数（余裕の倍率）にしてください")
       prefer = sk.get("prefer")
-      slots_of = {k["id"]: k.get("slot") for k in (c.raw.get("skills") or []) if isinstance(k, dict)}
+      slots_of = {
+        k.get("id"): k.get("slot") for k in (c.raw.get("skills") or []) if isinstance(k, dict) and k.get("id")
+      }
       if not isinstance(prefer, dict) or set(prefer) != set(SLOTS):
         err(f"{where}: skill.prefer は {'/'.join(SLOTS)} ごとの優先スキルの一覧にしてください")
       else:
