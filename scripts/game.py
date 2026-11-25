@@ -937,9 +937,10 @@ class Day:
       while hero["potions"] < min(me["potions_first"], potion["keep"]) and hero["gold"] >= potion["price"] + inn:
         hero["gold"] -= potion["price"]
         hero["potions"] += 1
-      reserve = inn
+      reserve = keep_after = inn
     else:
       reserve = potion["price"] * max(0, potion["keep"] - hero["potions"])  # 回復薬の分は残して装備を買う
+      keep_after = 0
     worn = equipment(self.world, self.state)
     rank = {r: n for n, r in enumerate(self.world["rarities"])}
     key = lambda i: equip_key(self.world, items[i], rank)  # noqa: E731  装備を選ぶときと同じ比べ方
@@ -955,7 +956,7 @@ class Day:
         self.state["inventory"][iid] = 1
         worn = equipment(self.world, self.state)
         bought.append(item["name"])
-    while hero["potions"] < potion["keep"] and hero["gold"] >= potion["price"] + reserve:
+    while hero["potions"] < potion["keep"] and hero["gold"] >= potion["price"] + keep_after:  # 宿代は残す
       hero["gold"] -= potion["price"]
       hero["potions"] += 1
     name = self.world["places"][town]["name"]
@@ -1242,10 +1243,18 @@ def advance(world: dict, state: dict, today: date, actions: int | None = None, g
       day.fall()
       break
   else:
-    # 溜めた行動力: 依頼の途中で今日の行動回数を使い切ったら使う（宿の休憩にも使う）。1 日に使う量に上限はない
-    hero = state["hero"]
-    while hero.get("stored", 0) > 0 and (
-      state["quest"] or state["road"] or (personality(world, state) and day.wants_inn())
+    # 溜めた行動力: 依頼の途中で今日の行動回数を使い切ったら使う（宿の休憩にも使う）。1 日に使う量に上限はない。
+    # 旅（受けられる依頼がないとき）や、残りの行動でとなりの町へ向かう道には使わない。休みの日（行動回数 0）も使わない
+    hero, rest_day = state["hero"], actions == 0
+
+    def on_quest() -> bool:
+      quest = state["quest"]
+      return bool(quest) and quest["type"] != "patrol"
+
+    while (
+      not rest_day
+      and hero.get("stored", 0) > 0
+      and (on_quest() or (personality(world, state) and not state["road"] and day.wants_inn()))
     ):
       hero["stored"] -= 1
       actions += 1

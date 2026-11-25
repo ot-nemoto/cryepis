@@ -1547,9 +1547,9 @@ class FallPathsTest(unittest.TestCase):
 
 
 def with_personality(pid, hero_id="h1"):
-  """性格 pid の勇者（最初の町にいる）。"""
+  """性格 pid の勇者（最初の町にいる。シーズン 1 の途中なので、advance で持ち物や溜めた行動力が戻らない）。"""
   state = G.new_state(WORLD, hero_id)
-  state["personality"] = pid
+  state.update(personality=pid, season=G.season_of(WORLD, START), season_day=1)
   return state
 
 
@@ -1643,14 +1643,36 @@ class PersonalityTest(unittest.TestCase):
     self.assertEqual(tactician["hero"]["stored"], 1)
 
   def test_stored_actions_finish_a_quest(self):
+    per_day = WORLD["season"]["actions_per_day"]
     state = with_personality("diligent")
     state["hero"]["stored"] = 6
-    G.advance(WORLD, state, START)
-    used = state["last"]["actions"] - WORLD["season"]["actions_per_day"]
-    self.assertGreaterEqual(used, 0)
-    self.assertEqual(state["hero"]["stored"], 6 - used if used else state["hero"]["stored"])
-    if used:  # 溜めた行動力は、依頼の途中で今日の行動回数を使い切ったときだけ使う
-      self.assertTrue(state["quest"] is None or state["hero"]["stored"] == 0)
+    quest = common_hunt()
+    G.finish_quest(WORLD, quest, TOWN)
+    with mock.patch.object(G.Day, "act", lambda self: state.update(quest=quest) or True):  # 依頼が終わらない
+      G.advance(WORLD, state, START)
+    self.assertEqual((state["last"]["actions"], state["hero"]["stored"]), (per_day + 6, 0))  # 溜めた分を全部使う
+    for trip, road in (
+      ({"type": "patrol"}, None),
+      (None, {"to": "eques", "left": 5}),
+    ):  # 旅・残りの行動の道には使わない
+      walker = with_personality("diligent")
+      walker["hero"]["stored"] = 6
+      with mock.patch.object(G.Day, "act", lambda self, w=walker, t=trip, r=road: w.update(quest=t, road=r) or True):
+        G.advance(WORLD, walker, START)
+      self.assertEqual((walker["last"]["actions"], walker["hero"]["stored"]), (per_day, 6))
+    rest = with_personality("diligent")  # 休みの日（行動回数 0）は使わない
+    rest.update(quest=quest)
+    rest["hero"]["stored"] = 6
+    G.advance(WORLD, rest, START, actions=0)
+    self.assertEqual(rest["hero"]["stored"], 6)
+
+  def test_shop_without_personality_still_buys_potions(self):
+    state = G.new_state(WORLD, "h1")
+    state["personality"] = None
+    price = WORLD["season"]["potion"]["price"]
+    state["hero"].update(potions=0, gold=price * 3)
+    day_of(state).shop(state["place"])
+    self.assertEqual(state["hero"]["potions"], 3)  # 回復薬の分のお金を二重に残さない
 
   def test_stored_actions_reset_each_season(self):
     state = with_personality("careful")

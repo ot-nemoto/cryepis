@@ -988,7 +988,7 @@ def personality_table(world: dict, table) -> str:
     text = SPARE_NAMES[p["spare"]]
     if "stroll_hp" in p:
       text = f"HP {p['stroll_hp']:.0%} 以上なら散策、未満なら{text}"
-    if p["spare"] == "rest" or "stroll_hp" in p:
+    if p["spare"] == "rest":  # 溜まりきったときの行動は、休む性格だけ
       text += f"。溜まりきったら{SPARE_NAMES[p.get('when_full', 'stroll')]}"
     return text
 
