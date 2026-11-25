@@ -27,8 +27,8 @@ class DataTest(unittest.TestCase):
   def test_world_data_is_valid(self):
     self.assertEqual(W.validate(RAW), [])
 
-  def test_quest_texts_follow_the_story_rules(self):
-    """依頼の文は、民話の語り口の決まり（docs/MYTH.md の 6・7）を守る: 設定の言葉を使わず、竜の思惑を断定しない。"""
+  def test_quest_texts_do_not_use_game_terms(self):
+    """依頼の文（作中の文）に、ゲームの用語を使わない。"""
     texts = []
 
     def walk(value):
@@ -45,18 +45,8 @@ class DataTest(unittest.TestCase):
       walk(RAW[key])
     self.assertGreater(len(texts), 40)
     for text in texts:
-      for word in ("創造主", "シーズン", "レベル", "経験値", "加護を与え", "利用"):
-        self.assertNotIn(word, text, text)  # 設定の言葉・竜の思惑の断定は、作中の文に出さない
-
-  def test_quest_texts_hint_at_the_teachings(self):
-    """依頼の文に、教えどうしの争いと骨の禁令が、少しだけ混ざっている（docs/MYTH.md §5）。"""
-    deliveries = " ".join(t for d in RAW["deliveries"]["dangers"] for t in d["texts"])
-    hunts = " ".join(t for tier in RAW["hunts"]["texts"] for t in tier)
-    towns = " ".join(q["text"] for qs in RAW["town_quests"].values() for q in qs)
-    self.assertIn("教え", deliveries)
-    self.assertIn("竜の骨", deliveries)
-    self.assertIn("教え", hunts)
-    self.assertTrue("竜の民" in towns and "星読み" in towns)
+      for word in ("シーズン", "レベル", "経験値"):
+        self.assertNotIn(word, text, text)  # ゲームの用語は、作中の文に出さない
 
   def test_load_world_builds_routes(self):
     world = W.load_world()
@@ -404,91 +394,9 @@ class ValidateTest(unittest.TestCase):
     )  # 上限ちょうどは通る
     self.assertEqual(errors_after(lambda r: r["items"][0].pop("text")), [])  # 説明は、書かなくてよい
 
-  def test_ore_descriptions_match_between_story_and_world_doc(self):
-    """鉱石の説明は、world/story.md（サイト）と docs/WORLD.md に同じ文を書いている（直したら、両方を直す）。"""
-
-    names = ("熾焔鋼", "霧氷石", "紫電鉄", "宵翳鋼", "星屑鉄", "陽炎石")
-
-    def ores(path):
-      lines = (ROOT / path).read_text(encoding="utf-8").splitlines()
-      return [line for line in lines if any(line.startswith(f"- **{name}") for name in names)]
-
-    story, doc = ores("world/story.md"), ores("docs/WORLD.md")
-    self.assertEqual(len(story), 6)
-    self.assertEqual(story, doc)
-
-  def test_conflict_history_matches_between_story_and_world_doc(self):
-    """教えの争いの出来事（骨の禁令・大災厄・霧氷の裁き）は、story.md と WORLD.md の歴史の表で、時代と出来事の文が同じ。"""
-
-    def rows(path):
-      lines = (ROOT / path).read_text(encoding="utf-8").splitlines()
-      found = {}
-      for line in lines:
-        cells = [c.strip() for c in line.strip("|").split("|")]
-        if line.startswith("|") and cells[0].startswith(("骨の禁令", "大災厄", "霧氷の裁き")):
-          found[cells[0]] = cells[1]
-      return found
-
-    story, doc = rows("world/story.md"), rows("docs/WORLD.md")
-    self.assertEqual(len(story), 3)
-    for key in story:
-      if key.startswith("大災厄"):  # WORLD.md の文は、生き残りの話が続く。誰のせいかが分かれる一文だけをそろえる
-        for rows_ in (story, doc):
-          self.assertIn("誰のせいかは、教えによって言うことが違う", rows_[key])
-      else:
-        self.assertEqual(story[key], doc[key])
-
-  def test_calendar_is_called_tomoshi_goyomi(self):
-    """年の数え方は「灯暦」。古い呼び名「星暦」は、設定とサイトの物語に残さない。"""
-    for path in ("world/story.md", "docs/WORLD.md", "docs/MYTH.md"):
-      text = (ROOT / path).read_text(encoding="utf-8")
-      self.assertIn("灯暦", text, path)
-    for path in [
-      *ROOT.glob("world/*"),
-      *ROOT.glob("docs/*.md"),
-      *ROOT.glob("scripts/*.py"),
-      *ROOT.glob("tools/worldgen/*.py"),
-      ROOT / "README.md",
-    ]:
-      self.assertNotIn("星暦", path.read_text(encoding="utf-8"), str(path))
-
-  def test_story_keeps_the_secret_and_the_rules(self):
-    """サイトに出す物語に、作者だけの秘密（竜は前の人類がつくった AI で、三つの教えを埋め込んだ。docs/MYTH.md §7）と、設定の言葉を書かない。教えの語りは「と教える」「という」の形。"""
-    text = (ROOT / "world/story.md").read_text(encoding="utf-8")
-    self.assertIn("## 三つの教え", text)
-    section = text.split("## 三つの教え")[1].split("\n## ")[0]
-    for word in ("創造主", "利用", "シーズン", "経験値", "加護を与え", "思惑", "道具"):
-      self.assertNotIn(word, section)
-    for phrase in (
-      "人を利用",
-      "思惑",
-      "AI",
-      "機械",
-      "人工",
-      "埋め込",
-    ):  # 秘密の言い換えも、出さない（文字どおりの語だけを見る簡単な守り）
-      self.assertNotIn(phrase, text)
-    for word in ("創造主", "利用"):  # 物語の全体にも、出さない
-      self.assertNotIn(word, text)
-    for teaching in ("星読み", "竜の民", "王国の教え"):
-      self.assertIn(teaching, section)
-    self.assertIn("どれが本当かは、誰も知らない", section)
-
-  def test_item_texts_hint_at_the_teachings(self):
-    """装備の説明に、教えのちがいが少し混ざっている（王の兵・星読みの兵・竜の民。docs/MYTH.md §5）。断定せず、秘密は出さない。"""
-    texts = {i["id"]: i["text"] for i in RAW["items"]}
-    self.assertIn("王の兵", texts["iron_helm"])
-    self.assertIn("王", texts["iron_shield"])
-    self.assertIn("教えの兵", texts["steel_sword"])
-    self.assertIn("星読み", texts["steel_shield"])
-    self.assertIn("竜の民", texts["lifeblood_charm"])
-    joined = " ".join(texts.values())
-    for word in ("創造主", "利用", "シーズン", "加護を与え"):
-      self.assertNotIn(word, joined)
-
   def test_every_item_has_a_text(self):
     for item in RAW["items"]:
-      self.assertTrue(item.get("text"), item["id"])  # 13 個すべてに、説明がある（民話の語り口）
+      self.assertTrue(item.get("text"), item["id"])  # すべてに、説明がある
 
   def test_too_strong_item(self):
     def change(r):

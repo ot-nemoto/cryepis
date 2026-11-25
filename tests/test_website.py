@@ -1,6 +1,5 @@
 import ast
 import copy
-import re
 import sys
 import tempfile
 import unittest
@@ -298,20 +297,16 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(keys, sorted(keys))
     self.assertEqual(names[:2], ["鉄の斧", "鉄の剣"])  # 武器が先、値段の高い順
 
-  def test_story_page(self):
+  def test_home_page(self):
     entries, _, today = party(2, 2)
-    html = website.build_story(WORLD, entries, today)
-    self.assertIn("<title>ストーリー | クリエピス戦記</title>", html)
-    self.assertIn('<a href="index.html" class="on">ストーリー</a><a href="map.html">地図</a>', html)  # 地図の前
-    self.assertIn('<h2 class="story-title">クリエピス戦記</h2>', html)  # world/story.md の物語
-    self.assertIn("始祖竜", html)
-    self.assertIn("<th>時代</th>", html)  # 歴史の表
-    self.assertIn('<h2 class="area">鉱石</h2>', html)  # 物語の背景の鉱石
-    self.assertIn("<strong>熾焔鋼（しえんこう）</strong>【炎属性】", html)
+    html = website.build_home(WORLD, entries, today)
+    self.assertIn("<title>ホーム | クリエピス戦記</title>", html)
+    self.assertIn('<a href="index.html" class="on">ホーム</a><a href="map.html">地図</a>', html)  # 地図の前
     self.assertIn("旅をしている勇者</th><td>2 人", html)  # いまの冒険の状況
     self.assertIn('坂東 <span class="en">Bando</span>', html)
     self.assertIn('href="towns.html#edo"', html)
-    self.assertLess(html.index("いまの冒険"), html.index('<h2 class="area">世界オルドラ'))  # 最初の見出しの前
+    for word in ("オルドラ", "星の巡り"):  # 物語はいったん外した（#249）
+      self.assertNotIn(word, html)
 
   def test_heroes_page(self):
     entries, _, today = party(2, 2)
@@ -414,8 +409,8 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f'<td><span class="tag">{t["name"]}</span></td><td>{t["text"]}</td>', html)
     self.assertIn("相性（左が右に強い）: 炎→雷→氷→炎", html)
     self.assertIn(
-      '<td><span class="tag">雷属性</span></td><td>頭</td><td>こころざし</td><td>紫電鉄</td>', html
-    )  # 属性・竜の部位・徳・鉱石（強い・苦手は図で見せる）
+      '<td><span class="tag">雷属性</span></td><td>紫電鉄</td>', html
+    )  # 属性・鉱石（強い・苦手は図で見せる）
     self.assertIn('aria-label="属性の三すくみ"', html)
     self.assertIn('<a class="pill" href="#g0">能力</a>', html)  # 上の移動ボタン
     self.assertIn('<div class="card" id="g0">', html)
@@ -472,7 +467,6 @@ class SiteTest(unittest.TestCase):
     self.assertIn("防は Lv1 で 6、Lv20 で 40", html)
     self.assertIn("攻は Lv1 で 6、Lv20 で 30", html)
     self.assertNotIn('aria-label="属性の三すくみ"', html)  # 輪になっていなければ、三すくみの図は出さない
-    self.assertNotIn("属性の相性は、この関係そのもの", html)  # 三つの徳の話も出さない
 
   def test_boss_without_an_area_is_in_the_other_group(self):
     world = copy.deepcopy(WORLD)
@@ -483,59 +477,27 @@ class SiteTest(unittest.TestCase):
     other = html[html.index(f'id="panel-{website.OTHER_AREA}"') :]
     self.assertIn("<td>巣穴の主</td>", other[: other.index("</section>")])
 
-  def test_guide_page_tells_the_myth(self):
+  def test_guide_page_season_and_elements(self):
     html = website.build_guide(WORLD)
-    for h in ("はじまりの話", "星の巡りと加護", "三つの徳", "三つの教えと争い"):  # 物語はストーリーのページへ（#240）
-      self.assertNotIn(f"<h3>{h}</h3>", html)
-    self.assertIn("<h3>シーズン（星の巡り）</h3>", html)
-    self.assertIn(f"星の巡りは、{WORLD['season']['months']} か月ごとにやってくる", html)
-    # 属性と相性の表は、竜の部位・徳・鉱石を world/ から引く
-    self.assertIn('<td><span class="tag">炎属性</span></td><td>心臓</td><td>いのち</td><td>熾焔鋼</td>', html)
-    self.assertIn('<td><span class="tag">氷属性</span></td><td>牙</td><td>かぎり</td><td>霧氷石</td>', html)
-    self.assertIn('<td><span class="tag">雷属性</span></td><td>頭</td><td>こころざし</td><td>紫電鉄</td>', html)
-    # 作者だけの秘密と設定の言葉は、サイトに出さない
-    for word in ("創造主", "利用"):
+    self.assertIn("<h3>シーズン</h3>", html)
+    self.assertIn(f"シーズンは {WORLD['season']['months']} か月ごと", html)
+    # 属性と相性の表は、鉱石を world/ から引く
+    self.assertIn('<td><span class="tag">炎属性</span></td><td>熾焔鋼</td>', html)
+    self.assertIn('<td><span class="tag">氷属性</span></td><td>霧氷石</td>', html)
+    for word in ("星の巡り", "竜の部位", "三つの徳", "ストーリー"):  # 物語はいったん外した（#249）
       self.assertNotIn(word, html)
 
-  def test_guide_myth_follows_the_elements(self):
+  def test_guide_follows_the_elements(self):
     world = copy.deepcopy(WORLD)
     world["elements"]["flame"]["ore"] = "<b>火鋼</b>"
     world["season"]["months"] = 4
     html = website.build_guide(world)
     self.assertIn("<td>&lt;b&gt;火鋼&lt;/b&gt;</td>", html)
-    self.assertIn("星の巡りは、4 か月ごとにやってくる", html)
+    self.assertIn("シーズンは 4 か月ごと", html)
     world["elements"].pop("ice")  # 氷属性のない世界でも、残りの行だけ出る
     html = website.build_guide(world)
     self.assertNotIn("霧氷石", html)
-    self.assertIn("<td>いのち</td>", html)
-
-  def test_visible_texts_do_not_reveal_the_secret(self):
-    """作者だけの秘密（竜は前の人類がつくった AI で、三つの教えを埋め込んだ。docs/MYTH.md §7）は、サイトに出す文
-    （物語・町の説明・依頼の文・アイテムの説明・手引き）のどこにも書かない。文字どおりの語だけを見る簡単な守り。"""
-    raw = W.load_raw()
-    texts = [
-      (ROOT / "world" / "story.md").read_text(encoding="utf-8"),
-      re.sub(r"<[^>]*>", "", website.build_guide(WORLD)),  # タグは見ない（読める文字だけ）
-      *(p["text"] for p in raw["map"]["places"] if p.get("text")),
-      *(i["text"] for i in raw["items"] if i.get("text")),
-    ]
-
-    def walk(value):
-      if isinstance(value, str):
-        texts.append(value)
-      elif isinstance(value, list):
-        for v in value:
-          walk(v)
-      elif isinstance(value, dict):
-        for v in value.values():
-          walk(v)
-
-    for key in ("hunts", "deliveries", "town_quests"):
-      walk(raw[key])
-    self.assertGreater(len(texts), 60)
-    for text in texts:
-      for word in ("AI", "機械", "人工", "埋め込", "冷凍", "思惑", "創造主", "利用"):
-        self.assertNotIn(word, text, word)
+    self.assertIn('<td><span class="tag">炎属性</span></td><td>&lt;b&gt;火鋼&lt;/b&gt;</td>', html)
 
   def test_guide_page_without_deliveries(self):
     world = copy.deepcopy(WORLD)
@@ -582,37 +544,6 @@ class SiteTest(unittest.TestCase):
       del world["road_info"][key]
     html = website.build_monsters(world)
     self.assertEqual(html.count("<td>野犬</td>"), 1)
-
-  def test_story_markdown(self):
-    blocks = website.md_html(
-      "# 題\n\n一行目\n二行目\n\n## 見出し\n\n- **太字** と <b>\n- 二つ目\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
-    )
-    self.assertEqual(
-      blocks,
-      [
-        '<h2 class="story-title">題</h2>',
-        '<p class="story">一行目<br>二行目</p>',
-        '<h2 class="area">見出し</h2>',
-        "<ul><li><strong>太字</strong> と &lt;b&gt;</li><li>二つ目</li></ul>",
-        '<div class="scroll"><table class="story-table"><tr><th>a</th><th>b</th></tr><tr><td>1</td><td>2</td></tr></table></div>',
-      ],
-    )
-
-  def test_story_markdown_edge_cases(self):
-    # どのかたまりにも当たらない # の行でも止まらない（### は小見出し、#1位 は段落の文字）
-    self.assertEqual(website.md_html("### 小見出し\n#1位\n"), ["<h3>小見出し</h3>", '<p class="story">#1位</p>'])
-    self.assertEqual(website.inline_md("**太字"), "**太字")  # 対のない ** はそのまま
-    self.assertEqual(website.inline_md("**a** と **b"), "<strong>a</strong> と **b")
-    table = website.md_html("| a | b |\n|---|---|\n| - | - |\n")[0]  # 中身が - だけの行は消さない
-    self.assertIn("<tr><td>-</td><td>-</td></tr>", table)
-
-  def test_story_file_with_bom(self):
-    with tempfile.TemporaryDirectory() as d:
-      path = Path(d) / "story.md"
-      path.write_text("\ufeff# 題\n", encoding="utf-8")
-      with mock.patch.object(website, "STORY_PATH", path):
-        html = website.build_story(WORLD, [], DAY)
-    self.assertIn('<h2 class="story-title">題</h2>', html)
 
   def test_guild_before_anyone_played(self):
     html = website.build_guild(WORLD, [], DAY, game.new_guild())
