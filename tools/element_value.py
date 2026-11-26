@@ -4,7 +4,7 @@
 1. 弱点を突けたとき: ダメージ × element_rates.strong が、攻撃 +いくつに当たるか（tools/stat_value.py と同じ強さの見積もり）
 2. 道での平均: 開放した道で出会う割合で重みをつけ、Lv1〜最大 Lv で平均した効き目を、攻撃 +1 を 1 点として出す
    （強さの見積もりは与えるダメージに比例するので、弱点を突くと強さも element_rates.strong 倍になるとして数える）
-docs/BALANCE.md の「8. アイテムの強さ」の「属性の点数」を参照。
+docs/BALANCE.md の「8. 武具の強さ」の「属性の点数」を参照。
 
 使い方:
   python tools/element_value.py

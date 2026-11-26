@@ -5,7 +5,7 @@ world/
   map.json      地方（areas）、場所（町・霊場）と道（陸路・航路・霊場への道）、開放した町（open）
   map-base.svg  ベースの地図（地形の絵。map.json の layout.background）
   monsters.json 敵（出る地形と性質）と、性質の一覧
-  items.json    アイテム（珍しさの一覧を含む）
+  items.json    武具（珍しさの一覧を含む）
   quests.json   口入れ屋の依頼（レアリティ・共通のひな形・町ごとの依頼）
 
 参照はすべて ID で行う。データに誤りがあれば validate() がその一覧を返し、load_world() は止まる。
@@ -23,10 +23,10 @@ from pathlib import Path
 import common
 
 WORLD_DIR = common.ROOT / "world"
-SLOTS = ("weapon", "helmet", "shield", "accessory")  # 鎧はない
+SLOTS = ("weapon", "helmet", "shield", "accessory")  # 盾の部位（shield）は「鎧」と呼ぶ（#261）
 # 属性を書ける部位（武器の属性で攻める。御守の属性は、武器に属性がないとき攻撃に付く）
 ELEMENT_SLOTS = ("weapon", "accessory")
-SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "shield": "盾", "accessory": "御守"}
+SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "shield": "鎧", "accessory": "御守"}
 PLACE_TYPES = ("town", "dungeon")
 # 道の種類: 陸路・航路は町どうしを結び、もののふが通る。霊場への道は地図に描くだけ（第 2 段階で使う）
 ROAD_KINDS = ("land", "sea", "trail")
@@ -67,7 +67,7 @@ BACKGROUND_TYPES = {
   ".webp": "image/webp",
 }
 BACKGROUND_MAX_BYTES = 1024 * 1024
-ITEM_TEXT_MAX = 100  # アイテムの説明（items.json の text）の長さの上限
+ITEM_TEXT_MAX = 100  # 武具の説明（items.json の text）の長さの上限
 BIG = 10**9
 # season.json の必須項目: 名前 → (型, 最小, 最大)
 SEASON_KEYS = {
@@ -249,7 +249,7 @@ class _Check:
       if not _hashable(key):
         self.err(f"{where}: キーは文字列にしてください: {key!r}")
       elif key != NONE and key not in self.rarities and key not in self.items:
-        self.err(f"{where}: {key!r} は none・珍しさ・アイテムの ID のどれでもありません")
+        self.err(f"{where}: {key!r} は none・珍しさ・武具の ID のどれでもありません")
 
 
 def _rank_ok(err, ranks: list, where: str, rank) -> None:
@@ -373,7 +373,7 @@ def _check_season(c: _Check):
   ):
     err("season.json: treasure_gold は宝箱のお金 [下, 上]（0 以上の整数。下 ≦ 上）にしてください")
   if not isinstance(season.get("rare_drops", True), bool):
-    err("season.json: rare_drops は true か false にしてください（false ならレアのアイテムを出さない）")
+    err("season.json: rare_drops は true か false にしてください（false ならレアの武具を出さない）")
   levels = season.get("encounter_levels")
   if (
     not isinstance(levels, list)
@@ -482,7 +482,7 @@ def _check_places(c: _Check, area_ids: set | None):
       if "quests_per_day" not in p:
         err(f"{where}: quests_per_day（口入れ屋の規模。高札の依頼の枠の数）を書いてください")
       if "shop" in p and not isinstance(p["shop"], list):
-        err(f"{where}: shop は店で売るアイテムの ID の一覧にしてください")
+        err(f"{where}: shop は店で売る武具の ID の一覧にしてください")
       for iid in _rows(p.get("shop")):
         if iid not in items:
           err(f"{where}: 店の {iid!r} が items.json にありません")
@@ -917,7 +917,7 @@ def _check_monsters(c: _Check):
 
 
 def _check_items(c: _Check):
-  """items.json の rarities とアイテム（スロット・能力・属性・町・値段）。"""
+  """items.json の rarities と武具（スロット・能力・属性・町・値段）。"""
   err, places, items, rarities, opened, elements = c.err, c.places, c.items, c.rarities, c.opened, c.elements
   # items.json
   if not rarities or len(set(rarities)) != len(rarities) or NONE in rarities or COMMON not in rarities:
@@ -1129,9 +1129,9 @@ def _check_town_quests(c: _Check, ranks: list):
 
 
 def _check_item_points(c: _Check):
-  """season.json の item_points と、アイテムの点数が珍しさの範囲に入っているか。"""
+  """season.json の item_points と、武具の点数が珍しさの範囲に入っているか。"""
   err, errors, season, items, rarities = c.err, c.errors, c.season, c.items, c.rarities
-  # 強さ: アイテムの点数（season.json の item_points）が、0 点から珍しさごとの上限（max）までに入る
+  # 強さ: 武具の点数（season.json の item_points）が、0 点から珍しさごとの上限（max）までに入る
   points = season.get("item_points")
   weights = points.get("weights") if isinstance(points, dict) else None
   caps = points.get("max") if isinstance(points, dict) else None
@@ -1207,7 +1207,7 @@ def validate(raw: dict) -> list[str]:
 
 
 def item_points(item: dict, cfg: dict) -> float:
-  """アイテムの点数（能力の増減 × season.json の item_points.weights の合計。マイナスの能力も同じ重みで引く）。
+  """武具の点数（能力の増減 × season.json の item_points.weights の合計。マイナスの能力も同じ重みで引く）。
   属性があれば item_points.element を足す。"""
   stats = sum(cfg["weights"].get(k, 0) * item.get(k, 0) for k in REWARD_STATS)
   return stats + (cfg.get("element", 0) if item.get("element") else 0)

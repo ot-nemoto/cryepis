@@ -49,14 +49,14 @@
   {"id": "iron_axe", "name": "鉞", "slot": "weapon", "rarity": "common", "atk": 2, "spd": -2, "price": 640, "text": "薪も割れるし、物の怪も割れる。重いので、足が遅くなる"},
   {"id": "wooden_helm", "name": "陣笠", "slot": "helmet", "rarity": "common", "def": 1, "spd": 1, "price": 240, "text": "足軽がかぶる、竹と紙を漆で固めた笠。軽くて、頭に風が通る"},
   {"id": "iron_helm", "name": "筋兜", "slot": "helmet", "rarity": "common", "def": 2, "price": 400, "text": "鉄の板を鋲で留めた兜。かぶると、少し声がこもる"},
-  {"id": "wooden_shield", "name": "手楯", "slot": "shield", "rarity": "common", "def": 2, "price": 240, "text": "板を重ねて革で綴じた、手に持つ楯。軽くて扱いやすい"},
-  {"id": "iron_shield", "name": "鉄楯", "slot": "shield", "rarity": "common", "def": 3, "spd": -1, "price": 400, "text": "鉄を張った楯。心強いが、足をとられる"},
+  {"id": "wooden_shield", "name": "革胴", "slot": "shield", "rarity": "common", "def": 2, "price": 240, "text": "革の札を糸で綴じた、軽い胴。動きやすい"},
+  {"id": "iron_shield", "name": "鉄胴", "slot": "shield", "rarity": "common", "def": 3, "spd": -1, "price": 400, "text": "鉄の札で作った胴。心強いが、足をとられる"},
   {"id": "soaring_leaf_charm", "name": "韋駄天の御守", "slot": "accessory", "rarity": "common", "spd": 2, "price": 400, "text": "足の速い神、韋駄天の御守。持つと、身が軽くなる"},
   {"id": "silkvine_charm", "name": "千手の御守", "slot": "accessory", "rarity": "common", "dex": 5, "price": 400, "text": "千の手を持つ観音の御守。指先が、よく利くようになる"},
   {"id": "lifeblood_charm", "name": "延命の御守", "slot": "accessory", "rarity": "common", "hp": 5, "price": 400, "text": "寺でいただく、命を延ばす御守。持つと、胸があたたかい"},
   {"id": "steel_sword", "name": "業物の太刀", "slot": "weapon", "rarity": "rare", "atk": 2, "towns": ["edo"], "text": "名のある刀鍛冶が打った、よく切れる太刀。潮風にさらしても錆びない、と江戸の鍛冶屋は自慢する"},
   {"id": "steel_helm", "name": "鍬形の兜", "slot": "helmet", "rarity": "rare", "def": 4, "towns": ["odawara"], "text": "小田原の具足師が打った、鍬形の前立てのついた兜。大将のように見える"},
-  {"id": "steel_shield", "name": "置き楯", "slot": "shield", "rarity": "rare", "hp": 5, "def": 4, "spd": -2, "towns": ["nagano"], "text": "信濃の山里で作る、地面に立てる大きな楯。重いが、矢も物の怪の爪も通さない"},
+  {"id": "steel_shield", "name": "大鎧", "slot": "shield", "rarity": "rare", "hp": 5, "def": 4, "spd": -2, "towns": ["nagano"], "text": "信濃の山里で作る、大将の着る重い鎧。重いが、矢も物の怪の爪も通さない"},
   {"id": "crimson_grass_charm", "name": "不動の御守", "slot": "accessory", "rarity": "rare", "element": "flame", "towns": ["kofu"], "text": "炎をまとう不動明王の御守。握ると、手のひらが熱くなる。甲府の兵が、よく身につけている"}
  ]
 }

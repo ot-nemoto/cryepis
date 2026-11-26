@@ -21,14 +21,14 @@ flowchart LR
 
     subgraph state[".state/（master にコミット）"]
         heroes[("heroes.json<br/>もののふ管理シート")]
-        board[("board.json<br/>ランキングの Gist の ID")]
+        board[("board.json<br/>番付の Gist の ID")]
         heroState[("heroes/&lt;id&gt;.json<br/>もののふごとの状態・持ち物・日誌・シーズンの記録")]
         lastRun[("last-run<br/>keepalive 用の日付")]
     end
 
-    world[("world/*.json<br/>シーズン・MAP・敵・アイテム・依頼")]
+    world[("world/*.json<br/>シーズン・MAP・敵・武具・依頼")]
     site["サイト（GitHub Pages）<br/>pages.yml の website.py が書き出す<br/>地図・もののふの詳細など"]
-    ranking["ランキングの Gist<br/>（Pin する）"]
+    ranking["番付の Gist<br/>（Pin する）"]
 
     world --> rpg
     heroes -->|"現役のもののふ"| rpg
@@ -51,12 +51,12 @@ flowchart LR
 
 | ファイル | 書き込み元 | 中身 | 使い道 |
 |---|---|---|---|
-| `world/*.json` | 人（手で編集） | テキスト RPG の世界（シーズン・MAP・敵・アイテム・口入れ屋の依頼）。形式は README の「世界を広げる」 | `rpg.py` の入力（Test で検証してから使う） |
+| `world/*.json` | 人（手で編集） | テキスト RPG の世界（シーズン・MAP・敵・武具・口入れ屋の依頼）。形式は README の「世界を広げる」 | `rpg.py` の入力（Test で検証してから使う） |
 | `.state/heroes.json` | `rpg.py`（New game / Retire hero） | もののふの一覧（ID・名前・作成日・現役かどうか）。現役は最大 30 人 | 毎日の更新の対象 |
 | `.state/heroes/<id>.json` | `rpg.py` | もののふの状態（場所・HP・レベル・依頼など）、持ち物、直近 30 日の日誌、シーズンの記録 | 翌日の続きと、Gist の表示 |
-| `.state/board.json` | `rpg.py`（最初の毎日の実行） | ランキングの Gist の ID と URL | 毎日更新するランキングの Gist |
+| `.state/board.json` | `rpg.py`（最初の毎日の実行） | 番付の Gist の ID と URL | 毎日更新する番付の Gist |
 | `.state/guild.json` | `rpg.py`（毎日の実行） | 町ごとの口入れ屋の高札（日をまたいで残る。受付中・受注中・達成・失敗） | もののふが依頼を受ける（早い者勝ち）。サイトの口入れ屋のページで、受付の残り日数と受けたもののふを出す |
-| サイト（GitHub Pages） | `website.py`（`pages.yml`） | 地図・ランキング・口入れ屋の今日の依頼・もののふの詳細の HTML（`.state/` と `world/` から書き出す。コミットしない） | ブラウザで見る。ランキングの Gist からリンクする |
+| サイト（GitHub Pages） | `website.py`（`pages.yml`） | 地図・番付・口入れ屋の今日の依頼・もののふの詳細の HTML（`.state/` と `world/` から書き出す。コミットしない） | ブラウザで見る。番付の Gist からリンクする |
 | `.state/last-run` | Commit state ステップ | 最終実行日（JST） | 60 日無活動で scheduled workflow が止まるのを防ぐ（keepalive） |
 
 `.state/` の各ファイルの JSON 構成・項目の意味・例は [STATE_FORMAT.md](STATE_FORMAT.md) を参照してください。
@@ -64,7 +64,7 @@ flowchart LR
 保持期間:
 - `heroes/<id>.json` は毎日上書きします（日誌は直近 30 日分、シーズンの記録と持ち物は無制限）。引退したもののふのファイルはそのまま残ります。
 - `heroes.json` はもののふの追加・引退のときだけ書き換えます。
-- `board.json` はランキングの Gist を作ったときに 1 回だけ書きます。
+- `board.json` は番付の Gist を作ったときに 1 回だけ書きます。
 - `last-run` は毎回上書きします。
 
 ## 毎日の workflow の処理順
@@ -74,7 +74,7 @@ sequenceDiagram
     autonumber
     participant WF as hero-adventure.yml
     participant RP as rpg.py
-    participant G as ランキングの Gist
+    participant G as 番付の Gist
     participant S as .state/*
     participant M as master
 
@@ -85,7 +85,7 @@ sequenceDiagram
     loop 現役のもののふごと（失敗はもののふごとに隔離）
         RP->>S: heroes/<id>.json を 1 日分進める（行動回数は毎日同じ、出来事は乱数。シーズンが変わったら持ち物以外をリセット。処理済みなら進めない。実行されなかった日があればさかのぼって進める）
     end
-    RP->>G: ランキングの Gist を更新（board.json がなければ作って記録）
+    RP->>G: 番付の Gist を更新（board.json がなければ作って記録）
     Note over WF,M: Commit state は前のステップが失敗しても実行（!cancelled()）
     WF->>S: last-run を更新
     WF->>M: .state/* に変更があればコミットし、pull --rebase してから push

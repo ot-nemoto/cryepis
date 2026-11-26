@@ -1,11 +1,11 @@
-"""シーズン制 RPG の 1 日分の進行（もののふの状態・口入れ屋の依頼・戦闘・アイテム・シーズンの切り替え）。
+"""シーズン制 RPG の 1 日分の進行（もののふの状態・口入れ屋の依頼・戦闘・武具・シーズンの切り替え）。
 
 もののふは毎日、決まった回数だけ行動する。場所は町だけで、町と町は陸路・航路でつながっている。
 町の口入れ屋で依頼を受け、討伐なら依頼の道を行き来して物の怪を倒し、配達なら届け先の町へ向かう。
 道を 1 行動進むごとに、道の地形に合った物の怪に出会ったり、宝箱を見つけたりする（乱数）。
 物の怪は種類ごとにレベル（強さ）があり、地形ごとに出る物の怪と性質（先手・毒・群れなど）が違う。
 依頼がなければ、となりの町へ旅をする。力尽きたら依頼は失敗になり、最後に寄った町で目を覚ます。
-シーズンが変わると、アイテム（持ち物）以外は最初の状態に戻る。
+シーズンが変わると、武具（持ち物）以外は最初の状態に戻る。
 乱数は「日付＋シーズン＋もののふの ID」を種にするので、同じ日に何度実行しても結果は同じ。
 """
 
@@ -25,7 +25,7 @@ JOURNAL_DAYS = 30
 
 
 def rarity_mark(world: dict, rarity: str) -> str:
-  """アイテムのレアリティの印。items.json の rarities の順に ★・★★・★★★…（依頼のレアリティと同じく ★ から始まる）。"""
+  """武具のレアリティの印。items.json の rarities の順に ★・★★・★★★…（依頼のレアリティと同じく ★ から始まる）。"""
   rarities = world["rarities"]
   return "★" * (rarities.index(rarity) + 1) if rarity in rarities else ""
 
@@ -136,7 +136,7 @@ def new_state(world: dict, hero_id: str = "h1", name: str = "もののふ") -> d
     "day": 0,
     "last_date": None,
     "hero": new_hero(world),
-    "inventory": [],  # 持っている装備（1 つずつ {"id": アイテム, "skill": スキル}。部位ごとに carry の数まで）
+    "inventory": [],  # 持っている装備（1 つずつ {"id": 武具, "skill": スキル}。部位ごとに carry の数まで）
     "storage": [],  # 蔵（どの町の口入れ屋でも出し入れできる。持てる数を超えた分）
     "place": town,
     "home_town": town,
@@ -152,7 +152,7 @@ def new_state(world: dict, hero_id: str = "h1", name: str = "もののふ") -> d
 
 
 def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "もののふ") -> dict:
-  """状態を読む。足りない項目は補い、world/ から消えた場所・アイテム・依頼の参照は安全な値に戻す。
+  """状態を読む。足りない項目は補い、world/ から消えた場所・武具・依頼の参照は安全な値に戻す。
   前の形式（一本道の RPG）の状態なら、新しい形式で最初から作り直す。"""
   try:
     loaded = json.loads(path.read_text(encoding="utf-8"))
@@ -326,12 +326,12 @@ def save_state(state: dict, path: Path) -> None:
 
 # ---- 装備と能力値 ----------------------------------------------------------------------
 def item_score(world: dict, item: dict) -> float:
-  """アイテムの強さ（点数。season.json の item_points）。装備を選ぶ・買うときに比べる。"""
+  """武具の強さ（点数。season.json の item_points）。装備を選ぶ・買うときに比べる。"""
   return W.item_points(item, world["season"]["item_points"])
 
 
 def minus_points(world: dict, item: dict) -> float:
-  """アイテムのマイナスの能力の点数（0 以上。損のないアイテムは 0）。"""
+  """武具のマイナスの能力の点数（0 以上。損のない武具は 0）。"""
   weights = world["season"]["item_points"]["weights"]
   return -sum(weights.get(k, 0) * v for k, v in item.items() if k in W.REWARD_STATS and isinstance(v, int) and v < 0)
 
@@ -990,7 +990,7 @@ class Day:
     物の怪の性質（trait）・属性の相性（武器の属性と物の怪の属性）・素早さで戦い方が変わる。
     素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する（性質「先手」は、素早さに関係なく物の怪が先）。
     もののふは戦いのたびに、持ち物の中からいちばん効く武器に持ち替える（能力は、持ち替えた武器のもの）。
-    装備のスキル（#233）: 武器と御守はその戦いで選んだもの、兜と盾はふだんのもので効く。"""
+    装備のスキル（#233）: 武器と御守はその戦いで選んだもの、兜と鎧はふだんのもので効く。"""
     e = W.trait_effect(monster)  # 凶暴・硬い・群れで変わる値
     hp, atk, guard, hits = e["hp"], e["atk"], e["guard"], e["hits"]
     weapon, rate, s, accessory = self.pick_gear(monster, guard)
@@ -1171,7 +1171,7 @@ class Day:
     if hero["level"] >= self.cfg["max_level"]:
       hero["exp"] = 0
 
-  # アイテム -------------------------------------------------------------------------
+  # 武具 -------------------------------------------------------------------------
   def draw(self, table: list | None, town: str | None = None) -> str | None:
     """ドロップ表から抽選する（特性「強運」なら、何も出なかったときに 1 度だけ引き直す）。"""
     got = self.draw_once(table, town)
@@ -1180,7 +1180,7 @@ class Day:
     return got
 
   def draw_once(self, table: list | None, town: str | None = None) -> str | None:
-    """ドロップ表から抽選する。珍しさが当たったら、その珍しさのアイテムから均等に選ぶ。
+    """ドロップ表から抽選する。珍しさが当たったら、その珍しさの武具から均等に選ぶ。
     common は、開放した地域のもの（開放した町の店で売っている品）だけ。
     レア（common 以外）は、その町（town。依頼を出した町）の依頼で出るもの（items.json の towns）だけ。
     season.json の rare_drops が false なら、レアが当たっても何も出ない（配布を止めている）。
@@ -1195,11 +1195,11 @@ class Day:
     if not self.cfg.get("rare_drops", True) and (items[key]["rarity"] if key in items else key) != W.COMMON:
       return None  # レアの配布は止めている（season.json の rare_drops）。当たっても何も出ない
 
-    def here(iid: str) -> bool:  # 出せるアイテムか（common は開放した地域のもの、レアはその町のもの）
+    def here(iid: str) -> bool:  # 出せる武具か（common は開放した地域のもの、レアはその町のもの）
       item = items[iid]
       return iid in region if item["rarity"] == W.COMMON else town in item.get("towns", [])
 
-    if key in items:  # アイテムの ID を直接書いたとき
+    if key in items:  # 武具の ID を直接書いたとき
       return key if here(key) else None
     rarities = self.world["rarities"]
     for rarity in reversed(rarities[rarities.index(W.COMMON) : rarities.index(key) + 1]):

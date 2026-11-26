@@ -60,7 +60,7 @@ class DisplayTest(unittest.TestCase):
     }
     state = game.new_state(world)
     state["inventory"] = {"iron_sword": 1, "wooden_helm": 1, "x_epic": 1, "steel_shield": 1}
-    self.assertEqual(view.gear_text(world, state), "★★★試しの兜/★★置き楯/★打刀")
+    self.assertEqual(view.gear_text(world, state), "★★★試しの兜/★★大鎧/★打刀")
 
   def test_quest_marks_are_not_rare_items(self):
     events = [
@@ -209,7 +209,7 @@ class HeroesTest(unittest.TestCase):
       patcher = mock.patch.object(module, target, value)
       patcher.start()
       self.addCleanup(patcher.stop)
-    # Gist を作るのはランキングだけ（毎日の実行の最初）
+    # Gist を作るのは番付だけ（毎日の実行の最初）
     patcher = mock.patch.object(common, "create_gist", return_value={"id": "board", "html_url": "https://g/board"})
     self.create_board = patcher.start()
     self.addCleanup(patcher.stop)
@@ -238,7 +238,7 @@ class HeroesTest(unittest.TestCase):
     self.assertEqual(rpg.clean_name("a" * 40), "a" * 32)  # 半角は 32 文字まで
 
   def test_long_names(self):
-    # 表示幅 32 の名前でも、ランキングのカードの出来事が読める。もののふの文章は詰めないので、名前も Lv・日も全部出る
+    # 表示幅 32 の名前でも、番付のカードの出来事が読める。もののふの文章は詰めないので、名前も Lv・日も全部出る
     name = "あいうえおかきくけこさしすせそた"
     world = WORLD
     state = game.new_state(world, "h1", name)
@@ -300,7 +300,7 @@ class HeroesTest(unittest.TestCase):
     self.new_game("引退者")
     self.run_main(["--retire", "h3"])
     self.assertEqual(self.daily(), 0)
-    # Gist はランキングの 1 つだけ（最初の実行で作られ、board.json に記録される）
+    # Gist は番付の 1 つだけ（最初の実行で作られ、board.json に記録される）
     self.assertEqual(self.create_board.call_count, 1)
     self.assertEqual(self.create_board.call_args.args[1], rpg.BOARD_FILENAME)
     self.update_gist.assert_not_called()
@@ -339,7 +339,7 @@ class HeroesTest(unittest.TestCase):
     warn.assert_called_once()
     self.assertEqual(load("h2")["day"], 1)
     board = self.create_board.call_args.args[2]
-    self.assertIn("■ ボブ", board)  # 進められたもののふだけでランキングを作る
+    self.assertIn("■ ボブ", board)  # 進められたもののふだけで番付を作る
     self.assertNotIn("■ アリス", board)
 
   def test_a_hero_whose_state_cannot_be_saved_does_not_stop_the_others(self):
@@ -360,7 +360,7 @@ class HeroesTest(unittest.TestCase):
     self.assertEqual(load("h2")["day"], 1)  # ボブは進んで、保存された
     self.assertEqual(load("h1")["day"], 0)  # アリスは進んでいない（次の実行でやり直す）
     board = self.create_board.call_args.args[2]
-    self.assertIn("■ ボブ", board)  # 進められたもののふだけでランキングを作る
+    self.assertIn("■ ボブ", board)  # 進められたもののふだけで番付を作る
     self.assertNotIn("■ アリス", board)
 
   def test_current_entries_skip_heroes_without_a_state_file(self):
@@ -473,7 +473,7 @@ class HeroesTest(unittest.TestCase):
     self.assertEqual(self.create_board.call_count, 1)
     (call,) = self.update_gist.call_args_list
     self.assertEqual(call.args[:3], ("board", "p", rpg.BOARD_FILENAME))
-    self.assertEqual(call.kwargs["description"], "もののふランキング シーズン1")
+    self.assertEqual(call.kwargs["description"], "もののふ番付 シーズン1")
 
   def test_board_is_recreated_when_the_gist_is_gone(self):
     self.new_game("アリス")
@@ -520,7 +520,7 @@ class HeroesTest(unittest.TestCase):
     store.hero_state_path("h1").unlink()
     with mock.patch.object(common, "warn") as warn:
       self.assertEqual(self.daily(), 1)
-    self.create_board.assert_not_called()  # 進められたもののふがいなければ、ランキングも作らない
+    self.create_board.assert_not_called()  # 進められたもののふがいなければ、番付も作らない
     warn.assert_called_once()
     self.assertFalse(store.hero_state_path("h1").exists())
 
