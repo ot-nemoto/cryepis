@@ -409,7 +409,7 @@ class HeroesTest(unittest.TestCase):
     state = game.new_state(rpg.load_world(), "h1", "アリス")
     state["hero"]["level"] = 99
 
-    def take_then_fail(world, st, day, actions, g):
+    def take_then_fail(world, st, day, actions, g, others=None):
       game.refresh_guild(world, g, day, 1)
       next(e for es in g["towns"].values() for e in es).update(status="held", holder="h1")
       raise RuntimeError("壊れた")

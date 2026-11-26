@@ -300,15 +300,24 @@ def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, 
   for day in days:
     order = [hid for hid, (_, _, ds) in loaded.items() if (day in ds or actions is not None) and hid not in errors]
     random.Random(f"order-{day.isoformat()}").shuffle(order)
+    # 何人かで受ける大物の依頼は、受けられるもののふが人数分いるときだけ出す（その日の朝の Lv で数える。#72）
+    guild["levels"] = sorted(st["hero"]["level"] for hid, (_, st, _) in loaded.items() if hid not in errors)
+    others = {hid: st for hid, (_, st, _) in loaded.items() if hid not in errors}  # 一緒に戦う仲間の状態
     for hid in order:
       hero, state, _ = loaded[hid]
-      before = copy.deepcopy(guild)  # 失敗したら、そのもののふが高札に加えた変更も取り消す
+      # 失敗したら、そのもののふが高札とほかのもののふ（一緒に戦った仲間）に加えた変更も取り消す
+      before = copy.deepcopy((guild, {h: st for h, st in others.items() if h != hid}))
       try:
-        game.advance(world, state, day, actions, guild)
+        game.advance(world, state, day, actions, guild, others)
       except (Exception, SystemExit) as e:  # noqa: BLE001  もののふごとに失敗を隔離する
         errors[hid] = e
         guild.clear()
-        guild.update(before)
+        guild.update(before[0])
+        for h, st in before[1].items():
+          others[h].clear()
+          others[h].update(st)
+        others.pop(hid, None)  # 進められなかったもののふとは、もう一緒に戦わない
+  guild.pop("levels", None)  # その日の朝の Lv は保存しない
   return errors
 
 

@@ -362,7 +362,14 @@ def name_html(name: str, en: str | None) -> str:
 # ---- 口入れ屋 -------------------------------------------------------------------------------
 def guild_status(world: dict, e: dict, today: date) -> str:
   """高札の依頼の状態。誰かが受けた依頼は、名前を出さずに「ACCEPTED」のスタンプを押す。
-  受付中なら、受けられる残りの日数。"""
+  受付中なら、受けられる残りの日数。何人かで受ける依頼（#72）は、集まった人数と、集まるのを待つ期限。"""
+  party = e.get("party", 1)
+  if party > 1 and e["status"] == "open" and e.get("members"):
+    until = date.fromisoformat(e["gather_until"])
+    return (
+      f'<span class="open">仲間を募集中 {len(e["members"])}/{party} 人</span>'
+      f'<div class="note">{until.month}/{until.day} までにそろわなければ流れる</div>'
+    )
   if e["status"] in ("held", "done", "failed"):
     note = {"done": "明日入れ替え", "failed": "明日また受付"}.get(e["status"])
     return '<span class="stamp">ACCEPTED</span>' + (f'<div class="note">{note}</div>' if note else "")
@@ -392,8 +399,10 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
     rows = []
     for e in guild.get("towns", {}).get(town, []):
       mark, _, rest = game.quest_text(world, e).partition(" ")
-      notes = ([f"「{escape(e['text'])}」"] if e.get("text") else []) + (
-        ["前のもののふが失敗した依頼"] if e.get("returned") else []
+      notes = (
+        ([f"{e['party']} 人で受ける依頼（Lv{e.get('min_level')} から）"] if e.get("party", 1) > 1 else [])
+        + ([f"「{escape(e['text'])}」"] if e.get("text") else [])
+        + (["前のもののふが失敗した依頼"] if e.get("returned") else [])
       )
       exp_text = f"{e['reward']['exp']}EXP<br>" if e["reward"]["exp"] else ""  # 依頼の経験値は 0（お金だけ）
       rows.append(
@@ -412,8 +421,20 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
     )
 
   groups = area_groups(world, world["towns"])
+  party = world["season"].get("party") or {}
+  bosses = [m for mid, m in world["monsters"].items() if m.get("boss") and game.boss_town(world, m)]
+  awake = [world["monsters"][mid]["name"] for mid in guild.get("awake") or [] if mid in world["monsters"]]
+  boss_note = ""
+  if bosses and party:
+    boss_note = (
+      f'<p class="note">霊場の主: {"・".join(awake)}が目覚めている（霊場への山道がつながる町に、主の依頼が出る）。</p>'
+      if awake
+      else f'<p class="note">大物を討った数: {guild.get("elite_kills", 0)}/{party.get("boss_after_elites")} 体'
+      "（全員合わせて。そろうと霊場の主が目覚める）。</p>"
+    )
   body = [
     f"<h2>町の口入れ屋の高札（{today.isoformat()}）</h2>",
+    boss_note,
     tab_bar([(aid, a["name"]) for aid, a, _ in groups]),
     rarity_filter([(str(i), r["mark"]) for i, r in enumerate(world["quest_ranks"], 1)], "条件に合う依頼はありません。"),
   ]
@@ -723,7 +744,8 @@ def build_monsters(world: dict) -> str:
       "道で出会うのは、道の両端の町がある地方の物の怪のうち、道の地形（街道の円グラフ）に住み、もののふの Lv に近い物の怪です"
       '（<a href="guide.html">手引き</a>）。'
       "生息地が WORLD の物の怪（大物）は道では出会わず、町の討伐の依頼で狙って戦います。"
-      "RAID の物の怪（主）は霊場の奥にいます（まだ挑めません）。</p></div>"
+      "RAID の物の怪（主）は霊場の奥にいて、大物が討たれ続けると目覚めます（口入れ屋の高札）。"
+      "大物・主は 1 人では勝てず、何人かで受ける依頼で戦います。</p></div>"
     )
 
   def monster_row(mid: str) -> str:  # 物の怪の 1 行（大物・主の Lv は N/A。道の物の怪と Lv の意味が違うので）
@@ -1120,8 +1142,23 @@ def build_guide(world: dict) -> str:
       + " の物の怪から出る（地方をまたぐ道は、どちらの地方も半分ずつ）。Lv の合う物の怪のいない地形は出ず、その分ほかの地形が出る。"
       "範囲に合う物の怪がどの地形にもいなければ、いちばん近い Lv の物の怪",
     ),
-    ("大物", "道では出会わない。町の討伐の依頼で狙って戦う。依頼は、物の怪のレベル以上のもののふだけが受けられる"),
-    ("主", "道では出会わない。霊場の奥にいる"),
+    (
+      "大物",
+      "道では出会わない。町の討伐の依頼で、何人かで狙って戦う（1 人では勝てない）。依頼は、物の怪のレベル以上のもののふだけが受けられ、"
+      "受けられるもののふが人数分いる日だけ高札に出る",
+    ),
+    (
+      "主",
+      "道では出会わない。霊場の奥にいて、大物が討たれ続けると目覚め、霊場への山道がつながる町に、何人かで受ける依頼が出る。"
+      "倒すと、また大物を数え直す",
+    ),
+    (
+      "何人かで受ける依頼",
+      "受けたもののふは狩り場（霊場）へ向かい、先に着いた人は仲間を待つ（待つ間も行動回数を使う。溜めた行動力は使わない）。"
+      "全員がそろったら一緒に戦う。物の怪は毎回、倒れていないもののふから 1 人を選んで攻撃する。"
+      "誰かが倒せば全員の勝ちで、経験値は全員が満額、お金は人数で割った額。全員が倒れたら負け（全員力尽きる）。"
+      "最初の 1 人が受けた日から決まった日数でそろわなければ、依頼は流れる（失敗にはならない）",
+    ),
   ]
   reward = cfg["monster_reward"]
   names_all = {"hp": "HP", "atk": "攻", "def": "防", "spd": "速", "dex": "器"}

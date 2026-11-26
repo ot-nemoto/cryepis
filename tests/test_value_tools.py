@@ -119,8 +119,8 @@ class ElementValueTest(unittest.TestCase):
 
 class BattleSimToolTest(unittest.TestCase):
   def test_fight_is_repeatable(self):
-    a = B.fight(WORLD, BOSS, "lucky", 15, [], 3, 20)
-    self.assertEqual(a, B.fight(WORLD, BOSS, "lucky", 15, [], 3, 20))  # 種が決まっているので、同じ結果
+    a = B.fight(WORLD, BOSS, "lucky", 20, [], 3, 20, party=4)  # 主は何人かで戦う（#72）
+    self.assertEqual(a, B.fight(WORLD, BOSS, "lucky", 20, [], 3, 20, party=4))  # 種が決まっているので、同じ結果
     rate, lost = a
     self.assertTrue(0 <= rate <= 1 and 0 <= lost <= 1, a)
 

@@ -283,20 +283,48 @@ def hunt_steps_ok(quest: dict) -> bool:
   return progress < count if hunting else progress >= count
 
 
+def party_size(world: dict, monster: dict) -> int:
+  """何人で受ける依頼か（大物・主は season.json の party。ほかは 1 人。#72）。"""
+  party = world["season"].get("party") or {}
+  if monster.get("boss"):
+    return party.get("boss", 1)
+  if monster.get("elite"):
+    return party.get("elite", 1)
+  return 1
+
+
+def boss_town(world: dict, monster: dict) -> str | None:
+  """主の依頼を出す町（主のいる霊場への山道がつながる、開放した町）。"""
+  for r in world["trails"]:
+    ends = {r["from"], r["to"]}
+    if monster.get("boss") in ends:
+      town = next(iter(ends - {monster["boss"]}))
+      if town in world["towns"]:
+        return town
+  return None
+
+
 def elite_ok(world: dict, quest: dict) -> bool:
-  """大物の討伐が、今の決まりで作られた依頼か（受けられるレベルが物の怪のレベルで、倒す数が町の依頼と同じ）。
-  大物にする前に貼られた・受けられた依頼（Lv の決まりがなく、数も多い）は捨てる。大物でなければ True。"""
+  """大物・主の討伐が、今の決まりで作られた依頼か（受けられるレベルが物の怪のレベルで、倒す数が町の依頼と同じで、
+  人数が今の決まり）。決まりを変える前に貼られた・受けられた依頼は捨てる。大物・主でなければ True。"""
   target = world["monsters"].get(quest.get("monster"), {})
-  if not target.get("elite"):
+  if not target.get("elite") and not target.get("boss"):
     return True
-  template = next(
-    (q for q in world["town_quests"].get(quest.get("town"), []) if q["id"] == quest.get("template")), None
-  )
+  if target.get("boss"):
+    count = 1
+    ok = quest.get("place") == target["boss"] and quest.get("report") == boss_town(world, target)
+  else:
+    template = next(
+      (q for q in world["town_quests"].get(quest.get("town"), []) if q["id"] == quest.get("template")), None
+    )
+    count = template["count"] if template else None
+    ok = template is not None
   return (
-    template is not None
+    ok
     and quest.get("min_level") == target["level"]
-    and quest.get("count") == template["count"]
+    and quest.get("count") == count
     and quest.get("level") == [target["level"], target["level"]]
+    and quest.get("party", 1) == party_size(world, target)
   )
 
 
@@ -304,16 +332,17 @@ def quest_ok(world: dict, quest: dict, steps: bool = True) -> bool:
   """依頼の参照先が今の world/ にあるか（行き先・報告先・依頼を出した町は開放した町、討伐は報告先からの道と物の怪）。
   steps が True なら、討伐の段取りが壊れていないかも確かめる。"""
   towns = set(world["towns"])
-  if quest.get("type") not in QUEST_TYPES or quest.get("place") not in towns:
+  boss = world["monsters"].get(quest.get("monster") or "", {}).get("boss") if quest.get("type") == "hunt" else None
+  if quest.get("type") not in QUEST_TYPES or (quest.get("place") not in towns and not boss):
     return False
   for key in ("report", "town"):
     if quest.get(key) is not None and quest[key] not in towns:
       return False
   if quest["type"] == "hunt":  # 前の形式（段取りのない討伐）は捨てる
+    target = world["monsters"].get(quest.get("monster"))
     return (
-      (quest.get("report"), quest["place"]) in world["roads"]
-      and quest.get("monster") in world["monsters"]
-      and not world["monsters"][quest["monster"]].get("boss")  # 主は道に出ない
+      target is not None
+      and ((quest.get("report"), quest["place"]) in world["roads"] or bool(target.get("boss")))  # 主は霊場へ
       and elite_ok(world, quest)
       and (hunt_steps_ok(quest) if steps else isinstance(quest.get("steps"), list))
     )
@@ -479,14 +508,24 @@ def board(world: dict, town: str, d: date, season: int) -> list[dict]:
   return draw_quests(world, town, d, season, quests_per_day(world, town))
 
 
-def draw_quests(world: dict, town: str, d: date, season: int, n: int, exclude: set | None = None) -> list[dict]:
+def draw_quests(
+  world: dict, town: str, d: date, season: int, n: int, exclude: set | None = None, levels: list | None = None
+) -> list[dict]:
   """町 town に、日付 d に新しく出す依頼を n 件まで作る（全員共通。日付と町で決まる）。
   枠ごとにレアリティ（★〜）を重みで選び、その町の依頼から選ぶ。その町に当たったレアリティの依頼がなければ
   1 つ下に落とす。町の依頼は高札に 1 度に 1 つだけ出て（exclude は高札に残っている町の依頼の ID）、
-  足りない枠には共通の依頼（templates）が入る。"""
+  足りない枠には共通の依頼（templates）が入る。
+  levels（もののふたちの今の Lv）を渡すと、何人かで受ける大物の依頼は、受けられるもののふが人数分いるときだけ出す（#72）。"""
   ranks = world["quest_ranks"]
   rng = random.Random(f"board-{d.isoformat()}-{season}-{town}")
-  own = [q for q in world["town_quests"].get(town, []) if q["id"] not in (exclude or set())]
+
+  def ready(q: dict) -> bool:  # 大物の依頼を受けられるもののふが、人数分いるか
+    target = world["monsters"].get(q.get("monster") or "", {})
+    if levels is None or q["type"] != "hunt" or not target.get("elite"):
+      return True
+    return sum(lv >= target["level"] for lv in levels) >= party_size(world, target)
+
+  own = [q for q in world["town_quests"].get(town, []) if q["id"] not in (exclude or set()) and ready(q)]
   quests = []
   for i in range(n):
     rank = rng.choices(range(1, len(ranks) + 1), [r["weight"] for r in ranks])[0]
@@ -520,7 +559,10 @@ def quests_per_day(world: dict, town: str) -> int:
 #   open（受付中）: 誰でも受けられる。誰も受けないまま quest_open_days 日たつと、新しい依頼に入れ替わる
 #   held（受注中）: もののふが受けて、こなしている（ほかのもののふは受けられない。期限はない）
 #   done（達成）/ failed（失敗）: 翌日の朝、達成なら新しい依頼に入れ替わり、失敗なら同じ依頼が受付中に戻る
-GUILD_FIELDS = ("posted", "status", "holder", "returned")
+GUILD_FIELDS = ("posted", "status", "holder", "returned", "members", "arrived", "gather_until")
+# 何人かで受ける依頼（party。#72）は、受けたもののふを members、狩り場（霊場）に着いたもののふを arrived に入れる。
+# 人数がそろうまでは open（受付中）のまま。最初の 1 人が受けた日から gather_days 日（gather_until まで）でそろわなければ流れる。
+# そろったら held。物の怪を倒したら done、全員が倒れたら failed（翌朝、受付中に戻る）。
 
 
 def new_guild() -> dict:
@@ -540,7 +582,7 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
   if guild.get("season") is not None and season < guild["season"]:
     return
   if guild.get("season") != season:
-    guild.update(season=season, towns={}, refreshed={})
+    guild.update(season=season, towns={}, refreshed={}, elite_kills=0, awake=[])
   boards, refreshed = guild.setdefault("towns", {}), guild.setdefault("refreshed", {})
   for town in [t for t in boards if t not in world["towns"]]:
     del boards[town]
@@ -552,12 +594,16 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
     for e in boards.get(town, []):
       if e.get("status") == "failed":
         e.update(status="open", holder=None, posted=d.isoformat(), returned=True)
+        if e.get("party", 1) > 1:
+          e.update(members=[], arrived=[], gather_until=None)
         if quest_ok(world, e, steps=False):  # 受付に戻すときは、段取り・行動力・報酬を最初の状態に作り直す
           finish_quest(world, e, e["town"])
       # 高札の段取りは見ない（受けるときに作り直す。受注中の進みはもののふの状態のほう）
       if e.get("status") not in ("open", "held") or not quest_ok(world, e, steps=False):
         continue  # 達成された依頼（と、world/ から消えた依頼）ははがす
-      if e["status"] == "open" and last_open_day(world, e) < d:
+      if e.get("gather_until") and e["status"] == "open" and date.fromisoformat(e["gather_until"]) < d:
+        continue  # 人数がそろわないまま流れた（受けていたもののふは、自分の番で引き返す）
+      if e["status"] == "open" and not e.get("members") and last_open_day(world, e) < d:
         continue  # 誰も受けないまま受付が終わった
       renew_quest_texts(world, e)  # 物の怪の名前が変わったら、文も合わせる
       if e["status"] == "open":  # 物の怪のレベルが変わったら、依頼のレベルも合わせる
@@ -565,9 +611,20 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
         e["level"] = [lv, lv] if lv is not None else None
       kept.append(e)
     exclude = {e["template"] for e in kept}
-    new = draw_quests(world, town, d, season, max(0, quests_per_day(world, town) - len(kept)), exclude)
+    slots = max(0, quests_per_day(world, town) - sum(not str(e["template"]).startswith("boss-") for e in kept))
+    new = draw_quests(world, town, d, season, slots, exclude, guild.get("levels"))
+    for mid in guild.get("awake") or []:  # 目覚めた主の依頼（高札の枠とは別に貼る）
+      target = world["monsters"].get(mid, {})
+      if f"boss-{mid}" not in exclude and boss_town(world, target) == town:
+        boss = make_boss_quest(world, mid, d)
+        if boss:
+          new.append(boss)
     for i, q in enumerate(new):
-      q.update(id=f"{d.isoformat()}-{town}-{i}", posted=d.isoformat(), status="open", holder=None, returned=False)
+      if not str(q["template"]).startswith("boss-"):
+        q["id"] = f"{d.isoformat()}-{town}-{i}"
+      q.update(posted=d.isoformat(), status="open", holder=None, returned=False)
+      if q.get("party", 1) > 1:
+        q.update(members=[], arrived=[], gather_until=None)
     boards[town] = kept + new
     refreshed[town] = d.isoformat()
 
@@ -584,6 +641,22 @@ def release_orphans(guild: dict, states: dict[str, dict], keep: set | frozenset 
   n = 0
   for entries in guild.get("towns", {}).values():
     for e in entries:
+      if e.get("party", 1) > 1:  # 何人かの依頼: いなくなったもののふだけを外す（人数が欠けたら受付中に戻す）
+        if e["status"] not in ("open", "held"):
+          continue
+        mine = [
+          h
+          for h in e.get("members") or []
+          if h in keep or ((states.get(h) or {}).get("quest") or {}).get("id") == e["id"]
+        ]
+        if mine != (e.get("members") or []):
+          n += len(e["members"]) - len(mine)
+          e["members"] = mine
+          e["arrived"] = [h for h in e.get("arrived") or [] if h in mine]
+          e["status"] = "open"
+          if not mine:
+            e["gather_until"] = None
+        continue
       state = states.get(e.get("holder"))
       if (
         e["status"] == "held"
@@ -599,8 +672,12 @@ HUNT_TRIP_MAX = 2  # 討伐の狩り場までの行動力の上限（狩り場�
 
 
 def hunt_steps(world: dict, town: str, to: str) -> list[list]:
-  """討伐の段取り: 行き（狩り場まで）→ 討伐（何体いても 1 行動で連戦）→ 帰り。[[段取り, 残りの行動力], ...]。"""
-  trip = min(HUNT_TRIP_MAX, -(-world["roads"][(town, to)] // 2))
+  """討伐の段取り: 行き（狩り場まで）→ 討伐（何体いても 1 行動で連戦）→ 帰り。[[段取り, 残りの行動力], ...]。
+  霊場（主）へは、山道の行動回数そのまま行き帰りする。"""
+  if (town, to) in world["roads"]:
+    trip = min(HUNT_TRIP_MAX, -(-world["roads"][(town, to)] // 2))
+  else:
+    trip = next(r["distance"] for r in world["trails"] if {r["from"], r["to"]} == {town, to})
   return [["go", trip], ["hunt", 1], ["back", trip]]
 
 
@@ -612,8 +689,9 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
   if quest["type"] == "hunt":
     quest["steps"] = hunt_steps(world, town, quest["place"])
     target = world["monsters"].get(quest["monster"], {})
-    if target.get("elite"):  # 大物は、物の怪のレベル以上のもののふだけが受ける
+    if target.get("elite") or target.get("boss"):  # 大物・主は、物の怪のレベル以上のもののふだけが、何人かで受ける
       quest["min_level"] = lvl
+      quest["party"] = party_size(world, target)
     quest["away"] = 0  # 町から何行動ぶん離れているか（地図に描く位置）
     cost = sum(n for _, n in quest["steps"])
   else:
@@ -643,6 +721,20 @@ def make_town_quest(world: dict, q: dict, town: str, d: date) -> dict:
     quest = {"type": "deliver", "place": q["to"], "report": q["to"], "monster": None, "count": 1}
   quest.update(template=q["id"], name=q["name"], rank=q["rank"], text=q.get("text", ""))
   return finish_quest(world, quest, town)
+
+
+def make_boss_quest(world: dict, mid: str, d: date) -> dict | None:
+  """主の討伐の依頼（主が目覚めたら、霊場への山道がつながる町に出す。#72）。"""
+  target = world["monsters"][mid]
+  town = boss_town(world, target)
+  if town is None:
+    return None
+  name = f"{world['places'][target['boss']]['name']}の{target['name']}"
+  quest = {"type": "hunt", "place": target["boss"], "report": town, "monster": mid, "count": 1}
+  quest.update(template=f"boss-{mid}", name=name, rank=len(world["quest_ranks"]), text=target.get("text", ""))
+  quest = finish_quest(world, quest, town)
+  quest["id"] = f"{d.isoformat()}-{town}-boss-{mid}"
+  return quest
 
 
 def hunt_rank(world: dict, level: int, count: int) -> int:
@@ -827,6 +919,8 @@ def patrol(world: dict, state: dict, rng: random.Random) -> dict:
 def quest_detail(world: dict, quest: dict) -> str:
   places = world["places"]
   place = places[quest["place"]]["name"]
+  if quest["type"] == "hunt" and places[quest["place"]]["type"] == "dungeon":
+    return f"{place}の{world['monsters'][quest['monster']]['name']}を討つ"
   if quest["type"] == "hunt":
     return (
       f"{places[quest['report']]['name']}と{place}の間の道で"
@@ -873,7 +967,15 @@ def prefer_index(world: dict, state: dict, x: dict) -> int:
 class Day:
   """1 日分の出来事を記録しながら進める。"""
 
-  def __init__(self, world: dict, state: dict, today: date, rng: random.Random, guild: dict | None = None):
+  def __init__(
+    self,
+    world: dict,
+    state: dict,
+    today: date,
+    rng: random.Random,
+    guild: dict | None = None,
+    others: dict | None = None,
+  ):
     self.world, self.state, self.today, self.rng = world, state, today, rng
     self.cfg = world["season"]
     self.hero = state["hero"]
@@ -888,6 +990,8 @@ class Day:
     self.smithed = False  # 今日、鍛冶屋でスキルを付けたか（1 日 1 回）
     self.rested = False
     self.guild = guild if guild is not None else new_guild()  # 全員で共有する高札（None なら、このもののふだけの高札）
+    self.others = others or {}  # ほかのもののふの状態（ID → 状態。何人かで受ける依頼で、一緒に戦う。#72）
+    self.waiting = False  # 今日、仲間を待ったか（待つ日は溜めた行動力を使わない）
 
   def log(self, text: str) -> None:
     self.events.append(text)
@@ -1328,9 +1432,19 @@ class Day:
     )
 
   def settle(self, quest: dict, status: str) -> None:
-    """高札の依頼を、達成（done）か失敗（failed）にする（翌日の朝に入れ替わる・受付中に戻る）。"""
+    """高札の依頼を、達成（done）か失敗（failed）にする（翌日の朝に入れ替わる・受付中に戻る）。
+    何人かの依頼は、物の怪と戦った結果で決まる（party_hunt）。戦う前に 1 人が失敗したら、その人だけ外れる（枠が空く）。"""
     entry = guild_entry(self.guild, quest)
-    if entry and entry["status"] == "held" and entry["holder"] == self.state["id"]:
+    me = self.state["id"]
+    if entry and entry.get("party", 1) > 1:
+      if status == "failed" and entry["status"] in ("open", "held") and me in (entry.get("members") or []):
+        entry["members"].remove(me)
+        entry["arrived"] = [h for h in entry.get("arrived") or [] if h != me]
+        entry["status"] = "open"
+        if not entry["members"]:
+          entry["gather_until"] = None
+      return
+    if entry and entry["status"] == "held" and entry["holder"] == me:
       entry["status"] = status
 
   def report(self, quest: dict) -> None:
@@ -1442,14 +1556,27 @@ class Day:
         entry = min(entries, key=lambda e: tuple(f(e, level) for f in order))
       else:
         entry = self.rng.choice(entries)
-      entry.update(status="held", holder=self.state["id"])
+      if entry.get("party", 1) > 1:  # 何人かの依頼: 枠に入る（そろったら受注中）
+        entry.setdefault("members", []).append(self.state["id"])
+        if not entry.get("gather_until"):
+          days = self.cfg["party"]["gather_days"]
+          entry["gather_until"] = (self.today + timedelta(days=days - 1)).isoformat()
+        if len(entry["members"]) >= entry["party"]:
+          entry["status"] = "held"
+      else:
+        entry.update(status="held", holder=self.state["id"])
       # 深く写す（高札の依頼と段取りの一覧を共有しない）。段取り・進み・行動力・報酬は最初の状態から作り直す
       # （前に受けたもののふが力尽きて戻ってきた依頼でも、今の world/ の道の長さで、最初の状態で受ける）
       quest = finish_quest(self.world, copy.deepcopy({k: v for k, v in entry.items() if k not in GUILD_FIELDS}), town)
       self.state["taken"].append(quest["id"])
+      party = (
+        f"、{quest['party']} 人で受ける依頼。{len(entry['members'])}/{quest['party']} 人"
+        if quest.get("party", 1) > 1
+        else ""
+      )
       self.log(
         f"{self.world['places'][town]['name']}の口入れ屋で依頼を受けた: {quest_text(self.world, quest)}"
-        f"（行動力 {quest['cost']}）"
+        f"（行動力 {quest['cost']}{party}）"
       )
       self.arrange(town, quest)  # 依頼に合わせて、蔵の装備と入れ替える（#234）
     else:  # 受けられる依頼がない（どれも性格の範囲より強い・大物の Lv が足りない・ほかのもののふに取られた）ので、旅に出る
@@ -1498,7 +1625,7 @@ class Day:
   def road_event(self, a: str, b: str, stroll: bool = False) -> bool:
     """道を 1 行動進んだときの出来事。力尽きたら False。
     stroll（散策）なら散策の表（stroll_events・stroll_treasure）。強い物の怪（strong_battle）は、もののふの Lv + stroll_strong_levels の物の怪。"""
-    info = self.world["road_info"][(a, b)]
+    info = self.world["road_info"].get((a, b)) or self.trail_info(a, b)
     kinds, weights = zip(*self.event_weights(stroll).items())
     kind = self.rng.choices(kinds, weights)[0]
     if kind in ("battle", "strong_battle"):  # 道の戦いは 1 体だけ（何体かと戦うのは討伐の依頼だけ）
@@ -1536,6 +1663,12 @@ class Day:
       texts = [t for k in info["terrain"] for t in self.cfg.get("terrain_scenery", {}).get(k, [])]
       self.log(self.rng.choice(texts or self.cfg["scenery"]))
     return True
+
+  def trail_info(self, a: str, b: str) -> dict:
+    """霊場への山道の、道の情報（出る物の怪・地形。主の依頼で通る）。"""
+    road = next(r for r in self.world["trails"] if {r["from"], r["to"]} == {a, b})
+    monsters = W.road_monsters(road, self.world["places"], list(self.world["monsters"].values()))
+    return {"kind": "trail", "terrain": [t for t, _ in road["terrain"]], "monsters": monsters}
 
   def fall(self) -> None:
     state, hero = self.state, self.hero
@@ -1580,6 +1713,18 @@ class Day:
       self.fail_quest("段取りが壊れていた")
       return True
     phase = quest["steps"][0]
+    if quest.get("party", 1) > 1 and phase[0] != "back":
+      entry = guild_entry(self.guild, quest)
+      if not entry or self.state["id"] not in (entry.get("members") or []) or entry["status"] not in ("open", "held"):
+        self.log(f"仲間がそろわず、依頼が流れた: {quest_text(self.world, quest)}")  # 失敗にはしない
+        quest["steps"] = [["back", quest["away"]]] if quest.get("away") else []
+        quest["flowed"] = True  # 町に戻ったら、報告せずに依頼を終える
+        if not quest["steps"]:
+          self.state["quest"] = None
+          return True
+        phase = quest["steps"][0]
+      elif phase[0] == "hunt":
+        return self.party_hunt(quest, entry)
     if phase[0] == "hunt":
       left = quest["count"] - quest["progress"]
       if left > 1:
@@ -1604,8 +1749,68 @@ class Day:
     if not quest["steps"]:  # 町に帰ってきた
       quest["away"] = 0
       self.log(f"{self.world['places'][quest['report']]['name']}に戻った")
+      if quest.get("flowed"):  # 流れた依頼は、報告せずに終える（失敗にはしない）
+        self.state["quest"] = None
       self.visit_town(quest["report"])
     return True
+
+  def party_hunt(self, quest: dict, entry: dict) -> bool:
+    """何人かで受ける依頼の討伐（#72）。狩り場（霊場）に着いたら仲間を待ち、全員がそろったら一緒に戦う
+    （最後に着いたもののふの番で、ほかの仲間の状態も進める）。全員が倒れたら False（このもののふは力尽きる）。"""
+    me = self.state["id"]
+    arrived = entry.setdefault("arrived", [])
+    if me not in arrived:
+      arrived.append(me)
+    members = entry.get("members") or []
+    ready = len(members) >= quest["party"] and all(h in arrived for h in members)
+    others = {h: self.others.get(h) for h in members if h != me}
+    if not ready or any(st is None or (st.get("quest") or {}).get("id") != quest["id"] for st in others.values()):
+      if not self.waiting:
+        self.waiting = True
+        places = self.world["places"]
+        where = places[quest["place"]]["name"]  # 霊場か、町と町の間の道（大物の狩り場）
+        if places[quest["place"]]["type"] != "dungeon":
+          where = f"{places[quest['report']]['name']}と{where}の間の道"
+        self.log(f"{where}で仲間を待っている（{len(arrived)}/{quest['party']} 人）")
+      return True
+    days = {me: self}
+    for h, st in others.items():
+      days[h] = Day(self.world, st, self.today, random.Random(f"{self.today.isoformat()}-party-{h}"), self.guild)
+    order = [days[h] for h in members]
+    target = self.world["monsters"][quest["monster"]]
+    names = "・".join(d.state["name"] for d in order)
+    for d in order:
+      d.log(f"{names}で{self.monster_name(target)}に挑んだ")
+    won = party_battle(order, dict(target))
+    entry["status"] = "done" if won else "failed"
+    if won:
+      if target.get("boss"):  # 主を倒したら、大物を数え直す
+        self.guild["awake"] = [m for m in self.guild.get("awake") or [] if m != quest["monster"]]
+        self.guild["elite_kills"] = 0
+      elif target.get("elite"):  # 大物を数える。決まった数を討つと、主が目覚める
+        self.guild["elite_kills"] = self.guild.get("elite_kills", 0) + 1
+        need = self.cfg["party"]["boss_after_elites"]
+        if self.guild["elite_kills"] >= need:
+          self.guild["elite_kills"] = 0
+          for mid, m in self.world["monsters"].items():
+            if m.get("boss") and boss_town(self.world, m) and mid not in self.guild.setdefault("awake", []):
+              self.guild["awake"].append(mid)
+              for d in order:
+                d.log(f"大物が討たれ続け、{self.world['places'][m['boss']]['name']}の{m['name']}が目覚めた")
+      for d in order:
+        q = d.state["quest"]
+        q["progress"] = q["count"]
+        q["steps"].pop(0)
+        d.log(f"討伐の目標を果たした（{len(order)} 人で）")
+    for h, d in days.items():
+      if h == me:
+        continue
+      if not won:
+        d.fall()
+        if d.state.get("last_date") != self.today.isoformat():  # まだ今日の分を進めていなければ、今日は休む
+          d.state["fell_on"] = self.today.isoformat()
+      deliver_events(d.state, d.events, self.today)
+    return won
 
   def stroll(self, town: str) -> bool:
     """その日はもう依頼を受けたので、町の周りを散策する（道の出来事だけが起きる。町からは動かない）。"""
@@ -1784,6 +1989,20 @@ def _fight(sides: list[dict], monster: dict, hp: int) -> bool:
         return True
 
 
+def deliver_events(state: dict, events: list[str], today: date) -> None:
+  """ほかのもののふの番で起きた出来事（一緒に戦った、など）を、そのもののふの日誌に届ける。
+  今日の分をもう進めていれば今日の日誌に足し、まだなら次に進めるときの最初に足す（inbox）。"""
+  if not events:
+    return
+  last = state.get("last") or {}
+  if state.get("last_date") == today.isoformat() and last.get("date") == today.isoformat():
+    last["events"] = list(last.get("events") or []) + list(events)
+    if state.get("journal") and state["journal"][0].get("date") == today.isoformat():
+      state["journal"][0]["text"] = " / ".join(last["events"])
+  else:
+    state.setdefault("inbox", []).extend(events)
+
+
 def start_season(world: dict, state: dict, season: int) -> None:
   """シーズンを切り替える: 記録を残し、持ち物以外を最初の状態に戻す。"""
   if state["season"] is not None and state["season_day"] > 0:
@@ -1812,7 +2031,14 @@ def start_season(world: dict, state: dict, season: int) -> None:
   )
 
 
-def advance(world: dict, state: dict, today: date, actions: int | None = None, guild: dict | None = None) -> bool:
+def advance(
+  world: dict,
+  state: dict,
+  today: date,
+  actions: int | None = None,
+  guild: dict | None = None,
+  others: dict | None = None,
+) -> bool:
   """today の分を進める（actions を省くと season.json の actions_per_day。毎日同じ回数で、出来事が乱数で決まる）。処理済み（last_date 以前の日付）なら何もせず False。"""
   if state["last_date"] and today.isoformat() <= state["last_date"]:
     return False
@@ -1827,15 +2053,20 @@ def advance(world: dict, state: dict, today: date, actions: int | None = None, g
   state["taken"] = []
   if guild is not None:  # 朝の高札にする（前の日の達成・失敗は、ここで入れ替わる・受付中に戻る）
     refresh_guild(world, guild, today, season)
-  day = Day(world, state, today, rng, guild)
+  day = Day(world, state, today, rng, guild, others)
+  day.events.extend(state.pop("inbox", None) or [])  # ほかのもののふの番で起きた出来事（一緒に戦った、など）
+  fell = state.pop("fell_on", None) == today.isoformat()  # ほかのもののふの番で、一緒に戦って力尽きた日は動かない
   if new_season:
     day.log(f"シーズン{season}が始まった（レベルは 1 に戻り、持ち物はそのまま）")
   if actions is None:
     actions = world["season"]["actions_per_day"]
+  if fell:
+    day.log("仲間と戦って力尽きたので、今日は休んだ")
+    actions = 0
   town = state["place"]
   if state["season_day"] == 1 and world["places"][town]["type"] == "town" and not state["road"]:
     day.visit_town(town)  # 旅立ちの日は最初の町で支度する
-  if actions == 0:
+  if actions == 0 and not fell:
     hero = state["hero"]
     hero["hp"] = min(day.stats["max_hp"], hero["hp"] + int(day.stats["max_hp"] * world["season"]["rest_heal_rate"]))
     day.log(rng.choice(world["season"]["rest"]))
@@ -1848,9 +2079,9 @@ def advance(world: dict, state: dict, today: date, actions: int | None = None, g
     # 旅（受けられる依頼がないとき）や、残りの行動でとなりの町へ向かう道には使わない。休みの日（行動回数 0）も使わない
     hero, rest_day = state["hero"], actions == 0
 
-    def on_quest() -> bool:
+    def on_quest() -> bool:  # 仲間を待っている日は、溜めた行動力を使わない
       quest = state["quest"]
-      return bool(quest) and quest["type"] != "patrol"
+      return bool(quest) and quest["type"] != "patrol" and not day.waiting
 
     while (
       not rest_day

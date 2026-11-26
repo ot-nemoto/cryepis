@@ -22,15 +22,17 @@ class BattleSimTest(unittest.TestCase):
     self.assertEqual((state["hero"]["level"], state["hero"]["potions"], state["inventory"]), (15, 3, []))
     self.assertEqual(state["hero"]["hp"], 108)  # 装備なし、怪力は HP の伸びが 0.7 倍（30 + 8×14×0.7 = 108.4）
 
-  def test_boss_win_rates_for_a_plain_hero(self):
-    # ふつう（能力の伸びない強運）・装備なし・丸薬 3 個で、Lv15 で 5 割、Lv16 で 7 割、Lv17 で 9 割、それより上はほぼ必ず勝つ
+  def test_boss_and_elites_need_a_party(self):
+    # ふつう（能力の伸びない強運）・装備なし・丸薬 3 個、性格は 1 人ずつ順に（#72）:
+    # 主は Lv20 の 3 人で 2 割くらい、大物は Lv15 の 2 人で 2 割くらい。どちらも 1 人では勝てない
+    pers = sorted(WORLD["season"]["personalities"])
     boss = WORLD["monsters"]["den_lord"]
-    rate = {lv: B.win_rate(WORLD, boss, "lucky", lv, [], 3, 400) for lv in (12, 15, 16, 17, 19)}
-    self.assertLess(rate[12], 0.05)
-    self.assertTrue(0.4 <= rate[15] <= 0.65, rate)
-    self.assertTrue(0.6 <= rate[16] <= 0.8, rate)
-    self.assertTrue(0.8 <= rate[17] <= 0.97, rate)
-    self.assertGreaterEqual(rate[19], 0.98)
+    self.assertTrue(0.12 <= B.win_rate(WORLD, boss, "lucky", 20, [], 3, 600, 3, pers) <= 0.3)
+    self.assertLess(B.win_rate(WORLD, boss, "lucky", 20, [], 3, 200, 1, pers), 0.02)
+    for mid in ("yeti", "rock_golem", "great_eagle"):
+      elite = WORLD["monsters"][mid]
+      self.assertTrue(0.12 <= B.win_rate(WORLD, elite, "lucky", 15, [], 3, 600, 2, pers) <= 0.3, mid)
+      self.assertLess(B.win_rate(WORLD, elite, "lucky", 15, [], 3, 200, 1, pers), 0.02, mid)
 
   def test_stat_traits_help_against_the_boss(self):
     boss = WORLD["monsters"]["den_lord"]
