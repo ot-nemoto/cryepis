@@ -182,7 +182,7 @@ class BattleSimToolTest(unittest.TestCase):
   def test_strength_mode(self):
     _, out = run(B.main, "-n", "10", "--strength", "--trait", "strong")
     self.assertIn("怪力", out)
-    self.assertIn("五分で戦える強さ", out)
+    self.assertIn("勝率 50% で戦える強さ", out)
     self.assertIn("ふつうの", out)
 
   def test_hp_loss_mode(self):

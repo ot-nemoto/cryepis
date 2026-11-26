@@ -1,6 +1,8 @@
 """戦いを何度も試して、勝率を出す（強さの調整に使う。ゲームの状態は変えない）。
 
-もののふはレベルアップの伸び（特性つき）だけで作り、装備は指定したものだけを持たせる。戦いの処理はゲームと同じ（game.Day.battle）。
+もののふはレベルアップの伸び（特性つき）だけで作り、装備は指定したものだけを持たせる。戦いの処理はゲームと同じ（game.party_battle）。
+--personality all なら、ゲームにいる性格を、戦うたびに 1 人ずつ順に入れる（丸薬の使い方が性格で変わる。#242）。
+--party で、何人かで力を合わせて戦う（霊場の主。#72）。
 
 使い方:
   python tools/battle_sim.py                          # 酒呑童子に、Lv15・装備なし・丸薬 3 個で、特性ごとの勝率
@@ -10,6 +12,8 @@
   python tools/battle_sim.py --monster wild_dog --level 1 --potions 0 --hp-loss  # 勝ったときに減る HP（道の物の怪の調整）
   python tools/battle_sim.py --monster road --fit-hp-loss 0.2   # 道の物の怪の HP・攻撃・防御を、減る HP 20% に合わせて探す
   python tools/battle_sim.py --monster rock_golem -n 5000
+  python tools/battle_sim.py --level 20 --party 3 --personality all --trait lucky   # 3 人で主と戦う（性格は順に）
+  python tools/battle_sim.py --level 20 --party 3 --personality all --trait lucky --strength --goal 0.2  # 勝率 20% の強さ
 """
 
 from __future__ import annotations
@@ -28,11 +32,14 @@ import world as W  # noqa: E402
 DAY = date(2026, 12, 1)
 
 
-def make_hero(world: dict, trait: str, level: int, gear: list[str], potions: int) -> dict:
-  """特性 trait のもののふを、レベルアップの伸びだけで level まで育てる（装備は gear、丸薬は potions 個）。"""
+def make_hero(
+  world: dict, trait: str, level: int, gear: list[str], potions: int, personality: str | None = None
+) -> dict:
+  """特性 trait のもののふを、レベルアップの伸びだけで level まで育てる（装備は gear、丸薬は potions 個）。
+  personality が None なら性格のないもののふ（倒れる前に丸薬を使う）。"""
   state = game.new_state(world, "sim", "試し")
   state["trait"] = trait
-  state["personality"] = None  # 大物・主の強さは、性格のないもののふ（倒れる前に丸薬を使う）で測る
+  state["personality"] = personality
   state["hero"]["level"] = level
   game.set_base_stats(world, state)  # レベルと特性で決まる能力（レベルアップを繰り返したのと同じ）
   state["inventory"] = [{"id": iid, "skill": None} for iid in gear]
@@ -41,27 +48,51 @@ def make_hero(world: dict, trait: str, level: int, gear: list[str], potions: int
 
 
 def fight(
-  world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int
+  world: dict,
+  monster: dict,
+  trait: str,
+  level: int,
+  gear: list[str],
+  potions: int,
+  n: int,
+  party: int = 1,
+  personalities: list[str] | None = None,
 ) -> tuple[float, float | None]:
   """n 回戦って、(勝った割合, 勝ったときに減った HP の割合の平均。1 回も勝てなければ None)。
-  乱数の種は 0〜n-1 なので、同じ条件なら何度やっても同じ結果。
-  減った HP は戦いの前後の差なので、丸薬を使うと、回復した分だけ少なく出る（道の物の怪は --potions 0 で測る）。"""
+  party 人で力を合わせて戦う（みな同じ特性・レベル・装備・丸薬）。personalities を渡すと、i 回目の k 人目は
+  personalities[(i + k) % 数] の性格（性格を 1 人ずつ順に入れる）。渡さなければ性格のないもののふ。
+  乱数の種は 0〜n-1（k 人目は i * party + k）なので、同じ条件なら何度やっても同じ結果（1 人なら種は i）。
+  減った HP は戦いの前後の差（何人かなら全員の平均）なので、丸薬を使うと、回復した分だけ少なく出る（道の物の怪は --potions 0 で測る）。"""
   wins, lost = 0, 0.0
-  hero = make_hero(world, trait, level, gear, potions)
-  max_hp = game.stats(world, hero)["max_hp"]
+  heroes = {p: make_hero(world, trait, level, gear, potions, p) for p in (personalities or [None])}
+  max_hp = game.stats(world, next(iter(heroes.values())))["max_hp"]
   for seed in range(n):
-    state = copy.deepcopy(hero)
-    day = game.Day(world, state, DAY, random.Random(seed))
-    day.gain_exp = lambda exp: None  # 勝っても育たない（戦いの結果だけを見る）
-    if day.battle(dict(monster)):
+    days = []
+    for k in range(party):
+      pers = personalities[(seed + k) % len(personalities)] if personalities else None
+      state = copy.deepcopy(heroes[pers])
+      day = game.Day(world, state, DAY, random.Random(seed * party + k))
+      day.gain_exp = lambda exp: None  # 勝っても育たない（戦いの結果だけを見る）
+      days.append(day)
+    if game.party_battle(days, dict(monster)):
       wins += 1
-      lost += 1 - state["hero"]["hp"] / max_hp
+      lost += sum(1 - d.state["hero"]["hp"] / max_hp for d in days) / party
   return wins / n, (lost / wins if wins else None)
 
 
-def win_rate(world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int) -> float:
+def win_rate(
+  world: dict,
+  monster: dict,
+  trait: str,
+  level: int,
+  gear: list[str],
+  potions: int,
+  n: int,
+  party: int = 1,
+  personalities: list[str] | None = None,
+) -> float:
   """n 回戦って、勝った割合。"""
-  return fight(world, monster, trait, level, gear, potions, n)[0]
+  return fight(world, monster, trait, level, gear, potions, n, party, personalities)[0]
 
 
 def scaled(monster: dict, factor: float) -> dict:
@@ -69,21 +100,32 @@ def scaled(monster: dict, factor: float) -> dict:
   return monster | {"hp": max(1, round(monster["hp"] * factor)), "atk": max(1, round(monster["atk"] * factor))}
 
 
-def even_strength(world: dict, monster: dict, trait: str, level: int, gear: list[str], potions: int, n: int) -> float:
-  """勝率がちょうど 50% になる、物の怪の強さの倍率（HP と攻撃を同じ倍率で変える。二分探索）。
-  1.0 より大きいほど、元の物の怪より強い相手と五分に戦える。
+def even_strength(
+  world: dict,
+  monster: dict,
+  trait: str,
+  level: int,
+  gear: list[str],
+  potions: int,
+  n: int,
+  party: int = 1,
+  personalities: list[str] | None = None,
+  goal: float = 0.5,
+) -> float:
+  """勝率がちょうど goal（既定 50%）になる、物の怪の強さの倍率（HP と攻撃を同じ倍率で変える。二分探索）。
+  1.0 より大きいほど、元の物の怪より強い相手と goal の勝率で戦える。
   探す範囲（LOW〜HIGH 倍）の外なら、端の値を返す（is_capped で確かめられる）。"""
   low, high = LOW, HIGH
   for _ in range(14):
     mid = (low + high) / 2
-    if win_rate(world, scaled(monster, mid), trait, level, gear, potions, n) >= 0.5:
+    if win_rate(world, scaled(monster, mid), trait, level, gear, potions, n, party, personalities) >= goal:
       low = mid
     else:
       high = mid
   return (low + high) / 2
 
 
-LOW, HIGH = 0.3, 3.0  # even_strength が探す倍率の範囲
+LOW, HIGH = 0.3, 6.0  # even_strength が探す倍率の範囲
 
 
 def is_capped(factor: float) -> bool:
@@ -149,8 +191,17 @@ def main() -> int:
   ap.add_argument("--gear", default="", help="装備の ID を , でつなぐ（既定: 装備なし）")
   ap.add_argument("--potions", type=int, help="丸薬の数（既定: 3）")
   ap.add_argument("-n", type=int, default=2000, help="戦う回数（既定: 2000）")
-  ap.add_argument("--reach", action="store_true", help="特性ごとに、勝率 50%% に届くレベルを出す（Lv10〜最大レベル）")
-  ap.add_argument("--strength", action="store_true", help="特性ごとに、五分で戦える物の怪の強さの倍率を出す")
+  ap.add_argument("--party", type=int, default=1, help="何人で力を合わせて戦うか（既定: 1）")
+  ap.add_argument(
+    "--personality", default="none", help="性格の ID か、all（性格を 1 人ずつ順に入れる）、none（性格なし。既定）"
+  )
+  ap.add_argument("--goal", type=float, default=0.5, help="--strength・--reach の目標の勝率（既定: 0.5）")
+  ap.add_argument(
+    "--reach", action="store_true", help="特性ごとに、勝率 --goal（既定 50%%）に届くレベルを出す（Lv10〜最大レベル）"
+  )
+  ap.add_argument(
+    "--strength", action="store_true", help="特性ごとに、勝率 --goal（既定 50%%）で戦える物の怪の強さの倍率を出す"
+  )
   ap.add_argument("--hp-loss", action="store_true", help="特性ごとに、勝率と、勝ったときに減る HP の平均を出す")
   ap.add_argument(
     "--fit-hp-loss",
@@ -161,8 +212,13 @@ def main() -> int:
   a = ap.parse_args()
   world = W.load_world()
   if a.fit_hp_loss is not None:
-    if a.trait is not None or a.gear or a.potions is not None:
-      raise SystemExit("--fit-hp-loss は強運・装備なし・丸薬なしで測るので、--trait・--gear・--potions は使えません")
+    if (
+      a.trait is not None or a.gear or a.potions is not None or a.party != 1 or a.personality != "none" or a.goal != 0.5
+    ):
+      raise SystemExit(
+        "--fit-hp-loss は強運・装備なし・丸薬なし・1 人・性格なしで測るので、"
+        "--trait・--gear・--potions・--party・--personality・--goal は使えません"
+      )
     return fit_main(world, a)
   a.level = 15 if a.level is None else a.level
   a.trait = "all" if a.trait is None else a.trait
@@ -176,36 +232,53 @@ def main() -> int:
   if a.trait != "all" and a.trait not in world["season"]["hero_traits"]:
     raise SystemExit(f"特性 {a.trait!r} がありません（{'/'.join(sorted(world['season']['hero_traits']))}）")
   traits = sorted(world["season"]["hero_traits"]) if a.trait == "all" else [a.trait]
+  pers_all = sorted(world["season"].get("personalities") or {})
+  if a.personality == "all":
+    pers = pers_all
+  elif a.personality == "none":
+    pers = None
+  elif a.personality in pers_all:
+    pers = [a.personality]
+  else:
+    raise SystemExit(f"性格 {a.personality!r} がありません（{'/'.join(pers_all)}・all・none）")
+  if a.party < 1 or not 0 < a.goal < 1:
+    raise SystemExit("--party は 1 以上、--goal は 0 より大きく 1 より小さい値にしてください")
+  opt = {"party": a.party, "personalities": pers}
   monster = world["monsters"][a.monster]
   names = world["season"]["hero_traits"]
   print(
     f"{monster['name']} と戦う（装備: {'・'.join(world['items'][g]['name'] for g in gear) or 'なし'}、"
-    f"丸薬 {a.potions} 個、{a.n} 回ずつ）"
+    f"丸薬 {a.potions} 個、{a.party} 人、性格 {a.personality}、{a.n} 回ずつ）"
   )
   if a.strength:
-    base = even_strength(world, monster, "lucky", a.level, gear, a.potions, a.n)  # 強運＝能力が伸びない（ふつう）
+    # 強運＝能力が伸びない（ふつう）
+    base = even_strength(world, monster, "lucky", a.level, gear, a.potions, a.n, goal=a.goal, **opt)
     for t in traits:
-      f = even_strength(world, monster, t, a.level, gear, a.potions, a.n)
+      f = even_strength(world, monster, t, a.level, gear, a.potions, a.n, goal=a.goal, **opt)
       note = "（探す範囲の端。正しく測れていない）" if is_capped(f) or is_capped(base) else ""
-      print(f"  {names[t]['name']:4s} Lv{a.level}: 五分で戦える強さ ×{f:.3f}（ふつうの {f / base:.0%}）{note}")
+      print(
+        f"  {names[t]['name']:4s} Lv{a.level}: 勝率 {a.goal:.0%} で戦える強さ ×{f:.3f}（ふつうの {f / base:.0%}）{note}"
+        f"  HP{scaled(monster, f)['hp']} 攻{scaled(monster, f)['atk']}"
+      )
     return 0
   if a.hp_loss:
     for t in traits:
-      rate, lost = fight(world, monster, t, a.level, gear, a.potions, a.n)
+      rate, lost = fight(world, monster, t, a.level, gear, a.potions, a.n, **opt)
       shown = "—（勝てない）" if lost is None else f"{lost:.0%}"
       print(f"  {names[t]['name']:4s} Lv{a.level}: 勝率 {rate:.1%}  勝ったときに減る HP {shown}")
     return 0
   if not a.reach:
     for t in traits:
       print(
-        f"  {names[t]['name']:4s} Lv{a.level}: 勝率 {win_rate(world, monster, t, a.level, gear, a.potions, a.n):.0%}"
+        f"  {names[t]['name']:4s} Lv{a.level}: "
+        f"勝率 {win_rate(world, monster, t, a.level, gear, a.potions, a.n, **opt):.1%}"
       )
     return 0
   levels = range(10, world["season"]["max_level"] + 1)
-  print("  特性   50%に届くLv  " + " ".join(f"Lv{lv:<4d}" for lv in levels))
+  print(f"  特性   {a.goal:.0%}に届くLv  " + " ".join(f"Lv{lv:<4d}" for lv in levels))
   for t in traits:
-    rates = {lv: win_rate(world, monster, t, lv, gear, a.potions, a.n) for lv in levels}
-    reach = reach_level(rates)
+    rates = {lv: win_rate(world, monster, t, lv, gear, a.potions, a.n, **opt) for lv in levels}
+    reach = reach_level(rates, a.goal)
     print(
       f"  {names[t]['name']:4s}  {('Lv' + str(reach)) if reach else '届かない':>8s}    "
       + " ".join(f"{rates[lv]:5.0%} " for lv in levels)

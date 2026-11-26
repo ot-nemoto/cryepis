@@ -708,6 +708,93 @@ class RoadTest(unittest.TestCase):
     self.assertTrue(all(any(n in e for n in names) for e in fought), fought)
 
 
+class PartyBattleTest(unittest.TestCase):
+  """何人かで力を合わせて戦う（#72）。1 人なら Day.battle と同じ戦い。"""
+
+  def party(self, n, level=20, personality="careful", potions=3, seed="p"):
+    days = []
+    for k in range(n):
+      state = G.new_state(WORLD, f"h{k}")
+      state.update(personality=personality)
+      state["hero"]["level"] = level
+      G.set_base_stats(WORLD, state)
+      state["hero"].update(hp=G.stats(WORLD, state)["max_hp"], potions=potions, exp=0)
+      days.append(day_of(state, seed=f"{seed}{k}"))
+    return days
+
+  def test_solo_is_the_same_as_battle(self):
+    boss = WORLD["monsters"]["den_lord"]
+    for seed in range(20):
+      a, b = self.party(1, level=15, seed=seed), self.party(1, level=15, seed=seed)
+      self.assertEqual(a[0].battle(dict(boss)), G.party_battle(b, dict(boss)))
+      self.assertEqual((a[0].state["hero"], a[0].events), (b[0].state["hero"], b[0].events))
+
+  def test_skills_of_the_gear_for_the_battle_work_after_winning(self):
+    # 毒の物の怪には、毒よけの御守に着け替えて戦う。勝ったあとの毒も、着け替えた御守のスキルで防ぐ（ふだんの御守ではない）
+    for seed in range(10):
+      state = self.party(1, level=15, seed=seed)[0].state
+      state["inventory"] = [{"id": "lifeblood_charm", "skill": None}, {"id": "soaring_leaf_charm", "skill": "antidote"}]
+      self.assertNotEqual(G.worn(WORLD, state)["accessory"]["skill"], "antidote")  # ふだんは毒よけではない
+      day = day_of(state, seed=seed)
+      self.assertTrue(day.battle(dict(WORLD["monsters"]["venom_moth"])))
+      self.assertFalse(any("毒で HP" in e for e in day.events), day.events)
+      self.assertIsNone(day.gear)
+
+  def test_only_the_one_who_finishes_gets_the_inspiration_bonus(self):
+    boss = dict(WORLD["monsters"]["den_lord"], hp=600)
+    days = self.party(3, seed="i")
+    for d in days:  # 悟り: とどめの一撃が会心なら経験値が増える
+      d.state["inventory"] = [{"id": "iron_sword", "skill": "inspiration"}]
+    sides = [d.ready(dict(boss), W.trait_effect(boss)) | {"party": 3, "killing_crit": True} for d in days]
+    sides[0]["killer"] = True
+    try:
+      for d, c in zip(days, sides):
+        d.gain_exp = lambda exp, d=d: d.hero.__setitem__("exp", exp)
+        d.win(dict(boss, exp=100), c)
+    finally:
+      for d in days:
+        d.gear = None
+    factor = WORLD["skills"]["inspiration"]["value"]
+    self.assertEqual([d.hero["exp"] for d in days], [W.half_up(100 * factor), 100, 100])
+
+  def test_together_they_win_and_share_the_gold(self):
+    boss = dict(WORLD["monsters"]["den_lord"], hp=900)
+    wins = 0
+    for seed in range(30):
+      days = self.party(3, seed=seed)
+      gold = [d.hero["gold"] for d in days]
+      if not G.party_battle(days, dict(boss)):
+        continue
+      wins += 1
+      for d, g in zip(days, gold):
+        self.assertEqual(d.hero["gold"] - g, boss["gold"] // 3)  # お金は人数で割る（切り捨て）
+        self.assertGreaterEqual(d.hero["hp"], 1)  # 倒れていたもののふも起き上がる
+        self.assertTrue(any("酒呑童子〔硬い〕を倒した" in e for e in d.events))
+        self.assertEqual(d.state["season_stats"]["kills"], 1)
+    self.assertGreater(wins, 0)
+    solo = sum(G.party_battle(self.party(1, seed=seed), dict(boss)) for seed in range(30))
+    self.assertLess(solo, wins)  # 3 人のほうが勝ちやすい
+
+  def test_monster_attacks_everyone_and_all_down_is_a_loss(self):
+    boss = dict(WORLD["monsters"]["den_lord"], hp=5000, atk=200)
+    days = self.party(3, potions=0)
+    self.assertFalse(G.party_battle(days, boss))
+    for d in days:  # 全員が倒れるまで戦う（物の怪はみんなを攻撃する）
+      self.assertEqual(d.hero["hp"], 0)
+      self.assertTrue(any("酒呑童子〔硬い〕に倒された" in e for e in d.events), d.events)
+      self.assertIsNone(d.gear)  # 戦いの外では、その戦いの装備を外す
+
+  def test_battle_sim_party_is_repeatable(self):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+    import battle_sim as B
+
+    boss = dict(WORLD["monsters"]["den_lord"], hp=900)
+    pers = sorted(WORLD["season"]["personalities"])
+    a = B.fight(WORLD, boss, "lucky", 20, [], 3, 20, party=3, personalities=pers)
+    self.assertEqual(a, B.fight(WORLD, boss, "lucky", 20, [], 3, 20, party=3, personalities=pers))
+    self.assertGreater(a[0], B.fight(WORLD, boss, "lucky", 20, [], 3, 20, party=1, personalities=pers)[0])
+
+
 class TraitTest(unittest.TestCase):
   """物の怪の性質の効き方（会心の運で結果がぶれないよう、もののふと物の怪の器用さを 0 にして、会心を出さずに確かめる）。"""
 
