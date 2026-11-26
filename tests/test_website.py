@@ -217,7 +217,7 @@ class SiteTest(unittest.TestCase):
     header = html.split("<th>名前</th>")[1].split("</tr>")[0]  # 表の見出しの行
     self.assertNotIn("性能", header)
     self.assertNotIn("手に入れ方", header)
-    axe = html.split("鉞")[1].split("</tr>")[0]  # 攻+2・速-2、開放した 4 町の店で売っている
+    axe = html.split("<td>鉞")[1].split("</tr>")[0]  # 攻+2・速-2、開放した 4 町の店で売っている
     self.assertIn('<td class="num zero">0</td><td class="num">+2</td><td class="num zero">0</td>', axe)
     self.assertIn('<td class="num minus">-2</td>', axe)  # マイナスは赤字
     self.assertEqual(axe.count('class="pill"'), 4)  # 買える店
