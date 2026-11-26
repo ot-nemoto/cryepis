@@ -23,10 +23,11 @@ from pathlib import Path
 import common
 
 WORLD_DIR = common.ROOT / "world"
-SLOTS = ("weapon", "helmet", "shield", "accessory")  # 盾の部位（shield）は「鎧」と呼ぶ（#261）
+# 兜の部位（helmet）は「頭」、盾の部位（shield）は「胴」と呼ぶ（#261・#263）
+SLOTS = ("weapon", "helmet", "shield", "accessory")
 # 属性を書ける部位（武器の属性で攻める。御守の属性は、武器に属性がないとき攻撃に付く）
 ELEMENT_SLOTS = ("weapon", "accessory")
-SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "shield": "鎧", "accessory": "御守"}
+SLOT_NAMES = {"weapon": "武器", "helmet": "頭", "shield": "胴", "accessory": "御守"}
 PLACE_TYPES = ("town", "dungeon")
 # 道の種類: 陸路・航路は町どうしを結び、もののふが通る。霊場への道は地図に描くだけ（第 2 段階で使う）
 ROAD_KINDS = ("land", "sea", "trail")
