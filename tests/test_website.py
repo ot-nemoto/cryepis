@@ -59,7 +59,6 @@ class SiteTest(unittest.TestCase):
       rels,
       {
         "index.html",
-        "map.html",
         "ranking.html",
         "heroes.html",
         "guild.html",
@@ -243,10 +242,10 @@ class SiteTest(unittest.TestCase):
 
   def test_item_description_is_optional_and_escaped(self):
     world = copy.deepcopy(WORLD)
-    world["items"]["iron_sword"]["text"] = "<b>剣</b> & 盾"
+    world["items"]["iron_sword"]["text"] = "<b>剣</b> & 鎧"
     world["items"]["iron_axe"].pop("text")
     html = website.build_items(world)
-    self.assertIn('<span class="note">&lt;b&gt;剣&lt;/b&gt; &amp; 盾</span>', html)  # エスケープする
+    self.assertIn('<span class="note">&lt;b&gt;剣&lt;/b&gt; &amp; 鎧</span>', html)  # エスケープする
     self.assertNotIn("<b>剣</b>", html)
     axe = html.split("<td>鉞")[1].split("</tr>")[0]
     self.assertTrue(axe.startswith("</td>"), axe[:30])  # 説明がなければ、名前だけ
@@ -301,24 +300,23 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(keys, sorted(keys))
     self.assertEqual(names[:2], ["鉞", "打刀"])  # 武器が先、値段の高い順
 
-  def test_home_page(self):
+  def test_first_page_is_the_map(self):
+    """ホームはなくして、最初のページ（index.html）は絵図（#261）。"""
     entries, _, today = party(2, 2)
-    html = website.build_home(WORLD, entries, today)
-    self.assertIn("<title>ホーム | クリエピス戦記</title>", html)
-    self.assertIn('<a href="index.html" class="on">ホーム</a><a href="map.html">地図</a>', html)  # 地図の前
-    self.assertIn("旅をしているもののふ</th><td>2 人", html)  # いまの冒険の状況
-    self.assertIn('坂東 <span class="en">Bando</span>', html)
-    self.assertIn('href="towns.html#edo"', html)
-    for word in ("オルドラ", "星の巡り"):  # 物語はいったん外した（#249）
-      self.assertNotIn(word, html)
+    html = website.build_map(WORLD, entries, today)
+    self.assertIn("<title>絵図 | クリエピス戦記</title>", html)
+    self.assertIn('<a href="index.html" class="on">絵図</a><a href="ranking.html">番付</a>', html)  # メニューの最初
+    self.assertIn("<h2>世界の絵図</h2>", html)
+    self.assertNotIn("ホーム", html)
+    self.assertNotIn("map.html", html)
 
   def test_heroes_page(self):
     entries, _, today = party(2, 2)
     html = website.build_heroes(WORLD, entries, today)
-    self.assertIn('<a href="ranking.html">ランキング</a><a href="heroes.html" class="on">もののふ</a>', html)
+    self.assertIn('<a href="ranking.html">番付</a><a href="heroes.html" class="on">もののふ</a>', html)
     for h, _ in entries:  # もののふの一覧（詳細のページへのリンク）
       self.assertIn(f'<a href="heroes/{h["id"]}.html">{h["name"]}</a>', html)
-    self.assertNotIn("<h2>もののふたち</h2>", website.build_ranking(WORLD, entries, today))  # ランキングからは移した
+    self.assertNotIn("<h2>もののふたち</h2>", website.build_ranking(WORLD, entries, today))  # 番付からは移した
     self.assertIn("まだもののふがいません", website.build_heroes(WORLD, [], today))
 
   def test_monsters_page(self):
@@ -372,7 +370,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<th class="icon">属性</th><th class="num">HP</th>', html)
     self.assertIn('<th class="num">速</th><th class="num">器</th><th class="num">EXP</th>', html)  # 器用さ
     self.assertIn('<th>名前</th><th class="num">Lv</th><th>生息地</th><th class="icon">性質</th>', html)
-    self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 雪狼（アイテムと同じ枠の札）
+    self.assertIn('<td class="icon"><span class="tag">氷属性</span></td>', south)  # 雪狼（武具と同じ枠の札）
     for name in ("雪女", "だいだらぼっち", "大天狗"):  # 大物（長野・甲府の討伐の依頼）も 1 度ずつ
       self.assertEqual(south.count(f"<td>{name}</td>"), 1)
     self.assertNotIn("属性の相性", html)  # 説明は手引きのページに
@@ -427,7 +425,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("引き返さない。HP が減っても、依頼が終わるか力尽きるまで進む", html)
     self.assertIn("Lv20 で 182。特性で変わる", html)
     self.assertIn("<h3>物の怪の経験値とお金</h3>", html)
-    item = html.split("<h3>アイテムの強さ</h3>")[1].split("</div></div>")[0]  # 点数の重みと、珍しさごとの点数
+    item = html.split("<h3>武具の強さ</h3>")[1].split("</div></div>")[0]  # 点数の重みと、珍しさごとの点数
     self.assertIn("<tr><td>HP</td><td>0.2 点</td><td>5</td></tr>", item)
     self.assertIn("<tr><td>防</td><td>0.5 点</td><td>2</td></tr>", item)
     self.assertIn("<tr><td>速</td><td>0.5 点</td><td>2</td></tr>", item)
@@ -589,7 +587,7 @@ class SiteTest(unittest.TestCase):
 
 class ImportsTest(unittest.TestCase):
   def test_website_does_not_depend_on_rpg(self):
-    """サイトの書き出しは、もののふの登録やランキングの Gist の更新（rpg.py）を読み込まない（表示は view.py、状態は store.py）。"""
+    """サイトの書き出しは、もののふの登録や番付の Gist の更新（rpg.py）を読み込まない（表示は view.py、状態は store.py）。"""
     tree = ast.parse(Path(website.__file__).read_text(encoding="utf-8"))
     imported = {a.name.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
     imported |= {n.module.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module}

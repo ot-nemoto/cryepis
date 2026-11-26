@@ -2,12 +2,11 @@
 """GitHub Pages に載せるサイト（HTML）を書き出す。冒険は進めない（今の状態を見せるだけ）。
 
 ページ:
-  index.html          ホーム（いまの冒険の状況）
-  map.html            世界の地図（拡大・移動ができる。場所やもののふの印にマウスを乗せると説明が出る）
-  ranking.html        今シーズンのランキングと、今日の出来事
+  index.html          世界の絵図（拡大・移動ができる。場所やもののふの印にマウスを乗せると説明が出る）
+  ranking.html        今シーズンの番付と、今日の出来事
   heroes.html         旅をしているもののふの一覧（居場所・能力・装備・今日の出来事）
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・口入れ屋の規模・特産品・店・レア・道。開放していない町は「-」）
-  items.html          開放した地域で手に入るアイテム（装備の種類ごとのタブ。レアリティで絞り込める）
+  items.html          開放した地域で手に入る武具（装備の種類ごとのタブ。レアリティで絞り込める）
   monsters.html       開放した道に出る物の怪と主（地方ごとのタブ。街道の地形の割合・Lv・生息地・性質・属性・強さ。生息地で絞り込める）
   guide.html          手引き（能力・もののふの特性・物の怪の性質・属性と相性・戦いの決まりの説明）
   guild.html          町ごとの口入れ屋の高札（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
@@ -42,13 +41,12 @@ import world as W  # noqa: E402
 
 TITLE = "クリエピス戦記"
 PAGES = (
-  ("index.html", "ホーム"),
-  ("map.html", "地図"),
-  ("ranking.html", "ランキング"),
+  ("index.html", "絵図"),
+  ("ranking.html", "番付"),
   ("heroes.html", "もののふ"),
   ("towns.html", "町"),
   ("guild.html", "口入れ屋"),
-  ("items.html", "アイテム"),
+  ("items.html", "武具"),
   ("monsters.html", "物の怪"),
   ("guide.html", "手引き"),
 )
@@ -100,7 +98,6 @@ font-size:13px;letter-spacing:.12em;transform:rotate(-8deg);opacity:.85;margin:2
 .chip-mark{color:#b7791f;white-space:nowrap}
 .info th{width:11em;vertical-align:top;padding-top:6px}
 .closed{opacity:.75}
-ul.plain{margin:0;padding-left:1.2em}
 .en{font-weight:normal;font-style:italic;color:var(--sub);font-size:.85em;letter-spacing:.02em}
 .tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:2px solid var(--line);margin:4px 0 14px}
 .tab{font:inherit;font-weight:bold;color:var(--sub);background:none;border:0;border-bottom:3px solid transparent;
@@ -196,34 +193,10 @@ def updated(today: date) -> str:
   return f'<p class="note">{today.isoformat()} の冒険を終えた状態（毎朝 7 時すぎに更新）</p>'
 
 
-# ---- ホーム ---------------------------------------------------------------------------
-def build_home(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
-  """最初のページ: いまの冒険の状況（シーズン・もののふ・開放した地方と町）。"""
-  season = game.season_of(world, today)
-  first, last = game.season_range(world, season)
-  day = "開幕前" if today < first else f"{(today - first).days + 1} 日目（{(last - first).days + 1} 日のうち）"
-  places = world["places"]
-  areas = []
-  for _, area, members in area_groups(world, world["towns"]):
-    towns = "・".join(
-      f'<a href="towns.html#{escape(t)}">{escape(places[t].get("emoji", ""))} {escape(places[t]["name"])}</a>'
-      for t in members
-    )
-    areas.append(f"<li>{name_html(area['name'], area.get('en'))}: {towns}</li>")
-  status = (
-    '<div class="card"><h3>いまの冒険</h3><table class="info"><colgroup><col style="width:11em"><col></colgroup>'
-    f"<tr><th>シーズン</th><td>シーズン{season}（{first}〜{last}）・{day}</td></tr>"
-    f'<tr><th>旅をしているもののふ</th><td>{len(entries)} 人（<a href="heroes.html">もののふの一覧</a>）</td></tr>'
-    f'<tr><th>旅のできる地方</th><td><ul class="plain">{"".join(areas)}</ul></td></tr>'
-    "</table></div>"
-  )
-  return page("ホーム", f"<h2>{TITLE}</h2>{updated(today)}{status}", "index.html")
-
-
-# ---- 地図 -------------------------------------------------------------------------------
+# ---- 絵図（最初のページ） ------------------------------------------------------------------
 def build_map(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
   svg = mapsvg.render(world, entries)
-  body = [f"<h2>世界の地図</h2>{updated(today)}"]
+  body = [f"<h2>世界の絵図</h2>{updated(today)}"]
   if svg:
     svg = svg[svg.index("<svg") :]
     body.append(
@@ -233,11 +206,11 @@ def build_map(world: dict, entries: list[tuple[dict, dict]], today: date) -> str
       f"道の上の数字は移動にかかる行動回数です（もののふは 1 日に {world['season']['actions_per_day']} 回行動します）。</p>"
     )
   else:
-    body.append('<p class="note">地図はありません（world/map.json に layout がありません）。</p>')
-  return page("地図", "".join(body), "map.html", script=MAP_JS if svg else "")
+    body.append('<p class="note">絵図はありません（world/map.json に layout がありません）。</p>')
+  return page("絵図", "".join(body), "index.html", script=MAP_JS if svg else "")
 
 
-# ---- ランキング ---------------------------------------------------------------------------
+# ---- 番付 ---------------------------------------------------------------------------
 def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
   season = game.season_of(world, today)
   first, last = game.season_range(world, season)
@@ -262,7 +235,7 @@ def build_ranking(world: dict, entries: list[tuple[dict, dict]], today: date) ->
       + "</div>"
     )
   body.append('<div class="grid">' + "".join(cards) + "</div>")
-  return page("ランキング", "".join(body), "ranking.html")
+  return page("番付", "".join(body), "ranking.html")
 
 
 # ---- もののふ ---------------------------------------------------------------------------------
@@ -292,7 +265,7 @@ def build_heroes(world: dict, entries: list[tuple[dict, dict]], today: date) -> 
   return page("もののふ", "".join(body), "heroes.html")
 
 
-# ---- タブと絞り込み（町・口入れ屋・アイテムのページで使う）------------------------------------------
+# ---- タブと絞り込み（町・口入れ屋・武具のページで使う）------------------------------------------
 # タブ（1 つずつ切り替える。URL の #タブの ID か、中の要素の ID（町など）で、開くタブを選べる。
 # JavaScript がなければタブは出さず、全部の中身を順に見せる）。切り替えると tabchange を送る
 TABS_JS = """
@@ -476,7 +449,7 @@ def build_towns(world: dict) -> str:
       return [("口入れ屋の規模", size)] + [
         (k, "-") for k in ("依頼の報酬で出るレア", "店の品ぞろえ", "道（行き先と行動回数）")
       ]
-    # 店の品ぞろえは、アイテムの種類（武器・兜・盾・御守）の順に、同じ種類なら値段の高い順
+    # 店の品ぞろえは、武具の種類（武器・兜・鎧・御守）の順に、同じ種類なら値段の高い順
     shop = sorted(
       places[town].get("shop", []), key=lambda i: (W.SLOTS.index(items[i]["slot"]), -items[i].get("price", 0), i)
     )
@@ -526,9 +499,9 @@ def build_towns(world: dict) -> str:
   return page("町", "".join(body), "towns.html", script=TABS_JS)
 
 
-# ---- アイテム ---------------------------------------------------------------------------
+# ---- 武具 ---------------------------------------------------------------------------
 def item_rows(world: dict) -> dict[str, list[dict]]:
-  """開放した地域で手に入るアイテム（部位ごと。★ の多い順、同じ ★ なら強い順）:
+  """開放した地域で手に入る武具（部位ごと。★ の多い順、同じ ★ なら強い順）:
   {部位: [{id, item, shops, towns}]}。
   shops は売っている町、towns は依頼の報酬で出る町（どちらも開放した町の ID）。"""
   places, items = world["places"], world["items"]
@@ -549,8 +522,8 @@ def item_rows(world: dict) -> dict[str, list[dict]]:
   return rows
 
 
-SLOT_EMOJI = {"weapon": "⚔️", "helmet": "🪖", "shield": "🛡️", "accessory": "📿"}  # 部位の名前の先頭に付ける
-ITEM_STATS = (("hp", "HP"), ("atk", "攻"), ("def", "防"), ("spd", "速"), ("dex", "器"))  # アイテムページの能力の列
+SLOT_EMOJI = {"weapon": "⚔️", "helmet": "🪖", "shield": "🥋", "accessory": "📿"}  # 部位の名前の先頭に付ける
+ITEM_STATS = (("hp", "HP"), ("atk", "攻"), ("def", "防"), ("spd", "速"), ("dex", "器"))  # 武具ページの能力の列
 
 
 def slot_label(slot: str) -> str:
@@ -584,13 +557,13 @@ def element_label(world: dict, element: str | None) -> str:
 
 
 def build_items(world: dict) -> str:
-  """開放した地域で手に入るアイテムの一覧。装備の種類ごとのタブで、レアリティで絞り込める。
+  """開放した地域で手に入る武具の一覧。装備の種類ごとのタブで、レアリティで絞り込める。
   能力は HP・攻・防・速・器の列に分けて出す。入手方法は町の札（レアは報酬で出る依頼の町、ほかは買える店）。"""
   rows = item_rows(world)
   used = [r for r in world["rarities"] if any(x["item"]["rarity"] == r for rs in rows.values() for x in rs)]
   slots = [slot for slot in W.SLOTS if rows[slot]]  # 開放した地域で手に入る装備のない種類は、タブを出さない
   body = [
-    "<h2>アイテム一覧</h2>",
+    "<h2>武具一覧</h2>",
     "" if world["season"].get("rare_drops", True) else '<p class="note">今はレア（★★ 以上）の配布を止めています。</p>',
     (
       '<p class="note">★★ 以上の装備には、町の鍛冶屋でスキルを付けられる（'
@@ -600,7 +573,7 @@ def build_items(world: dict) -> str:
       else ""
     ),
     tab_bar([(slot, slot_label(slot)) for slot in slots]),
-    rarity_filter([(r, game.rarity_mark(world, r)) for r in used], "条件に合うアイテムはありません。"),
+    rarity_filter([(r, game.rarity_mark(world, r)) for r in used], "条件に合う武具はありません。"),
   ]
   for slot in slots:
     trs = []
@@ -628,7 +601,7 @@ def build_items(world: dict) -> str:
       + "</table></div></div>"
     )
     body.append(tab_panel(slot, escape(slot_label(slot)), table))
-  return page("アイテム", "".join(body), "items.html", script=FILTER_JS + TABS_JS)
+  return page("武具", "".join(body), "items.html", script=FILTER_JS + TABS_JS)
 
 
 # ---- 物の怪 ---------------------------------------------------------------------------------
@@ -947,7 +920,7 @@ def skill_cards(world: dict, table) -> list[tuple[str, str]]:
   body = (
     f"<p>スキルは {escape(game.rarity_mark(world, next(iter(prices), 'rare')))} 以上の装備に、町の鍛冶屋で付けられる"
     f"（代金 {escape(price_text)}。1 日 1 回まで、行動力は使わない）。部位ごとのスキルからランダムで 1 つ付き、"
-    "持っている装備を ★ の多い順に見て、性格の優先スキルの付いていない最初の装備に付ける（優先スキルが付いた装備は、もう変えない）。スキルは点数（アイテムの強さ）には入らない。"
+    "持っている装備を ★ の多い順に見て、性格の優先スキルの付いていない最初の装備に付ける（優先スキルが付いた装備は、もう変えない）。スキルは点数（武具の強さ）には入らない。"
     "★★★ 以上の固定スキルは、まだない</p>"
   )
   for slot in W.SLOTS:
@@ -1227,7 +1200,7 @@ def build_guide(world: dict) -> str:
     )
     for r in world["rarities"]
   ]
-  # 例には、マイナスの能力のあるアイテム（なければ最初のアイテム）を使う
+  # 例には、マイナスの能力のある武具（なければ最初の武具）を使う
   items = list(world["items"].values())
   sample = next((i for i in items if any(i.get(k, 0) < 0 for k, _ in ITEM_STATS)), items[0])
   parts = [(labels[k], sample[k], points["weights"][k] * sample[k]) for k, _ in ITEM_STATS if sample.get(k)]
@@ -1238,12 +1211,12 @@ def build_guide(world: dict) -> str:
   )
   cards.append(
     (
-      "アイテムの強さ",
-      "<p>アイテムの強さは点数で決まる。能力の増減に、能力ごとの点数を掛けて足す（マイナスの能力も同じ点数で引く）</p>"
+      "武具の強さ",
+      "<p>武具の強さは点数で決まる。能力の増減に、能力ごとの点数を掛けて足す（マイナスの能力も同じ点数で引く）</p>"
       + table(("能力", "+1 あたり", "1 点になる量"), weight_rows)
       + '<h4 class="sub">珍しさごとの点数</h4>'
       + table(("珍しさ", "点数の上限", "属性", "スキル"), rarity_rows)
-      + f'<p class="note">{escape(example)}。もののふは ★ の多いアイテムを装備し（★ が同じなら点数の高いもの。'
+      + f'<p class="note">{escape(example)}。もののふは ★ の多い武具を装備し（★ が同じなら点数の高いもの。'
       "それも同じなら、特性と性格で選ぶ。もののふの性格の「同じ点数の装備」）、店でもその順に買う（同じ強さの品は買い直さない）。"
       "スキルは点数に入らない</p>",
     )
@@ -1301,7 +1274,7 @@ def build_guide(world: dict) -> str:
     ),
     (
       "依頼の失敗",
-      "報酬はもらえない（それまでの戦いの経験値・お金・アイテムは残る）。高札の依頼は翌朝、最初の状態で受付中に戻る",
+      "報酬はもらえない（それまでの戦いの経験値・お金・武具は残る）。高札の依頼は翌朝、最初の状態で受付中に戻る",
     ),
   ]
   cards.append(("依頼の進め方", table(("場面", "どうなるか"), quest_rows)))
@@ -1365,14 +1338,13 @@ def write_site(
   retired: list[tuple[dict, dict]] | None = None,
 ) -> list[Path]:
   """サイトを out に書き出す（out の中身は作り直す）。書き出したファイルの一覧を返す。
-  retired（引退したもののふ）は、詳細のページだけを書き出す（一覧やランキングには出さない）。"""
+  retired（引退したもののふ）は、詳細のページだけを書き出す（一覧や番付には出さない）。"""
   check_out(out)
   if out.exists():
     shutil.rmtree(out)
   (out / "heroes").mkdir(parents=True)
   files = {
-    "index.html": build_home(world, entries, today),
-    "map.html": build_map(world, entries, today),
+    "index.html": build_map(world, entries, today),
     "ranking.html": build_ranking(world, entries, today),
     "heroes.html": build_heroes(world, entries, today),
     "guild.html": build_guild(world, entries, today, guild),

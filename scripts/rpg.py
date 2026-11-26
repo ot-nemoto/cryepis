@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""シーズン制のテキスト RPG。もののふ（最大 MAX_HEROES 人）を 1 日分ずつ進め、ランキングの Gist を更新する。
+"""シーズン制のテキスト RPG。もののふ（最大 MAX_HEROES 人）を 1 日分ずつ進め、番付の Gist を更新する。
 
-もののふは heroes.json（もののふ管理シート）に登録する。世界（MAP・敵・アイテム・依頼）は world/ の下のデータで、
+もののふは heroes.json（もののふ管理シート）に登録する。世界（MAP・敵・武具・依頼）は world/ の下のデータで、
 1 日分の進め方は game.py にある。もののふは毎日、乱数で決まる回数だけ行動し、町の口入れ屋の依頼をこなして育つ。
-シーズン（world/season.json）が変わると、アイテム以外は最初に戻る。
+シーズン（world/season.json）が変わると、武具以外は最初に戻る。
 workflow が動かなかった日があれば、次の実行で最大 CATCH_UP_DAYS 日分までさかのぼって進める。
 
 状態は .state/heroes.json（もののふの一覧）と .state/heroes/<id>.json（もののふごとの状態）に保存し、
-もののふごとの詳細（ステータス・装備・持ち物・日誌）と地図は、サイト（scripts/website.py）で見る（Gist は作らない）。
-ランキングの Gist の ID は .state/board.json に記録する（なければ毎日の実行で作る）。
+もののふごとの詳細（ステータス・装備・持ち物・日誌）と絵図は、サイト（scripts/website.py）で見る（Gist は作らない）。
+番付の Gist の ID は .state/board.json に記録する（なければ毎日の実行で作る）。
 workflow の最後のステップで master にコミットする。
 乱数は「日付＋シーズン＋もののふの ID」を種にするので、同じ日に何度実行しても結果は同じ（その日の分が処理済みなら進めない）。
 
 環境変数:
-  GIST_PAT   ランキングの Gist の作成・更新に使う（gist スコープの Classic PAT）
+  GIST_PAT   番付の Gist の作成・更新に使う（gist スコープの Classic PAT）
 
 使い方:
   python scripts/rpg.py                          # 登録済みのもののふを全員 1 日分進めて Gist を更新する（毎日の workflow）
@@ -45,7 +45,7 @@ import world as W  # noqa: E402
 BOARD_PATH = common.ROOT / ".state" / "board.json"
 BOARD_FILENAME = "hero-ranking.txt"
 MAX_HEROES = 30  # 同時に冒険できる（引退していない）もののふの数
-BOARD_NAME_WIDTH = 8  # ランキングのカードに出す名前の表示幅
+BOARD_NAME_WIDTH = 8  # 番付のカードに出す名前の表示幅
 MEDALS = ("🥇", "🥈", "🥉")
 NAME_WIDTH_MAX = 32  # もののふの名前の表示幅（全角 = 2。全角 16 文字・半角 32 文字）
 CATCH_UP_DAYS = 7  # 実行されなかった日をさかのぼって進める最大の日数
@@ -115,11 +115,11 @@ def write_map_grid(world: dict, out: str) -> int:
   return 0
 
 
-# ---- ランキング（Pin 用の Gist）------------------------------------------------------
+# ---- 番付（Pin 用の Gist）------------------------------------------------------
 
 
 def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> str:
-  """Pin 用のランキングの Gist の中身。entries は現役のもののふの (heroes.json の行, 状態)。"""
+  """Pin 用の番付の Gist の中身。entries は現役のもののふの (heroes.json の行, 状態)。"""
   season = game.season_of(world, today)
   first, last = game.season_range(world, season)
   views = [(hero, view.season_view(world, state, season)) for hero, state in entries]
@@ -142,9 +142,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
 
   detail = ["", f"── シーズン{season}（{first}〜{last}）──"]
   if site_url():
-    detail.append(
-      f"サイト「クリエピス戦記」（ホーム・地図・ランキング・もののふ・町・口入れ屋・アイテム・物の怪・手引き）: {site_url()}"
-    )
+    detail.append(f"サイト「クリエピス戦記」（絵図・番付・もののふ・町・口入れ屋・武具・物の怪・手引き）: {site_url()}")
   for title, _, key, value, unit in view.RANKINGS:
     detail += ["", f"── {title} ──"]
     detail += [
@@ -169,7 +167,7 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
 
 
 def hero_summary(world: dict, entry: dict, state: dict, today: date) -> list[str]:
-  """ランキングの本文に載せる、もののふごとの短い欄（entry は heroes.json の行）。"""
+  """番付の本文に載せる、もののふごとの短い欄（entry は heroes.json の行）。"""
   hero, s = state["hero"], game.stats(world, state)
   rares = sorted(
     {x["id"] for x in game.owned(state) if world["items"][x["id"]]["rarity"] != "common"},
@@ -188,7 +186,7 @@ def hero_summary(world: dict, entry: dict, state: dict, today: date) -> list[str
 
 
 def board_description(world: dict, today: date) -> str:
-  return f"もののふランキング シーズン{game.season_of(world, today)}"
+  return f"もののふ番付 シーズン{game.season_of(world, today)}"
 
 
 def load_board(path: Path | None = None) -> dict | None:
@@ -207,13 +205,12 @@ def create_board(content: str, description: str, today: date, token: str | None)
   BOARD_PATH.parent.mkdir(parents=True, exist_ok=True)
   BOARD_PATH.write_text(json.dumps(board, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
   write_summary(
-    f"## ランキングの Gist を作りました\n\n{gist['html_url']}\n\n"
-    "プロフィールの **Customize your pins** で Pin できます。"
+    f"## 番付の Gist を作りました\n\n{gist['html_url']}\n\nプロフィールの **Customize your pins** で Pin できます。"
   )
 
 
 def update_board(world: dict, entries: list[tuple[dict, dict]], today: date, dry_run: bool, token: str | None) -> None:
-  """ランキングの Gist を更新する。まだないか、消えていたら（404）作って board.json に記録する。"""
+  """番付の Gist を更新する。まだないか、消えていたら（404）作って board.json に記録する。"""
   content = build_board(world, entries, today)
   print(content)
   if dry_run:
@@ -228,7 +225,7 @@ def update_board(world: dict, entries: list[tuple[dict, dict]], today: date, dry
   except common.GistAPIError as e:
     if e.status != 404:
       raise
-    common.warn(f"ランキングの Gist（{board['gist_url']}）が見つからないので、新しく作ります。Pin し直してください")
+    common.warn(f"番付の Gist（{board['gist_url']}）が見つからないので、新しく作ります。Pin し直してください")
     create_board(content, description, today, token)
 
 
@@ -264,7 +261,7 @@ def new_game(world: dict, raw_name: str, today: date) -> int:
   game.save_state(state, store.hero_state_path(hero_id))
   store.save_heroes(heroes)
   board = load_board()
-  where = f"ランキングの Gist（{board['gist_url']}）" if board else "ランキングの Gist（次回の毎日の実行で作られます）"
+  where = f"番付の Gist（{board['gist_url']}）" if board else "番付の Gist（次回の毎日の実行で作られます）"
   write_summary(
     f"## もののふ「{md_escape(name)}」({hero_id}) が旅立ちます\n\n"
     f"冒険は次回の毎日の実行から進みます。様子は{where}と、{hero_link(hero_id)}で見られます。"
@@ -316,7 +313,7 @@ def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, 
 
 
 def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) -> int:
-  """現役のもののふを全員進めて、状態と、ランキングの Gist を更新する（詳細と地図はサイトで見る）。
+  """現役のもののふを全員進めて、状態と、番付の Gist を更新する（詳細と絵図はサイトで見る）。
   1 人が失敗しても残りは続け、1 つでも失敗したら終了コード 1。"""
   heroes = [h for h in store.load_heroes() if h["active"]]
   if not heroes:
@@ -369,7 +366,7 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
       update_board(world, entries, today, dry_run, token)
     except (Exception, SystemExit) as e:  # noqa: BLE001
       failed += 1
-      common.warn(f"ランキングの Gist を更新できませんでした: {e}")
+      common.warn(f"番付の Gist を更新できませんでした: {e}")
   return 1 if failed else 0
 
 

@@ -51,7 +51,7 @@ def with_rares():
   world["season"]["rare_drops"] = True  # レアの配布を止めていても、しくみは確かめる
   world["items"]["x_epic"] = {
     "id": "x_epic",
-    "name": "試しの盾",
+    "name": "試しの鎧",
     "slot": "shield",
     "rarity": "epic",
     "def": 1,
@@ -459,7 +459,7 @@ class BattleAndItemTest(unittest.TestCase):
     day = G.Day(world, G.new_state(world), START, random.Random("t"))  # Lv.1 でも出る（レベルの制限はない）
     self.assertEqual({day.draw([["legendary", 1]], "edo") for _ in range(50)}, {"x_legend"})
     self.assertEqual({day.draw([["epic", 1]], "edo") for _ in range(50)}, {"x_epic"})
-    # 長野には epic・legendary がないので、1 つ下に落として rare（置き楯）が出る
+    # 長野には epic・legendary がないので、1 つ下に落として rare（大鎧）が出る
     self.assertEqual({day.draw([["legendary", 1]], "nagano") for _ in range(20)}, {"steel_shield"})
     self.assertEqual({day.draw([["rare", 1]], None) for _ in range(20)}, {None})  # 宝箱（町なし）では出ない
     commons = {day.draw([["common", 1]]) for _ in range(300)}
@@ -510,13 +510,13 @@ class BattleAndItemTest(unittest.TestCase):
     self.assertEqual(G.rarity_mark(world, "mythic"), "★★★★★")
 
   def test_four_slots_are_equipped(self):
-    self.assertEqual(W.SLOTS, ("weapon", "helmet", "shield", "accessory"))  # 鎧はない
+    self.assertEqual(W.SLOTS, ("weapon", "helmet", "shield", "accessory"))  # 鎧の部位の ID は shield のまま
     state = G.new_state(WORLD)
     state["inventory"] = {"iron_sword": 1, "iron_helm": 1, "iron_shield": 1, "lifeblood_charm": 1, "wooden_shield": 1}
     worn = G.equipment(WORLD, state)
     self.assertEqual(list(worn.values()), ["iron_sword", "iron_helm", "wooden_shield", "lifeblood_charm"])
     s = G.stats(WORLD, state)
-    self.assertEqual(s["def"], state["hero"]["base_def"] + 2 + 2)  # 筋兜 +2・手楯 +2（鉄楯は同じ 1 点で速 -1）
+    self.assertEqual(s["def"], state["hero"]["base_def"] + 2 + 2)  # 筋兜 +2・革胴 +2（鉄胴は同じ 1 点で速 -1）
     self.assertEqual(s["spd"], state["hero"]["base_spd"])
     self.assertEqual(s["atk"], state["hero"]["base_atk"] + 1)
     self.assertEqual(s["max_hp"], state["hero"]["max_hp"] + 5)  # 延命の御守は HP +5
@@ -528,9 +528,9 @@ class BattleAndItemTest(unittest.TestCase):
 
   def test_equipment_follows_the_item_points(self):
     state = G.new_state(WORLD)
-    state["inventory"] = {"wooden_shield": 1, "iron_shield": 1}  # どちらも 1 点。速 -1 のない手楯
+    state["inventory"] = {"wooden_shield": 1, "iron_shield": 1}  # どちらも 1 点。速 -1 のない革胴
     self.assertEqual(G.equipment(WORLD, state)["shield"], "wooden_shield")
-    for iid in ("wooden_helm", "iron_helm", "wooden_shield", "iron_shield"):  # 兜と盾はどれも 1 点
+    for iid in ("wooden_helm", "iron_helm", "wooden_shield", "iron_shield"):  # 兜と鎧はどれも 1 点
       self.assertEqual(G.item_score(WORLD, WORLD["items"][iid]), 1, iid)
     self.assertEqual(G.item_score(WORLD, WORLD["items"]["iron_axe"]), 1)  # 攻 +2・速 -2 は 2 − 1
 
@@ -1368,7 +1368,7 @@ class BattleDepthTest(unittest.TestCase):
     self.assertIn("wooden_helm", ids(state))
     self.assertNotIn("iron_helm", ids(state))
     guard = self.hero_state(gold=10000)
-    guard.update(personality="brave", trait="guard")  # 鉄壁 × 伸ばす: 防の上がる筋兜・鉄楯を買う
+    guard.update(personality="brave", trait="guard")  # 鉄壁 × 伸ばす: 防の上がる筋兜・鉄胴を買う
     guard["hero"]["potions"] = 3
     day_of(guard).shop("edo")
     self.assertIn("iron_helm", ids(guard))
@@ -2060,12 +2060,12 @@ class SkillTest(unittest.TestCase):
       self.assertEqual(G.load_state(WORLD, path, "h1")["inventory"], gear(("iron_sword", None)))
 
   def test_review_fixes_2(self):
-    # 依頼がないときは、対策スキルのために強い盾を蔵にしまわない
+    # 依頼がないときは、対策スキルのために強い鎧を蔵にしまわない
     state = with_personality("brave")
     world = copy.deepcopy(WORLD)
     world["items"]["x_leg_shield"] = {
       "id": "x_leg_shield",
-      "name": "伝説の盾",
+      "name": "伝説の鎧",
       "slot": "shield",
       "rarity": "legendary",
       "def": 1,

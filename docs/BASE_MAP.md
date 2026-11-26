@@ -1,6 +1,6 @@
 # ベースの地図
 
-世界の地図（サイトの地図のページ）の一番下に敷く、ベースの地図（地形の絵）について。
+世界の地図（サイトの絵図のページ）の一番下に敷く、ベースの地図（地形の絵）について。
 いまのベースの地図 `world/map-base.svg` は、日本（九州〜東北）の地形（[WORLD.md](WORLD.md)）をプログラム（`tools/worldgen/`）で生成して、ベクター（SVG）にしたもの。
 `python tools/worldgen/make.py` で、地形・陸路・航路・行動回数と一緒に作り直せる（同じ乱数の種なら同じ地図になる）。
 町・霊場の印、名前、道と行動回数、もののふの印（赤い丸）は、プログラムが毎日その上に重ねて描く。
@@ -49,5 +49,5 @@
 
    ```sh
    python -m unittest discover -s tests   # データのチェック（ファイルの大きさ・形式・道のつながりも確かめる）
-   python scripts/website.py /tmp/site    # サイトを書き出す（/tmp/site/map.html をブラウザで開いて確かめる）
+   python scripts/website.py /tmp/site    # サイトを書き出す（/tmp/site/index.html（絵図）をブラウザで開いて確かめる）
    ```

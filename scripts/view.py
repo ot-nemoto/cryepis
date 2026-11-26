@@ -1,5 +1,5 @@
-"""もののふの見た目（カードやページに出す文章・ランキングの並べ方）。状態を読むだけで、ファイルも API も触らない。
-rpg.py（ランキングの Gist・毎日の実行）と website.py（サイト）の両方から使う。"""
+"""もののふの見た目（カードやページに出す文章・番付の並べ方）。状態を読むだけで、ファイルも API も触らない。
+rpg.py（番付の Gist・毎日の実行）と website.py（サイト）の両方から使う。"""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import world as W
 
 # カードに優先して出す出来事（前ほど優先）
 HIGHLIGHTS = (
-  "★★「",  # レアのアイテム（★★「…」以上。ふつうの装備は ★「…」、依頼のレアリティは「★ 名前」で区別する）
+  "★★「",  # レアの武具（★★「…」以上。ふつうの装備は ★「…」、依頼のレアリティは「★ 名前」で区別する）
   "シーズン",
   "依頼達成",
   "力尽きた",
@@ -24,12 +24,12 @@ HIGHLIGHTS = (
   "依頼を受けた",
 )
 TEASERS = ("新しい依頼を探している…", "次の町を目指している…", "腕が鳴る…")
-RANKING_TOP = 10  # ランキングの順位表に出す人数（同じ順位でも 10 人で切る。並びは登録の早い順）
+RANKING_TOP = 10  # 番付の順位表に出す人数（同じ順位でも 10 人で切る。並びは登録の早い順）
 RANKINGS = (  # (見出し, カードでの見出し（None ならカードに出さない）, 並べる値, 表示する値, 単位)
   ("レベル", "Lv  ", lambda s: s["hero"]["level"], lambda s: s["hero"]["level"], ""),
   ("討伐数", "討伐", lambda s: s["season_stats"]["kills"], lambda s: s["season_stats"]["kills"], "体"),
   ("依頼達成", "依頼", lambda s: s["season_stats"]["quests_done"], lambda s: s["season_stats"]["quests_done"], "件"),
-  ("レアアイテム", None, lambda s: len(s["season_stats"]["rares"]), lambda s: len(s["season_stats"]["rares"]), "個"),
+  ("レア武具", None, lambda s: len(s["season_stats"]["rares"]), lambda s: len(s["season_stats"]["rares"]), "個"),
 )
 
 
@@ -212,7 +212,7 @@ def shorten(text: str, limit: int) -> str:
 
 
 def season_view(world: dict, state: dict, season: int) -> dict:
-  """ランキング用に、今のシーズンの状態を返す（まだ今のシーズンを進めていないもののふは最初の状態として扱う）。"""
+  """番付用に、今のシーズンの状態を返す（まだ今のシーズンを進めていないもののふは最初の状態として扱う）。"""
   if state["season"] == season:
     return state
   return {**state, "hero": game.new_hero(world), "season_stats": game.new_season_stats(), "season_day": 0}
@@ -231,7 +231,7 @@ def ranked(entries: list[tuple[dict, dict]], key) -> list[tuple[int, dict, dict]
 
 def news(entries: list[tuple[dict, dict]], today: date, name_width: int | None = None) -> list[str]:
   """今日の出来事（もののふごとに目立つものを 1 つ）。目立つ順。name_width を渡すと、名前をその表示幅に詰める
-  （ランキングのカードで、名前が長くても出来事が読めるように）。"""
+  （番付のカードで、名前が長くても出来事が読めるように）。"""
   picks = []
   for hero, state in entries:
     last = state["last"]

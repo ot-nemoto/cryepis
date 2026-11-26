@@ -27,7 +27,7 @@ class LoadersTest(unittest.TestCase):
     """(名前, パスを受け取って読む関数)。"""
     return (
       ("もののふ管理シート", store.load_heroes),
-      ("ランキングの Gist の記録", rpg.load_board),
+      ("番付の Gist の記録", rpg.load_board),
       ("口入れ屋の高札", store.load_guild),
       ("もののふの状態", lambda path: game.load_state(WORLD, path)),
       ("world/ のデータ", W.read_json),
@@ -44,7 +44,7 @@ class LoadersTest(unittest.TestCase):
   def test_missing_files(self):
     gone = self.path.with_name("gone.json")
     self.assertEqual(store.load_heroes(gone), [])  # まだ誰も登録していない
-    self.assertIsNone(rpg.load_board(gone))  # ランキングの Gist はこれから作る
+    self.assertIsNone(rpg.load_board(gone))  # 番付の Gist はこれから作る
     self.assertEqual(store.load_guild(gone), game.new_guild())  # 高札は貼り直す
     self.assertEqual(game.load_state(WORLD, gone, "h3", "アリス"), game.new_state(WORLD, "h3", "アリス"))
     with self.assertRaises(SystemExit) as cm:

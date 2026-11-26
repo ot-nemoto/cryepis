@@ -1,7 +1,7 @@
 name: Advance hero adventure (text RPG)
 
-# 現役のもののふ（.state/heroes.json）を全員 1 日分進め、ランキングの Gist を更新する（1 日の行動回数は決まっていて、出来事が乱数で決まる。世界は world/ のデータ）。
-# 状態は .state/heroes/<id>.json に書き、最後に master にコミットする（もののふの詳細と地図はサイトで見る。pages.yml が公開する）。もののふは new-game.yml で増やす。
+# 現役のもののふ（.state/heroes.json）を全員 1 日分進め、番付の Gist を更新する（1 日の行動回数は決まっていて、出来事が乱数で決まる。世界は world/ のデータ）。
+# 状態は .state/heroes/<id>.json に書き、最後に master にコミットする（もののふの詳細と絵図はサイトで見る。pages.yml が公開する）。もののふは new-game.yml で増やす。
 
 on:
   schedule:
