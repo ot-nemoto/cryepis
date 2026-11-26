@@ -1972,7 +1972,7 @@ class SkillTest(unittest.TestCase):
     self.assertIsNone(G.carried(common)[0]["skill"])
 
   def test_smith_skips_gear_with_a_preferred_skill(self):
-    brave = with_personality("brave")  # 武器の優先スキル: 会心の心得・連撃・修練
+    brave = with_personality("brave")  # 武器の優先スキル: 会心の心得・二の太刀・修練
     world = copy.deepcopy(WORLD)
     world["items"]["x_epic_sword"] = {
       "id": "x_epic_sword",
@@ -1989,7 +1989,7 @@ class SkillTest(unittest.TestCase):
     skills = {x["id"]: x["skill"] for x in G.carried(brave)}
     self.assertEqual(skills, {"x_epic_sword": "crit_art", "steel_sword": "hunter"})  # 優先スキルの剣は変えず、次の剣に
     self.assertNotIn("（優先スキル）", day.events[-1])
-    day.smithed = False  # 次の日: 優先スキルでない狩人の剣は、また付け直す
+    day.smithed = False  # 次の日: 優先スキルでない手柄の刀は、また付け直す
     with mock.patch.object(day.rng, "choice", return_value="combo"):
       day.smith(brave["place"])
     self.assertEqual({x["id"]: x["skill"] for x in G.carried(brave)}["steel_sword"], "combo")
@@ -2157,7 +2157,7 @@ class SkillTest(unittest.TestCase):
     G.finish_quest(WORLD, state["quest"], TOWN)
     gold = state["hero"]["gold"]
     day.report(state["quest"] | {"reward": {"exp": 0, "gold": 100, "item": None}})
-    self.assertEqual(state["hero"]["gold"], gold + 120)  # 狩人
+    self.assertEqual(state["hero"]["gold"], gold + 120)  # 手柄
 
 
 if __name__ == "__main__":
