@@ -60,7 +60,7 @@ class DisplayTest(unittest.TestCase):
     }
     state = game.new_state(world)
     state["inventory"] = {"iron_sword": 1, "wooden_helm": 1, "x_epic": 1, "steel_shield": 1}
-    self.assertEqual(view.gear_text(world, state), "★★★試しの兜/★★鋼鉄の盾/★鉄の剣")
+    self.assertEqual(view.gear_text(world, state), "★★★試しの兜/★★置き楯/★打刀")
 
   def test_quest_marks_are_not_rare_items(self):
     events = [
@@ -102,7 +102,7 @@ class DisplayTest(unittest.TestCase):
       }
     )
     text = view.build_text(WORLD, state)
-    self.assertIn("★★鋼鉄の剣", text)
+    self.assertIn("★★業物の太刀", text)
     self.assertIn("シーズン0: Lv.20", text)
 
   def test_board_links_to_the_site(self):

@@ -432,13 +432,13 @@ class BattleAndItemTest(unittest.TestCase):
   def test_best_item_is_equipped(self):
     state = G.new_state(WORLD)
     state.update(personality="diligent", trait="lucky")  # バランス: 同じ点数なら、マイナスのない安いもの
-    state["inventory"] = {"wooden_helm": 1, "iron_helm": 1, "steel_sword": 1}  # 兜はどちらも 1 点、木の兜のほうが安い
+    state["inventory"] = {"wooden_helm": 1, "iron_helm": 1, "steel_sword": 1}  # 兜はどちらも 1 点、陣笠のほうが安い
     worn = G.equipment(WORLD, state)
     self.assertEqual((worn["weapon"], worn["helmet"], worn["accessory"]), ("steel_sword", "wooden_helm", None))
     s = G.stats(WORLD, state)
     self.assertEqual(s["def"], state["hero"]["base_def"] + 1)
-    self.assertEqual(s["atk"], state["hero"]["base_atk"] + 2)  # 鋼鉄の剣は攻 +2
-    state.update(personality="brave", trait="guard")  # 鉄壁 × 伸ばす: 防の上がる鉄の兜（#244）
+    self.assertEqual(s["atk"], state["hero"]["base_atk"] + 2)  # 業物の太刀は攻 +2
+    state.update(personality="brave", trait="guard")  # 鉄壁 × 伸ばす: 防の上がる筋兜（#244）
     self.assertEqual(G.equipment(WORLD, state)["helmet"], "iron_helm")
     state.update(personality="careful", trait="strong")  # 怪力 × 補う: 不得意な HP。兜には HP の品がないのでバランス
     self.assertEqual(G.equipment(WORLD, state)["helmet"], "wooden_helm")
@@ -448,9 +448,9 @@ class BattleAndItemTest(unittest.TestCase):
     day = day_of(state)
     day.obtain("steel_sword", "宝箱から")
     self.assertEqual(state["season_stats"]["rares"], ["steel_sword"])
-    self.assertIn("★★「鋼鉄の剣」", day.events[0])
+    self.assertIn("★★「業物の太刀」", day.events[0])
     day.obtain("iron_sword", "宝箱から")
-    self.assertIn("宝箱から★「鉄の剣」を手に入れた", day.events[1])  # ふつうの装備も ★
+    self.assertIn("宝箱から★「打刀」を手に入れた", day.events[1])  # ふつうの装備も ★
     self.assertFalse(day.events[1].endswith("！"))  # ！はレアだけ
     self.assertIn("装備した", day.events[0])
 
@@ -459,7 +459,7 @@ class BattleAndItemTest(unittest.TestCase):
     day = G.Day(world, G.new_state(world), START, random.Random("t"))  # Lv.1 でも出る（レベルの制限はない）
     self.assertEqual({day.draw([["legendary", 1]], "edo") for _ in range(50)}, {"x_legend"})
     self.assertEqual({day.draw([["epic", 1]], "edo") for _ in range(50)}, {"x_epic"})
-    # 長野には epic・legendary がないので、1 つ下に落として rare（鋼鉄の盾）が出る
+    # 長野には epic・legendary がないので、1 つ下に落として rare（置き楯）が出る
     self.assertEqual({day.draw([["legendary", 1]], "nagano") for _ in range(20)}, {"steel_shield"})
     self.assertEqual({day.draw([["rare", 1]], None) for _ in range(20)}, {None})  # 宝箱（町なし）では出ない
     commons = {day.draw([["common", 1]]) for _ in range(300)}
@@ -516,19 +516,19 @@ class BattleAndItemTest(unittest.TestCase):
     worn = G.equipment(WORLD, state)
     self.assertEqual(list(worn.values()), ["iron_sword", "iron_helm", "wooden_shield", "lifeblood_charm"])
     s = G.stats(WORLD, state)
-    self.assertEqual(s["def"], state["hero"]["base_def"] + 2 + 2)  # 鉄の兜 +2・木の盾 +2（鉄の盾は同じ 1 点で速 -1）
+    self.assertEqual(s["def"], state["hero"]["base_def"] + 2 + 2)  # 筋兜 +2・手楯 +2（鉄楯は同じ 1 点で速 -1）
     self.assertEqual(s["spd"], state["hero"]["base_spd"])
     self.assertEqual(s["atk"], state["hero"]["base_atk"] + 1)
-    self.assertEqual(s["max_hp"], state["hero"]["max_hp"] + 5)  # 活血樹の護符は HP +5
+    self.assertEqual(s["max_hp"], state["hero"]["max_hp"] + 5)  # 延命の御守は HP +5
 
   def test_equal_points_prefer_items_without_minus(self):
     state = G.new_state(WORLD)
     state["inventory"] = {"iron_axe": 1, "iron_sword": 1}  # どちらも 1 点
-    self.assertEqual(G.equipment(WORLD, state)["weapon"], "iron_sword")  # 速 -2 のない鉄の剣
+    self.assertEqual(G.equipment(WORLD, state)["weapon"], "iron_sword")  # 速 -2 のない打刀
 
   def test_equipment_follows_the_item_points(self):
     state = G.new_state(WORLD)
-    state["inventory"] = {"wooden_shield": 1, "iron_shield": 1}  # どちらも 1 点。速 -1 のない木の盾
+    state["inventory"] = {"wooden_shield": 1, "iron_shield": 1}  # どちらも 1 点。速 -1 のない手楯
     self.assertEqual(G.equipment(WORLD, state)["shield"], "wooden_shield")
     for iid in ("wooden_helm", "iron_helm", "wooden_shield", "iron_shield"):  # 兜と盾はどれも 1 点
       self.assertEqual(G.item_score(WORLD, WORLD["items"][iid]), 1, iid)
@@ -1169,7 +1169,7 @@ class BattleDepthTest(unittest.TestCase):
       "x_lance": {"name": "騎兵の槍", "atk": 6, "element": "thunder"},
       "x_bow": {"name": "試しの弓", "atk": 1, "dex": 5},
       "x_flame": {"name": "試しの炎の剣", "atk": 2, "element": "flame", "rarity": "rare"},
-      "x_flame_charm": {"name": "試しの炎の護符", "slot": "accessory", "element": "flame", "rarity": "rare"},
+      "x_flame_charm": {"name": "試しの炎の御守", "slot": "accessory", "element": "flame", "rarity": "rare"},
     }
     items = {
       k: {"id": k, "slot": "weapon", "rarity": "common", "price": 100} | v for k, v in test_items.items()
@@ -1285,7 +1285,7 @@ class BattleDepthTest(unittest.TestCase):
 
   def test_accessory_element_goes_to_attacks_without_one(self):
     state = self.hero_state(base_atk=20)
-    state["inventory"] = {"iron_sword": 1, "crimson_grass_charm": 1}  # 紅蓮草の護符（炎）
+    state["inventory"] = {"iron_sword": 1, "crimson_grass_charm": 1}  # 不動の御守（炎）
     day = day_of(state)
     self.assertEqual(G.attack_element(WORLD, "iron_sword", "crimson_grass_charm"), "flame")  # 属性のない武器にも炎
     self.assertEqual(G.attack_element(WORLD, None, "crimson_grass_charm"), "flame")  # 素手でも
@@ -1304,20 +1304,20 @@ class BattleDepthTest(unittest.TestCase):
   def test_elemental_accessory_is_worn_unless_the_foe_resists(self):
     state = self.hero_state(base_atk=20)
     state["inventory"] = {"iron_sword": 1, "soaring_leaf_charm": 1, "crimson_grass_charm": 1}
-    # どちらも 1 点（紅蓮草の護符は炎属性の 1 点）。珍しい紅蓮草の護符がふだんの装飾品
+    # どちらも 1 点（不動の御守は炎属性の 1 点）。珍しい不動の御守がふだんの御守
     self.assertEqual(G.equipment(WORLD, state)["accessory"], "crimson_grass_charm")
     day = day_of(state)
     _, rate, _, acc = day.pick_weapon(self.monster(element="thunder"), 0)  # 雷の相手: 着けたまま弱点を突く
     self.assertEqual((acc, rate), ("crimson_grass_charm", WORLD["season"]["element_rates"]["strong"]))
-    _, rate, held, acc = day.pick_weapon(self.monster(element="ice"), 0)  # 氷には炎が苦手 → 翔天葉の護符に着け替える
+    _, rate, held, acc = day.pick_weapon(self.monster(element="ice"), 0)  # 氷には炎が苦手 → 韋駄天の御守に着け替える
     self.assertEqual((acc, rate), ("soaring_leaf_charm", 1.0))
     self.assertEqual(held["spd"], state["hero"]["base_spd"] + 2)
-    _, rate, _, acc = day.pick_weapon(self.monster(), 0)  # 属性のない相手は、ふだんの装飾品のまま
+    _, rate, _, acc = day.pick_weapon(self.monster(), 0)  # 属性のない相手は、ふだんの御守のまま
     self.assertEqual((acc, rate), ("crimson_grass_charm", 1.0))
 
   def test_elemental_accessory_is_swapped_in_against_its_weak_foe(self):
     state = self.hero_state(base_atk=20)
-    state["inventory"] = {"iron_sword": 1, "silkvine_charm": 1, "x_flame_charm": 1}  # 試しの炎の護符は 1 点の ★
+    state["inventory"] = {"iron_sword": 1, "silkvine_charm": 1, "x_flame_charm": 1}  # 試しの炎の御守は 1 点の ★
     WORLD["items"]["x_flame_charm"].update(rarity="common", price=1000)  # setUp で毎回作り直す仮の品
     state.update(personality="diligent", trait="lucky")
     self.assertEqual(
@@ -1326,34 +1326,34 @@ class BattleDepthTest(unittest.TestCase):
     day = day_of(state)
     _, rate, held, acc = day.pick_weapon(self.monster(element="thunder"), 0)  # 雷の相手: その戦いだけ着け替える
     self.assertEqual((acc, rate), ("x_flame_charm", WORLD["season"]["element_rates"]["strong"]))
-    self.assertEqual(held["dex"], state["hero"]["base_dex"])  # その戦いは糸紡蔓の護符の器 +5 がない
+    self.assertEqual(held["dex"], state["hero"]["base_dex"])  # その戦いは千手の御守の器 +5 がない
     day.battle(self.monster(element="thunder", hp=1))
-    self.assertIn("（試しの炎の護符で弱点を突いた）", day.events[-1])
-    for enemy in ("ice", "flame", None):  # 弱点を突けない相手では、ふだんの装飾品のまま
+    self.assertIn("（試しの炎の御守で弱点を突いた）", day.events[-1])
+    for enemy in ("ice", "flame", None):  # 弱点を突けない相手では、ふだんの御守のまま
       _, rate, _, acc = day.pick_weapon(self.monster(element=enemy), 0)
       self.assertEqual((acc, rate), ("silkvine_charm", 1.0), enemy)
 
   def test_elemental_accessory_stays_on_against_neutral_foes(self):
     state = self.hero_state(base_atk=20)
-    state["inventory"] = {"iron_sword": 1, "silkvine_charm": 1, "crimson_grass_charm": 1}  # 器 +5 の護符もある
+    state["inventory"] = {"iron_sword": 1, "silkvine_charm": 1, "crimson_grass_charm": 1}  # 器 +5 の御守もある
     day = day_of(state)
-    for enemy in (None, "flame"):  # 苦手でない相手なら、器 +5 のほうが少し効いても、ふだんの紅蓮草の護符のまま
+    for enemy in (None, "flame"):  # 苦手でない相手なら、器 +5 のほうが少し効いても、ふだんの不動の御守のまま
       self.assertEqual(day.pick_weapon(self.monster(element=enemy), 0)[3], "crimson_grass_charm", enemy)
 
   def test_weak_spot_note_names_only_what_carried_the_element(self):
     state = self.hero_state(base_atk=20)
-    state["inventory"] = {"x_lance": 1, "soaring_leaf_charm": 1, "crimson_grass_charm": 1}  # 雷の武器と炎の装飾品
+    state["inventory"] = {"x_lance": 1, "soaring_leaf_charm": 1, "crimson_grass_charm": 1}  # 雷の武器と炎の御守
     day = day_of(state)
-    # 氷: 雷の槍で突く。炎の護符は氷に苦手なので、翔天葉の護符（速 +2 で 2 回攻撃になる）に着け替える
+    # 氷: 雷の槍で突く。炎の御守は氷に苦手なので、韋駄天の御守（速 +2 で 2 回攻撃になる）に着け替える
     weapon, _, _, acc = day.pick_weapon(self.monster(element="ice", spd=4), 0)
     self.assertEqual((weapon, acc), ("x_lance", "soaring_leaf_charm"))
     day.battle(self.monster(element="ice", spd=4, hp=1))
-    self.assertNotIn("翔天葉の護符で弱点", day.events[-1])  # 属性のない護符の名前は出さない
+    self.assertNotIn("韋駄天の御守で弱点", day.events[-1])  # 属性のない御守の名前は出さない
     self.assertIn("弱点を突いた", day.events[-1])
 
   def test_elemental_accessory_is_taken_off_against_a_strong_foe(self):
     state = self.hero_state(base_atk=20)
-    state["inventory"] = {"crimson_grass_charm": 1}  # 装飾品は紅蓮草の護符だけ
+    state["inventory"] = {"crimson_grass_charm": 1}  # 御守は不動の御守だけ
     day = day_of(state)
     _, rate, _, acc = day.pick_weapon(self.monster(element="ice"), 0)  # 氷には炎が苦手 → 外して戦う
     self.assertEqual((acc, rate), (None, 1.0))
@@ -1364,11 +1364,11 @@ class BattleDepthTest(unittest.TestCase):
     state = self.hero_state(gold=10000)
     state.update(personality="diligent", trait="lucky")  # バランス
     state["hero"]["potions"] = 3
-    day_of(state).shop("edo")  # 兜はどちらも 1 点。安い木の兜だけを買い、鉄の兜は買わない（買い直さない。#244）
+    day_of(state).shop("edo")  # 兜はどちらも 1 点。安い陣笠だけを買い、筋兜は買わない（買い直さない。#244）
     self.assertIn("wooden_helm", ids(state))
     self.assertNotIn("iron_helm", ids(state))
     guard = self.hero_state(gold=10000)
-    guard.update(personality="brave", trait="guard")  # 鉄壁 × 伸ばす: 防の上がる鉄の兜・鉄の盾を買う
+    guard.update(personality="brave", trait="guard")  # 鉄壁 × 伸ばす: 防の上がる筋兜・鉄楯を買う
     guard["hero"]["potions"] = 3
     day_of(guard).shop("edo")
     self.assertIn("iron_helm", ids(guard))
@@ -1376,26 +1376,26 @@ class BattleDepthTest(unittest.TestCase):
     self.assertNotIn("wooden_helm", ids(guard))
     owner = self.hero_state(
       gold=10000
-    )  # 同じ強さの品は、安くても買い直さない（宝箱で鉄の兜を拾っていても、木の兜を買わない）
+    )  # 同じ強さの品は、安くても買い直さない（宝箱で筋兜を拾っていても、陣笠を買わない）
     owner.update(personality="diligent", trait="lucky")
     owner["hero"]["potions"] = 3
     owner["inventory"] = {"iron_helm": 1}
     day_of(owner).shop("edo")
     self.assertNotIn("wooden_helm", ids(owner))
-    poor = self.hero_state(gold=300)  # 鉄の兜（400文）は買えないので、次の木の兜（240文）
+    poor = self.hero_state(gold=300)  # 筋兜（400文）は買えないので、次の陣笠（240文）
     poor.update(personality="brave", trait="guard")
     poor["hero"]["potions"] = 3
     poor["inventory"] = {"iron_sword": 1, "iron_shield": 1, "soaring_leaf_charm": 1}  # 兜だけがない
     day_of(poor).shop("edo")
     self.assertIn("wooden_helm", ids(poor))
-    poor["hero"]["gold"] = 10000  # お金ができたら、防の上がる鉄の兜に買い替える
+    poor["hero"]["gold"] = 10000  # お金ができたら、防の上がる筋兜に買い替える
     day_of(poor).shop("edo")
     self.assertEqual(G.equipment(WORLD, poor)["helmet"], "iron_helm")
     rich = self.hero_state(gold=10000)
     rich["hero"]["potions"] = 3
     day_of(rich).shop("edo")
     charms = [i for i in ids(rich) if WORLD["items"][i]["slot"] == "accessory"]
-    self.assertEqual(len(charms), 1)  # 同じ点数・同じ値段の護符は 1 つだけ買う
+    self.assertEqual(len(charms), 1)  # 同じ点数・同じ値段の御守は 1 つだけ買う
 
   def test_shop_buys_weapons_with_new_elements(self):
     state = self.hero_state(gold=10000)
@@ -2031,7 +2031,7 @@ class SkillTest(unittest.TestCase):
 
   def test_review_fixes(self):
     # ふだん着ける装備は ★ の多いもの。★ と点数が同じなら、性格の優先スキルの付いたもの
-    state = with_personality("thrifty")  # 装飾品の優先スキル: 値切り
+    state = with_personality("thrifty")  # 御守の優先スキル: 値切り
     state["inventory"] = gear(("crimson_grass_charm", None), ("lifeblood_charm", "haggle"))
     self.assertEqual(G.worn(WORLD, state)["accessory"]["id"], "crimson_grass_charm")  # ★★ を先に
     state["inventory"] = gear(("silkvine_charm", None), ("silkvine_charm", "haggle"))

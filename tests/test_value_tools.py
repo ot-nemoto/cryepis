@@ -168,7 +168,7 @@ class BattleSimToolTest(unittest.TestCase):
     _, out = run(
       B.main, "-n", "10", "--trait", "swift", "--gear", "iron_sword,iron_helm", "--potions", "1", "--level", "12"
     )
-    self.assertIn("装備: 鉄の剣・", out)
+    self.assertIn("装備: 打刀・", out)
     self.assertIn("丸薬 1 個", out)
     self.assertIn("Lv12", out)
     self.assertEqual(out.count("Lv12"), 1)  # 特性は 1 つだけ

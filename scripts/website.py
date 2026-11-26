@@ -476,7 +476,7 @@ def build_towns(world: dict) -> str:
       return [("口入れ屋の規模", size)] + [
         (k, "-") for k in ("依頼の報酬で出るレア", "店の品ぞろえ", "道（行き先と行動回数）")
       ]
-    # 店の品ぞろえは、アイテムの種類（武器・兜・盾・装飾品）の順に、同じ種類なら値段の高い順
+    # 店の品ぞろえは、アイテムの種類（武器・兜・盾・御守）の順に、同じ種類なら値段の高い順
     shop = sorted(
       places[town].get("shop", []), key=lambda i: (W.SLOTS.index(items[i]["slot"]), -items[i].get("price", 0), i)
     )
@@ -549,7 +549,7 @@ def item_rows(world: dict) -> dict[str, list[dict]]:
   return rows
 
 
-SLOT_EMOJI = {"weapon": "⚔️", "helmet": "🪖", "shield": "🛡️", "accessory": "💍"}  # 部位の名前の先頭に付ける
+SLOT_EMOJI = {"weapon": "⚔️", "helmet": "🪖", "shield": "🛡️", "accessory": "📿"}  # 部位の名前の先頭に付ける
 ITEM_STATS = (("hp", "HP"), ("atk", "攻"), ("def", "防"), ("spd", "速"), ("dex", "器"))  # アイテムページの能力の列
 
 
@@ -935,7 +935,7 @@ def skill_cards(world: dict, table) -> list[tuple[str, str]]:
       (
         "持てる数と蔵",
         table(("部位", "持てる数"), [(escape(W.SLOT_NAMES[s]), f"{carry[s]}") for s in W.SLOTS])
-        + '<p class="note">着けるのは部位ごとに 1 つ（武器と装飾品は、戦いのたびに持っている中から選ぶ）。'
+        + '<p class="note">着けるのは部位ごとに 1 つ（武器と御守は、戦いのたびに持っている中から選ぶ）。'
         "持てる数を超えた分は、町の口入れ屋の蔵に預ける（どの町でも出し入れでき、依頼に合わせて入れ替える。"
         "依頼の物の怪の性質に効くスキル → 弱点を突ける属性 → 性格の優先スキル → ★ の多い装備、の順に持つ）。持ち物と蔵はシーズンをまたいで残る</p>",
       )
@@ -1112,7 +1112,7 @@ def build_guide(world: dict) -> str:
       "武器の持ち替え",
       "もののふは戦いのたびに、持ち物の中からいちばん効く武器（属性・2 回攻撃も考える）に持ち替える。"
       "苦手な属性の武器しかなく、持たないほうが効くときは、武器を持たずに戦う。"
-      "装飾品は、弱点を突ける属性のものを持っていれば、その戦いだけ着け替える（苦手な属性なら外す）",
+      "御守は、弱点を突ける属性のものを持っていれば、その戦いだけ着け替える（苦手な属性なら外す）",
     ),
     *(
       [
@@ -1209,7 +1209,7 @@ def build_guide(world: dict) -> str:
         + element_triangle(world)
         + table(("属性", "鉱石"), element_rows)
         + f'<p class="note">強い相手を攻めるとダメージ {rates["strong"]} 倍、苦手な相手だと {rates["weak"]} 倍。'
-        "属性は物の怪と一部の武器・装飾品にある（属性のない物の怪・武器もある）。装飾品の属性は、武器に属性がないとき攻撃に付く。"
+        "属性は物の怪と一部の武器・御守にある（属性のない物の怪・武器もある）。御守の属性は、武器に属性がないとき攻撃に付く。"
         "属性の武器は、その属性の力を持つ鉱石から作られる</p>",
       )
     )
@@ -1222,7 +1222,7 @@ def build_guide(world: dict) -> str:
     (
       escape(game.rarity_mark(world, r)),
       escape(f"{points['max'][r]:g} 点まで"),
-      escape("なし" if r == W.COMMON else "付くことがある（武器・装飾品）"),
+      escape("なし" if r == W.COMMON else "付くことがある（武器・御守）"),
       escape(skill_slots(world, r)),
     )
     for r in world["rarities"]
