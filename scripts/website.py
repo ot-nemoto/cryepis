@@ -1329,6 +1329,14 @@ def check_out(out: Path) -> None:
     )
 
 
+# 前の地図のページ（map.html）。絵図を最初のページにしたので（#261）、index.html へ移すだけのページ
+MOVED_MAP = (
+  '<!doctype html>\n<html lang="ja"><head><meta charset="utf-8">'
+  '<meta http-equiv="refresh" content="0;url=index.html"><title>絵図 | ' + TITLE + "</title></head>"
+  '<body><p><a href="index.html">絵図</a>へ移りました</p></body></html>\n'
+)
+
+
 def write_site(
   world: dict,
   entries: list[tuple[dict, dict]],
@@ -1345,6 +1353,7 @@ def write_site(
   (out / "heroes").mkdir(parents=True)
   files = {
     "index.html": build_map(world, entries, today),
+    "map.html": MOVED_MAP,  # 前の地図のページ（ブックマーク・外からのリンク）は、絵図（index.html）へ移す
     "ranking.html": build_ranking(world, entries, today),
     "heroes.html": build_heroes(world, entries, today),
     "guild.html": build_guild(world, entries, today, guild),

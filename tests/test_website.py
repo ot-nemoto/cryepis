@@ -59,6 +59,7 @@ class SiteTest(unittest.TestCase):
       rels,
       {
         "index.html",
+        "map.html",
         "ranking.html",
         "heroes.html",
         "guild.html",
@@ -308,7 +309,12 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<a href="index.html" class="on">絵図</a><a href="ranking.html">番付</a>', html)  # メニューの最初
     self.assertIn("<h2>世界の絵図</h2>", html)
     self.assertNotIn("ホーム", html)
-    self.assertNotIn("map.html", html)
+    self.assertNotIn("map.html", html)  # メニューに地図のページはない
+
+  def test_old_map_page_moves_to_the_first_page(self):
+    """前の地図のページ（map.html）は、絵図（index.html）へ移すだけのページにする（ブックマークを 404 にしない）。"""
+    self.assertIn('<meta http-equiv="refresh" content="0;url=index.html">', website.MOVED_MAP)
+    self.assertIn('<a href="index.html">絵図</a>', website.MOVED_MAP)
 
   def test_heroes_page(self):
     entries, _, today = party(2, 2)
