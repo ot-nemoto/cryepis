@@ -406,7 +406,7 @@ def gear_key(world: dict, item: dict, state: dict | None = None) -> tuple:
 
 def worn(world: dict, state: dict) -> dict[str, dict | None]:
   """部位ごとに、ふだん着ける装備（なければ None）。★ の多いもの → 点数の高いもの（gear_key）、すべて同じなら
-  性格の優先スキルの付いたもの → ID の順。戦いの武器と装飾品は、戦いごとに選び直す（pick_gear）。"""
+  性格の優先スキルの付いたもの → ID の順。戦いの武器と御守は、戦いごとに選び直す（pick_gear）。"""
   best: dict[str, dict | None] = {slot: None for slot in W.SLOTS}
   best_key: dict[str, tuple] = {}
   for x in sorted(carried(state), key=lambda x: (x["id"], x.get("skill") or "")):
@@ -441,8 +441,8 @@ def stats(world: dict, state: dict, held: dict[str, str | None] | None = None) -
 
 
 def attack_element(world: dict, weapon: str | None, accessory: str | None) -> str | None:
-  """武器 weapon（None は素手）と装飾品 accessory で攻めるときの属性。
-  武器に属性がなければ、装飾品の属性（なければ None）。"""
+  """武器 weapon（None は素手）と御守 accessory で攻めるときの属性。
+  武器に属性がなければ、御守の属性（なければ None）。"""
   items = world["items"]
   if weapon and items[weapon].get("element"):
     return items[weapon]["element"]
@@ -928,26 +928,26 @@ class Day:
     return math.ceil(base * cut) if cut else base
 
   def pick_weapon(self, monster: dict, guard: int) -> tuple[str | None, float, dict[str, int], str | None]:
-    """pick_gear の、武器と装飾品を ID にしたもの。"""
+    """pick_gear の、武器と御守を ID にしたもの。"""
     w, rate, s, acc = self.pick_gear(monster, guard)
     return (w["id"] if w else None), rate, s, (acc["id"] if acc else None)
 
   def pick_gear(self, monster: dict, guard: int) -> tuple[dict | None, float, dict[str, int], dict | None]:
     """この物の怪に、1 回の攻撃の番でいちばんダメージの大きい武器（持ち物から持ち替える）と、属性の倍率と、
     その武器を持ったときの能力（stats。攻撃・素早さだけでなく、武器の HP・防御・器用さも持ち替えたものになる）と、
-    その戦いで着ける装飾品。ダメージは、物の怪の守り（性質で変わったあと）・属性・2 回攻撃・会心の平均まで考える
+    その戦いで着ける御守。ダメージは、物の怪の守り（性質で変わったあと）・属性・2 回攻撃・会心の平均まで考える
     （武器のスキルの鎧通し・弱点突き・連撃・会心の心得も入れる）。
     武器を持たない（None）ほうが効くとき（苦手な属性の武器しかないとき）は、武器を持たずに戦う。
-    攻める属性は武器の属性。武器に属性がなければ（素手も）、装飾品の属性（attack_element）。
-    装飾品は、ふだんの装飾品（worn）のまま戦う。ただし、物の怪の弱点を突ける属性の装飾品か、物の怪の性質に効くスキル（対策）の
-    装飾品を持っていれば、その戦いだけ着け替える。ふだんの装飾品の属性が物の怪に苦手なときは、属性のない装飾品に着け替えるか、外す。
-    候補の中からどれにするかは、物の怪の性質に効くスキルの数（#234）→ 与えるダメージで決める（同じなら、ふだんの装飾品・武器）。"""
+    攻める属性は武器の属性。武器に属性がなければ（素手も）、御守の属性（attack_element）。
+    御守は、ふだんの御守（worn）のまま戦う。ただし、物の怪の弱点を突ける属性の御守か、物の怪の性質に効くスキル（対策）の
+    御守を持っていれば、その戦いだけ着け替える。ふだんの御守の属性が物の怪に苦手なときは、属性のない御守に着け替えるか、外す。
+    候補の中からどれにするかは、物の怪の性質に効くスキルの数（#234）→ 与えるダメージで決める（同じなら、ふだんの御守・武器）。"""
     items, crit = self.world["items"], self.cfg["critical"]
     usual = worn(self.world, self.state)
     usual_acc, usual_wpn, enemy = usual["accessory"], usual["weapon"], monster.get("element")
     mine = sorted(carried(self.state), key=lambda x: (x["id"], x.get("skill") or ""))
     accessories = [usual_acc]
-    for x in mine:  # 弱点を突ける属性・性質に効くスキルの装飾品
+    for x in mine:  # 弱点を突ける属性・性質に効くスキルの御守
       if items[x["id"]]["slot"] == "accessory" and x is not usual_acc:
         if element_rate(self.world, items[x["id"]].get("element"), enemy) > 1 or self.counters(x, monster):
           accessories.append(x)
@@ -990,7 +990,7 @@ class Day:
     物の怪の性質（trait）・属性の相性（武器の属性と物の怪の属性）・素早さで戦い方が変わる。
     素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する（性質「先手」は、素早さに関係なく物の怪が先）。
     もののふは戦いのたびに、持ち物の中からいちばん効く武器に持ち替える（能力は、持ち替えた武器のもの）。
-    装備のスキル（#233）: 武器と装飾品はその戦いで選んだもの、兜と盾はふだんのもので効く。"""
+    装備のスキル（#233）: 武器と御守はその戦いで選んだもの、兜と盾はふだんのもので効く。"""
     e = W.trait_effect(monster)  # 凶暴・硬い・群れで変わる値
     hp, atk, guard, hits = e["hp"], e["atk"], e["guard"], e["hits"]
     weapon, rate, s, accessory = self.pick_gear(monster, guard)
@@ -1056,7 +1056,7 @@ class Day:
           below = personality(self.world, self.state).get("potion_below")
           if below is None and hero["hp"] <= 0 and hero["potions"]:  # 性格がなければ、倒れる前に丸薬を使う
             self.spend_potion()
-            # 回復の量は、ふだんの装備の最大 HP で決める（持ち替えた武器・装飾品の HP は、その戦いだけ）
+            # 回復の量は、ふだんの装備の最大 HP で決める（持ち替えた武器・御守の HP は、その戦いだけ）
             hero["hp"] = max(1, int(self.stats["max_hp"] * (sk("revive_art") or self.cfg["potion"]["heal_rate"])))
             continue
           if hero["hp"] <= 0:  # 性格があれば、HP が 0 になったら丸薬があっても力尽きる
@@ -1082,7 +1082,7 @@ class Day:
     if rate > 1:
       if weapon and items[weapon["id"]].get("element"):  # 弱点を突いたのは武器の属性
         note = f"（{items[weapon['id']]['name']}で弱点を突いた）" if weapon["id"] != usual_wpn else "（弱点を突いた）"
-      elif accessory and accessory["id"] != equipment(self.world, self.state)["accessory"]:  # 着け替えた装飾品の属性
+      elif accessory and accessory["id"] != equipment(self.world, self.state)["accessory"]:  # 着け替えた御守の属性
         note = f"（{items[accessory['id']]['name']}で弱点を突いた）"
       else:
         note = "（弱点を突いた）"
@@ -1244,7 +1244,7 @@ class Day:
   def arrange(self, town: str, quest: dict | None = None) -> None:
     """町の口入れ屋で、持ち物と蔵を入れ替える（部位ごとに carry の数まで持ち、残りは蔵。#232・#234）。
     持つ順は carry_key（依頼の物の怪に効く対策スキル → 性格の欲しいスキル → 装備の強さ）。
-    2 つ以上持てる部位（武器・装飾品）は、いちばん強い装備（ふだん着けるもの）を必ず持つ。"""
+    2 つ以上持てる部位（武器・御守）は、いちばん強い装備（ふだん着けるもの）を必ず持つ。"""
     state, items = self.state, self.world["items"]
     foes = self.quest_foes(quest)
     pool = owned(state)
@@ -1273,7 +1273,7 @@ class Day:
 
   def carry_key(self, x: dict, foes: list[dict] | None = None) -> tuple:
     """持っておく装備の順（大きいほうを先に持つ）: 依頼の物の怪（foes）に効く対策スキルの割合（依頼があるときだけ）
-    → 弱点を突ける属性の割合（依頼がなければ開放した道の物の怪で見る）（属性の武器・装飾品を蔵にしまい込まない）→ 性格の優先スキル
+    → 弱点を突ける属性の割合（依頼がなければ開放した道の物の怪で見る）（属性の武器・御守を蔵にしまい込まない）→ 性格の優先スキル
     （prefer の前のほうが先）→ 装備の優先順（gear_key）→ ID。"""
     sk = (self.world.get("skills") or {}).get(x.get("skill"))
     hit = counter_share(self.world, sk, foes) if sk and foes else 0.0  # 対策は、依頼の物の怪があるときだけ

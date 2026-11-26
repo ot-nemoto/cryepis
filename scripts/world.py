@@ -24,9 +24,9 @@ import common
 
 WORLD_DIR = common.ROOT / "world"
 SLOTS = ("weapon", "helmet", "shield", "accessory")  # 鎧はない
-# 属性を書ける部位（武器の属性で攻める。装飾品の属性は、武器に属性がないとき攻撃に付く）
+# 属性を書ける部位（武器の属性で攻める。御守の属性は、武器に属性がないとき攻撃に付く）
 ELEMENT_SLOTS = ("weapon", "accessory")
-SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "shield": "盾", "accessory": "装飾品"}
+SLOT_NAMES = {"weapon": "武器", "helmet": "兜", "shield": "盾", "accessory": "御守"}
 PLACE_TYPES = ("town", "dungeon")
 # 道の種類: 陸路・航路は町どうしを結び、もののふが通る。霊場への道は地図に描くだけ（第 2 段階で使う）
 ROAD_KINDS = ("land", "sea", "trail")
@@ -944,7 +944,7 @@ def _check_items(c: _Check):
     if "element" in it and (
       it.get("slot") not in ELEMENT_SLOTS or not isinstance(it["element"], str) or it["element"] not in elements
     ):
-      err(f"{where}: element は武器と装飾品だけに、{'/'.join(elements)} のどれかで書いてください")
+      err(f"{where}: element は武器と御守だけに、{'/'.join(elements)} のどれかで書いてください")
     if "drop_level" in it:
       err(f"{where}: drop_level はもう使いません（出やすさはドロップ表の重みで決める）")
     towns = it.get("towns")
