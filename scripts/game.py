@@ -1369,7 +1369,7 @@ class Day:
     bonus = (
       self.skill("hunter") if quest["type"] == "hunt" else self.skill("escort") if quest["type"] == "deliver" else None
     )
-    if bonus:  # 手柄・用心棒: 報酬のお金が増える
+    if bonus:  # 手柄・荷守り: 報酬のお金が増える
       reward["gold"] = W.half_up(reward["gold"] * bonus)
     self.hero["gold"] += reward["gold"]
     self.state["season_stats"]["quests_done"] += 1

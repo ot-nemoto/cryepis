@@ -31,7 +31,7 @@
   {"id": "endure", "name": "踏ん張り", "slot": "shield", "kind": "guard", "text": "倒れる一撃を 1 度だけ耐える", "logic": "1 日 1 回、HP が 0 以下になる一撃を HP 1 で耐える"},
   {"id": "second_wind", "name": "息継ぎ", "slot": "shield", "kind": "heal", "text": "連戦の合間に息を整える", "logic": "討伐の連戦で、1 体倒すごとに最大 HP の value 回復", "value": 0.05},
   {"id": "escape", "name": "逃げ足", "slot": "shield", "kind": "travel", "text": "強い物の怪から逃げる", "logic": "散策の強い物の怪と会ったら、value の確率で逃げる", "value": 0.5},
-  {"id": "escort", "name": "用心棒", "slot": "shield", "kind": "money", "text": "荷を守って報酬が増える", "logic": "配達の依頼の報酬 × value", "value": 1.2},
+  {"id": "escort", "name": "荷守り", "slot": "shield", "kind": "money", "text": "荷を守って報酬が増える", "logic": "配達の依頼の報酬 × value", "value": 1.2},
   {"id": "hardship", "name": "耐えの修行", "slot": "shield", "kind": "growth", "text": "苦しい戦いから学ぶ", "logic": "HP を半分以上削られて勝った戦いは、経験値 × value", "value": 1.2},
   {"id": "anti_theft", "name": "盗みよけ", "slot": "accessory", "kind": "counter", "text": "お金を盗まれない", "logic": "盗みの確率 40% を 0% にする", "counter": {"trait": "thief"}},
   {"id": "first_move", "name": "先駆け", "slot": "accessory", "kind": "attack", "text": "最初に必ず攻撃する", "logic": "戦いの最初の番だけ、もののふが先に攻撃する"},
