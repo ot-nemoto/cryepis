@@ -137,6 +137,7 @@ def new_state(world: dict, hero_id: str = "h1", name: str = "もののふ") -> d
     "last_date": None,
     "hero": new_hero(world),
     "inventory": [],  # 持っている装備（1 つずつ {"id": 武具, "skill": スキル}。部位ごとに carry の数まで）
+    "stones": {},  # 地方ごとの原石の個数
     "storage": [],  # 蔵（どの町の口入れ屋でも出し入れできる。持てる数を超えた分）
     "place": town,
     "home_town": town,
@@ -191,7 +192,11 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "もの
   if quest and not quest_ok(world, quest):
     state["quest"] = None
   if state["quest"]:
-    renew_quest_texts(world, state["quest"])
+    quest = state["quest"]
+    renew_quest_texts(world, quest)
+    rank = quest.get("rank", 0)
+    if isinstance(quest.get("reward"), dict) and isinstance(rank, int) and 1 <= rank <= len(world["quest_ranks"]):
+      quest["reward"]["item"] = None if quest.get("party") else world["quest_ranks"][rank - 1]["item"]
   stay = state.get("stay")
   try:  # 今の町に着いた日（壊れていたら数え直す）
     ok = isinstance(stay, dict) and stay.get("town") == state["place"] and bool(date.fromisoformat(stay["since"]))
@@ -708,7 +713,7 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
       "gold": round(
         base["gold"] * cost * cfg["reward"] * (base.get("deliver_rate", 1) if quest["type"] == "deliver" else 1)
       ),
-      "item": cfg["item"],
+      "item": None if quest.get("party") else cfg["item"],
     },
   )
   return quest
@@ -1262,7 +1267,7 @@ class Day:
 
   # 武具 -------------------------------------------------------------------------
   def draw(self, table: list | None, town: str | None = None) -> str | None:
-    """ドロップ表から抽選する（特性「強運」なら、何も出なかったときに 1 度だけ引き直す）。"""
+    """ドロップ表から抽選する（特性「強運」なら、外れたときに 1 度だけ引き直す）。"""
     got = self.draw_once(table, town)
     if got is None and table and hero_trait(self.world, self.state).get("luck"):
       got = self.draw_once(table, town)
@@ -1271,7 +1276,7 @@ class Day:
   def draw_once(self, table: list | None, town: str | None = None) -> str | None:
     """ドロップ表から抽選する。珍しさが当たったら、その珍しさの武具から均等に選ぶ。
     common は、開放した地域のもの（開放した町の店で売っている品）だけ。
-    レア（common 以外）は、その町（town。依頼を出した町）の依頼で出るもの（items.json の towns）だけ。
+    レア（common 以外）は、指定した町に対応する武具（items.json の towns）だけ。
     season.json の rare_drops が false なら、レアが当たっても何も出ない（配布を止めている）。
     その町にない珍しさが当たったら、1 つ下の珍しさに落として選び直す（どの町にも rare は必ずある）。"""
     if not table:
@@ -1299,19 +1304,29 @@ class Day:
         return None  # rare もない（宝箱など、町のない抽選）なら何も出ない
     return None
 
-  def obtain(self, iid: str, source: str) -> None:
+  def random_item_skill(self, iid: str) -> str:
+    slot = self.world["items"][iid]["slot"]
+    return self.rng.choice(sorted(sid for sid, sk in self.world["skills"].items() if sk["slot"] == slot))
+
+  def obtain(self, iid: str, source: str, skill: str | None = None) -> None:
     item = self.world["items"][iid]
     before = equipment(self.world, self.state)[item["slot"]]
-    carried(self.state).append(
-      {"id": iid, "skill": None}
-    )  # 手に入れた装備にスキルはない（持てる数を超えたら、町で蔵へ）
+    carried(self.state).append({"id": iid, "skill": skill})
     mark = rarity_mark(self.world, item["rarity"])
     if item["rarity"] != "common":
       self.state["season_stats"]["rares"].append(iid)
     text = f"{source}{mark}「{item['name']}」を手に入れた"
     if equipment(self.world, self.state)[item["slot"]] == iid and before != iid:
       text += "（装備した）"
+    if skill:
+      text += f"〔{self.world['skills'][skill]['name']}〕"
     self.log(text + ("！" if item["rarity"] != W.COMMON else ""))
+
+  def obtain_stones(self, town: str, count: int, source: str) -> None:
+    area = self.world["places"][town]["area"]
+    stones = self.state.setdefault("stones", {})
+    stones[area] = stones.get(area, 0) + count
+    self.log(f"{source}{self.world['areas'][area]['name']}の原石を {count} つ手に入れた")
 
   # 町 --------------------------------------------------------------------------------
   def visit_town(self, town: str) -> None:
@@ -1437,8 +1452,7 @@ class Day:
       return
     self.hero["gold"] -= cost
     self.smithed = True
-    slot = items[target["id"]]["slot"]
-    target["skill"] = self.rng.choice(sorted(sid for sid, sk in skills.items() if sk["slot"] == slot))
+    target["skill"] = self.random_item_skill(target["id"])
     star = "（優先スキル）" if prefer_index(self.world, self.state, target) < 99 else ""
     self.log(
       f"{self.world['places'][town]['name']}の鍛冶屋で{items[target['id']]['name']}にスキルを付けた"
@@ -1475,7 +1489,7 @@ class Day:
     self.state["quest"] = None
     gain = ([f"+{reward['exp']}EXP"] if reward["exp"] else []) + [f"+{reward['gold']}文"]
     self.log(f"依頼達成！{quest_text(self.world, quest)}（{' '.join(gain)}）")
-    iid = self.draw(reward.get("item"), quest["town"])
+    iid = self.draw(reward.get("item"), quest["town"]) if not quest.get("party") else None
     if iid:
       self.obtain(iid, "報酬で")
     self.gain_exp(reward["exp"])
@@ -1661,19 +1675,17 @@ class Day:
       if not self.battle(monster):
         return False
     elif kind == "treasure":
-      if stroll:  # 散策の宝箱: 装備・丸薬・お金の重み（stroll_treasure）
-        found, fw = zip(*self.cfg["stroll_treasure"].items())
-        found = self.rng.choices(found, fw)[0]
-        iid = self.draw([[W.COMMON, 1]]) if found == "item" else None
-      else:
-        iid = self.draw(self.cfg["treasure"])
-        found = "item" if iid else ("potion" if self.rng.random() < 0.3 else "gold")
+      chances = self.cfg["stroll_treasure" if stroll else "road_treasure"]
+      found = self.rng.choices(list(chances), list(chances.values()))[0]
+      iid = self.draw_once([["rare", 1]], a) if found == "item" else None
       if iid:
         self.obtain(iid, "宝箱から")
+      elif found == "stone":
+        self.obtain_stones(a, 1, "宝箱から")
       elif found == "potion":
         self.hero["potions"] += 1
         self.log("宝箱から丸薬を見つけた")
-      else:  # 出せる装備がないときも、お金
+      else:  # 武具の配布が止まっている場合もお金
         gold = self.rng.randint(*self.cfg["treasure_gold"])  # 宝箱のお金（Lv に関係なく決まった範囲。#150）
         self.hero["gold"] += gold
         self.log(f"宝箱から{gold}文を見つけた")
@@ -1802,6 +1814,7 @@ class Day:
     won = party_battle(order, dict(target))
     entry["status"] = "done" if won else "failed"
     if won:
+      self.party_loot(order, quest["town"], "boss" if target.get("boss") else "elite")
       if target.get("boss"):  # 主を倒したら、大物を数え直す
         self.guild["awake"] = [m for m in self.guild.get("awake") or [] if m != quest["monster"]]
         self.guild["elite_kills"] = 0
@@ -1829,6 +1842,24 @@ class Day:
           d.state["fell_on"] = self.today.isoformat()
       deliver_events(d.state, d.events, self.today)
     return won
+
+  def party_loot(self, members: list[Day], town: str, kind: str) -> None:
+    """石を受け取る 1 人を決め、残りのもののふにはそれぞれ武具を渡す。"""
+    stone_recipient = self.rng.choice(members)
+    stone_recipient.obtain_stones(town, self.cfg["party_stones"][kind], "討伐の褒美で")
+    if not self.cfg.get("rare_drops", True):
+      return
+    pool = sorted(
+      iid for iid, item in self.world["items"].items() if item["rarity"] == "epic" and town in item.get("towns", [])
+    )
+    if not pool:
+      return
+    for member in members:
+      if member is stone_recipient:
+        continue
+      iid = member.rng.choice(pool)
+      skill = member.random_item_skill(iid) if kind == "boss" else None
+      member.obtain(iid, "討伐の褒美で", skill)
 
   def stroll(self, town: str) -> bool:
     """その日はもう依頼を受けたので、町の周りを散策する（道の出来事だけが起きる。町からは動かない）。"""

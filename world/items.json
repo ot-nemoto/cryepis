@@ -57,6 +57,9 @@
   {"id": "steel_sword", "name": "業物の太刀", "slot": "weapon", "rarity": "rare", "atk": 2, "towns": ["edo"], "text": "名のある刀鍛冶が打った、よく切れる太刀。潮風にさらしても錆びない、と江戸の鍛冶屋は自慢する"},
   {"id": "steel_helm", "name": "鍬形の兜", "slot": "helmet", "rarity": "rare", "def": 4, "towns": ["odawara"], "text": "小田原の具足師が打った、鍬形の前立てのついた兜。大将のように見える"},
   {"id": "steel_shield", "name": "大鎧", "slot": "shield", "rarity": "rare", "hp": 5, "def": 4, "spd": -2, "towns": ["nagano"], "text": "信濃の山里で作る、大将の着る重い鎧。重いが、矢も物の怪の爪も通さない"},
-  {"id": "crimson_grass_charm", "name": "不動の御守", "slot": "accessory", "rarity": "rare", "element": "flame", "towns": ["kofu"], "text": "炎をまとう不動明王の御守。握ると、手のひらが熱くなる。甲府の兵が、よく身につけている"}
+  {"id": "crimson_grass_charm", "name": "不動の御守", "slot": "accessory", "rarity": "rare", "element": "flame", "towns": ["kofu"], "text": "炎をまとう不動明王の御守。握ると、手のひらが熱くなる。甲府の兵が、よく身につけている"},
+  {"id": "cross_spear", "name": "十文字槍", "slot": "weapon", "rarity": "epic", "atk": 2, "towns": ["kofu", "nagano"]},
+  {"id": "iron_face_guard", "name": "鉄地の面頬", "slot": "helmet", "rarity": "epic", "def": 3, "spd": 1, "towns": ["kofu", "nagano"]},
+  {"id": "yamabushi_robe", "name": "山伏の法衣", "slot": "shield", "rarity": "epic", "def": 3, "hp": 2, "towns": ["kofu", "nagano"]}
  ]
 }

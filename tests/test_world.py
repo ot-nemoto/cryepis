@@ -426,11 +426,8 @@ class ValidateTest(unittest.TestCase):
 
     self.assertError(change, ["nagano", "rare"])
 
-  def test_treasure_cannot_hold_rares(self):
-    self.assertError(lambda r: r["season"]["treasure"].append(["rare", 1]), ["treasure", "rare"])
-    self.assertError(
-      lambda r: r["season"]["treasure"].append(["crimson_grass_charm", 1]), ["treasure", "crimson_grass_charm"]
-    )
+  def test_treasure_table_rejects_unknown_outcomes(self):
+    self.assertError(lambda r: r["season"]["road_treasure"].update(unknown=1), ["road_treasure"])
 
   def test_every_town_quest_has_some_rare(self):
     towns = {tid for i in RAW["items"] if i["rarity"] == "rare" for tid in i["towns"]}
@@ -737,8 +734,8 @@ class BrokenDataTest(unittest.TestCase):
       any("ID は文字列" in e for e in errors_after(lambda r: r["map"]["places"][0].update(id=[]))),
     )
     for change in (
-      lambda r: r["season"]["treasure"].append([[], 1]),  # ドロップ表のキーが一覧
-      lambda r: r["season"].update(treasure=-1),
+      lambda r: r["season"].update(road_treasure=[[[], 1]]),
+      lambda r: r["season"].update(road_treasure=-1),
       lambda r: r["map"].update(roads=None),
       lambda r: r["map"]["places"][0].update(shop=None),
       lambda r: r.update(traits=None),

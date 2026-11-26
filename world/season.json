@@ -20,7 +20,8 @@
   "road_events": {"battle": 40, "treasure": 8, "nothing": 52},
   "stroll_events": {"battle": 30, "strong_battle": 5, "treasure": 15, "nothing": 50},
   "stroll_strong_levels": [2, 3],
-  "stroll_treasure": {"item": 10, "potion": 25, "gold": 65},
+  "stroll_treasure": {"item": 20, "stone": 2, "potion": 25, "gold": 53},
+  "road_treasure": {"item": 12.5, "stone": 1.25, "potion": 24, "gold": 62.25},
   "inn": {"price": 20},
   "stored_days": 2,
   "stay_days_max": 7,
@@ -35,7 +36,7 @@
     "guard": {"name": "鉄壁", "text": "防御の伸びが 1.25 倍", "strong_stat": "def", "growth": {"def": 1.25}},
     "swift": {"name": "俊足", "text": "素早さの伸びが 1.25 倍", "strong_stat": "spd", "growth": {"spd": 1.25}},
     "skilled": {"name": "技巧", "text": "器用さの伸びが 1.25 倍（会心の一撃が出やすい）", "strong_stat": "dex", "growth": {"dex": 1.25}},
-    "lucky": {"name": "強運", "text": "宝箱や依頼の報酬で何も出なかったとき、もう 1 度だけ引き直す（能力は伸びない）", "luck": true}
+    "lucky": {"name": "強運", "text": "通常の依頼の達成報告で★★武具が出なかったとき、もう 1 度だけ引き直す（能力は伸びない）", "luck": true}
   },
   "personalities": {
     "careful": {"name": "慎重", "text": "危ないことをしない。旅籠に早めに泊まり、丸薬を多めに持つ。自分より弱い依頼を選び、残りの行動は溜めておく",
@@ -63,8 +64,8 @@
       "gear": "cover", "skill": {"from": "legendary", "margin": 1, "prefer": {"weapon": ["weak_point", "pierce"], "helmet": ["element_guard", "insight", "antidote"], "shield": ["swarm_guard", "deflect", "crit_guard"], "accessory": ["anti_theft", "haggle", "decoy"]}},
       "quest": {"levels": [-1, 1], "order": ["rank_high"]}, "spare": "rest", "stroll_hp": 0.7, "when_full": "stroll"}
   },
-  "rare_drops": false,
-  "treasure": [["none", 80], ["common", 20]],
+  "rare_drops": true,
+  "party_stones": {"elite": 1, "boss": 3},
   "treasure_gold": [10, 30],
   "rest": ["焚き火のそばで体を休めた", "旅籠で一日のんびり過ごした", "夢の中で冒険の続きを見た"],
   "scenery": ["風が吹き抜けていく", "道端に小さな花が咲いている", "遠くで鳥が鳴いている"],
