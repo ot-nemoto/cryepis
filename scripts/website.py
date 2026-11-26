@@ -449,7 +449,7 @@ def build_towns(world: dict) -> str:
       return [("口入れ屋の規模", size)] + [
         (k, "-") for k in ("依頼の報酬で出るレア", "店の品ぞろえ", "道（行き先と行動回数）")
       ]
-    # 店の品ぞろえは、武具の種類（武器・兜・鎧・御守）の順に、同じ種類なら値段の高い順
+    # 店の品ぞろえは、武具の種類（武器・頭・胴・御守）の順に、同じ種類なら値段の高い順
     shop = sorted(
       places[town].get("shop", []), key=lambda i: (W.SLOTS.index(items[i]["slot"]), -items[i].get("price", 0), i)
     )
