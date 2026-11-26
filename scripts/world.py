@@ -524,7 +524,7 @@ def _check_layout(c: _Check):
 def _check_roads(c: _Check):
   """map.json の roads（種類・両端・距離・地形の割合・線）。"""
   err, places, monsters = c.err, c.places, c.monsters
-  monster_areas = {m.get("area") for m in monsters.values() if on_road(m)}  # 主・大物は道に出ない
+  homes = {(m.get("area"), m.get("terrain")) for m in monsters.values() if on_road(m)}  # 主・大物は道に出ない
   for i, r in enumerate(c.roads):
     where = f"map.json の roads[{i}]"
     kind = r.get("kind", "land")
@@ -548,8 +548,8 @@ def _check_roads(c: _Check):
       pass
     elif not _weights_ok(terrain) or any(t not in TERRAINS for t, _ in terrain):
       err(f"{where}: terrain は [地形, 正の重み] の一覧にしてください（地形は {'/'.join(TERRAINS)}）")
-    elif not {places.get(r.get(e), {}).get("area") for e in ("from", "to")} & monster_areas:
-      err(f"{where}: 両端の町の地方に、monsters.json の道の物の怪がいません（主・大物以外）")
+    elif not {(places.get(r.get(e), {}).get("area"), t) for e in ("from", "to") for t, _ in terrain} & homes:
+      err(f"{where}: 両端の町の地方に、terrain のどの地形にも住む道の物の怪がいません（主・大物以外。monsters.json）")
     path = r.get("path")
     if path is not None and (not isinstance(path, list) or len(path) < 2 or not all(_point_ok(p) for p in path)):
       err(f"{where}: path（地図に描く線）は [x, y] の一覧（2 点以上）にしてください")
@@ -887,6 +887,11 @@ def _check_monsters(c: _Check, area_ids: set | None):
   """monsters.json の物の怪（能力・地形・地方・性質・属性・主・大物）。area_ids が None（map.json に areas がない）なら、
   地方は調べない（道の物の怪は、地方のない町どうしの道に、地方のない物の怪として出る）。"""
   err, places, monsters, opened, elements, raw = c.err, c.places, c.monsters, c.opened, c.elements, c.raw
+  area_terrains: dict = {}  # 地方ごとの、町につながる陸路・航路の地形（開放していない道も入れる）
+  for r in c.roads:
+    if r.get("kind", "land") != "trail" and _weights_ok(r.get("terrain")):
+      for e in ("from", "to"):
+        area_terrains.setdefault(places.get(r.get(e), {}).get("area"), set()).update(t for t, _ in r["terrain"])
   for mid, m in monsters.items():
     if not m.get("name"):
       err(f"monsters.json の {mid}: name がありません")
@@ -894,6 +899,13 @@ def _check_monsters(c: _Check, area_ids: set | None):
       err(f"monsters.json の {mid}: terrain は {'/'.join(TERRAINS)} のどれかにしてください")
     if area_ids is not None and on_road(m) and m.get("area") not in area_ids:
       err(f"monsters.json の {mid}: area（道で出会う地方）は map.json の areas の ID にしてください")
+    elif (
+      on_road(m) and m.get("terrain") in TERRAINS and m.get("terrain") not in area_terrains.get(m.get("area"), set())
+    ):
+      err(
+        f"monsters.json の {mid}: terrain の {m['terrain']!r} は、その地方（{m.get('area')}）の町につながる陸路・航路にない地形です"
+        "（その地方にある地形の物の怪にしてください）"
+      )
     elif not on_road(m) and "area" in m:
       err(f"monsters.json の {mid}: 主・大物には area を書かないでください（道に出ないため）")
     if "trait" in m and m["trait"] not in TRAITS:
@@ -1229,12 +1241,15 @@ def background_uri(bg: dict | None) -> str | None:
 
 
 def road_monsters(road: dict, places: dict, monsters: list[dict]) -> list[tuple[str, float]]:
-  """道に出る物の怪と重み。両端の町の地方の物の怪（#265）。地方をまたぐ道は、どちらの地方も半分ずつ（地方の中は均等）。"""
+  """道に出る物の怪と重み。両端の町の地方（#265）の物の怪のうち、道の地形に住む物の怪（#267）。
+  地方をまたぐ道は、どちらの地方も半分ずつ。地方の中は、道の地形の割合を、その地形の物の怪の数で分ける。"""
   areas = list(dict.fromkeys(places.get(road.get(e), {}).get("area") for e in ("from", "to")))
+  total = sum(w for _, w in road.get("terrain") or [])
   pool = []
   for area in areas:
-    here = [m["id"] for m in monsters if m.get("area") == area and on_road(m)]  # 主・大物は道には出ない
-    pool += [(mid, 1 / len(areas) / len(here)) for mid in here]
+    for t, w in road.get("terrain") or []:
+      here = [m["id"] for m in monsters if m.get("area") == area and m.get("terrain") == t and on_road(m)]
+      pool += [(mid, w / total / len(areas) / len(here)) for mid in here]  # 主・大物は道には出ない
   return pool
 
 

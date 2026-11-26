@@ -653,7 +653,7 @@ def hunt_rank(world: dict, level: int, count: int) -> int:
 
 def rank_hunt(world: dict, t: dict, town: str, rank: int, rng: random.Random) -> dict | None:
   """★ が rank になる共通の討伐（町から出る道の 1 本で、その道に出る物の怪を数体）。道を均等に選び、
-  その道で rank になる物の怪の Lv を均等に選び、同じ Lv の中は道の重み（地方の割合）で物の怪を選び、数は rank になるものから均等に選ぶ。
+  その道で rank になる物の怪の Lv を均等に選び、同じ Lv の中は道の重み（地方と地形の割合）で物の怪を選び、数は rank になるものから均等に選ぶ。
   どの道でも作れなければ、★ を 1 つずつ下げて探し、それでもなければ上げて探す（どの ★ でも作れなければ None）。"""
   low, high = t["count"]
   top = len(world["hunt_ranks"]) + 1
@@ -780,7 +780,8 @@ QUEST_ORDER = {  # 性格の依頼の選び方（quest.order）。小さいほ�
 def encounters(world: dict, monsters: list, level: int, window: list | None = None) -> list:
   """道で出会う物の怪（[ID, 重み], ...）のうち、もののふの Lv に合うもの。Lv が「もののふの Lv + encounter_levels」の範囲
   （season.json。[-3, 1] なら Lv −3〜+1）の物の怪だけにする。範囲に 1 体もいなければ、範囲にいちばん近い Lv の物の怪。
-  地方ごとの割合は道のまま（地方をまたぐ道は半分ずつ。残った物の怪で、その地方の重みを分け直す。残った物の怪のいない地方は出ない）。
+  地方と地形ごとの割合は道のまま（地方をまたぐ道は半分ずつ、地方の中は道の地形の割合。残った物の怪で、その地方・地形の重みを
+  分け直す。残った物の怪のいない地方・地形は出ない）。
   window（[下, 上]）を渡すと、encounter_levels の代わりにその範囲を使う（散策の強い物の怪）。"""
   low, high = (level + d for d in (window or world["season"]["encounter_levels"]))
   lv = world["monsters"]
@@ -790,13 +791,17 @@ def encounters(world: dict, monsters: list, level: int, window: list | None = No
 
   near = min(gap(mid) for mid, _ in monsters)
   kept = [(mid, w) for mid, w in monsters if gap(mid) == near]
-  total: dict[str, float] = {}  # 地方ごとの重み（道のまま）と、残った物の怪の重み
-  left: dict[str, float] = {}
+
+  def home(mid: str) -> tuple:  # 物の怪の住む地方と地形
+    return lv[mid].get("area"), lv[mid]["terrain"]
+
+  total: dict[tuple, float] = {}  # 地方・地形ごとの重み（道のまま）と、残った物の怪の重み
+  left: dict[tuple, float] = {}
   for mid, w in monsters:
-    total[lv[mid].get("area")] = total.get(lv[mid].get("area"), 0) + w
+    total[home(mid)] = total.get(home(mid), 0) + w
   for mid, w in kept:
-    left[lv[mid].get("area")] = left.get(lv[mid].get("area"), 0) + w
-  return [(mid, w * total[lv[mid].get("area")] / left[lv[mid].get("area")]) for mid, w in kept]
+    left[home(mid)] = left.get(home(mid), 0) + w
+  return [(mid, w * total[home(mid)] / left[home(mid)]) for mid, w in kept]
 
 
 def patrol(world: dict, state: dict, rng: random.Random) -> dict:
