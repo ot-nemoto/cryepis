@@ -560,15 +560,15 @@ class RoadTest(unittest.TestCase):
         self.assertEqual(levels, {15})
       self.assertEqual([m for m, _ in got], [m for m, _ in road if m in dict(got)])  # 道の並びのまま
 
-      def share(pairs, got=got):  # 地形ごとの割合（残った物の怪のいる地形だけで比べる）
-        terrains = {lv[m]["terrain"] for m, _ in got}
+      def share(pairs, got=got):  # 地方ごとの割合（残った物の怪のいる地方だけで比べる）
+        areas = {lv[m]["area"] for m, _ in got}
         out = {}
         for m, w in pairs:
-          if lv[m]["terrain"] in terrains:
-            out[lv[m]["terrain"]] = out.get(lv[m]["terrain"], 0) + w
+          if lv[m]["area"] in areas:
+            out[lv[m]["area"]] = out.get(lv[m]["area"], 0) + w
         return {t: round(v / sum(out.values()), 6) for t, v in out.items()}
 
-      self.assertEqual(share(got), share(road), level)  # 地形ごとの割合は道のまま
+      self.assertEqual(share(got), share(road), level)  # 地方ごとの割合は道のまま
     self.assertEqual({lv[m]["level"] for m, _ in G.encounters(WORLD, road, 1)}, {1, 2})
 
   def test_hunt_targets_spread_over_levels(self):
@@ -693,7 +693,7 @@ class RoadTest(unittest.TestCase):
     state["quest"] = None
     self.assertEqual(day.danger_shift(), 0)
 
-  def test_sea_route_has_sea_monsters_and_scenery(self):
+  def test_sea_route_has_monsters_of_both_areas(self):
     world = everything_open()  # 今は航路を開放していない
     (a, b), _ = next((k, i) for k, i in world["road_info"].items() if i["kind"] == "sea")
     state = G.new_state(world)
@@ -701,10 +701,11 @@ class RoadTest(unittest.TestCase):
     day = G.Day(world, state, START, random.Random("sea"))
     for _ in range(30):
       day.road_event(a, b)
-    sea_names = {m["name"] for m in world["monsters"].values() if m["terrain"] == "sea"}
+    areas = {world["places"][a]["area"], world["places"][b]["area"]}  # 航路も、両端の町の地方の物の怪（#265）
+    names = {m["name"] for m in world["monsters"].values() if m.get("area") in areas}
     fought = [e for e in day.events if "を倒した" in e]
     self.assertTrue(fought)
-    self.assertTrue(all(any(n in e for n in sea_names) for e in fought), fought)
+    self.assertTrue(all(any(n in e for n in names) for e in fought), fought)
 
 
 class TraitTest(unittest.TestCase):
@@ -1072,7 +1073,8 @@ class GuildBoardTest(unittest.TestCase):
 
   def test_broken_hunt_quest_is_dropped_on_load(self):
     state = play(1, "h1", actions=0)
-    quest = next(e for e in self.board if e["type"] == "hunt" and e["count"] >= 2)  # 2 体以上の討伐
+    board = [e for es in self.guild["towns"].values() for e in es]
+    quest = next(e for e in board if e["type"] == "hunt" and e["count"] >= 2)  # 2 体以上の討伐（どの町でもよい）
     ok = dict(quest, steps=[["hunt", 1], ["back", 1]], progress=1)
     self.assertTrue(G.quest_ok(WORLD, ok))
     self.assertTrue(G.quest_ok(WORLD, dict(ok, steps=[["hunt", quest["count"] - 1], ["back", 1]])))  # 前の形式も読める
