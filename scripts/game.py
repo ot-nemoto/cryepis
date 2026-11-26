@@ -896,8 +896,8 @@ class Day:
   ) -> int:
     """1 回の攻撃のダメージ。器用さ（dex）÷ critical.dex_divisor の確率で会心の一撃（multiplier 倍）になる。
     もののふも物の怪も同じ。会心があるので、能力の差が小さいと勝ち負けに幅が出る。
-    divisor・multiplier を渡すと、会心の確率・倍率を変える（スキルの集中・会心の心得・守りの心得）。
-    会心が出たかは self.crit に残す（スキルの閃き）。"""
+    divisor・multiplier を渡すと、会心の確率・倍率を変える（スキルの心眼・会心の心得・守りの心得）。
+    会心が出たかは self.crit に残す（スキルの悟り）。"""
     hit = max(1, attack - guard // 2 + self.rng.randint(-2, 2))
     crit = self.cfg["critical"]
     rate = dex / (divisor or crit["dex_divisor"])
@@ -936,7 +936,7 @@ class Day:
     """この物の怪に、1 回の攻撃の番でいちばんダメージの大きい武器（持ち物から持ち替える）と、属性の倍率と、
     その武器を持ったときの能力（stats。攻撃・素早さだけでなく、武器の HP・防御・器用さも持ち替えたものになる）と、
     その戦いで着ける御守。ダメージは、物の怪の守り（性質で変わったあと）・属性・2 回攻撃・会心の平均まで考える
-    （武器のスキルの鎧通し・弱点突き・連撃・会心の心得も入れる）。
+    （武器のスキルの鎧通し・弱点突き・二の太刀・会心の心得も入れる）。
     武器を持たない（None）ほうが効くとき（苦手な属性の武器しかないとき）は、武器を持たずに戦う。
     攻める属性は武器の属性。武器に属性がなければ（素手も）、御守の属性（attack_element）。
     御守は、ふだんの御守（worn）のまま戦う。ただし、物の怪の弱点を突ける属性の御守か、物の怪の性質に効くスキル（対策）の
@@ -1064,7 +1064,7 @@ class Day:
             self.log(f"{self.monster_name(monster)}に敗れた")
             return False
           self.use_potion()
-          if dmg > 0 and sk("counter") and self.rng.random() < sk("counter"):  # 反撃
+          if dmg > 0 and sk("counter") and self.rng.random() < sk("counter"):  # 返し技
             hp -= strike()
             if hp <= 0:
               break
@@ -1116,7 +1116,7 @@ class Day:
     return True
 
   def guard_skills(self, dmg: int, monster: dict, spd: int, mspd: int) -> int:
-    """受けるダメージに、守りのスキルをかける（属性よけ・受け太刀・冷静・身代わり・堅牢）。"""
+    """受けるダメージに、守りのスキルをかける（魔除け・受け太刀・平常心・身代わり・金剛）。"""
     sk, hero = self.skill, self.hero
     if sk("element_guard") and monster.get("element"):
       dmg = W.half_up(dmg * sk("element_guard"))
@@ -1369,7 +1369,7 @@ class Day:
     bonus = (
       self.skill("hunter") if quest["type"] == "hunt" else self.skill("escort") if quest["type"] == "deliver" else None
     )
-    if bonus:  # 狩人・護衛料: 報酬のお金が増える
+    if bonus:  # 手柄・荷守り: 報酬のお金が増える
       reward["gold"] = W.half_up(reward["gold"] * bonus)
     self.hero["gold"] += reward["gold"]
     self.state["season_stats"]["quests_done"] += 1
@@ -1500,7 +1500,7 @@ class Day:
 
   # 道 --------------------------------------------------------------------------------
   def event_weights(self, stroll: bool) -> dict[str, float]:
-    """道・散策の出来事の重み（スキルの忍び足・宝探し・警戒で変わる。減った分は「何もない」へ）。"""
+    """道・散策の出来事の重み（スキルの忍び足・宝探し・物見で変わる。減った分は「何もない」へ）。"""
     weights = dict(self.cfg["stroll_events" if stroll else "road_events"])
     before = sum(weights.values())
     if self.skill("stealth"):
@@ -1671,7 +1671,7 @@ class Day:
     if choice == "rest":
       if hero["stored"] < stored_max(self.world):
         hero["stored"] += 1
-        if self.skill("camper"):  # 野営上手: 休むと少し回復する
+        if self.skill("camper"):  # 野宿上手: 休むと少し回復する
           self.heal(self.skill("camper"))
         if not self.rested:
           self.rested = True
