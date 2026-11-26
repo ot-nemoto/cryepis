@@ -153,6 +153,27 @@ class ValidateTest(unittest.TestCase):
   def test_road_monster_needs_an_area(self):
     self.assertError(lambda r: r["monsters"][0].pop("area"), ["wild_dog", "area"])
     self.assertError(lambda r: r["monsters"][0].update(area="moon"), ["wild_dog", "area"])
+    self.assertError(lambda r: r["monsters"][0].update(area=["bando"]), ["monsters[0]", "area は文字列"])  # 落ちない
+
+  def test_broken_area_does_not_hide_other_monster_errors(self):
+    def change(r):
+      r["map"]["areas"].append({"id": ["x"], "name": "y"})
+      r["monsters"][0]["hp"] = -5
+
+    errors = errors_after(change)
+    self.assertTrue(any("areas[" in e for e in errors), errors)
+    self.assertTrue(any("wild_dog" in e and "hp" in e for e in errors), errors)  # 物の怪の検査も最後まで動く
+    self.assertFalse(any("調べきれません" in e for e in errors), errors)
+
+  def test_world_without_areas_needs_no_monster_area(self):
+    def change(r):
+      r["map"].pop("areas")
+      for p in r["map"]["places"]:
+        p.pop("area", None)
+      for m in r["monsters"]:
+        m.pop("area", None)
+
+    self.assertFalse([e for e in errors_after(change) if "area" in e])  # 地方のない世界では、地方を調べない
 
   def test_duplicate_id(self):
     self.assertError(lambda r: r["monsters"].append(dict(r["monsters"][0])), ["重複", "wild_dog"])

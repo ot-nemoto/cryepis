@@ -300,6 +300,8 @@ def _check_shape(c: _Check):
   for i, m in enumerate(rows("monsters.json の monsters", raw.get("monsters"))):
     if not _hashable(m.get("terrain")):
       err(f"monsters.json の monsters[{i}]: terrain は文字列にしてください")
+    if not _hashable(m.get("area")):
+      err(f"monsters.json の monsters[{i}]: area は文字列にしてください")
   rows("items.json の items", raw.get("items"))
   rarities = raw.get("rarities")
   if isinstance(rarities, list) and not all(isinstance(r, str) for r in rarities):  # 文章に並べるので、文字列だけ
@@ -881,16 +883,16 @@ def _check_monster_traits(c: _Check):
       err(f"monsters.json の traits の {key}: gold_rate（倒したときのお金の倍率）は 0 以上の数にしてください")
 
 
-def _check_monsters(c: _Check):
-  """monsters.json の物の怪（能力・地形・性質・属性・主・大物）。"""
+def _check_monsters(c: _Check, area_ids: set | None):
+  """monsters.json の物の怪（能力・地形・地方・性質・属性・主・大物）。area_ids が None（map.json に areas がない）なら、
+  地方は調べない（道の物の怪は、地方のない町どうしの道に、地方のない物の怪として出る）。"""
   err, places, monsters, opened, elements, raw = c.err, c.places, c.monsters, c.opened, c.elements, c.raw
   for mid, m in monsters.items():
     if not m.get("name"):
       err(f"monsters.json の {mid}: name がありません")
     if m.get("terrain") not in TERRAINS:
       err(f"monsters.json の {mid}: terrain は {'/'.join(TERRAINS)} のどれかにしてください")
-    areas = {a.get("id") for a in raw["map"].get("areas") or [] if isinstance(a, dict)}
-    if on_road(m) and m.get("area") not in areas:
+    if area_ids is not None and on_road(m) and m.get("area") not in area_ids:
       err(f"monsters.json の {mid}: area（道で出会う地方）は map.json の areas の ID にしてください")
     elif not on_road(m) and "area" in m:
       err(f"monsters.json の {mid}: 主・大物には area を書かないでください（道に出ないため）")
@@ -1196,7 +1198,7 @@ def validate(raw: dict) -> list[str]:
   _run(c, _check_skills)
   _run(c, _check_monster_reward)
   _run(c, _check_monster_traits)
-  _run(c, _check_monsters)
+  _run(c, _check_monsters, area_ids)
   _run(c, _check_items)
   _run(c, _check_lowest_rare)
   ranks = _run(c, _check_quest_ranks) or []
