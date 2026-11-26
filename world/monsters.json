@@ -244,9 +244,9 @@
   {"id": "kyushu_14b", "name": "火焔入道", "level": 14, "hp": 67, "atk": 24, "def": 7, "spd": 13, "dex": 6, "terrain": "mountain", "area": "kyushu", "element": "flame"},
   {"id": "kyushu_15a", "name": "大海亀", "level": 15, "hp": 67, "atk": 24, "def": 7, "spd": 14, "dex": 6, "terrain": "sea", "area": "kyushu", "trait": "armored"},
   {"id": "kyushu_15b", "name": "阿蘇の大蛇", "level": 15, "hp": 55, "atk": 19, "def": 5, "spd": 14, "dex": 6, "terrain": "forest", "area": "kyushu", "trait": "poison"},
-  {"id": "yeti", "name": "雪女", "level": 10, "hp": 175, "atk": 36, "def": 12, "spd": 16, "dex": 30, "terrain": "snow", "trait": "fierce", "element": "ice", "elite": true},
-  {"id": "rock_golem", "name": "だいだらぼっち", "level": 10, "hp": 283, "atk": 40, "def": 10, "spd": 2, "dex": 6, "terrain": "mountain", "trait": "armored", "elite": true},
-  {"id": "great_eagle", "name": "大天狗", "level": 10, "hp": 263, "atk": 15, "def": 10, "spd": 40, "dex": 10, "terrain": "mountain", "trait": "first_strike", "element": "thunder", "elite": true},
-  {"id": "den_lord", "name": "酒呑童子", "level": 15, "hp": 320, "atk": 37, "def": 12, "spd": 18, "dex": 15, "terrain": "mountain", "trait": "armored", "boss": "fuji", "text": "富士山の奥に棲む鬼の頭領。山を越えて坂東へ物の怪を送り出している"}
+  {"id": "yeti", "name": "雪女", "level": 13, "hp": 718, "atk": 40, "def": 12, "spd": 16, "dex": 30, "terrain": "snow", "trait": "fierce", "element": "ice", "elite": true},
+  {"id": "rock_golem", "name": "だいだらぼっち", "level": 13, "hp": 1361, "atk": 60, "def": 10, "spd": 2, "dex": 6, "terrain": "mountain", "trait": "armored", "elite": true},
+  {"id": "great_eagle", "name": "大天狗", "level": 13, "hp": 1243, "atk": 40, "def": 10, "spd": 40, "dex": 10, "terrain": "mountain", "trait": "first_strike", "element": "thunder", "elite": true},
+  {"id": "den_lord", "name": "酒呑童子", "level": 18, "hp": 1265, "atk": 80, "def": 12, "spd": 18, "dex": 15, "terrain": "mountain", "trait": "armored", "boss": "fuji", "text": "富士山の奥に棲む鬼の頭領。山を越えて坂東へ物の怪を送り出している"}
  ]
 }

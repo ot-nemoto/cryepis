@@ -90,6 +90,13 @@ LEVEL_UP_KEYS = {
   "exp_power": (float, 0.01, 10),
 }
 POTION_KEYS = {"price": (int, 1, BIG), "heal_rate": (float, 0.01, 1), "keep": (int, 0, BIG)}
+# 何人かで受ける依頼（#72）: 大物・主の人数、集まるのを待つ日数、主が目覚めるまでに討つ大物の数
+PARTY_KEYS = {
+  "elite": (int, 1, 10),
+  "boss": (int, 1, 10),
+  "gather_days": (int, 1, 30),
+  "boss_after_elites": (int, 1, BIG),
+}
 
 
 def read_json(path: Path) -> dict:
@@ -346,6 +353,7 @@ def _check_season(c: _Check):
     ("season.json の hero", season.get("hero"), HERO_KEYS),
     ("season.json の level_up", season.get("level_up"), LEVEL_UP_KEYS),
     ("season.json の potion", season.get("potion"), POTION_KEYS),
+    ("season.json の party", season.get("party"), PARTY_KEYS),
   ):
     if not isinstance(obj, dict):
       err(f"{where} がありません")

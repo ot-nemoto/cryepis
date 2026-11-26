@@ -404,12 +404,42 @@ class HeroesTest(unittest.TestCase):
     self.assertTrue((out / "heroes" / "h2.html").exists())  # 引退したもののふの詳細も残る
     self.assertNotIn("ボブ", (out / "heroes.html").read_text(encoding="utf-8"))  # 一覧には出さない
 
+  def test_only_heroes_advanced_today_fight_together(self):
+    world = rpg.load_world()
+    seen = {}
+
+    def capture(world, st, day, actions, g, others=None):
+      seen[st["id"]] = sorted(others or {})
+      return True
+
+    a, b = game.new_state(world, "a", "アリス"), game.new_state(world, "b", "ボブ")
+    with mock.patch.object(game, "advance", side_effect=capture):
+      rpg.advance_heroes(
+        world, {"a": ({"id": "a"}, a, [date(2026, 12, 1)]), "b": ({"id": "b"}, b, [])}, date(2026, 12, 1), None, {}
+      )
+    self.assertEqual(seen, {"a": ["a"]})  # その日を進めない（保存しない）もののふとは一緒に戦わない
+
+  def test_guild_preview_uses_the_heroes_levels(self):
+    world = rpg.load_world()
+    state = game.new_state(world, "h1", "アリス")
+    state["hero"]["level"] = 14
+    seen = []
+    real = game.refresh_guild
+
+    def capture(world, guild, d, season, towns=None):
+      seen.append(guild.get("levels"))
+      return real(world, guild, d, season, towns)
+
+    with mock.patch.object(game, "refresh_guild", side_effect=capture):
+      website.build_guild(world, [({"id": "h1"}, state)], date(2026, 12, 1), game.new_guild())
+    self.assertEqual(seen, [[14]])  # 毎日の実行と同じく、もののふたちの Lv で大物の依頼を抽選する
+
   def test_failed_heros_changes_to_the_guild_are_undone(self):
     guild = game.new_guild()
     state = game.new_state(rpg.load_world(), "h1", "アリス")
     state["hero"]["level"] = 99
 
-    def take_then_fail(world, st, day, actions, g):
+    def take_then_fail(world, st, day, actions, g, others=None):
       game.refresh_guild(world, g, day, 1)
       next(e for es in g["towns"].values() for e in es).update(status="held", holder="h1")
       raise RuntimeError("壊れた")
