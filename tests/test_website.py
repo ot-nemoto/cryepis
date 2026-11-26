@@ -531,7 +531,7 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(website.share_text(0.126), "13%")
 
   def test_pie_and_terrain_shares(self):
-    shares = website.terrain_shares(WORLD["monsters"], WORLD["road_info"][("nagano", "kofu")]["monsters"])
+    shares = website.terrain_shares(WORLD["road_info"][("nagano", "kofu")]["terrain_weights"])  # 道の地形の割合
     self.assertAlmostEqual(sum(x for _, x in shares), 1.0)
     self.assertEqual([t for t, _ in shares], ["forest", "mountain", "snow", "plain"])  # 多い順
     svg = website.pie_svg(shares)

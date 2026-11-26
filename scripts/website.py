@@ -631,11 +631,11 @@ def habitat_label(hid: str) -> str:
   return terrain_label(hid)
 
 
-def terrain_shares(monsters: dict, pool: list) -> list[tuple[str, float]]:
-  """道に出る物の怪（[ID, 重み], ...）から、地形ごとの割合（戦いになったとき、その地形が選ばれる割合）。多い順。"""
+def terrain_shares(weights: list) -> list[tuple[str, float]]:
+  """道の地形（[地形, 重み], ...）の割合。多い順。道の景色の文は、この地形から選ぶ（出会う物の怪は地方で決まる。#265）。"""
   out: dict[str, float] = {}
-  for mid, w in pool:
-    out[monsters[mid]["terrain"]] = out.get(monsters[mid]["terrain"], 0) + w
+  for t, w in weights:
+    out[t] = out.get(t, 0) + w
   total = sum(out.values()) or 1
   return sorted(((t, w / total) for t, w in out.items()), key=lambda x: (-x[1], W.TERRAINS.index(x[0])))
 
@@ -688,7 +688,8 @@ def build_monsters(world: dict) -> str:
     for (a, b), info in world["road_info"].items():
       if place_order[a] > place_order[b] or not ({a, b} & set(members)):
         continue  # 同じ道は 1 度だけ。この地方（のまとまり）の町につながる道だけ
-      seen |= {mid for mid, _ in info["monsters"]}
+      # 地方をまたぐ道の物の怪は、その物の怪の地方のタブにだけ出す（地方のない・知らないまとまりは、道の物の怪を全部）
+      seen |= {mid for mid, _ in info["monsters"] if aid not in world["areas"] or monsters[mid].get("area") == aid}
     if not seen:
       return '<div class="card"><p class="note">まだ開放されていません（この地方の道は通れません）。</p></div>'
     elites = [
@@ -706,7 +707,7 @@ def build_monsters(world: dict) -> str:
     return (
       monster_table(rows)
       + '<p class="note">HP・攻・防は、性質の効果がかかる前の値です（たとえば「硬い」は戦いで守りが固くなります）。'
-      '道で出会うのは、その道の地形の物の怪のうち、もののふの Lv に近い物の怪です（<a href="guide.html">手引き</a>）。'
+      '道で出会うのは、道の両端の町がある地方の物の怪のうち、もののふの Lv に近い物の怪です（<a href="guide.html">手引き</a>）。'
       "生息地が WORLD の物の怪（大物）は道では出会わず、町の討伐の依頼で狙って戦います。"
       "RAID の物の怪（主）は霊場の奥にいます（まだ挑めません）。</p></div>"
     )
@@ -746,7 +747,7 @@ def build_monsters(world: dict) -> str:
     for (a, b), info in world["road_info"].items():
       if place_order[a] > place_order[b] or not ({a, b} & set(members)):
         continue
-      shares = terrain_shares(monsters, info["monsters"])
+      shares = terrain_shares(info["terrain_weights"])
       legend = "".join(f"<li>{terrain_label(t)} {share_text(share)}</li>" for t, share in shares)
       items.append(
         f'<div class="road">{pie_svg(shares)}<div><div class="name">{escape(places[a]["name"])}〜'
@@ -757,8 +758,8 @@ def build_monsters(world: dict) -> str:
     return (
       '<div class="card"><h3>街道</h3><div class="roads">'
       + "".join(items)
-      + '</div><p class="note">かっこの中は移動にかかる行動回数。円グラフは、道で戦いになったときに、どの地形の物の怪が出るかの割合'
-      "（その地形の物の怪のうち、もののふの Lv に近い物の怪が出る）。</p></div>"
+      + '</div><p class="note">かっこの中は移動にかかる行動回数。円グラフは、道の地形の割合'
+      "（出会う物の怪は地形ではなく、道の両端の町がある地方で決まる）。</p></div>"
     )
 
   groups = area_groups(world, towns)
@@ -1099,10 +1100,10 @@ def build_guide(world: dict) -> str:
     ),
     (
       "道で出会う物の怪",
-      "戦いになったら、まず道の地形（草原・森など。道ごとの割合は物の怪のページの「街道」）を選び、その地形の物の怪のうち、Lv がもののふの Lv "
+      "道の両端の町がある地方の物の怪のうち、Lv がもののふの Lv "
       + "〜".join(f"{d:+d}" for d in cfg["encounter_levels"])
-      + " の物の怪から出る（同じ地形の中では同じくらいずつ）。Lv の合う物の怪のいない地形は出ず、その分ほかの地形が出る。"
-      "範囲に合う物の怪がどの地形にもいなければ、いちばん近い Lv の物の怪",
+      + " の物の怪から出る（同じ地方の中では同じくらいずつ。地方をまたぐ道は、どちらの地方も半分ずつ）。"
+      "範囲に合う物の怪がいなければ、いちばん近い Lv の物の怪",
     ),
     ("大物", "道では出会わない。町の討伐の依頼で狙って戦う。依頼は、物の怪のレベル以上のもののふだけが受けられる"),
     ("主", "道では出会わない。霊場の奥にいる"),

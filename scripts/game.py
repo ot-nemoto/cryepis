@@ -3,7 +3,7 @@
 もののふは毎日、決まった回数だけ行動する。場所は町だけで、町と町は陸路・航路でつながっている。
 町の口入れ屋で依頼を受け、討伐なら依頼の道を行き来して物の怪を倒し、配達なら届け先の町へ向かう。
 道を 1 行動進むごとに、道の地形に合った物の怪に出会ったり、宝箱を見つけたりする（乱数）。
-物の怪は種類ごとにレベル（強さ）があり、地形ごとに出る物の怪と性質（先手・毒・群れなど）が違う。
+物の怪は種類ごとにレベル（強さ）と性質（先手・毒・群れなど）があり、地方ごとに出る物の怪が違う。
 依頼がなければ、となりの町へ旅をする。力尽きたら依頼は失敗になり、最後に寄った町で目を覚ます。
 シーズンが変わると、武具（持ち物）以外は最初の状態に戻る。
 乱数は「日付＋シーズン＋もののふの ID」を種にするので、同じ日に何度実行しても結果は同じ。
@@ -653,7 +653,7 @@ def hunt_rank(world: dict, level: int, count: int) -> int:
 
 def rank_hunt(world: dict, t: dict, town: str, rank: int, rng: random.Random) -> dict | None:
   """★ が rank になる共通の討伐（町から出る道の 1 本で、その道に出る物の怪を数体）。道を均等に選び、
-  その道で rank になる物の怪の Lv を均等に選び、同じ Lv の中は地形の重みで物の怪を選び、数は rank になるものから均等に選ぶ。
+  その道で rank になる物の怪の Lv を均等に選び、同じ Lv の中は道の重み（地方の割合）で物の怪を選び、数は rank になるものから均等に選ぶ。
   どの道でも作れなければ、★ を 1 つずつ下げて探し、それでもなければ上げて探す（どの ★ でも作れなければ None）。"""
   low, high = t["count"]
   top = len(world["hunt_ranks"]) + 1
@@ -780,7 +780,7 @@ QUEST_ORDER = {  # 性格の依頼の選び方（quest.order）。小さいほ�
 def encounters(world: dict, monsters: list, level: int, window: list | None = None) -> list:
   """道で出会う物の怪（[ID, 重み], ...）のうち、もののふの Lv に合うもの。Lv が「もののふの Lv + encounter_levels」の範囲
   （season.json。[-3, 1] なら Lv −3〜+1）の物の怪だけにする。範囲に 1 体もいなければ、範囲にいちばん近い Lv の物の怪。
-  地形ごとの割合は道のまま（残った物の怪で、その地形の重みを分け直す。残った物の怪のいない地形は出ない）。
+  地方ごとの割合は道のまま（地方をまたぐ道は半分ずつ。残った物の怪で、その地方の重みを分け直す。残った物の怪のいない地方は出ない）。
   window（[下, 上]）を渡すと、encounter_levels の代わりにその範囲を使う（散策の強い物の怪）。"""
   low, high = (level + d for d in (window or world["season"]["encounter_levels"]))
   lv = world["monsters"]
@@ -790,13 +790,13 @@ def encounters(world: dict, monsters: list, level: int, window: list | None = No
 
   near = min(gap(mid) for mid, _ in monsters)
   kept = [(mid, w) for mid, w in monsters if gap(mid) == near]
-  total: dict[str, float] = {}  # 地形ごとの重み（道のまま）と、残った物の怪の重み
+  total: dict[str, float] = {}  # 地方ごとの重み（道のまま）と、残った物の怪の重み
   left: dict[str, float] = {}
   for mid, w in monsters:
-    total[lv[mid]["terrain"]] = total.get(lv[mid]["terrain"], 0) + w
+    total[lv[mid].get("area")] = total.get(lv[mid].get("area"), 0) + w
   for mid, w in kept:
-    left[lv[mid]["terrain"]] = left.get(lv[mid]["terrain"], 0) + w
-  return [(mid, w * total[lv[mid]["terrain"]] / left[lv[mid]["terrain"]]) for mid, w in kept]
+    left[lv[mid].get("area")] = left.get(lv[mid].get("area"), 0) + w
+  return [(mid, w * total[lv[mid].get("area")] / left[lv[mid].get("area")]) for mid, w in kept]
 
 
 def patrol(world: dict, state: dict, rng: random.Random) -> dict:

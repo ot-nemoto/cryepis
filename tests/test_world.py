@@ -61,18 +61,31 @@ class DataTest(unittest.TestCase):
     world = W.load_world()
     for key, info in world["road_info"].items():
       self.assertTrue(info["monsters"], key)
+      ends = {world["places"][p]["area"] for p in key}
       for mid, weight in info["monsters"]:
-        self.assertIn(world["monsters"][mid]["terrain"], info["terrain"])
+        self.assertIn(world["monsters"][mid]["area"], ends)  # 両端の町の地方の物の怪（#265）
         self.assertGreater(weight, 0)
 
-  def test_sea_routes_have_sea_monsters(self):
+  def test_each_area_has_two_monsters_per_level(self):
+    world = W.load_world()
+    road = [m for m in world["monsters"].values() if W.on_road(m)]
+    for area in world["areas"]:
+      levels = sorted(m["level"] for m in road if m["area"] == area)
+      self.assertEqual(levels, sorted(list(range(1, 16)) * 2), area)
+    names = [m["name"] for m in world["monsters"].values()]
+    self.assertEqual(len(names), len(set(names)))  # 地方どうしで名前が重ならない
+
+  def test_cross_area_road_splits_between_areas(self):
     raw = copy.deepcopy(RAW)
-    raw["map"].pop("open", None)  # 開放していない航路も含めて
+    raw["map"].pop("open", None)  # 開放していない道も含めて
     world = W.build(raw)
-    sea = [k for k, i in world["road_info"].items() if i["kind"] == "sea"]
-    self.assertTrue(sea)
-    for key in sea:
-      self.assertTrue(all(world["monsters"][m]["terrain"] == "sea" for m, _ in world["road_info"][key]["monsters"]))
+    info = world["road_info"][("edo", "kurokawa")]  # 坂東と奥羽をまたぐ道
+    share: dict = {}
+    for mid, w in info["monsters"]:
+      share[world["monsters"][mid]["area"]] = share.get(world["monsters"][mid]["area"], 0) + w
+    self.assertEqual(set(share), {"bando", "ou"})
+    for w in share.values():
+      self.assertAlmostEqual(w, 0.5)
 
 
 class MonsterRewardTest(unittest.TestCase):
@@ -131,11 +144,36 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["monsters"][0].update(terrain="moon"), ["wild_dog", "terrain"])
     self.assertError(lambda r: r["monsters"][0].update(trait="laser"), ["wild_dog", "trait"])
 
-  def test_road_terrain_needs_a_monster(self):
+  def test_road_needs_a_monster_of_its_areas(self):
     def change(r):
-      r["monsters"] = [m for m in r["monsters"] if m["terrain"] != "sea"]
+      r["monsters"] = [m for m in r["monsters"] if m.get("area") != "bando"]
 
-    self.assertError(change, ["terrain", "物の怪がいません"])
+    self.assertError(change, ["roads", "物の怪がいません"])
+
+  def test_road_monster_needs_an_area(self):
+    self.assertError(lambda r: r["monsters"][0].pop("area"), ["wild_dog", "area"])
+    self.assertError(lambda r: r["monsters"][0].update(area="moon"), ["wild_dog", "area"])
+    self.assertError(lambda r: r["monsters"][0].update(area=["bando"]), ["monsters[0]", "area は文字列"])  # 落ちない
+
+  def test_broken_area_does_not_hide_other_monster_errors(self):
+    def change(r):
+      r["map"]["areas"].append({"id": ["x"], "name": "y"})
+      r["monsters"][0]["hp"] = -5
+
+    errors = errors_after(change)
+    self.assertTrue(any("areas[" in e for e in errors), errors)
+    self.assertTrue(any("wild_dog" in e and "hp" in e for e in errors), errors)  # 物の怪の検査も最後まで動く
+    self.assertFalse(any("調べきれません" in e for e in errors), errors)
+
+  def test_world_without_areas_needs_no_monster_area(self):
+    def change(r):
+      r["map"].pop("areas")
+      for p in r["map"]["places"]:
+        p.pop("area", None)
+      for m in r["monsters"]:
+        m.pop("area", None)
+
+    self.assertFalse([e for e in errors_after(change) if "area" in e])  # 地方のない世界では、地方を調べない
 
   def test_duplicate_id(self):
     self.assertError(lambda r: r["monsters"].append(dict(r["monsters"][0])), ["重複", "wild_dog"])
@@ -228,22 +266,15 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["monsters"][-1].update(boss="edo"), ["den_lord", "boss"])
     self.assertError(lambda r: r["monsters"][-1].update(boss=["fuji"]), ["den_lord", "boss"])  # 落ちない
 
-  def test_road_needs_a_monster_other_than_the_boss(self):
-    def boss_only(r):  # 火山には主だけ、という道
-      r["monsters"] = [m for m in r["monsters"] if m["terrain"] != "volcano" or m.get("boss")]
-      r["monsters"][-1]["terrain"] = "volcano"
-      r["map"]["roads"][0]["terrain"] = [["volcano", 1]]
-
-    self.assertError(boss_only, ["roads[0]", "主以外"])
+  def test_boss_has_no_area(self):
+    self.assertError(lambda r: r["monsters"][-1].update(area="bando"), ["den_lord", "area"])  # 主は道に出ない
 
   def test_hunt_quest_cannot_target_the_boss(self):
     def boss_quest(r):
       q = r["town_quests"]["nagano"][0]
-      boss = r["monsters"][-1]
-      boss["terrain"] = next(m["terrain"] for m in r["monsters"] if m["id"] == q["monster"])  # 道の地形に合わせる
-      q["monster"] = boss["id"]
+      q["monster"] = r["monsters"][-1]["id"]
 
-    self.assertError(boss_quest, ["nagano_3", "主以外"])
+    self.assertError(boss_quest, ["nagano_3", "主は狙えない"])
 
   def test_item_dex_is_checked(self):
     self.assertError(lambda r: r["items"][-1].update(dex="2"), ["crimson_grass_charm", "dex"])
@@ -354,7 +385,7 @@ class ValidateTest(unittest.TestCase):
 
     self.assertEqual(errors_after(town_quest()), [])  # 町の討伐も書ける（今は大物だけ）
     self.assertError(town_quest(to="edo"), ["nagano_x", "直接つながる"])  # 道がない
-    self.assertError(town_quest(monster="marsh_leech"), ["nagano_x", "その道に出る"])  # その道にいない物の怪
+    self.assertError(town_quest(monster="ou_01a"), ["nagano_x", "その道に出る"])  # その道にいない物の怪（奥羽の物の怪）
     self.assertError(town_quest(rank=9), ["nagano_x", "rank"])
     self.assertError(town_quest(count=0), ["nagano_x", "count"])
     self.assertError(town_quest(type="deliver", to="nagano"), ["nagano_x", "別の町"])
