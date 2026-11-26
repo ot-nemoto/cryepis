@@ -833,10 +833,10 @@ class PartyQuestTest(unittest.TestCase):
         if self.world["monsters"][q["monster"] or "wild_dog"].get("elite")
       ]
 
-    self.assertFalse(elites([15, 14, 3]))  # Lv15 以上が 1 人だけなら出ない
-    found = elites([15, 20, 3])
+    self.assertFalse(elites([13, 12, 3]))  # Lv13 以上が 1 人だけなら出ない
+    found = elites([13, 20, 3])
     self.assertTrue(found)
-    self.assertTrue(all(q["party"] == 2 and q["min_level"] == 15 for q in found))
+    self.assertTrue(all(q["party"] == 2 and q["min_level"] == 13 for q in found))
 
   def test_joining_fills_the_party(self):
     guild = G.new_guild()
@@ -933,7 +933,7 @@ class PartyQuestTest(unittest.TestCase):
     G.refresh_guild(self.world, guild, START + timedelta(days=1), 1)
     boss = [e for e in guild["towns"]["kofu"] if e["monster"] == "den_lord"]
     self.assertEqual(len(boss), 1)  # 霊場への山道がつながる甲府に、主の依頼が出る（高札の枠とは別）
-    self.assertEqual((boss[0]["place"], boss[0]["party"], boss[0]["min_level"]), ("fuji", 3, 20))
+    self.assertEqual((boss[0]["place"], boss[0]["party"], boss[0]["min_level"]), ("fuji", 3, 18))
     self.assertEqual(boss[0]["steps"], [["go", 2], ["hunt", 1], ["back", 2]])
     self.assertTrue(G.quest_ok(self.world, boss[0]))
     self.assertIn("富士山の酒呑童子を討つ", G.quest_text(self.world, boss[0]))
