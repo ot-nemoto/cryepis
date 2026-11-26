@@ -334,17 +334,23 @@ class SiteTest(unittest.TestCase):
     shown = {m for (a, b), i in WORLD["road_info"].items() for m, _ in i["monsters"]}
     for mid in shown:  # 開放した道に出る物の怪
       self.assertIn(f"<td>{WORLD['monsters'][mid]['name']}</td>", south)
-    self.assertNotIn("<td>蛸入道</td>", html)  # 開放していない航路の物の怪は出さない
+    self.assertNotIn("<td>蛸入道</td>", south)  # ほかの地方の物の怪は、坂東のタブに出さない
+    tokai = html[html.index('id="panel-tokai"') :]
+    tokai = tokai[: tokai.index("</section>")]
+    self.assertIn("まだ開放されていません", tokai)  # 開放していない地方も、その地方の物の怪の表を出す（#267）
+    self.assertIn("<td>蛸入道</td>", tokai)
+    self.assertEqual(tokai.count("<tr data-f="), 30)  # 道の物の怪 30 体（大物・主はまだいない）
+    self.assertNotIn("<h3>街道</h3>", tokai)  # 通れる道がないので、街道の円グラフは出さない
     self.assertNotIn("江戸〜小田原（", south[south.index("<table") :])  # 物の怪の表には出る道と割合を出さない
     self.assertIn(
       '<tr data-f="plain"><td>送り犬</td><td class="num">1</td>'
       '<td><span class="tdot" style="background:var(--t-plain)"></span>草原</td>',
       south,
     )  # 名前の右に Lv と地形（街道の円グラフと同じ色の丸）
-    head = html[: html.index('class="tabs"')]  # 地形の絞り込み（タブの上。開放した道と大物・主にある地形だけ）
-    for t in ("plain", "mountain", "forest", "snow"):
+    head = html[: html.index('class="tabs"')]  # 地形の絞り込み（タブの上。表に出した物の怪の地形だけ）
+    for t in ("plain", "mountain", "forest", "snow", "sea"):  # 海はまだ開放していない地方の物の怪
       self.assertIn(f'class="chip" data-f="{t}"', head)
-    self.assertNotIn('data-f="sea"', head)
+    self.assertNotIn('data-f="wetland"', head)  # どの地方の道にもない地形の物の怪はいない（#267）
     self.assertIn('data-f="world"', head)  # 大物は WORLD、主は RAID で絞り込める
     self.assertIn('data-f="raid"', head)
     self.assertIn(
@@ -531,7 +537,7 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(website.share_text(0.126), "13%")
 
   def test_pie_and_terrain_shares(self):
-    shares = website.terrain_shares(WORLD["road_info"][("nagano", "kofu")]["terrain_weights"])  # 道の地形の割合
+    shares = website.terrain_shares(WORLD["monsters"], WORLD["road_info"][("nagano", "kofu")]["monsters"])
     self.assertAlmostEqual(sum(x for _, x in shares), 1.0)
     self.assertEqual([t for t, _ in shares], ["forest", "mountain", "snow", "plain"])  # 多い順
     svg = website.pie_svg(shares)
@@ -540,6 +546,16 @@ class SiteTest(unittest.TestCase):
     one = website.pie_svg([("plain", 1.0)])  # 1 つだけなら円
     self.assertIn("<circle", one)
     self.assertNotIn("<path", one)
+
+  def test_opened_area_without_matching_foes_is_still_open(self):
+    world = copy.deepcopy(WORLD)
+    for info in world["road_info"].values():
+      info["monsters"] = []  # 開放した道に、坂東の物の怪がひとりも住んでいなくても
+    html = website.build_monsters(world)
+    bando = html[html.index('id="panel-bando"') :]
+    bando = bando[: bando.index("</section>")]
+    self.assertNotIn("まだ開放されていません", bando)  # 開放した町のある地方は、開放した地方として出す
+    self.assertIn("<td>雪女</td>", bando)  # 町の討伐で狙う大物も出す
 
   def test_monsters_page_edge_cases(self):
     world = copy.deepcopy(WORLD)

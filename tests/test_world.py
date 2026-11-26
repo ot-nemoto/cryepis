@@ -9,9 +9,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+import game as G  # noqa: E402
 import world as W  # noqa: E402
 
 RAW = W.load_raw()
+RAW_MONSTERS = {m["id"]: m for m in RAW["monsters"]}
 WORLD = W.build(copy.deepcopy(RAW))
 
 
@@ -64,6 +66,7 @@ class DataTest(unittest.TestCase):
       ends = {world["places"][p]["area"] for p in key}
       for mid, weight in info["monsters"]:
         self.assertIn(world["monsters"][mid]["area"], ends)  # 両端の町の地方の物の怪（#265）
+        self.assertIn(world["monsters"][mid]["terrain"], info["terrain"])  # 道の地形に住む物の怪（#267）
         self.assertGreater(weight, 0)
 
   def test_each_area_has_two_monsters_per_level(self):
@@ -74,6 +77,51 @@ class DataTest(unittest.TestCase):
       self.assertEqual(levels, sorted(list(range(1, 16)) * 2), area)
     names = [m["name"] for m in world["monsters"].values()]
     self.assertEqual(len(names), len(set(names)))  # 地方どうしで名前が重ならない
+
+  def test_every_road_has_a_foe_for_every_level_even_before_opening(self):
+    raw = copy.deepcopy(RAW)
+    raw["map"].pop("open", None)  # 開放していない道（航路も）でも、Lv1〜15 のどのもののふにも Lv −3〜+1 の相手がいる
+    world = W.build(raw)
+    low, high = world["season"]["encounter_levels"]
+    for key, info in world["road_info"].items():
+      for level in range(1, 16):
+        levels = {world["monsters"][m]["level"] for m, _ in G.encounters(world, info["monsters"], level)}
+        self.assertTrue(levels and all(level + low <= x <= level + high for x in levels), (key, level, levels))
+
+  def test_road_weights_follow_the_terrain_shares(self):
+    world = W.load_world()
+    info = world["road_info"][("kofu", "nagano")]  # 坂東の中の道。地形の割合 = その地形の物の怪の重みの合計
+    road = next(r for r in RAW["map"]["roads"] if {r["from"], r["to"]} == {"kofu", "nagano"})
+    total = sum(w for _, w in road["terrain"])
+    for t, w in road["terrain"]:
+      got = sum(x for m, x in info["monsters"] if world["monsters"][m]["terrain"] == t)
+      self.assertAlmostEqual(got, w / total, msg=t)
+
+  def test_terrain_without_monsters_is_left_out(self):
+    raw = copy.deepcopy(RAW)
+    road = next(r for r in raw["map"]["roads"] if {r["from"], r["to"]} == {"edo", "odawara"})
+    road["terrain"] = [["plain", 1], ["wetland", 9]]  # 坂東に湿地の物の怪はいない
+    info = W.build(raw)["road_info"][("edo", "odawara")]
+    self.assertTrue(info["monsters"])
+    self.assertAlmostEqual(sum(w for _, w in info["monsters"]), 1.0)  # 湿地の分は、住む物の怪のいる地形で分け直す
+    self.assertEqual({RAW_MONSTERS[m]["terrain"] for m, _ in info["monsters"]}, {"plain"})
+
+  def test_area_without_monsters_on_the_road_is_left_out(self):
+    raw = copy.deepcopy(RAW)
+    raw["map"].pop("open", None)
+    world = W.build(raw)
+    info = world["road_info"][("ujiyamada", "edo")]  # 航路。坂東に海の物の怪はいないので、東海の物の怪だけ
+    self.assertEqual({world["monsters"][m]["area"] for m, _ in info["monsters"]}, {"tokai"})
+    self.assertAlmostEqual(sum(w for _, w in info["monsters"]), 1.0)
+
+  def test_broken_road_terrain_does_not_stop_the_quest_check(self):
+    def change(r):
+      road = next(x for x in r["map"]["roads"] if {x["from"], x["to"]} == {"kofu", "nagano"})
+      road["terrain"] = [["plain", 0]]
+
+    errors = errors_after(change)
+    self.assertTrue(any("terrain" in e for e in errors), errors)
+    self.assertFalse(any("調べきれません" in e for e in errors), errors)
 
   def test_cross_area_road_splits_between_areas(self):
     raw = copy.deepcopy(RAW)
@@ -149,6 +197,11 @@ class ValidateTest(unittest.TestCase):
       r["monsters"] = [m for m in r["monsters"] if m.get("area") != "bando"]
 
     self.assertError(change, ["roads", "物の怪がいません"])
+
+  def test_monster_lives_on_a_terrain_of_its_area(self):
+    self.assertError(
+      lambda r: r["monsters"][0].update(terrain="wetland"), ["wild_dog", "wetland", "bando"]
+    )  # 坂東に湿地はない
 
   def test_road_monster_needs_an_area(self):
     self.assertError(lambda r: r["monsters"][0].pop("area"), ["wild_dog", "area"])
