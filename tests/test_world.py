@@ -90,13 +90,13 @@ class DataTest(unittest.TestCase):
 
   def test_every_terrain_has_a_foe_for_every_level(self):
     """道の地形ごとに、Lv1〜15 のどのもののふにも Lv −3〜+1 の物の怪が住む（#269）。陸路は両端の地方それぞれで、
-    航路の海は両端の地方を合わせて。Lv1〜2 の物の怪は地方に 4 体なので、地形が 5 つの北陸の森の Lv1 だけは除く。"""
+    航路の海は両端の地方を合わせて。Lv1〜2 の物の怪は地方に 4 体なので、地形が 5 つの北陸の雪原の Lv1 だけは除く。"""
     raw = copy.deepcopy(RAW)
     raw["map"].pop("open", None)  # 開放していない道も
     world = W.build(raw)
     low, high = world["season"]["encounter_levels"]
     road_foes = [m for m in world["monsters"].values() if W.on_road(m)]
-    allowed = {("hokuriku", "forest", 1)}
+    allowed = {("hokuriku", "snow", 1)}
     for r in raw["map"]["roads"]:
       if r.get("kind", "land") == "trail":
         continue
