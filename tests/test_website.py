@@ -537,7 +537,7 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(website.share_text(0.126), "13%")
 
   def test_pie_and_terrain_shares(self):
-    shares = website.terrain_shares(WORLD["road_info"][("nagano", "kofu")]["terrain_weights"])  # 道の地形の割合
+    shares = website.terrain_shares(WORLD["monsters"], WORLD["road_info"][("nagano", "kofu")]["monsters"])
     self.assertAlmostEqual(sum(x for _, x in shares), 1.0)
     self.assertEqual([t for t, _ in shares], ["forest", "mountain", "snow", "plain"])  # 多い順
     svg = website.pie_svg(shares)
@@ -546,6 +546,16 @@ class SiteTest(unittest.TestCase):
     one = website.pie_svg([("plain", 1.0)])  # 1 つだけなら円
     self.assertIn("<circle", one)
     self.assertNotIn("<path", one)
+
+  def test_opened_area_without_matching_foes_is_still_open(self):
+    world = copy.deepcopy(WORLD)
+    for info in world["road_info"].values():
+      info["monsters"] = []  # 開放した道に、坂東の物の怪がひとりも住んでいなくても
+    html = website.build_monsters(world)
+    bando = html[html.index('id="panel-bando"') :]
+    bando = bando[: bando.index("</section>")]
+    self.assertNotIn("まだ開放されていません", bando)  # 開放した町のある地方は、開放した地方として出す
+    self.assertIn("<td>雪女</td>", bando)  # 町の討伐で狙う大物も出す
 
   def test_monsters_page_edge_cases(self):
     world = copy.deepcopy(WORLD)

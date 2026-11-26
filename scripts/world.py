@@ -1242,14 +1242,25 @@ def background_uri(bg: dict | None) -> str | None:
 
 def road_monsters(road: dict, places: dict, monsters: list[dict]) -> list[tuple[str, float]]:
   """道に出る物の怪と重み。両端の町の地方（#265）の物の怪のうち、道の地形に住む物の怪（#267）。
-  地方をまたぐ道は、どちらの地方も半分ずつ。地方の中は、道の地形の割合を、その地形の物の怪の数で分ける。"""
-  areas = list(dict.fromkeys(places.get(road.get(e), {}).get("area") for e in ("from", "to")))
-  total = sum(w for _, w in road.get("terrain") or [])
+  地方をまたぐ道は、どちらの地方も半分ずつ（道の地形に住む物の怪のいない地方は入れない）。地方の中は、道の地形の割合を
+  （その地方の物の怪が住む地形だけで分け直して）、その地形の物の怪の数で分ける。terrain の形が崩れていれば空。"""
+  if not _weights_ok(road.get("terrain")):
+    return []
+  homes: dict = {}  # (地方, 地形) → 物の怪（主・大物は道には出ない）
+  for m in monsters:
+    if on_road(m):
+      homes.setdefault((m.get("area"), m.get("terrain")), []).append(m["id"])
+  areas = [
+    a
+    for a in dict.fromkeys(places.get(road.get(e), {}).get("area") for e in ("from", "to"))
+    if any((a, t) in homes for t, _ in road["terrain"])
+  ]
   pool = []
   for area in areas:
-    for t, w in road.get("terrain") or []:
-      here = [m["id"] for m in monsters if m.get("area") == area and m.get("terrain") == t and on_road(m)]
-      pool += [(mid, w / total / len(areas) / len(here)) for mid in here]  # 主・大物は道には出ない
+    here = [(t, w) for t, w in road["terrain"] if (area, t) in homes]
+    total = sum(w for _, w in here)
+    for t, w in here:
+      pool += [(mid, w / total / len(areas) / len(homes[(area, t)])) for mid in homes[(area, t)]]
   return pool
 
 
@@ -1374,7 +1385,6 @@ def build(raw: dict) -> dict:
       info[(a, b)] = {
         "kind": kind,
         "terrain": [t for t, _ in r["terrain"]],
-        "terrain_weights": [list(x) for x in r["terrain"]],
         "monsters": pool,
         "path": path if a == r["from"] or not path else path[::-1],
       }

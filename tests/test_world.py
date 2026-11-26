@@ -13,6 +13,7 @@ import game as G  # noqa: E402
 import world as W  # noqa: E402
 
 RAW = W.load_raw()
+RAW_MONSTERS = {m["id"]: m for m in RAW["monsters"]}
 WORLD = W.build(copy.deepcopy(RAW))
 
 
@@ -95,6 +96,32 @@ class DataTest(unittest.TestCase):
     for t, w in road["terrain"]:
       got = sum(x for m, x in info["monsters"] if world["monsters"][m]["terrain"] == t)
       self.assertAlmostEqual(got, w / total, msg=t)
+
+  def test_terrain_without_monsters_is_left_out(self):
+    raw = copy.deepcopy(RAW)
+    road = next(r for r in raw["map"]["roads"] if {r["from"], r["to"]} == {"edo", "odawara"})
+    road["terrain"] = [["plain", 1], ["wetland", 9]]  # 坂東に湿地の物の怪はいない
+    info = W.build(raw)["road_info"][("edo", "odawara")]
+    self.assertTrue(info["monsters"])
+    self.assertAlmostEqual(sum(w for _, w in info["monsters"]), 1.0)  # 湿地の分は、住む物の怪のいる地形で分け直す
+    self.assertEqual({RAW_MONSTERS[m]["terrain"] for m, _ in info["monsters"]}, {"plain"})
+
+  def test_area_without_monsters_on_the_road_is_left_out(self):
+    raw = copy.deepcopy(RAW)
+    raw["map"].pop("open", None)
+    world = W.build(raw)
+    info = world["road_info"][("ujiyamada", "edo")]  # 航路。坂東に海の物の怪はいないので、東海の物の怪だけ
+    self.assertEqual({world["monsters"][m]["area"] for m, _ in info["monsters"]}, {"tokai"})
+    self.assertAlmostEqual(sum(w for _, w in info["monsters"]), 1.0)
+
+  def test_broken_road_terrain_does_not_stop_the_quest_check(self):
+    def change(r):
+      road = next(x for x in r["map"]["roads"] if {x["from"], x["to"]} == {"kofu", "nagano"})
+      road["terrain"] = [["plain", 0]]
+
+    errors = errors_after(change)
+    self.assertTrue(any("terrain" in e for e in errors), errors)
+    self.assertFalse(any("調べきれません" in e for e in errors), errors)
 
   def test_cross_area_road_splits_between_areas(self):
     raw = copy.deepcopy(RAW)

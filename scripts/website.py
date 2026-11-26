@@ -631,11 +631,12 @@ def habitat_label(hid: str) -> str:
   return terrain_label(hid)
 
 
-def terrain_shares(weights: list) -> list[tuple[str, float]]:
-  """道の地形（[地形, 重み], ...）の割合。多い順。戦いになったとき、この割合でどの地形の物の怪が出るかが決まる（#267）。"""
+def terrain_shares(monsters: dict, pool: list) -> list[tuple[str, float]]:
+  """道に出る物の怪（[ID, 重み], ...）から、地形ごとの割合（戦いになったとき、その地形の物の怪が出る割合）。多い順。
+  道の地形の割合（map.json）のうち、両端の地方の物の怪が住む地形だけで分け直したもの（#267）。"""
   out: dict[str, float] = {}
-  for t, w in weights:
-    out[t] = out.get(t, 0) + w
+  for mid, w in pool:
+    out[monsters[mid]["terrain"]] = out.get(monsters[mid]["terrain"], 0) + w
   total = sum(out.values()) or 1
   return sorted(((t, w / total) for t, w in out.items()), key=lambda x: (-x[1], W.TERRAINS.index(x[0])))
 
@@ -667,8 +668,9 @@ def pie_svg(shares: list[tuple[str, float]]) -> str:
 
 
 def build_monsters(world: dict) -> str:
-  """開放した道に出る物の怪の一覧（地方ごとのタブ。Lv・生息地・性質・属性・強さ）。並びは Lv の順（同じ Lv は地形の順）。
-  道で出会う物の怪はもののふの Lv でも変わるので、物の怪ごとの「出る道と割合」は出さない。道は、両端の町の地方に入れる。開放した道のない地方は、まだ開放されていないと出す。
+  """物の怪の一覧（地方ごとのタブ。Lv・生息地・性質・属性・強さ）。並びは Lv の順（同じ Lv は地形の順）。
+  開放した地方は開放した道に出る物の怪、開放していない地方は、開放すると道に出るその地方の物の怪を出す（#267）。
+  道で出会う物の怪はもののふの Lv でも変わるので、物の怪ごとの「出る道と割合」は出さない。道は、両端の町の地方に入れる。
   大物（生息地 WORLD）と主（RAID）も同じ表に、道の物の怪のあとに出す（開放した町のある地方だけ。Lv は N/A）。"""
   places, monsters, traits = world["places"], world["monsters"], world["traits"]
   towns = [t for t, p in places.items() if p["type"] == "town"]
@@ -684,14 +686,14 @@ def build_monsters(world: dict) -> str:
   def table(aid: str, members: list[str]) -> str:
     """この地方の物の怪: 町につながる開放した道の物の怪、町の討伐の依頼で狙う大物（WORLD）、霊場の主（RAID）。
     並びは道の物の怪（Lv の順）→ 大物 → 主。大物・主は、開放した町のある地方だけ。
-    開放した道のない地方は、まだ開放されていないと出し、その地方の道の物の怪（開放すると道に出る）の表を出す（#267）。"""
+    開放した町のない地方は、まだ開放されていないと出し、その地方の道の物の怪（開放すると道に出る）の表を出す（#267）。"""
     seen: set[str] = set()
     for (a, b), info in world["road_info"].items():
       if place_order[a] > place_order[b] or not ({a, b} & set(members)):
         continue  # 同じ道は 1 度だけ。この地方（のまとまり）の町につながる道だけ
       # 地方をまたぐ道の物の怪は、その物の怪の地方のタブにだけ出す（地方のない・知らないまとまりは、道の物の怪を全部）
       seen |= {mid for mid, _ in info["monsters"] if aid not in world["areas"] or monsters[mid].get("area") == aid}
-    if not seen:
+    if not set(members) & set(world["towns"]):  # 開放した町のない地方（#267）
       later = [mid for mid, m in monsters.items() if aid in world["areas"] and m.get("area") == aid and W.on_road(m)]
       later.sort(key=lambda m: (monsters[m]["level"], order.get(monsters[m]["terrain"], 99), m))
       shown.update(habitat(monsters[m]) for m in later)
@@ -759,7 +761,7 @@ def build_monsters(world: dict) -> str:
     for (a, b), info in world["road_info"].items():
       if place_order[a] > place_order[b] or not ({a, b} & set(members)):
         continue
-      shares = terrain_shares(info["terrain_weights"])
+      shares = terrain_shares(monsters, info["monsters"])
       legend = "".join(f"<li>{terrain_label(t)} {share_text(share)}</li>" for t, share in shares)
       items.append(
         f'<div class="road">{pie_svg(shares)}<div><div class="name">{escape(places[a]["name"])}〜'
