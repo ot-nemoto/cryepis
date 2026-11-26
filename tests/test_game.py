@@ -945,6 +945,48 @@ class PartyQuestTest(unittest.TestCase):
     self.assertFalse(G.quest_ok(self.world, old))  # 1 人で受ける前の大物の依頼は捨てる
     self.assertTrue(G.quest_ok(self.world, {k: v for k, v in entry.items() if k not in G.GUILD_FIELDS}))
 
+  def test_waiting_does_not_spend_stored_actions(self):
+    guild = G.new_guild()
+    G.refresh_guild(self.world, guild, START, 1)
+    entry = self.elite_entry(guild)
+    entry.update(members=["a", "b"], status="held", gather_until=(START + timedelta(days=2)).isoformat())
+    a = self.hero("a")
+    self.at_the_hunt(a, entry)
+    a["hero"].update(stored=5, gold=5000, hp=1)  # HP が低く、旅籠代もあるが、狩り場で待っている
+    a["last_date"] = (START - timedelta(days=1)).isoformat()
+    G.advance(self.world, a, START, guild=guild, others={"a": a})
+    self.assertEqual(a["hero"]["stored"], 5)
+    self.assertEqual(a["last"]["actions"], self.world["season"]["actions_per_day"])
+
+  def test_cannot_join_the_same_party_twice(self):
+    guild = G.new_guild()
+    G.refresh_guild(self.world, guild, START, 1)
+    guild["towns"]["nagano"] = []
+    entry = self.elite_entry(guild)
+    entry.update(members=["a"], gather_until=START.isoformat())
+    a = self.hero("a")
+    a["personality"] = None
+    G.Day(self.world, a, START, random.Random(0), guild).take_quest("nagano")
+    self.assertEqual(entry["members"], ["a"])  # すでに入っている依頼には入り直さない
+    self.assertEqual(entry["status"], "open")
+
+  def test_held_party_flows_after_the_deadline(self):
+    guild = G.new_guild()
+    G.refresh_guild(self.world, guild, START, 1)
+    entry = self.elite_entry(guild)
+    entry.update(members=["a", "b"], arrived=["a"], status="held", gather_until=START.isoformat())
+    guild["refreshed"]["nagano"] = START.isoformat()
+    G.refresh_guild(self.world, guild, START + timedelta(days=1), 1, ["nagano"])
+    self.assertNotIn("e1", [e["id"] for e in guild["towns"]["nagano"]])  # 仲間が来られなくても、待ち続けない
+
+  def test_once_a_day_skills_count_across_turns(self):
+    a = self.hero("a")
+    day = G.Day(self.world, a, START, random.Random(0))
+    day.endured = True
+    day.remember("endured")
+    self.assertTrue(G.Day(self.world, a, START, random.Random(1)).endured)  # 同じ日に仲間の番で戦っても、もう使えない
+    self.assertFalse(G.Day(self.world, a, START + timedelta(days=1), random.Random(1)).endured)
+
   def test_release_orphans_frees_the_slot(self):
     guild = G.new_guild()
     entry = self.elite_entry(guild)

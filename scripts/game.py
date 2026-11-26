@@ -561,7 +561,8 @@ def quests_per_day(world: dict, town: str) -> int:
 #   done（達成）/ failed（失敗）: 翌日の朝、達成なら新しい依頼に入れ替わり、失敗なら同じ依頼が受付中に戻る
 GUILD_FIELDS = ("posted", "status", "holder", "returned", "members", "arrived", "gather_until")
 # 何人かで受ける依頼（party。#72）は、受けたもののふを members、狩り場（霊場）に着いたもののふを arrived に入れる。
-# 人数がそろうまでは open（受付中）のまま。最初の 1 人が受けた日から gather_days 日（gather_until まで）でそろわなければ流れる。
+# 人数がそろうまでは open（受付中）のまま。最初の 1 人が受けた日から gather_days 日（gather_until まで）に、全員が狩り場に
+# そろって戦えなければ流れる（受注中でも。仲間の 1 人が進められなくなったときに、ほかの仲間が待ち続けないように）。
 # そろったら held。物の怪を倒したら done、全員が倒れたら failed（翌朝、受付中に戻る）。
 
 
@@ -601,8 +602,8 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
       # 高札の段取りは見ない（受けるときに作り直す。受注中の進みはもののふの状態のほう）
       if e.get("status") not in ("open", "held") or not quest_ok(world, e, steps=False):
         continue  # 達成された依頼（と、world/ から消えた依頼）ははがす
-      if e.get("gather_until") and e["status"] == "open" and date.fromisoformat(e["gather_until"]) < d:
-        continue  # 人数がそろわないまま流れた（受けていたもののふは、自分の番で引き返す）
+      if e.get("gather_until") and e["status"] in ("open", "held") and date.fromisoformat(e["gather_until"]) < d:
+        continue  # 期限までに全員がそろって戦えなかったので流れた（受けていたもののふは、自分の番で引き返す）
       if e["status"] == "open" and not e.get("members") and last_open_day(world, e) < d:
         continue  # 誰も受けないまま受付が終わった
       renew_quest_texts(world, e)  # 物の怪の名前が変わったら、文も合わせる
@@ -985,7 +986,11 @@ class Day:
     self.reported = False  # 今日、依頼を報告したか（長くいた町から旅に出るのは、次の日の朝にする）
     self.gear: list | None = None  # 戦いの中で着けている装備（スキルを見る。戦いの外は None）
     self.crit = False  # 最後の攻撃が会心の一撃だったか
-    self.endured = self.decoyed = False  # 踏ん張り・身代わりを今日もう使ったか（1 日 1 回）
+    # 踏ん張り・身代わりを今日もう使ったか（1 日 1 回。仲間の番で一緒に戦うときも数えるので、状態に残す）
+    used = state.get("used_today") or {}
+    same_day = used.get("date") == today.isoformat()
+    self.endured = bool(same_day and used.get("endured"))
+    self.decoyed = bool(same_day and used.get("decoyed"))
     self.hunting = False  # 討伐の連戦の途中か（スキルの息継ぎ）
     self.smithed = False  # 今日、鍛冶屋でスキルを付けたか（1 日 1 回）
     self.rested = False
@@ -995,6 +1000,14 @@ class Day:
 
   def log(self, text: str) -> None:
     self.events.append(text)
+
+  def remember(self, flag: str) -> None:
+    """1 日 1 回のスキル（踏ん張り・身代わり）を使ったことを、状態に残す（同じ日に仲間の番で戦うときも使えない）。"""
+    used = self.state.get("used_today") or {}
+    if used.get("date") != self.today.isoformat():
+      used = {"date": self.today.isoformat()}
+    used[flag] = True
+    self.state["used_today"] = used
 
   @property
   def stats(self) -> dict:
@@ -1201,6 +1214,7 @@ class Day:
       dmg -= sk("calm")
     if sk("decoy") and not self.decoyed and dmg > 0:  # 身代わり: 1 日 1 回、受けたダメージを 0
       self.decoyed = True
+      self.remember("decoyed")
       self.log("身代わりが攻撃を受けた")
       return 0
     return max(0 if sk("sturdy") else 1, dmg)
@@ -1540,7 +1554,11 @@ class Day:
     refresh_guild(self.world, self.guild, self.today, season_of(self.world, self.today), [town])
     levels = me.get("quest", {}).get("levels")
     open_ = [  # 受付中の依頼だけ（受注中のものは受けられない）
-      e for e in self.guild["towns"].get(town, []) if e["status"] == "open" and e["id"] not in self.state["taken"]
+      e
+      for e in self.guild["towns"].get(town, [])
+      if e["status"] == "open"
+      and e["id"] not in self.state["taken"]
+      and self.state["id"] not in (e.get("members") or [])  # 何人かの依頼に、同じもののふが 2 度入らない
     ]
     entries = [e for e in open_ if suitable(e, level, levels)]
     if not entries and levels:
@@ -1951,6 +1969,7 @@ def _fight(sides: list[dict], monster: dict, hp: int) -> bool:
       c["taken"] += dmg
       if hero["hp"] <= 0 and d.skill("endure") and not d.endured:  # 踏ん張り: 1 日 1 回、HP 1 で耐える
         d.endured = True
+        d.remember("endured")
         hero["hp"] = 1
         d.log("踏ん張って倒れずに耐えた")
       below = personality(d.world, d.state).get("potion_below")
@@ -2085,6 +2104,7 @@ def advance(
 
     while (
       not rest_day
+      and not day.waiting  # 仲間を待っている日は、溜めた行動力を使わない（旅籠にも行かない）
       and hero.get("stored", 0) > 0
       and (on_quest() or (personality(world, state) and not state["road"] and day.wants_inn()))
     ):

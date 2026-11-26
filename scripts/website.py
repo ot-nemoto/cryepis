@@ -391,6 +391,9 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
   ):
     # まだ誰も進めていない・その日の高札になっていない: その日の朝の高札を見せる（保存はしない）
     guild = copy.deepcopy(guild) if guild.get("season") == season else game.new_guild()
+    guild["levels"] = sorted(
+      st["hero"]["level"] for _, st in entries
+    )  # 毎日の実行と同じく、もののふたちの Lv で抽選する
     game.refresh_guild(world, guild, today, season)
   places = world["places"]
 

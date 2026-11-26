@@ -302,7 +302,8 @@ def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, 
     random.Random(f"order-{day.isoformat()}").shuffle(order)
     # 何人かで受ける大物の依頼は、受けられるもののふが人数分いるときだけ出す（その日の朝の Lv で数える。#72）
     guild["levels"] = sorted(st["hero"]["level"] for hid, (_, st, _) in loaded.items() if hid not in errors)
-    others = {hid: st for hid, (_, st, _) in loaded.items() if hid not in errors}  # 一緒に戦う仲間の状態
+    # 一緒に戦う仲間の状態（この日を進めるもののふだけ。ほかは進めないので保存されず、一緒に戦った結果が残らない）
+    others = {hid: loaded[hid][1] for hid in order}
     for hid in order:
       hero, state, _ = loaded[hid]
       # 失敗したら、そのもののふが高札とほかのもののふ（一緒に戦った仲間）に加えた変更も取り消す
