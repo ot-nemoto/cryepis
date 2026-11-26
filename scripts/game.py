@@ -992,94 +992,60 @@ class Day:
     )
 
   def battle(self, monster: dict) -> bool:
-    """勝てば True。丸薬が尽きて HP が 0 になったら False。
+    """勝てば True。丸薬が尽きて HP が 0 になったら False（1 人で戦う。何人かで戦うのは party_battle）。
     物の怪の性質（trait）・属性の相性（武器の属性と物の怪の属性）・素早さで戦い方が変わる。
     素早いほうが先に攻撃し、相手の 2 倍以上素早ければ 2 回攻撃する（性質「先手」は、素早さに関係なく物の怪が先）。
     もののふは戦いのたびに、持ち物の中からいちばん効く武器に持ち替える（能力は、持ち替えた武器のもの）。
     装備のスキル（#233）: 武器と御守はその戦いで選んだもの、頭と胴はふだんのもので効く。"""
-    e = W.trait_effect(monster)  # 凶暴・硬い・群れで変わる値
-    hp, atk, guard, hits = e["hp"], e["atk"], e["guard"], e["hits"]
+    return party_battle([self], monster)
+
+  def ready(self, monster: dict, effect: dict) -> dict:
+    """戦いの支度: その戦いの装備を選んで self.gear に入れ、このもののふから見た物の怪の値（性質のスキルで変わる守り・
+    攻撃・攻撃の回数）と、このもののふの攻撃の回数・先に動くかなどをまとめる（party_battle が使う）。"""
+    atk, guard, hits = effect["atk"], effect["guard"], effect["hits"]
     weapon, rate, s, accessory = self.pick_gear(monster, guard)
     usual = worn(self.world, self.state)
     self.gear = [weapon, accessory, usual["helmet"], usual["shield"]]
-    try:
-      return self.fight(monster, hp, atk, guard, hits, weapon, rate, s, accessory)
-    finally:
-      self.gear = None
-
-  def fight(self, monster, hp, atk, guard, hits, weapon, rate, s, accessory) -> bool:
-    """battle の続き（self.gear にその戦いの装備を入れてから呼ぶ）。"""
-    hero, trait, sk = self.hero, monster.get("trait"), self.skill
-    items, usual_wpn = self.world["items"], equipment(self.world, self.state)["weapon"]
+    trait, sk = monster.get("trait"), self.skill
     if trait == "armored" and sk("pierce"):
       guard = monster["def"]
     if trait == "fierce" and sk("deflect"):
       atk = monster["atk"]
     if trait == "swarm" and sk("swarm_guard"):
       hits = max(1, hits - 1)
-    full = hp
-    hero_atk, spd = s["atk"], s["spd"]
+    spd = s["spd"]
     mspd = monster.get("spd", spd)
-    hero_hits = 2 if spd >= (sk("combo") or 2) * mspd else 1
-    hits *= 2 if mspd >= 2 * spd else 1
-    hero_first = (trait != "first_strike" or bool(sk("insight"))) and spd >= mspd
-    divisor, mult, taken_mult = sk("focus"), sk("crit_art"), sk("crit_guard")
-    taken, max_hp, killing_crit = 0, self.stats["max_hp"], False
+    return {
+      "day": self,
+      "weapon": weapon,
+      "accessory": accessory,
+      "rate": rate,
+      "s": s,
+      "guard": guard,  # このもののふが攻めるときの物の怪の守り
+      "atk": atk,  # 物の怪がこのもののふを攻めるときの攻撃
+      "hits": hits * (2 if mspd >= 2 * spd else 1),  # 物の怪がこのもののふを攻める回数
+      "hero_hits": 2 if spd >= (sk("combo") or 2) * mspd else 1,
+      "first": (trait != "first_strike" or bool(sk("insight"))) and spd >= mspd,
+      "first_move": bool(sk("first_move")),
+      "spd": spd,
+      "mspd": mspd,
+      "divisor": sk("focus"),
+      "mult": sk("crit_art"),
+      "taken_mult": sk("crit_guard"),
+      "taken": 0,
+      "max_hp": self.stats["max_hp"],
+      "killing_crit": False,
+      "down": False,
+    }
 
-    def strike() -> int:
-      nonlocal killing_crit
-      self.crit = False
-      extra = {k: v for k, v in (("divisor", divisor), ("multiplier", mult)) if v}  # スキルがなければ渡さない
-      dmg = round(self.damage(hero_atk, guard, s["dex"], **extra) * rate)
-      if sk("finisher") and hp <= full * 0.2:
-        dmg = W.half_up(dmg * sk("finisher"))
-      killing_crit = self.crit
-      return max(1, dmg)
-
-    first_round = True
-    while True:
-      order = ("hero", "monster") if hero_first or (first_round and sk("first_move")) else ("monster", "hero")
-      first_round = False
-      for side in order:
-        if side == "hero":
-          for _ in range(hero_hits):
-            hp -= strike()
-            if hp <= 0:
-              break
-          if hp <= 0:
-            break
-          continue
-        for _ in range(hits):
-          extra = {"multiplier": taken_mult} if taken_mult else {}
-          dmg = self.damage(atk, s["def"], monster.get("dex", 6), **extra)
-          dmg = self.guard_skills(dmg, monster, spd, mspd)
-          hero["hp"] -= dmg
-          taken += dmg
-          if hero["hp"] <= 0 and sk("endure") and not self.endured:  # 踏ん張り: 1 日 1 回、HP 1 で耐える
-            self.endured = True
-            hero["hp"] = 1
-            self.log("踏ん張って倒れずに耐えた")
-          below = personality(self.world, self.state).get("potion_below")
-          if below is None and hero["hp"] <= 0 and hero["potions"]:  # 性格がなければ、倒れる前に丸薬を使う
-            self.spend_potion()
-            # 回復の量は、ふだんの装備の最大 HP で決める（持ち替えた武器・御守の HP は、その戦いだけ）
-            hero["hp"] = max(1, int(self.stats["max_hp"] * (sk("revive_art") or self.cfg["potion"]["heal_rate"])))
-            continue
-          if hero["hp"] <= 0:  # 性格があれば、HP が 0 になったら丸薬があっても力尽きる
-            hero["hp"] = 0
-            self.log(f"{self.monster_name(monster)}に敗れた")
-            return False
-          self.use_potion()
-          if dmg > 0 and sk("counter") and self.rng.random() < sk("counter"):  # 返し技
-            hp -= strike()
-            if hp <= 0:
-              break
-        if hp <= 0:
-          break
-      if hp <= 0:
-        break
+  def win(self, monster: dict, c: dict) -> None:
+    """物の怪を倒したあと（経験値・お金・スキル・毒・盗み）。c は ready の支度。
+    何人かで戦ったときは、経験値は全員が満額、お金は物の怪のお金を人数で割った額（四捨五入。#72）。"""
+    hero, trait, sk = self.hero, monster.get("trait"), self.skill
+    items, usual_wpn = self.world["items"], equipment(self.world, self.state)["weapon"]
+    rate, weapon, accessory = c["rate"], c["weapon"], c["accessory"]
     exp = monster["exp"]
-    gold = monster["gold"]
+    gold = W.half_up(monster["gold"] / c["party"])
     if sk("keen_eye"):
       gold = W.half_up(gold * sk("keen_eye"))
     hero["gold"] += gold
@@ -1095,8 +1061,8 @@ class Day:
     for factor, ok in (
       (sk("study"), True),
       (sk("training"), monster.get("level", 0) > hero["level"]),
-      (sk("hardship"), taken >= max_hp * 0.5),  # 受けたダメージの合計（途中の丸薬を差し引かない）
-      (sk("inspiration"), killing_crit),
+      (sk("hardship"), c["taken"] >= c["max_hp"] * 0.5),  # 受けたダメージの合計（途中の丸薬を差し引かない）
+      (sk("inspiration"), c["killing_crit"]),
     ):
       if factor and ok:
         exp *= factor
@@ -1104,7 +1070,7 @@ class Day:
     self.log(f"{self.monster_name(monster)}を倒した{note} (+{exp}EXP)")
     if sk("lifesteal"):
       self.heal(sk("lifesteal"))
-    if sk("breath") and hero["hp"] < max_hp * 0.3:
+    if sk("breath") and hero["hp"] < c["max_hp"] * 0.3:
       self.heal(sk("breath"))
     if sk("second_wind") and self.hunting:
       self.heal(sk("second_wind"))
@@ -1119,7 +1085,6 @@ class Day:
       hero["gold"] -= stolen
       self.log(f"逃げ際に {stolen}文盗まれた")
     self.gain_exp(exp)
-    return True
 
   def guard_skills(self, dmg: int, monster: dict, spd: int, mspd: int) -> int:
     """受けるダメージに、守りのスキルをかける（魔除け・受け太刀・平常心・身代わり・金剛）。"""
@@ -1717,6 +1682,102 @@ class Day:
         continue
       return self.move_toward(quest["place"])
     return True
+
+
+def party_battle(days: list[Day], monster: dict) -> bool:
+  """もののふ（days。1 人でも何人でも）が力を合わせて物の怪と戦う。誰かが物の怪を倒せば True（全員の勝ち）、
+  全員が倒れたら False。1 人なら、Day.battle と同じ戦い（乱数の使い方も同じ）。
+  - 物の怪の HP は 1 つ。もののふはそれぞれ自分の番に攻撃する（物の怪より速い・先手の心得なら物の怪の前、遅ければ後）
+  - 物の怪は毎回、倒れていないもののふから 1 人を選んで攻撃する（攻撃の回数・強さは、選んだもののふとの素早さ・スキルで決まる）
+  - 丸薬は、それぞれの性格のとおりに使う。倒れたもののふは、その戦いではもう動かない
+  - 勝てば、倒れたもののふも含めて全員がもらう。経験値は満額、お金は人数で割る（倒れていたもののふは HP 1 で起き上がる）"""
+  effect = W.trait_effect(monster)  # 凶暴・硬い・群れで変わる値
+  try:
+    sides = [d.ready(monster, effect) | {"party": len(days)} for d in days]
+    won = _fight(sides, monster, effect["hp"])
+  finally:
+    for d in days:
+      d.gear = None
+  if won:
+    for c in sides:
+      if c["down"]:
+        c["day"].hero["hp"] = 1
+        c["day"].log("仲間が物の怪を討ち取り、起き上がった")
+      c["day"].win(monster, c)
+  return won
+
+
+def _fight(sides: list[dict], monster: dict, hp: int) -> bool:
+  """party_battle の戦いの部分（勝てば True）。sides は Day.ready の支度。"""
+  full = hp
+  alive = list(sides)
+  solo = len(sides) == 1
+
+  def strike(c: dict) -> int:
+    d = c["day"]
+    d.crit = False
+    extra = {k: v for k, v in (("divisor", c["divisor"]), ("multiplier", c["mult"])) if v}  # スキルがなければ渡さない
+    dmg = round(d.damage(c["s"]["atk"], c["guard"], c["s"]["dex"], **extra) * c["rate"])
+    if d.skill("finisher") and hp <= full * 0.2:
+      dmg = W.half_up(dmg * d.skill("finisher"))
+    c["killing_crit"] = d.crit
+    return max(1, dmg)
+
+  def hero_turn(c: dict) -> bool:  # 物の怪を倒したら True
+    nonlocal hp
+    for _ in range(c["hero_hits"]):
+      hp -= strike(c)
+      if hp <= 0:
+        return True
+    return False
+
+  def monster_turn() -> bool | None:  # 物の怪を倒したら True、全員倒れたら False、続くなら None
+    nonlocal hp
+    c = alive[0] if len(alive) == 1 else sides[0]["day"].rng.choice(alive)
+    d, hero = c["day"], c["day"].hero
+    for _ in range(c["hits"]):
+      extra = {"multiplier": c["taken_mult"]} if c["taken_mult"] else {}
+      dmg = d.damage(c["atk"], c["s"]["def"], monster.get("dex", 6), **extra)
+      dmg = d.guard_skills(dmg, monster, c["spd"], c["mspd"])
+      hero["hp"] -= dmg
+      c["taken"] += dmg
+      if hero["hp"] <= 0 and d.skill("endure") and not d.endured:  # 踏ん張り: 1 日 1 回、HP 1 で耐える
+        d.endured = True
+        hero["hp"] = 1
+        d.log("踏ん張って倒れずに耐えた")
+      below = personality(d.world, d.state).get("potion_below")
+      if below is None and hero["hp"] <= 0 and hero["potions"]:  # 性格がなければ、倒れる前に丸薬を使う
+        d.spend_potion()
+        # 回復の量は、ふだんの装備の最大 HP で決める（持ち替えた武器・御守の HP は、その戦いだけ）
+        hero["hp"] = max(1, int(d.stats["max_hp"] * (d.skill("revive_art") or d.cfg["potion"]["heal_rate"])))
+        continue
+      if hero["hp"] <= 0:  # 性格があれば、HP が 0 になったら丸薬があっても倒れる
+        hero["hp"] = 0
+        c["down"] = True
+        alive.remove(c)
+        d.log(f"{d.monster_name(monster)}に敗れた" if solo else f"{d.monster_name(monster)}に倒された")
+        return False if not alive else None
+      d.use_potion()
+      if dmg > 0 and d.skill("counter") and d.rng.random() < d.skill("counter"):  # 返し技
+        hp -= strike(c)
+        if hp <= 0:
+          return True
+    return None
+
+  first_round = True
+  while True:
+    before = [c for c in alive if c["first"] or (first_round and c["first_move"])]
+    after = [c for c in alive if c not in before]
+    first_round = False
+    for c in before:
+      if hero_turn(c):
+        return True
+    result = monster_turn()
+    if result is not None:
+      return result
+    for c in after:
+      if c in alive and hero_turn(c):
+        return True
 
 
 def start_season(world: dict, state: dict, season: int) -> None:
