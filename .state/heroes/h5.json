@@ -4,19 +4,19 @@
   "trait": "sturdy",
   "personality": "brave",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-25",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 3,
-    "exp": 24,
+    "exp": 30,
     "max_hp": 52,
-    "hp": 47,
+    "hp": 46,
     "base_atk": 10,
     "base_def": 7,
     "base_spd": 7,
     "base_dex": 9,
-    "gold": 4,
+    "gold": 9,
     "potions": 4,
     "stored": 0
   },
@@ -26,7 +26,7 @@
       "skill": null
     },
     {
-      "id": "iron_helm",
+      "id": "wooden_helm",
       "skill": null
     },
     {
@@ -40,47 +40,59 @@
   ],
   "storage": [
     {
-      "id": "wooden_helm",
+      "id": "iron_helm",
       "skill": null
     }
   ],
-  "place": "karun",
-  "home_town": "karun",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
-  "quest": null,
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "kofu",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 1,
+    "deadline": null,
+    "reward": null,
+    "cost": 3
+  },
   "taken": [
-    "2026-11-25-eques-2"
+    "2026-11-26-patrol"
   ],
   "stay": {
-    "town": "karun",
-    "since": "2026-11-25"
+    "town": "kofu",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 3,
     "quests_failed": 0,
-    "kills": 6,
+    "kills": 7,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "大ネズミ〔群れ〕を倒した (+5EXP)",
-      "エクエスに着いた",
-      "依頼達成！★ 毛皮の交易（エクエスへ荷物を届ける）（+32G）",
-      "報酬で★「活血樹の護符」を手に入れた（装備した）",
-      "エクエスで鉄の兜を買った",
-      "エクエスのギルドの保管庫に、装備を 1 つ預けた",
-      "エクエスのギルドで依頼を受けた: ★ 風にささげる競馬祭の賞杯の配達（カルンへ風にささげる競馬祭の賞杯を届ける）（行動力 2）",
-      "遠くで羊の群れが草を食んでいる",
-      "吐く息が白い",
-      "カルンに着いた",
-      "依頼達成！★ 風にささげる競馬祭の賞杯の配達（カルンへ風にささげる競馬祭の賞杯を届ける）（+32G）",
-      "カルンで木の盾を買った"
+      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "切り立った崖の細い道を進んだ",
+      "木漏れ日が道をまだらに照らす",
+      "送り犬を倒した (+6EXP)",
+      "甲府に着いた",
+      "甲府の口入れ屋の蔵に、装備を 1 つ預けた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 切り立った崖の細い道を進んだ / 木漏れ日が道をまだらに照らす / 送り犬を倒した (+6EXP) / 甲府に着いた / 甲府の口入れ屋の蔵に、装備を 1 つ預けた"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

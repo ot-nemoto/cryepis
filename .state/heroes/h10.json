@@ -4,9 +4,9 @@
   "trait": "guard",
   "personality": "diligent",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-25",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 1,
     "exp": 6,
@@ -18,7 +18,7 @@
     "base_dex": 6,
     "gold": 5,
     "potions": 3,
-    "stored": 1
+    "stored": 0
   },
   "inventory": [
     {
@@ -27,16 +27,64 @@
     }
   ],
   "storage": [],
-  "place": "karun",
-  "home_town": "karun",
-  "road": null,
-  "quest": null,
+  "place": "edo",
+  "home_town": "edo",
+  "road": {
+    "to": "kofu",
+    "left": 1
+  },
+  "quest": {
+    "type": "deliver",
+    "place": "kofu",
+    "report": "kofu",
+    "monster": null,
+    "count": 1,
+    "rank": 3,
+    "danger": 2,
+    "cargo": "大名の書状",
+    "name": "大名の書状の配達",
+    "text": "大名の書状を狙う者がいると聞く。どの教えの者かは分からない。甲府まで、決して渡すな",
+    "min_level": 5,
+    "template": "deliver",
+    "town": "odawara",
+    "progress": 0,
+    "level": null,
+    "deadline": null,
+    "cost": 5,
+    "reward": {
+      "exp": 0,
+      "gold": 320,
+      "item": [
+        [
+          "none",
+          45
+        ],
+        [
+          "common",
+          10
+        ],
+        [
+          "rare",
+          30
+        ],
+        [
+          "epic",
+          13
+        ],
+        [
+          "legendary",
+          2
+        ]
+      ]
+    },
+    "id": "2026-11-26-odawara-2"
+  },
   "taken": [
-    "2026-11-25-patrol"
+    "2026-11-26-odawara-2"
   ],
   "stay": {
-    "town": "karun",
-    "since": "2026-11-25"
+    "town": "edo",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 0,
@@ -46,17 +94,23 @@
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
-    "actions": 3,
+    "date": "2026-11-26",
+    "actions": 4,
     "events": [
-      "エクエスのギルドには受けられる依頼がない。カルンへ旅に出る",
-      "野犬を倒した (+6EXP)",
-      "道端に小さな花が咲いている",
-      "カルンに着いた",
-      "カルンで休んで、行動力を溜めた"
+      "小田原の口入れ屋で依頼を受けた: ★★★ 大名の書状の配達（甲府へ大名の書状を届ける）（行動力 5）",
+      "眼下に雲海が広がっている",
+      "切り立った崖の細い道を進んだ",
+      "江戸に着いた",
+      "苔むした倒木をまたいだ",
+      "草原を風が吹き抜けていく"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 4,
+      "text": "小田原の口入れ屋で依頼を受けた: ★★★ 大名の書状の配達（甲府へ大名の書状を届ける）（行動力 5） / 眼下に雲海が広がっている / 切り立った崖の細い道を進んだ / 江戸に着いた / 苔むした倒木をまたいだ / 草原を風が吹き抜けていく"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

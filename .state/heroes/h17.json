@@ -4,19 +4,19 @@
   "trait": "lucky",
   "personality": "thrifty",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-25",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 2,
-    "exp": 6,
+    "exp": 17,
     "max_hp": 38,
-    "hp": 38,
+    "hp": 31,
     "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 12,
+    "gold": 21,
     "potions": 4,
     "stored": 0
   },
@@ -27,51 +27,42 @@
     }
   ],
   "storage": [],
-  "place": "muralis",
-  "home_town": "muralis",
+  "place": "edo",
+  "home_town": "edo",
   "road": null,
-  "quest": {
-    "type": "patrol",
-    "name": "旅",
-    "template": null,
-    "town": null,
-    "place": "muralis",
-    "report": null,
-    "monster": null,
-    "count": 1,
-    "progress": 1,
-    "level": [
-      2,
-      2
-    ],
-    "deadline": null,
-    "reward": null,
-    "cost": 6
-  },
-  "taken": [],
+  "quest": null,
+  "taken": [
+    "2026-11-26-patrol"
+  ],
   "stay": {
-    "town": "muralis",
-    "since": "2026-11-25"
+    "town": "edo",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 2,
+    "kills": 4,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "ゴブリンを倒した (+8EXP)",
-      "宝箱から回復薬を見つけた",
-      "ゴブリンを倒した (+8EXP)",
-      "レベルが上がった！ Lv.2",
-      "ムラリスに着いた"
+      "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "鉄鼠〔群れ〕を倒した (+5EXP)",
+      "岩の間から竜の骨のような白い石がのぞく",
+      "江戸に着いた",
+      "江戸の周りを散策した",
+      "送り犬を倒した (+6EXP)"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る / 鉄鼠〔群れ〕を倒した (+5EXP) / 岩の間から竜の骨のような白い石がのぞく / 江戸に着いた / 江戸の周りを散策した / 送り犬を倒した (+6EXP)"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

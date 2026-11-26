@@ -4,19 +4,19 @@
   "trait": "strong",
   "personality": "thrifty",
   "season": 1,
-  "season_day": 5,
-  "day": 5,
-  "last_date": "2026-11-25",
+  "season_day": 6,
+  "day": 6,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 4,
-    "exp": 31,
+    "exp": 46,
     "max_hp": 47,
-    "hp": 47,
+    "hp": 42,
     "base_atk": 14,
     "base_def": 7,
     "base_spd": 8,
     "base_dex": 10,
-    "gold": 14,
+    "gold": 25,
     "potions": 3,
     "stored": 0
   },
@@ -35,55 +35,54 @@
     }
   ],
   "storage": [],
-  "place": "karun",
-  "home_town": "karun",
-  "road": {
-    "to": "muralis",
-    "left": 3
-  },
+  "place": "kofu",
+  "home_town": "kofu",
+  "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "muralis",
+    "place": "kofu",
     "report": null,
     "monster": null,
     "count": 1,
-    "progress": 0,
-    "level": [
-      2,
-      2
-    ],
+    "progress": 1,
     "deadline": null,
     "reward": null,
-    "cost": 6
+    "cost": 3
   },
   "taken": [
-    "2026-11-25-patrol"
+    "2026-11-26-patrol"
   ],
   "stay": {
-    "town": "karun",
-    "since": "2026-11-25"
+    "town": "kofu",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 3,
     "quests_failed": 0,
-    "kills": 8,
+    "kills": 9,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "カルンのギルドには受けられる依頼がない。ムラリスへ旅に出る",
-      "遠くで羊の群れが草を食んでいる",
-      "大ネズミ〔群れ〕を倒した (+5EXP)",
-      "遠くで羊の群れが草を食んでいる"
+      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "雪原に獣の足跡が続いている",
+      "雪狼〔群れ〕を倒した (+15EXP)",
+      "眼下に雲海が広がっている",
+      "甲府に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 雪原に獣の足跡が続いている / 雪狼〔群れ〕を倒した (+15EXP) / 眼下に雲海が広がっている / 甲府に着いた"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

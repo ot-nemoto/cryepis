@@ -4,19 +4,19 @@
   "trait": "swift",
   "personality": "thrifty",
   "season": 1,
-  "season_day": 5,
-  "day": 5,
-  "last_date": "2026-11-25",
+  "season_day": 6,
+  "day": 6,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 4,
-    "exp": 31,
+    "exp": 39,
     "max_hp": 54,
-    "hp": 54,
+    "hp": 53,
     "base_atk": 12,
     "base_def": 7,
     "base_spd": 9,
     "base_dex": 10,
-    "gold": 42,
+    "gold": 48,
     "potions": 3,
     "stored": 0
   },
@@ -39,39 +39,42 @@
     }
   ],
   "storage": [],
-  "place": "eques",
-  "home_town": "eques",
+  "place": "edo",
+  "home_town": "edo",
   "road": null,
   "quest": null,
   "taken": [
-    "2026-11-25-salina-0"
+    "2026-11-26-patrol"
   ],
   "stay": {
-    "town": "eques",
-    "since": "2026-11-25"
+    "town": "edo",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 4,
     "quests_failed": 0,
-    "kills": 8,
+    "kills": 9,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "野犬を倒した (+6EXP)",
-      "サリナに着いた",
-      "サリナのギルドで依頼を受けた: ★ 真珠の配達（エクエスへ真珠を届ける）（行動力 2）",
-      "暴れ猪〔凶暴〕を倒した (+23EXP)",
-      "草原を風が吹き抜けていく",
-      "エクエスに着いた",
-      "依頼達成！★ 真珠の配達（エクエスへ真珠を届ける）（+32G）",
-      "エクエスで木の盾を買った"
+      "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "小鬼を倒した (+8EXP)",
+      "切り立った崖の細い道を進んだ",
+      "江戸に着いた",
+      "江戸の周りを散策した",
+      "どこかでキツツキが木をつついている"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る / 小鬼を倒した (+8EXP) / 切り立った崖の細い道を進んだ / 江戸に着いた / 江戸の周りを散策した / どこかでキツツキが木をつついている"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

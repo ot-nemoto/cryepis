@@ -4,19 +4,19 @@
   "trait": "guard",
   "personality": "tactician",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-25",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 3,
-    "exp": 0,
+    "exp": 15,
     "max_hp": 46,
-    "hp": 46,
+    "hp": 34,
     "base_atk": 10,
     "base_def": 7,
     "base_spd": 7,
     "base_dex": 9,
-    "gold": 3,
+    "gold": 14,
     "potions": 3,
     "stored": 0
   },
@@ -26,7 +26,7 @@
       "skill": null
     },
     {
-      "id": "iron_helm",
+      "id": "wooden_helm",
       "skill": null
     },
     {
@@ -36,64 +36,59 @@
   ],
   "storage": [
     {
-      "id": "wooden_helm",
+      "id": "iron_helm",
       "skill": null
     }
   ],
-  "place": "karun",
-  "home_town": "karun",
-  "road": {
-    "to": "eques",
-    "left": 1
-  },
+  "place": "kofu",
+  "home_town": "kofu",
+  "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "eques",
+    "place": "kofu",
     "report": null,
     "monster": null,
     "count": 1,
-    "progress": 0,
-    "level": [
-      2,
-      2
-    ],
+    "progress": 1,
     "deadline": null,
     "reward": null,
-    "cost": 2
+    "cost": 3
   },
   "taken": [
-    "2026-11-25-patrol"
+    "2026-11-26-patrol"
   ],
   "stay": {
-    "town": "karun",
-    "since": "2026-11-25"
+    "town": "kofu",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 1,
     "quests_failed": 0,
-    "kills": 3,
+    "kills": 4,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
+      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
       "眼下に雲海が広がっている",
-      "雪原に獣の足跡が続いている",
-      "カルンに戻った",
-      "依頼達成！★ 氷狼の討伐（カルンとムラリスの間の道で氷狼を2体討伐）（+40G）",
-      "報酬で★「鉄の剣」を手に入れた（装備した）",
-      "カルンで鉄の兜を買った",
-      "カルンのギルドの保管庫に、装備を 1 つ預けた",
-      "カルンのギルドには受けられる依頼がない。エクエスへ旅に出る",
-      "宝箱から★「木の盾」を手に入れた（装備した）"
+      "雪狼〔群れ〕を倒した (+15EXP)",
+      "遠くで雪崩の音がした",
+      "甲府に着いた",
+      "甲府の口入れ屋の蔵に、装備を 1 つ預けた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 眼下に雲海が広がっている / 雪狼〔群れ〕を倒した (+15EXP) / 遠くで雪崩の音がした / 甲府に着いた / 甲府の口入れ屋の蔵に、装備を 1 つ預けた"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

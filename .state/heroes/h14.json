@@ -4,19 +4,19 @@
   "trait": "guard",
   "personality": "careful",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-25",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 3,
-    "exp": 13,
+    "exp": 26,
     "max_hp": 46,
-    "hp": 43,
+    "hp": 38,
     "base_atk": 10,
     "base_def": 7,
     "base_spd": 7,
     "base_dex": 9,
-    "gold": 18,
+    "gold": 52,
     "potions": 3,
     "stored": 0
   },
@@ -35,47 +35,54 @@
     }
   ],
   "storage": [],
-  "place": "eques",
-  "home_town": "eques",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
-  "quest": null,
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "kofu",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 1,
+    "deadline": null,
+    "reward": null,
+    "cost": 3
+  },
   "taken": [
-    "2026-11-25-eques-0"
+    "2026-11-26-patrol"
   ],
   "stay": {
-    "town": "eques",
-    "since": "2026-11-25"
+    "town": "kofu",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 1,
     "quests_failed": 0,
-    "kills": 7,
+    "kills": 8,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "エクエスのギルドで依頼を受けた: ★ ゴブリンの討伐（エクエスとカルンの間の道でゴブリンを5体討伐）（行動力 3）",
-      "雪原に獣の足跡が続いている",
-      "ゴブリンが5体現れた",
-      "ゴブリンを倒した (+8EXP)",
-      "ゴブリンを倒した (+8EXP)",
-      "回復薬を使った（HP 36/38）",
-      "ゴブリンを倒した (+8EXP)",
-      "ゴブリンを倒した (+8EXP)",
-      "レベルが上がった！ Lv.3",
-      "ゴブリンを倒した (+8EXP)",
-      "討伐の目標を果たした（5体）",
-      "吐く息が白い",
-      "エクエスに戻った",
-      "依頼達成！★ ゴブリンの討伐（エクエスとカルンの間の道でゴブリンを5体討伐）（+24G）",
-      "報酬で★「翔天葉の護符」を手に入れた（装備した）",
-      "エクエスで木の盾を買った"
+      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "雪ん子を倒した (+13EXP)",
+      "宝箱から24文を見つけた",
+      "岩の間から竜の骨のような白い石がのぞく",
+      "甲府に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 雪ん子を倒した (+13EXP) / 宝箱から24文を見つけた / 岩の間から竜の骨のような白い石がのぞく / 甲府に着いた"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

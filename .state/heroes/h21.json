@@ -3,39 +3,63 @@
   "name": "OWAIN",
   "trait": "lucky",
   "personality": "adventurous",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 1,
-    "exp": 0,
+    "exp": 6,
     "max_hp": 30,
-    "hp": 30,
+    "hp": 26,
     "base_atk": 6,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 6,
-    "gold": 60,
-    "potions": 1,
+    "gold": 35,
+    "potions": 3,
     "stored": 0
   },
   "inventory": [],
   "storage": [],
-  "place": "salina",
-  "home_town": "salina",
-  "road": null,
+  "place": "odawara",
+  "home_town": "odawara",
+  "road": {
+    "to": "edo",
+    "left": 1
+  },
   "quest": null,
-  "taken": [],
-  "stay": null,
+  "taken": [
+    "2026-11-26-patrol"
+  ],
+  "stay": {
+    "town": "odawara",
+    "since": "2026-11-26"
+  },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 1,
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-26",
+    "actions": 3,
+    "events": [
+      "江戸の口入れ屋には受けられる依頼がない。小田原へ旅に出る",
+      "眼下に雲海が広がっている",
+      "草原を風が吹き抜けていく",
+      "小田原に着いた",
+      "送り犬を倒した (+6EXP)"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "江戸の口入れ屋には受けられる依頼がない。小田原へ旅に出る / 眼下に雲海が広がっている / 草原を風が吹き抜けていく / 小田原に着いた / 送り犬を倒した (+6EXP)"
+    }
+  ],
   "seasons": []
 }

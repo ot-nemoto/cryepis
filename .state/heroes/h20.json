@@ -4,19 +4,19 @@
   "trait": "lucky",
   "personality": "adventurous",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-25",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-26",
   "hero": {
-    "level": 1,
-    "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
+    "level": 2,
+    "exp": 2,
+    "max_hp": 38,
+    "hp": 38,
+    "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
-    "base_dex": 6,
-    "gold": 14,
+    "base_dex": 7,
+    "gold": 24,
     "potions": 3,
     "stored": 0
   },
@@ -27,79 +27,55 @@
     }
   ],
   "storage": [],
-  "place": "eques",
-  "home_town": "eques",
-  "road": {
-    "to": "salina",
-    "left": 1
-  },
+  "place": "kofu",
+  "home_town": "kofu",
+  "road": null,
   "quest": {
-    "type": "deliver",
-    "place": "salina",
-    "report": "salina",
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "kofu",
+    "report": null,
     "monster": null,
     "count": 1,
-    "rank": 1,
-    "danger": 0,
-    "cargo": "トナカイの干し肉",
-    "name": "トナカイの干し肉の配達",
-    "text": "トナカイの干し肉をサリナまで運んでほしい。待っている人がいるんだ",
-    "template": "deliver",
-    "town": "karun",
-    "progress": 0,
-    "level": [
-      2,
-      2
-    ],
+    "progress": 1,
     "deadline": null,
-    "cost": 4,
-    "reward": {
-      "exp": 0,
-      "gold": 64,
-      "item": [
-        [
-          "none",
-          88
-        ],
-        [
-          "common",
-          10
-        ],
-        [
-          "rare",
-          2
-        ]
-      ]
-    },
-    "id": "2026-11-25-karun-0"
+    "reward": null,
+    "cost": 3
   },
   "taken": [
-    "2026-11-25-karun-0"
+    "2026-11-26-patrol"
   ],
   "stay": {
-    "town": "eques",
-    "since": "2026-11-25"
+    "town": "kofu",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 2,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "カルンで木の兜を買った",
-      "カルンのギルドで依頼を受けた: ★ トナカイの干し肉の配達（サリナへトナカイの干し肉を届ける）（行動力 4）",
-      "遠くで雪崩の音がした",
-      "吐く息が白い",
-      "エクエスに着いた",
-      "宝箱から14Gを見つけた"
+      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "送り犬を倒した (+6EXP)",
+      "送り犬を倒した (+6EXP)",
+      "レベルが上がった！ Lv.2",
+      "道端に小さな花が咲いている",
+      "甲府に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 送り犬を倒した (+6EXP) / 送り犬を倒した (+6EXP) / レベルが上がった！ Lv.2 / 道端に小さな花が咲いている / 甲府に着いた"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

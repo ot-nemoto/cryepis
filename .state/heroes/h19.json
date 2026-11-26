@@ -4,20 +4,20 @@
   "trait": "lucky",
   "personality": "brave",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-25",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 2,
-    "exp": 11,
+    "exp": 22,
     "max_hp": 38,
-    "hp": 38,
+    "hp": 34,
     "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 26,
-    "potions": 0,
+    "gold": 5,
+    "potions": 2,
     "stored": 0
   },
   "inventory": [
@@ -27,41 +27,54 @@
     }
   ],
   "storage": [],
-  "place": "eques",
-  "home_town": "eques",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
-  "quest": null,
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "kofu",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 1,
+    "deadline": null,
+    "reward": null,
+    "cost": 3
+  },
   "taken": [
-    "2026-11-25-eques-3"
+    "2026-11-26-patrol"
   ],
   "stay": {
-    "town": "eques",
-    "since": "2026-11-25"
+    "town": "kofu",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 1,
-    "kills": 2,
+    "kills": 4,
     "deaths": 1,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "エクエスで鉄の剣を買った",
-      "エクエスのギルドで依頼を受けた: ★ 氷の精の討伐（エクエスとカルンの間の道で氷の精を2体討伐）（行動力 3）",
-      "ゴブリンを倒した (+8EXP)",
-      "氷の精が2体現れた",
-      "回復薬を使った（HP 19/30）",
-      "氷の精を倒した (+13EXP)",
-      "レベルが上がった！ Lv.2",
-      "氷の精に敗れた",
-      "力尽きた… エクエスで目を覚ました",
-      "依頼失敗（力尽きた）: ★ 氷の精の討伐（エクエスとカルンの間の道で氷の精を2体討伐）"
+      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "雪原に獣の足跡が続いている",
+      "送り犬を倒した (+6EXP)",
+      "鉄鼠〔群れ〕を倒した (+5EXP)",
+      "甲府に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 雪原に獣の足跡が続いている / 送り犬を倒した (+6EXP) / 鉄鼠〔群れ〕を倒した (+5EXP) / 甲府に着いた"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

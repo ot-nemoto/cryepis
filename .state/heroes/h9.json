@@ -4,21 +4,21 @@
   "trait": "strong",
   "personality": "careful",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-25",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 2,
-    "exp": 8,
+    "exp": 16,
     "max_hp": 36,
-    "hp": 31,
+    "hp": 26,
     "base_atk": 9,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 15,
+    "gold": 21,
     "potions": 4,
-    "stored": 0
+    "stored": 1
   },
   "inventory": [
     {
@@ -27,50 +27,41 @@
     }
   ],
   "storage": [],
-  "place": "muralis",
-  "home_town": "muralis",
+  "place": "edo",
+  "home_town": "edo",
   "road": null,
-  "quest": {
-    "type": "patrol",
-    "name": "旅",
-    "template": null,
-    "town": null,
-    "place": "muralis",
-    "report": null,
-    "monster": null,
-    "count": 1,
-    "progress": 1,
-    "level": [
-      2,
-      2
-    ],
-    "deadline": null,
-    "reward": null,
-    "cost": 6
-  },
-  "taken": [],
+  "quest": null,
+  "taken": [
+    "2026-11-26-patrol"
+  ],
   "stay": {
-    "town": "muralis",
-    "since": "2026-11-25"
+    "town": "edo",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 3,
+    "kills": 4,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "吐く息が白い",
-      "野犬を倒した (+6EXP)",
-      "木漏れ日が道をまだらに照らす",
-      "ムラリスに着いた"
+      "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "小鬼を倒した (+8EXP)",
+      "切り立った崖の細い道を進んだ",
+      "江戸に着いた",
+      "江戸で休んで、行動力を溜めた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る / 小鬼を倒した (+8EXP) / 切り立った崖の細い道を進んだ / 江戸に着いた / 江戸で休んで、行動力を溜めた"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

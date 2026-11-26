@@ -3,39 +3,74 @@
   "name": "ENOCH",
   "trait": "guard",
   "personality": "adventurous",
-  "season": null,
-  "season_day": 0,
-  "day": 0,
-  "last_date": null,
+  "season": 1,
+  "season_day": 1,
+  "day": 1,
+  "last_date": "2026-11-26",
   "hero": {
-    "level": 1,
-    "exp": 0,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
+    "level": 2,
+    "exp": 7,
+    "max_hp": 38,
+    "hp": 34,
+    "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
-    "base_dex": 6,
-    "gold": 60,
-    "potions": 1,
+    "base_dex": 7,
+    "gold": 44,
+    "potions": 3,
     "stored": 0
   },
   "inventory": [],
   "storage": [],
-  "place": "karun",
-  "home_town": "karun",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
-  "quest": null,
-  "taken": [],
-  "stay": null,
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "kofu",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 1,
+    "deadline": null,
+    "reward": null,
+    "cost": 3
+  },
+  "taken": [
+    "2026-11-26-patrol"
+  ],
+  "stay": {
+    "town": "kofu",
+    "since": "2026-11-26"
+  },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 0,
+    "kills": 3,
     "deaths": 0,
     "rares": []
   },
-  "last": null,
-  "journal": [],
+  "last": {
+    "date": "2026-11-26",
+    "actions": 3,
+    "events": [
+      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "送り犬を倒した (+6EXP)",
+      "送り犬を倒した (+6EXP)",
+      "レベルが上がった！ Lv.2",
+      "鉄鼠〔群れ〕を倒した (+5EXP)",
+      "甲府に着いた"
+    ]
+  },
+  "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 送り犬を倒した (+6EXP) / 送り犬を倒した (+6EXP) / レベルが上がった！ Lv.2 / 鉄鼠〔群れ〕を倒した (+5EXP) / 甲府に着いた"
+    }
+  ],
   "seasons": []
 }

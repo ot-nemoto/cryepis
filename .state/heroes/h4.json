@@ -4,19 +4,19 @@
   "trait": "strong",
   "personality": "adventurous",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-25",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-26",
   "hero": {
-    "level": 2,
-    "exp": 23,
-    "max_hp": 36,
-    "hp": 16,
-    "base_atk": 9,
-    "base_def": 6,
-    "base_spd": 6,
-    "base_dex": 7,
-    "gold": 26,
+    "level": 3,
+    "exp": 3,
+    "max_hp": 41,
+    "hp": 41,
+    "base_atk": 11,
+    "base_def": 7,
+    "base_spd": 7,
+    "base_dex": 9,
+    "gold": 12,
     "potions": 4,
     "stored": 0
   },
@@ -31,55 +31,57 @@
     }
   ],
   "storage": [],
-  "place": "salina",
-  "home_town": "salina",
+  "place": "nagano",
+  "home_town": "nagano",
   "road": {
-    "to": "muralis",
-    "left": 3
+    "to": "kofu",
+    "left": 1
   },
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "muralis",
+    "place": "kofu",
     "report": null,
     "monster": null,
     "count": 1,
     "progress": 0,
-    "level": [
-      2,
-      2
-    ],
     "deadline": null,
     "reward": null,
-    "cost": 6
+    "cost": 3
   },
   "taken": [
-    "2026-11-25-patrol"
+    "2026-11-26-patrol"
   ],
   "stay": {
-    "town": "salina",
-    "since": "2026-11-25"
+    "town": "nagano",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 4,
+    "kills": 5,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "サリナのギルドには受けられる依頼がない。ムラリスへ旅に出る",
-      "鬼火を倒した (+10EXP)",
-      "道端に小さな花が咲いている",
-      "宝箱から回復薬を見つけた"
+      "長野の旅籠で休んだ（-20文、HP 全回復）",
+      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "苔むした倒木をまたいだ",
+      "小鬼を倒した (+8EXP)",
+      "レベルが上がった！ Lv.3"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "長野の旅籠で休んだ（-20文、HP 全回復） / 長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 苔むした倒木をまたいだ / 小鬼を倒した (+8EXP) / レベルが上がった！ Lv.3"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

@@ -4,9 +4,9 @@
   "trait": "strong",
   "personality": "careful",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-25",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 2,
     "exp": 2,
@@ -17,7 +17,7 @@
     "base_spd": 6,
     "base_dex": 7,
     "gold": 10,
-    "potions": 3,
+    "potions": 4,
     "stored": 0
   },
   "inventory": [
@@ -27,31 +27,29 @@
     }
   ],
   "storage": [],
-  "place": "muralis",
-  "home_town": "muralis",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "muralis",
+    "place": "kofu",
     "report": null,
     "monster": null,
     "count": 1,
     "progress": 1,
-    "level": [
-      2,
-      2
-    ],
     "deadline": null,
     "reward": null,
-    "cost": 6
+    "cost": 3
   },
-  "taken": [],
+  "taken": [
+    "2026-11-26-patrol"
+  ],
   "stay": {
-    "town": "muralis",
-    "since": "2026-11-25"
+    "town": "kofu",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 0,
@@ -61,17 +59,22 @@
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "木漏れ日が道をまだらに照らす",
-      "野犬を倒した (+6EXP)",
-      "レベルが上がった！ Lv.2",
-      "苔むした倒木をまたいだ",
-      "ムラリスに着いた"
+      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "草原を風が吹き抜けていく",
+      "宝箱から丸薬を見つけた",
+      "遠くで雪崩の音がした",
+      "甲府に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 草原を風が吹き抜けていく / 宝箱から丸薬を見つけた / 遠くで雪崩の音がした / 甲府に着いた"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

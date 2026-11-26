@@ -4,20 +4,20 @@
   "trait": "lucky",
   "personality": "diligent",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-25",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 4,
-    "exp": 11,
+    "exp": 53,
     "max_hp": 54,
-    "hp": 54,
+    "hp": 36,
     "base_atk": 12,
     "base_def": 7,
     "base_spd": 8,
     "base_dex": 10,
-    "gold": 7,
-    "potions": 2,
+    "gold": 78,
+    "potions": 3,
     "stored": 0
   },
   "inventory": [
@@ -26,7 +26,7 @@
       "skill": null
     },
     {
-      "id": "iron_helm",
+      "id": "wooden_helm",
       "skill": null
     },
     {
@@ -36,46 +36,47 @@
   ],
   "storage": [
     {
-      "id": "wooden_helm",
+      "id": "iron_helm",
       "skill": null
     }
   ],
-  "place": "salina",
-  "home_town": "salina",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
   "quest": null,
-  "taken": [],
+  "taken": [
+    "2026-11-26-nagano-2"
+  ],
   "stay": {
-    "town": "salina",
-    "since": "2026-11-25"
+    "town": "kofu",
+    "since": "2026-11-26"
   },
   "season_stats": {
-    "quests_done": 2,
+    "quests_done": 3,
     "quests_failed": 0,
-    "kills": 8,
+    "kills": 11,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "泥人形が3体現れた",
-      "泥人形を倒した (+17EXP)",
-      "回復薬を使った（HP 32/46）",
-      "泥人形を倒した (+17EXP)",
-      "泥人形を倒した (+17EXP)",
-      "レベルが上がった！ Lv.4",
-      "討伐の目標を果たした（3体）",
-      "野犬を倒した (+6EXP)",
-      "岩の間から竜の骨のような白い石がのぞく",
-      "サリナに戻った",
-      "依頼達成！★ 泥人形の討伐（サリナとムラリスの間の道で泥人形を3体討伐）（+40G）",
-      "サリナで鉄の兜と翔天葉の護符を買った",
-      "サリナのギルドの保管庫に、装備を 1 つ預けた"
+      "長野の口入れ屋で依頼を受けた: ★ 日用品の配達（甲府へ日用品を届ける）（行動力 3）",
+      "長野の口入れ屋の蔵に、装備を 1 つ預けた",
+      "狒々〔盗み〕を倒した (+16EXP)",
+      "小鬼を倒した (+8EXP)",
+      "山犬を倒した (+18EXP)",
+      "甲府に着いた",
+      "依頼達成！★ 日用品の配達（甲府へ日用品を届ける）（+48文）"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "長野の口入れ屋で依頼を受けた: ★ 日用品の配達（甲府へ日用品を届ける）（行動力 3） / 長野の口入れ屋の蔵に、装備を 1 つ預けた / 狒々〔盗み〕を倒した (+16EXP) / 小鬼を倒した (+8EXP) / 山犬を倒した (+18EXP) / 甲府に着いた / 依頼達成！★ 日用品の配達（甲府へ日用品を届ける）（+48文）"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,

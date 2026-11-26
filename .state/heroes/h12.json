@@ -4,19 +4,19 @@
   "trait": "strong",
   "personality": "tactician",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-25",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-26",
   "hero": {
     "level": 2,
-    "exp": 14,
+    "exp": 20,
     "max_hp": 36,
-    "hp": 30,
+    "hp": 28,
     "base_atk": 9,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 18,
+    "gold": 35,
     "potions": 3,
     "stored": 0
   },
@@ -27,52 +27,42 @@
     }
   ],
   "storage": [],
-  "place": "muralis",
-  "home_town": "muralis",
+  "place": "edo",
+  "home_town": "edo",
   "road": null,
-  "quest": {
-    "type": "patrol",
-    "name": "旅",
-    "template": null,
-    "town": null,
-    "place": "muralis",
-    "report": null,
-    "monster": null,
-    "count": 1,
-    "progress": 1,
-    "level": [
-      2,
-      2
-    ],
-    "deadline": null,
-    "reward": null,
-    "cost": 6
-  },
-  "taken": [],
+  "quest": null,
+  "taken": [
+    "2026-11-26-patrol"
+  ],
   "stay": {
-    "town": "muralis",
-    "since": "2026-11-25"
+    "town": "edo",
+    "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 3,
+    "kills": 4,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "actions": 3,
     "events": [
-      "道端に小さな花が咲いている",
-      "ゴブリンを倒した (+8EXP)",
-      "レベルが上がった！ Lv.2",
-      "沼ヒル〔毒〕を倒した (+11EXP)",
-      "毒で HP が 3 減った",
-      "ムラリスに着いた"
+      "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "送り犬を倒した (+6EXP)",
+      "眼下に雲海が広がっている",
+      "江戸に着いた",
+      "江戸の周りを散策した",
+      "宝箱から12文を見つけた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-26",
+      "actions": 3,
+      "text": "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る / 送り犬を倒した (+6EXP) / 眼下に雲海が広がっている / 江戸に着いた / 江戸の周りを散策した / 宝箱から12文を見つけた"
+    },
     {
       "date": "2026-11-25",
       "actions": 3,
