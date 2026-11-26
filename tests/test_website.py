@@ -199,7 +199,7 @@ class SiteTest(unittest.TestCase):
       it["name"] for it in WORLD["items"].values() if it["rarity"] != "common"
     }
     self.assertEqual(shown, expected)
-    self.assertNotIn('data-tab="armor"', html)  # 胴の部位はない
+    self.assertNotIn('data-tab="armor"', html)  # armor という古いタブ ID は使わない（胴の部位の ID は shield）
     self.assertNotIn("data-slot=", html)  # 装備の種類の絞り込みはない
     self.assertNotIn("手に入る装備です", html)  # 説明文は出さない
     self.assertNotIn("丸薬", html)  # 丸薬は町の店の品ぞろえに出す
