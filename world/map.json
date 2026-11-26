@@ -36,7 +36,7 @@
    "area": "ou",
    "region": "陸奥",
    "emoji": "⚓",
-   "text": "津軽の十三湖のほとりの港町。北の蝦夷地との交易で栄えたが、今は昔ほどのにぎわいはない",
+   "text": "津軽の十三湖のほとりの港町。蝦夷地との交易で栄えた。霧の夜には、湖に沈んだ船の灯が浮かぶという",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1432,82],
    "quests_per_day": 3
@@ -50,7 +50,7 @@
    "area": "ou",
    "region": "出羽",
    "emoji": "⚓",
-   "text": "最上川の河口の港町。川を下ってきた米や紅花を、船に積みかえて日本海へ送り出す",
+   "text": "最上川の河口の港町。米や紅花を積んだ船が日本海へ出ていく。冬の荒海では、船を呼ぶ声が聞こえるという",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1311,313],
    "quests_per_day": 4
@@ -64,7 +64,7 @@
    "area": "ou",
    "region": "出羽",
    "emoji": "🏯",
-   "text": "出羽の南の盆地の城下町。冬は雪に閉ざされ、山を越えて会津や奥州へ道が通じる",
+   "text": "出羽の南の盆地の城下町。冬は雪に閉ざされる。峠の向こうの平泉からは、ときおり冷たい風と物の怪が下りてくる",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1295,435],
    "quests_per_day": 3
@@ -78,7 +78,7 @@
    "area": "ou",
    "region": "陸奥",
    "emoji": "🏯",
-   "text": "会津盆地の城下町。奥州の南の守りの要で、雪深い山々に囲まれている",
+   "text": "会津盆地の城下町。奥州の南の守りの要で、雪深い山々に囲まれ、山の物の怪を見張る砦が並ぶ",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1262,479],
    "quests_per_day": 4
@@ -92,7 +92,7 @@
    "area": "bando",
    "region": "武蔵",
    "emoji": "🏯",
-   "text": "武蔵の入り江に面した小さな城下町。湿地が広がり、川と海の舟運の拠点になっている",
+   "text": "武蔵の入り江の小さな城下町。湿地に葦が茂り、舟で運ばれる荷とともに、よそ者や物の怪のうわさも集まる",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1178,683],
    "quests_per_day": 5
@@ -106,7 +106,7 @@
    "area": "bando",
    "region": "相模",
    "emoji": "🏯",
-   "text": "相模の城下町。町ごと堀と土塁で囲む総構えで、関東でいちばん大きな城下町だ",
+   "text": "相模の城下町。町ごと堀と土塁で囲む総構えは、箱根の峠を越えてくる物の怪への備えでもある",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1107,714],
    "quests_per_day": 4
@@ -120,7 +120,7 @@
    "area": "bando",
    "region": "甲斐",
    "emoji": "🏯",
-   "text": "甲斐の盆地の城下町。四方を山に囲まれ、山を越える街道がここに集まる",
+   "text": "甲斐の盆地の城下町。四方の山から街道が集まる。南の富士山の奥には、鬼の頭領が棲むという",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1068,650],
    "quests_per_day": 3
@@ -134,7 +134,7 @@
    "area": "bando",
    "region": "信濃",
    "emoji": "⛩️",
-   "text": "善光寺の門前町。信濃の山あいにあり、各地から参拝の人が絶えない",
+   "text": "善光寺の門前町。参拝の人が絶えないが、雪の深い夜には、山から雪女が下りてくると恐れられている",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1070,523],
    "quests_per_day": 3
@@ -148,7 +148,7 @@
    "area": "tokai",
    "region": "駿河",
    "emoji": "🏯",
-   "text": "駿河の城下町。東海道の宿場でもあり、京の文化が伝わった東国の都だ",
+   "text": "駿河の城下町。京の文化が伝わった東国の都で、富士の峰を仰ぐ。東海道を行く旅人で、いつもにぎわう",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1024,723],
    "quests_per_day": 4,
@@ -163,7 +163,7 @@
    "area": "tokai",
    "region": "尾張",
    "emoji": "🏯",
-   "text": "尾張の城下町。濃尾平野の真ん中にあり、東海道と美濃への道が交わる",
+   "text": "尾張の城下町。濃尾平野の真ん中で、東海道と美濃への道が交わる。野を行く旅人は、日暮れ前に町へ急ぐ",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [891,649],
    "quests_per_day": 4
@@ -177,7 +177,7 @@
    "area": "tokai",
    "region": "伊勢",
    "emoji": "⛩️",
-   "text": "伊勢神宮の門前町。全国から参拝の人が集まり、御師が宿と案内をする",
+   "text": "伊勢神宮の門前町。全国から参拝の人が集まり、御師が宿と案内をする。神域には、物の怪も近づかないという",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [851,729],
    "quests_per_day": 4
@@ -191,7 +191,7 @@
    "area": "hokuriku",
    "region": "越後",
    "emoji": "🏯",
-   "text": "越後の山城のふもとの城下町。日本海に近く、冬は深い雪に埋もれる",
+   "text": "越後の山城のふもとの城下町。冬は深い雪に埋もれ、雪の野には白い影がさまようという",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1091,467],
    "quests_per_day": 4
@@ -205,7 +205,7 @@
    "area": "hokuriku",
    "region": "加賀",
    "emoji": "🛕",
-   "text": "加賀の寺内町。尾山御坊を中心に、一向宗の門徒が集まって町をつくった",
+   "text": "加賀の寺内町。尾山御坊を中心に、一向宗の門徒が集まって町をつくった。念仏の声が、夜通し絶えない",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [924,488],
    "quests_per_day": 4
@@ -219,7 +219,7 @@
    "area": "hokuriku",
    "region": "越前",
    "emoji": "🏯",
-   "text": "越前の谷あいの城下町。京から移り住んだ公家や文化人が多く、小京都と呼ばれる",
+   "text": "越前の谷あいの城下町。京から移った公家が多く、小京都と呼ばれる。谷の奥には古い社が眠る",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [865,543],
    "quests_per_day": 3
@@ -233,7 +233,7 @@
    "area": "hokuriku",
    "region": "越前",
    "emoji": "⚓",
-   "text": "越前の港町。日本海の船の荷が集まり、峠を越えて琵琶湖から京へ運ばれる",
+   "text": "越前の港町。日本海の船の荷が集まり、峠を越えて京へ運ばれる。気比の松原には、狐火が灯るという",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [836,576],
    "quests_per_day": 5,
@@ -248,7 +248,7 @@
    "area": "kinai",
    "region": "山城",
    "emoji": "🏛️",
-   "text": "山城の都。政治と文化の中心で、町衆が自分たちで町を治めている",
+   "text": "山城の都。町衆が自分たちで町を治める。都の北と西の峠には、古くから鬼が出ると伝えられる",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [784,641],
    "quests_per_day": 6
@@ -262,7 +262,7 @@
    "area": "kinai",
    "region": "近江",
    "emoji": "🏯",
-   "text": "近江の城下町。琵琶湖のほとりの山に城がそびえ、楽市楽座で商人が集まる",
+   "text": "近江の城下町。琵琶湖のほとりの山に城がそびえ、楽市楽座で商人が集まる。湖の向こうの山には、大きな百足が棲むという",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [824,636],
    "quests_per_day": 4,
@@ -277,7 +277,7 @@
    "area": "kinai",
    "region": "摂津",
    "emoji": "🛕",
-   "text": "摂津の寺内町。石山本願寺を囲む大きな町で、淀川と瀬戸内海の舟運の要だ",
+   "text": "摂津の寺内町。石山本願寺を囲む大きな町で、淀川と瀬戸内海の舟運の要。南の熊野へ向かう参詣の道も通る",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [750,671],
    "quests_per_day": 5,
@@ -292,7 +292,7 @@
    "area": "kinai",
    "region": "大和",
    "emoji": "🛕",
-   "text": "大和の寺内町。環濠に囲まれ、商人たちが自分たちで町を治めている",
+   "text": "大和の寺内町。環濠に囲まれ、商人たちが町を治める。熊野の山へ入る者は、ここで最後の支度をする",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [766,701],
    "quests_per_day": 3,
@@ -307,7 +307,7 @@
    "area": "saigoku",
    "region": "安芸",
    "emoji": "🏯",
-   "text": "安芸の城下町。太田川の河口の三角州に開かれ、瀬戸内海の舟運に面している",
+   "text": "安芸の城下町。太田川の三角州に開かれた。北の山の黄泉比良坂からは、あの世の風が吹いてくるという",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [456,612],
    "quests_per_day": 4
@@ -321,7 +321,7 @@
    "area": "saigoku",
    "region": "周防",
    "emoji": "🏯",
-   "text": "周防の城下町。京を手本に町をつくり、「西の京」と呼ばれる文化の町だ",
+   "text": "周防の城下町。京を手本に町をつくり、「西の京」と呼ばれる。寺社と学問が栄える文化の町だ",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [357,608],
    "quests_per_day": 4
@@ -335,7 +335,7 @@
    "area": "saigoku",
    "region": "阿波",
    "emoji": "🏯",
-   "text": "阿波の城下町。吉野川の下流の平野にあり、海を渡って畿内と行き来する",
+   "text": "阿波の城下町。吉野川の下流の平野にあり、海を渡って畿内と行き来する。南の剣山には、古い宝が眠るという",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [634,707],
    "quests_per_day": 3
@@ -349,7 +349,7 @@
    "area": "kyushu",
    "region": "筑前",
    "emoji": "⚓",
-   "text": "筑前の港町。明や朝鮮との交易の窓口で、豪商たちが町を治めている",
+   "text": "筑前の港町。明や朝鮮との交易の窓口で、豪商たちが町を治める。海の向こうの珍しい品と物の怪の話が集まる",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [236,644],
    "quests_per_day": 5
@@ -363,7 +363,7 @@
    "area": "kyushu",
    "region": "豊後",
    "emoji": "🏯",
-   "text": "豊後の城下町。南蛮船が出入りし、南蛮の文化と教えが伝わっている",
+   "text": "豊後の城下町。南蛮船が出入りし、南蛮の文化と教えが伝わる。西の阿蘇の山は、いつも煙を上げている",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [335,723],
    "quests_per_day": 4
@@ -377,7 +377,7 @@
    "area": "kyushu",
    "region": "薩摩",
    "emoji": "🏯",
-   "text": "薩摩の城下町。錦江湾をはさんで、火を噴く桜島と向き合う",
+   "text": "薩摩の城下町。錦江湾をはさんで、火を噴く桜島と向き合う。灰の降る日は、火の物の怪が騒ぐという",
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [171,879],
    "quests_per_day": 4
