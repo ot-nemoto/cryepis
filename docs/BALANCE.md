@@ -178,7 +178,7 @@ python tools/battle_sim.py --level 20 --party 3 --personality all --trait lucky 
 python tools/battle_sim.py --level 20 --party 3 --personality all --trait lucky --strength --goal 0.2  # 勝率 20% の倍率
 ```
 
-何人かで勝ったときは、経験値は全員が満額、お金は物の怪のお金を人数で割った額をもらう。倒れていたもののふも、勝てば HP 1 で起き上がる。
+何人かで勝ったときは、経験値は全員が満額、お金は物の怪のお金を人数で割った額（切り捨て）をもらう。とどめの一撃が会心だったときの悟りは、とどめを刺したもののふだけに効く。倒れていたもののふも、勝てば HP 1 で起き上がる。
 
 新しい大物や主を作るときの手順:
 

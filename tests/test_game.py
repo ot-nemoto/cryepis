@@ -729,6 +729,34 @@ class PartyBattleTest(unittest.TestCase):
       self.assertEqual(a[0].battle(dict(boss)), G.party_battle(b, dict(boss)))
       self.assertEqual((a[0].state["hero"], a[0].events), (b[0].state["hero"], b[0].events))
 
+  def test_skills_of_the_gear_for_the_battle_work_after_winning(self):
+    # 毒の物の怪には、毒よけの御守に着け替えて戦う。勝ったあとの毒も、着け替えた御守のスキルで防ぐ（ふだんの御守ではない）
+    for seed in range(10):
+      state = self.party(1, level=15, seed=seed)[0].state
+      state["inventory"] = [{"id": "lifeblood_charm", "skill": None}, {"id": "soaring_leaf_charm", "skill": "antidote"}]
+      self.assertNotEqual(G.worn(WORLD, state)["accessory"]["skill"], "antidote")  # ふだんは毒よけではない
+      day = day_of(state, seed=seed)
+      self.assertTrue(day.battle(dict(WORLD["monsters"]["venom_moth"])))
+      self.assertFalse(any("毒で HP" in e for e in day.events), day.events)
+      self.assertIsNone(day.gear)
+
+  def test_only_the_one_who_finishes_gets_the_inspiration_bonus(self):
+    boss = dict(WORLD["monsters"]["den_lord"], hp=600)
+    days = self.party(3, seed="i")
+    for d in days:  # 悟り: とどめの一撃が会心なら経験値が増える
+      d.state["inventory"] = [{"id": "iron_sword", "skill": "inspiration"}]
+    sides = [d.ready(dict(boss), W.trait_effect(boss)) | {"party": 3, "killing_crit": True} for d in days]
+    sides[0]["killer"] = True
+    try:
+      for d, c in zip(days, sides):
+        d.gain_exp = lambda exp, d=d: d.hero.__setitem__("exp", exp)
+        d.win(dict(boss, exp=100), c)
+    finally:
+      for d in days:
+        d.gear = None
+    factor = WORLD["skills"]["inspiration"]["value"]
+    self.assertEqual([d.hero["exp"] for d in days], [W.half_up(100 * factor), 100, 100])
+
   def test_together_they_win_and_share_the_gold(self):
     boss = dict(WORLD["monsters"]["den_lord"], hp=900)
     wins = 0
@@ -739,7 +767,7 @@ class PartyBattleTest(unittest.TestCase):
         continue
       wins += 1
       for d, g in zip(days, gold):
-        self.assertEqual(d.hero["gold"] - g, W.half_up(boss["gold"] / 3))  # お金は人数で割る
+        self.assertEqual(d.hero["gold"] - g, boss["gold"] // 3)  # お金は人数で割る（切り捨て）
         self.assertGreaterEqual(d.hero["hp"], 1)  # 倒れていたもののふも起き上がる
         self.assertTrue(any("酒呑童子〔硬い〕を倒した" in e for e in d.events))
         self.assertEqual(d.state["season_stats"]["kills"], 1)

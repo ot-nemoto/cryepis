@@ -195,9 +195,13 @@ def main() -> int:
   ap.add_argument(
     "--personality", default="none", help="性格の ID か、all（性格を 1 人ずつ順に入れる）、none（性格なし。既定）"
   )
-  ap.add_argument("--goal", type=float, default=0.5, help="--strength で探す勝率（既定: 0.5）")
-  ap.add_argument("--reach", action="store_true", help="特性ごとに、勝率 50%% に届くレベルを出す（Lv10〜最大レベル）")
-  ap.add_argument("--strength", action="store_true", help="特性ごとに、五分で戦える物の怪の強さの倍率を出す")
+  ap.add_argument("--goal", type=float, default=0.5, help="--strength・--reach の目標の勝率（既定: 0.5）")
+  ap.add_argument(
+    "--reach", action="store_true", help="特性ごとに、勝率 --goal（既定 50%%）に届くレベルを出す（Lv10〜最大レベル）"
+  )
+  ap.add_argument(
+    "--strength", action="store_true", help="特性ごとに、勝率 --goal（既定 50%%）で戦える物の怪の強さの倍率を出す"
+  )
   ap.add_argument("--hp-loss", action="store_true", help="特性ごとに、勝率と、勝ったときに減る HP の平均を出す")
   ap.add_argument(
     "--fit-hp-loss",
@@ -208,8 +212,13 @@ def main() -> int:
   a = ap.parse_args()
   world = W.load_world()
   if a.fit_hp_loss is not None:
-    if a.trait is not None or a.gear or a.potions is not None:
-      raise SystemExit("--fit-hp-loss は強運・装備なし・丸薬なしで測るので、--trait・--gear・--potions は使えません")
+    if (
+      a.trait is not None or a.gear or a.potions is not None or a.party != 1 or a.personality != "none" or a.goal != 0.5
+    ):
+      raise SystemExit(
+        "--fit-hp-loss は強運・装備なし・丸薬なし・1 人・性格なしで測るので、"
+        "--trait・--gear・--potions・--party・--personality・--goal は使えません"
+      )
     return fit_main(world, a)
   a.level = 15 if a.level is None else a.level
   a.trait = "all" if a.trait is None else a.trait
@@ -266,10 +275,10 @@ def main() -> int:
       )
     return 0
   levels = range(10, world["season"]["max_level"] + 1)
-  print("  特性   50%に届くLv  " + " ".join(f"Lv{lv:<4d}" for lv in levels))
+  print(f"  特性   {a.goal:.0%}に届くLv  " + " ".join(f"Lv{lv:<4d}" for lv in levels))
   for t in traits:
     rates = {lv: win_rate(world, monster, t, lv, gear, a.potions, a.n, **opt) for lv in levels}
-    reach = reach_level(rates)
+    reach = reach_level(rates, a.goal)
     print(
       f"  {names[t]['name']:4s}  {('Lv' + str(reach)) if reach else '届かない':>8s}    "
       + " ".join(f"{rates[lv]:5.0%} " for lv in levels)

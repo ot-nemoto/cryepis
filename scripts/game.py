@@ -1040,12 +1040,12 @@ class Day:
 
   def win(self, monster: dict, c: dict) -> None:
     """物の怪を倒したあと（経験値・お金・スキル・毒・盗み）。c は ready の支度。
-    何人かで戦ったときは、経験値は全員が満額、お金は物の怪のお金を人数で割った額（四捨五入。#72）。"""
+    何人かで戦ったときは、経験値は全員が満額、お金は物の怪のお金を人数で割った額（切り捨て。合計が物の怪のお金を超えない。#72）。"""
     hero, trait, sk = self.hero, monster.get("trait"), self.skill
     items, usual_wpn = self.world["items"], equipment(self.world, self.state)["weapon"]
     rate, weapon, accessory = c["rate"], c["weapon"], c["accessory"]
     exp = monster["exp"]
-    gold = W.half_up(monster["gold"] / c["party"])
+    gold = monster["gold"] // c["party"]
     if sk("keen_eye"):
       gold = W.half_up(gold * sk("keen_eye"))
     hero["gold"] += gold
@@ -1062,7 +1062,7 @@ class Day:
       (sk("study"), True),
       (sk("training"), monster.get("level", 0) > hero["level"]),
       (sk("hardship"), c["taken"] >= c["max_hp"] * 0.5),  # 受けたダメージの合計（途中の丸薬を差し引かない）
-      (sk("inspiration"), c["killing_crit"]),
+      (sk("inspiration"), c.get("killer") and c["killing_crit"]),  # とどめの一撃が会心（悟り）
     ):
       if factor and ok:
         exp *= factor
@@ -1693,18 +1693,20 @@ def party_battle(days: list[Day], monster: dict) -> bool:
   - 勝てば、倒れたもののふも含めて全員がもらう。経験値は満額、お金は人数で割る（倒れていたもののふは HP 1 で起き上がる）"""
   effect = W.trait_effect(monster)  # 凶暴・硬い・群れで変わる値
   try:
-    sides = [d.ready(monster, effect) | {"party": len(days)} for d in days]
+    sides = []
+    for d in days:
+      sides.append(d.ready(monster, effect) | {"party": len(days)})
     won = _fight(sides, monster, effect["hp"])
+    if won:  # 勝ったあとも、その戦いの装備のスキルで（self.gear を入れたまま）
+      for c in sides:
+        if c["down"]:
+          c["day"].hero["hp"] = 1
+          c["day"].log("仲間が物の怪を討ち取り、起き上がった")
+        c["day"].win(monster, c)
+    return won
   finally:
     for d in days:
       d.gear = None
-  if won:
-    for c in sides:
-      if c["down"]:
-        c["day"].hero["hp"] = 1
-        c["day"].log("仲間が物の怪を討ち取り、起き上がった")
-      c["day"].win(monster, c)
-  return won
 
 
 def _fight(sides: list[dict], monster: dict, hp: int) -> bool:
@@ -1720,7 +1722,7 @@ def _fight(sides: list[dict], monster: dict, hp: int) -> bool:
     dmg = round(d.damage(c["s"]["atk"], c["guard"], c["s"]["dex"], **extra) * c["rate"])
     if d.skill("finisher") and hp <= full * 0.2:
       dmg = W.half_up(dmg * d.skill("finisher"))
-    c["killing_crit"] = d.crit
+    c["killing_crit"] = d.crit  # 最後の攻撃が会心か（とどめを刺したもののふのものだけ、悟りに使う）
     return max(1, dmg)
 
   def hero_turn(c: dict) -> bool:  # 物の怪を倒したら True
@@ -1728,6 +1730,7 @@ def _fight(sides: list[dict], monster: dict, hp: int) -> bool:
     for _ in range(c["hero_hits"]):
       hp -= strike(c)
       if hp <= 0:
+        c["killer"] = True
         return True
     return False
 
@@ -1761,6 +1764,7 @@ def _fight(sides: list[dict], monster: dict, hp: int) -> bool:
       if dmg > 0 and d.skill("counter") and d.rng.random() < d.skill("counter"):  # 返し技
         hp -= strike(c)
         if hp <= 0:
+          c["killer"] = True
           return True
     return None
 
