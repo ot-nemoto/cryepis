@@ -41,7 +41,8 @@ import training  # noqa: E402
 import view  # noqa: E402
 import world as W  # noqa: E402
 
-TITLE = "クリエピス戦記"
+TITLE = common.SITE_TITLE
+TITLE_EN = "Warriors on the Road"
 PAGES = (
   ("index.html", "絵図"),
   ("ranking.html", "番付"),
@@ -69,8 +70,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 'Hiragino Sans
 header{border-bottom:1px solid var(--line);background:var(--card)}
 .wrap{max-width:1100px;margin:0 auto;padding-inline:16px}
 header .wrap{display:flex;flex-wrap:wrap;gap:4px 20px;align-items:baseline;padding-block:10px}
-header h1{font-size:20px;margin:0}
-header h1 a{color:inherit;text-decoration:none}
+header h1{font-size:20px;margin:0;max-width:100%}
+header h1 a{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px;color:inherit;text-decoration:none}
+.site-title-en{font-size:12px;font-weight:normal;color:var(--sub)}
 nav{display:flex;gap:14px;flex-wrap:wrap}
 nav a{color:var(--sub);text-decoration:none;padding:2px 0;border-bottom:2px solid transparent}
 nav a.on{color:var(--ink);border-color:var(--accent);font-weight:bold}
@@ -183,7 +185,8 @@ def page(title: str, body: str, current: str, depth: int = 0, script: str = "") 
     f'<!doctype html>\n<html lang="ja"><head><meta charset="utf-8">'
     f'<meta name="viewport" content="width=device-width,initial-scale=1">'
     f"<title>{escape(title)} | {TITLE}</title><style>{CSS}</style></head><body>"
-    f'<header><div class="wrap"><h1><a href="{up}index.html">{TITLE}</a></h1><nav>{nav}</nav></div></header>'
+    f'<header><div class="wrap"><h1><a href="{up}index.html">{escape(TITLE)}'
+    f'<span class="site-title-en" lang="en">{escape(TITLE_EN)}</span></a></h1><nav>{nav}</nav></div></header>'
     f'<main class="wrap">{body}</main>' + (f"<script>{script}</script>" if script else "") + "</body></html>\n"
   )
 
