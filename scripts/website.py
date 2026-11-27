@@ -185,7 +185,7 @@ def page(title: str, body: str, current: str, depth: int = 0, script: str = "") 
     f'<!doctype html>\n<html lang="ja"><head><meta charset="utf-8">'
     f'<meta name="viewport" content="width=device-width,initial-scale=1">'
     f"<title>{escape(title)} | {TITLE}</title><style>{CSS}</style></head><body>"
-    f'<header><div class="wrap"><h1><a href="{up}index.html">{escape(TITLE)}'
+    f'<header><div class="wrap"><h1><a href="{up}index.html">{escape(TITLE)} '
     f'<span class="site-title-en" lang="en">{escape(TITLE_EN)}</span></a></h1><nav>{nav}</nav></div></header>'
     f'<main class="wrap">{body}</main>' + (f"<script>{script}</script>" if script else "") + "</body></html>\n"
   )

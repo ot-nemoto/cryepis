@@ -357,7 +357,7 @@ class SiteTest(unittest.TestCase):
     html = website.build_map(WORLD, entries, today)
     self.assertIn("<title>絵図 | もののふ道中</title>", html)
     self.assertIn(
-      '<h1><a href="index.html">もののふ道中<span class="site-title-en" lang="en">Warriors on the Road</span></a></h1>',
+      '<h1><a href="index.html">もののふ道中 <span class="site-title-en" lang="en">Warriors on the Road</span></a></h1>',
       html,
     )
     self.assertIn('<a href="index.html" class="on">絵図</a><a href="ranking.html">番付</a>', html)  # メニューの最初
