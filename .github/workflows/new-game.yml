@@ -3,7 +3,7 @@ run-name: New game (${{ inputs.branch }})
 
 # 新しいもののふを登録する: もののふの名前を入れて手動実行すると、もののふ管理シート（.state/heroes.json）・
 # もののふの状態（.state/heroes/<id>.json）を選んだブランチにコミットする（Gist は作らない。もののふの詳細はサイトで見る）。
-# もののふは最大 30 人（引退したもののふは数えない）。冒険は次回の毎日の実行（hero-adventure.yml）から進む。
+# もののふは最大 30 人（引退したもののふは数えない）。冒険は次回の毎日の実行（master-adventure.yml）から進む。
 
 on:
   workflow_dispatch:

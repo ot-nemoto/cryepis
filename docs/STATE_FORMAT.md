@@ -9,7 +9,7 @@
 | [`board.json`](#boardjson) | `scripts/rpg.py`（最初の毎日の実行） | 番付の Gist の ID と URL |
 | [`guild.json`](#guildjson) | `scripts/rpg.py`（毎日の実行） | 町ごとの口入れ屋の高札（日をまたいで残る。早い者勝ち） |
 | [`heroes/<id>.json`](#heroesidjson) | `scripts/rpg.py` | もののふごとの状態・持ち物・日誌・シーズンの記録 |
-| [`last-run`](#last-run) | hero-adventure.yml の Commit state ステップ | 最終実行日 |
+| [`last-run`](#last-run) | update-game-state.yml の Record the last daily run ステップ | 最終実行日 |
 
 共通の決まり:
 
