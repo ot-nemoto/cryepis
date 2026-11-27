@@ -683,6 +683,18 @@ class SiteTest(unittest.TestCase):
     self.assertIn(gear, view.build_text(world, state))  # 毎日の実行のログでも詰めない
     self.assertIn(escape(gear), website.build_hero(world, hero, state))
 
+  def test_configured_site_url_is_used_for_the_board_and_hero_pages(self):
+    with mock.patch.dict("os.environ", {"RPG_SITE_URL": "https://example.pages.dev"}, clear=True):
+      self.assertIn("https://example.pages.dev/", rpg.build_board(WORLD, [], DAY))
+      self.assertEqual(rpg.page_url("h1"), "https://example.pages.dev/heroes/h1.html")
+
+  def test_redirect_preserves_paths_query_and_fragment(self):
+    files = website.write_site(WORLD, [], DAY, {}, self.out)
+    website.redirect_pages(files, self.out, "https://example.pages.dev/")
+    guide = (self.out / "guide.html").read_text()
+    self.assertIn('href="https://example.pages.dev/guide.html"', guide)
+    self.assertIn('location.replace("https://example.pages.dev/guide.html" + location.search + location.hash)', guide)
+
   def test_site_url_only_in_actions(self):
     with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "Owner/warriors-road"}, clear=True):
       self.assertEqual(rpg.site_url(), "https://owner.github.io/warriors-road/")

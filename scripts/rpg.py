@@ -85,7 +85,10 @@ def page_url(hero_id: str) -> str:
 
 
 def site_url() -> str | None:
-  """GitHub Pages のサイトの URL（GitHub Actions の中だけ分かる。scripts/website.py が書き出して pages.yml が公開する）。"""
+  """設定された公開先の URL。未設定の GitHub Actions では GitHub Pages の URL。"""
+  configured = os.environ.get("RPG_SITE_URL")
+  if configured is not None:
+    return configured.rstrip("/") + "/" if configured else None
   repo = os.environ.get("GITHUB_REPOSITORY", "")
   if "/" not in repo:
     return None
@@ -324,7 +327,7 @@ def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, 
   return errors
 
 
-def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) -> int:
+def advance_all(world: dict, today: date, actions: int | None, dry_run: bool, *, no_gist: bool = False) -> int:
   """現役のもののふを全員進めて、状態と、番付の Gist を更新する（詳細と絵図はサイトで見る）。
   1 人が失敗しても残りは続け、1 つでも失敗したら終了コード 1。"""
   heroes = [h for h in store.load_heroes() if h["active"]]
@@ -332,7 +335,7 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
     print("現役のもののふがいません（new-game で作れます）")
     return 0
   token = os.environ.get("GIST_PAT")
-  if not token and not dry_run:
+  if not token and not dry_run and not no_gist:
     raise SystemExit("GIST_PAT を環境変数で指定してください")
   failed, entries, loaded = 0, [], {}
 
@@ -373,7 +376,7 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
       fail(hero, e)
   if not dry_run:
     store.save_guild(guild)
-  if entries:
+  if entries and not no_gist:
     try:
       update_board(world, entries, today, dry_run, token)
     except (Exception, SystemExit) as e:  # noqa: BLE001
@@ -385,6 +388,7 @@ def advance_all(world: dict, today: date, actions: int | None, dry_run: bool) ->
 def main() -> int:
   ap = argparse.ArgumentParser()
   ap.add_argument("--dry-run", action="store_true", help="状態を保存せず、Gist も更新しない")
+  ap.add_argument("--no-gist", action="store_true", help="冒険の状態は保存し、番付の Gist の作成・更新を省く")
   ap.add_argument("--date", help="進める日付（既定は今日の JST）")
   ap.add_argument(
     "--actions", type=int, help="その日の行動回数を指定する（試すとき用。ふだんは season.json の actions_per_day）"
@@ -407,7 +411,7 @@ def main() -> int:
   today = date.fromisoformat(a.date) if a.date else datetime.now(UTC).astimezone(common.JST).date()
   if a.new_game is not None:
     return new_game(world, a.new_game, today)
-  return advance_all(world, today, a.actions, a.dry_run)
+  return advance_all(world, today, a.actions, a.dry_run, no_gist=a.no_gist)
 
 
 if __name__ == "__main__":

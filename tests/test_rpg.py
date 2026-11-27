@@ -564,6 +564,19 @@ class HeroesTest(unittest.TestCase):
     self.assertIn("kyoto (784, 641)", out.read_text(encoding="utf-8"))  # 確認用: 場所の ID と座標
     self.assertEqual(load("h1")["day"], 0)
 
+  def test_no_gist_advances_development_without_touching_the_production_board(self):
+    self.new_game("アリス")
+    self.assertEqual(self.daily("2026-12-01"), 0)
+    board_before = rpg.BOARD_PATH.read_bytes()
+    self.create_board.reset_mock()
+
+    self.assertEqual(self.run_main(["--date", "2026-12-02", "--no-gist"]), 0)
+    self.assertEqual(load("h1")["last_date"], "2026-12-02")
+    self.assertEqual(json.loads(store.GUILD_PATH.read_text())["refreshed"][load("h1")["place"]], "2026-12-02")
+    self.assertEqual(rpg.BOARD_PATH.read_bytes(), board_before)
+    self.create_board.assert_not_called()
+    self.update_gist.assert_not_called()
+
   def test_dry_run_writes_nothing(self):
     self.new_game("アリス")
     self.run_main(["--dry-run", "--actions", "1"])
