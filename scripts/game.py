@@ -92,6 +92,11 @@ def new_hero(world: dict) -> dict:
   }
 
 
+def stone_name(world: dict, area: str) -> str:
+  name = world["areas"].get(area, {}).get("name")
+  return f"{name}の原石" if name else "原石"
+
+
 def new_season_stats() -> dict:
   return {"quests_done": 0, "quests_failed": 0, "kills": 0, "deaths": 0, "rares": []}
 
@@ -300,13 +305,7 @@ def party_size(world: dict, monster: dict) -> int:
 
 def boss_town(world: dict, monster: dict) -> str | None:
   """主の依頼を出す町（主のいる霊場への山道がつながる、開放した町）。"""
-  for r in world["trails"]:
-    ends = {r["from"], r["to"]}
-    if monster.get("boss") in ends:
-      town = next(iter(ends - {monster["boss"]}))
-      if town in world["towns"]:
-        return town
-  return None
+  return W.boss_town(world["trails"], world["towns"], monster.get("boss"))
 
 
 def elite_ok(world: dict, quest: dict) -> bool:
@@ -1323,10 +1322,10 @@ class Day:
     self.log(text + ("！" if item["rarity"] != W.COMMON else ""))
 
   def obtain_stones(self, town: str, count: int, source: str) -> None:
-    area = self.world["places"][town]["area"]
+    area = self.world["places"][town].get("area") or ""
     stones = self.state.setdefault("stones", {})
     stones[area] = stones.get(area, 0) + count
-    self.log(f"{source}{self.world['areas'][area]['name']}の原石を {count} つ手に入れた")
+    self.log(f"{source}{stone_name(self.world, area)}を {count} つ手に入れた")
 
   # 町 --------------------------------------------------------------------------------
   def visit_town(self, town: str) -> None:
@@ -1849,9 +1848,7 @@ class Day:
     stone_recipient.obtain_stones(town, self.cfg["party_stones"][kind], "討伐の褒美で")
     if not self.cfg.get("rare_drops", True):
       return
-    pool = sorted(
-      iid for iid, item in self.world["items"].items() if item["rarity"] == "epic" and town in item.get("towns", [])
-    )
+    pool = W.party_gear(self.world["items"], town)
     if not pool:
       return
     for member in members:

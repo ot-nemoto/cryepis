@@ -207,6 +207,26 @@ def road_open(r: dict, opened: set, places: dict) -> bool:
   return all(r.get(e) in opened or places.get(r.get(e), {}).get("type") == "dungeon" for e in ("from", "to"))
 
 
+def boss_town(trails: list[dict], towns, dungeon: str | None) -> str | None:
+  """その霊場への山道がつながる、最初の開放した町。"""
+  for trail in trails:
+    a, b = trail.get("from"), trail.get("to")
+    if a == dungeon and b in towns:
+      return b
+    if b == dungeon and a in towns:
+      return a
+  return None
+
+
+def party_gear(items: dict, town: str) -> list[str]:
+  """大物・主の討伐で、その依頼元の町から出る★★★武具。"""
+  return sorted(
+    iid
+    for iid, item in items.items()
+    if item.get("rarity") == "epic" and isinstance(item.get("towns"), list) and town in item["towns"]
+  )
+
+
 def _rows(value) -> list:
   """一覧ならそのまま、そうでなければ空（形の誤りは _check_shape が知らせる）。"""
   return value if isinstance(value, list) else []
@@ -1125,6 +1145,7 @@ def _check_town_quests(c: _Check, ranks: list):
     err("quests.json: towns は {町の ID: 依頼の一覧} にしてください")
     town_quests = {}
   seen_ids = [q.get("id") for q in raw["quests"]]
+  party_towns = set()
   for tid, qs in town_quests.items():
     if places.get(tid, {}).get("type") != "town":
       err(f"quests.json の towns: {tid!r} は町の ID にしてください")
@@ -1142,9 +1163,12 @@ def _check_town_quests(c: _Check, ranks: list):
       _rank_ok(err, ranks, where, q.get("rank"))
       to = q.get("to")
       if q.get("type") == "hunt":
+        target = monsters.get(q.get("monster"), {})
+        if target.get("elite"):
+          party_towns.add(tid)
         if (tid, to) not in road_foes:
           err(f"{where}: to の {to!r} は、{tid} から陸路・航路で直接つながる開放した町にしてください")
-        elif q.get("monster") not in road_foes[(tid, to)] and not monsters.get(q.get("monster"), {}).get("elite"):
+        elif q.get("monster") not in road_foes[(tid, to)] and not target.get("elite"):
           err(f"{where}: monster の {q.get('monster')!r} は、その道に出る物の怪か大物にしてください（主は狙えない）")
         if not isinstance(q.get("count"), int) or q["count"] < 1:
           err(f"{where}: count は 1 以上の整数にしてください")
@@ -1153,6 +1177,13 @@ def _check_town_quests(c: _Check, ranks: list):
           err(f"{where}: to は開放した別の町の ID にしてください")
       else:
         err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
+
+  if c.season.get("rare_drops", True):
+    trails = [r for r in c.roads if r.get("kind") == "trail" and road_open(r, opened, places)]
+    boss_towns = {boss_town(trails, opened, m["boss"]) for m in monsters.values() if isinstance(m.get("boss"), str)}
+    for town in sorted(party_towns | (boss_towns - {None})):
+      if not party_gear(c.items, town):
+        err(f"items.json: {town} の大物・主の討伐で出る ★★★ 武具（epic）がありません")
 
 
 def _check_item_points(c: _Check):

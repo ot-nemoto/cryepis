@@ -2251,6 +2251,17 @@ class PersonalityTest(unittest.TestCase):
         self.assertEqual(state["stones"], {"bando": 1})
         self.assertFalse(state["inventory"])
 
+  def test_stone_loot_works_in_worlds_without_areas(self):
+    world = copy.deepcopy(WORLD)
+    world["areas"] = {}
+    for place in world["places"].values():
+      place.pop("area", None)
+    state = G.new_state(world)
+    day = G.Day(world, state, START, random.Random(0))
+    day.obtain_stones(TOWN, 1, "宝箱から")
+    self.assertEqual(state["stones"], {"": 1})
+    self.assertEqual(day.events[-1], "宝箱から原石を 1 つ手に入れた")
+
   def test_shop_buys_potions_first_and_keeps_inn_money(self):
     state = with_personality("careful")  # 先に 3 個、旅籠は HP 70% 未満
     state["hero"].update(potions=0, gold=WORLD["season"]["potion"]["price"] * 3 + WORLD["season"]["inn"]["price"], hp=1)

@@ -491,6 +491,24 @@ class SiteTest(unittest.TestCase):
     other = html[html.index(f'id="panel-{website.OTHER_AREA}"') :]
     self.assertIn("<td>酒呑童子</td>", other[: other.index("</section>")])
 
+  def test_guide_shows_loot_when_chests_or_rares_are_disabled(self):
+    world = copy.deepcopy(WORLD)
+    for key in ("stroll_events", "road_events"):
+      world["season"][key].pop("treasure")
+    html = website.build_guide(world)
+    for action in ("散策", "移動"):
+      self.assertIn(f"<td>{action}1行動</td>" + "<td>0%</td>" * 4, html)
+
+    world = copy.deepcopy(WORLD)
+    world["season"]["rare_drops"] = False
+    html = website.build_guide(world)
+    self.assertIn("今は★★以上の武具の配布を止めています", html)
+    self.assertIn("<td>散策1行動</td><td>0%</td><td>0.3%</td><td>3.75%</td><td>10.95%</td>", html)
+    self.assertIn("<td>移動1行動</td><td>0%</td><td>0.1%</td><td>1.92%</td><td>5.98%</td>", html)
+    self.assertIn("<td>★★★</td><td>0%</td><td>0%</td>", html)
+    self.assertIn("<td>大物</td><td>原石 1 個を 1 人に</td><td>原石 50%、武具 0%</td>", html)
+    self.assertIn("<td>主</td><td>原石 3 個を 1 人に</td><td>原石 33.3333%、武具 0%</td>", html)
+
   def test_guide_page_season_and_elements(self):
     html = website.build_guide(WORLD)
     self.assertIn("<h3>シーズン</h3>", html)

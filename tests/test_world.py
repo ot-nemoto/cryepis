@@ -430,6 +430,17 @@ class ValidateTest(unittest.TestCase):
 
     self.assertError(change, ["nagano", "rare"])
 
+  def test_party_quests_need_epic_rewards_when_rare_drops_are_enabled(self):
+    for town in ("nagano", "kofu"):
+      with self.subTest(town=town):
+        raw = copy.deepcopy(RAW)
+        for item in raw["items"]:
+          if item["rarity"] == "epic":
+            item["towns"].remove(town)
+        self.assertTrue(any(town in e and "epic" in e for e in W.validate(raw)))
+        raw["season"]["rare_drops"] = False
+        self.assertEqual(W.validate(raw), [])
+
   def test_treasure_table_rejects_unknown_outcomes(self):
     self.assertError(lambda r: r["season"]["road_treasure"].update(unknown=1), ["road_treasure"])
 

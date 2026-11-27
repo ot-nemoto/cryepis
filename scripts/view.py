@@ -180,7 +180,7 @@ def build_text(world: dict, state: dict) -> str:
     detail += [
       "",
       "── 原石 ──",
-      *(f"{area['name']}の原石: {stones[aid]}個" for aid, area in world["areas"].items() if stones.get(aid)),
+      *(f"{game.stone_name(world, area)}: {count}個" for area, count in sorted(stones.items()) if count),
     ]
   quest = state["quest"]
   if quest and quest["type"] != "patrol":

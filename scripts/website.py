@@ -1340,11 +1340,14 @@ def build_guide(world: dict) -> str:
   def percent(rate: float) -> str:
     return f"{rate * 100:.4f}".rstrip("0").rstrip(".") + "%"
 
+  rare_drops = cfg.get("rare_drops", True)
   loot_rows = []
   for mode, label in (("stroll", "散策1行動"), ("road", "移動1行動")):
     events = cfg[f"{mode}_events"]
-    chest = events["treasure"] / sum(events.values())
-    loot = cfg[f"{mode}_treasure"]
+    chest = events.get("treasure", 0) / sum(events.values())
+    loot = dict(cfg[f"{mode}_treasure"])
+    if not rare_drops:
+      loot["gold"] = loot.get("gold", 0) + loot.pop("item", 0)
 
     probabilities = [percent(chest * loot.get(k, 0) / sum(loot.values())) for k in W.TREASURE_KINDS]
     loot_rows.append((label, *probabilities))
@@ -1352,22 +1355,23 @@ def build_guide(world: dict) -> str:
   for rank in world["quest_ranks"]:
     weights = dict(rank["item"])
     if weights.get("rare"):
-      chance_ = weights["rare"] / sum(weights.values())
+      chance_ = weights["rare"] / sum(weights.values()) if rare_drops else 0
       quest_loot.append((escape(rank["mark"]), percent(chance_), percent(1 - (1 - chance_) ** 2)))
   party = cfg["party"]
   stones = cfg["party_stones"]
-  party_loot = [
-    (
-      label,
-      f"原石 {stones[kind]} 個を 1 人に、{gear}を残り {party[kind] - 1} 人に 1 つずつ",
-      f"原石 {percent(1 / party[kind])}、武具 {percent((party[kind] - 1) / party[kind])}",
-    )
-    for kind, label, gear in (("elite", "大物", "★★★武具"), ("boss", "主", "ランダムなスキル付き★★★武具"))
-  ]
+  party_loot = []
+  for kind, label, gear in (("elite", "大物", "★★★武具"), ("boss", "主", "ランダムなスキル付き★★★武具")):
+    reward = f"原石 {stones[kind]} 個を 1 人に"
+    gear_chance = 0
+    if rare_drops:
+      reward += f"、{gear}を残り {party[kind] - 1} 人に 1 つずつ"
+      gear_chance = (party[kind] - 1) / party[kind]
+    party_loot.append((label, reward, f"原石 {percent(1 / party[kind])}、武具 {percent(gear_chance)}"))
   cards.append(
     (
       "武具と原石の入手",
-      table(("行動", "★★武具", "原石1個", "丸薬1個", "お金"), loot_rows)
+      ("" if rare_drops else '<p class="note">今は★★以上の武具の配布を止めています。</p>')
+      + table(("行動", "★★武具", "原石1個", "丸薬1個", "お金"), loot_rows)
       + "<p>表は1行動あたりの確率。宝探しが効くと宝箱の出現率が上がる。"
       "宝箱から出る★★武具と原石は散策した町、または出発した町で決まる。</p>"
       + table(("通常依頼の達成報告1回", "★★武具", "★★武具（強運）"), quest_loot)
