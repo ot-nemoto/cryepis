@@ -1,0 +1,128 @@
+name: Update game state
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+        type: string
+      operation:
+        required: true
+        type: string
+      hero:
+        type: string
+    secrets:
+      GIST_PAT:
+        required: false
+
+jobs:
+  run-game:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      source: ${{ steps.source.outputs.tree }}
+      artifact: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.branch }}
+          persist-credentials: false
+
+      - id: source
+        run: echo "tree=$(git rev-parse --verify -q HEAD:.state || printf absent)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - id: tests
+        name: Test
+        run: python -m unittest discover -s tests
+
+      - name: Advance production game
+        if: inputs.operation == 'advance' && inputs.branch == 'master'
+        env:
+          GIST_PAT: ${{ secrets.GIST_PAT }}
+          RPG_SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://ot-nemoto.github.io/warriors-road/' }}
+        run: python scripts/rpg.py
+
+      - name: Advance development game
+        if: inputs.operation == 'advance' && inputs.branch == 'develop'
+        run: python scripts/rpg.py --no-gist
+
+      - name: Update hero roster
+        if: inputs.operation != 'advance'
+        env:
+          OPERATION: ${{ inputs.operation }}
+          HERO: ${{ inputs.hero }}
+          RPG_SITE_URL: ${{ inputs.branch == 'master' && (vars.PRODUCTION_SITE_URL || 'https://ot-nemoto.github.io/warriors-road/') || (vars.CLOUDFLARE_PAGES_PROJECT != '' && format('https://develop.{0}.pages.dev/', vars.CLOUDFLARE_PAGES_PROJECT) || '') }}
+        run: |
+          case "$OPERATION" in
+            new-game) python scripts/rpg.py --new-game "$HERO" ;;
+            retire) python scripts/rpg.py --retire "$HERO" ;;
+            *) exit 1 ;;
+          esac
+
+      - name: Record the last daily run
+        if: ${{ !cancelled() && inputs.operation == 'advance' && steps.tests.outcome != 'skipped' }}
+        run: |
+          mkdir -p .state
+          TZ=Asia/Tokyo date +%F > .state/last-run
+
+      # 一部のもののふが失敗しても、進められた分の日次セーブは渡す。
+      - id: upload
+        uses: actions/upload-artifact@v6
+        if: ${{ !cancelled() && (success() || (inputs.operation == 'advance' && steps.tests.outcome != 'skipped')) }}
+        with:
+          name: game-state-${{ inputs.branch }}
+          path: .state/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  save-state:
+    needs: run-game
+    if: >-
+      ${{ !cancelled() && needs.run-game.outputs.source != '' && needs.run-game.outputs.artifact != ''
+          && (needs.run-game.result == 'success' || inputs.operation == 'advance') }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # 生成元のコードは実行せず、対象ブランチの .state/ だけを書き戻す。
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.branch }}
+          path: repository
+
+      - uses: actions/download-artifact@v7
+        with:
+          artifact-ids: ${{ needs.run-game.outputs.artifact }}
+          path: state-output
+
+      - name: Commit state
+        working-directory: repository
+        env:
+          BRANCH: ${{ inputs.branch }}
+          OPERATION: ${{ inputs.operation }}
+          SOURCE: ${{ needs.run-game.outputs.source }}
+        run: |
+          case "$BRANCH" in master|develop) ;; *) exit 1 ;; esac
+          current=$(git rev-parse --verify -q HEAD:.state || printf absent)
+          if [ "$current" != "$SOURCE" ]; then
+            echo "セーブが別の実行で更新されています。最新の状態で再実行してください。"
+            exit 1
+          fi
+          rm -rf .state
+          mkdir .state
+          cp -R ../state-output/. .state/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A .state/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: $OPERATION game state"
+            git push origin "HEAD:refs/heads/$BRANCH"
+          fi

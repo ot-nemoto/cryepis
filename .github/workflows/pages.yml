@@ -232,6 +232,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Lint the development snapshot
+        if: matrix.target.sha != needs.resolve.outputs.sha
+        run: |
+          pip install "ruff==$RUFF_VERSION"
+          ruff check --output-format=github .
+          ruff format --check --diff .
+
       - name: Test the development snapshot
         if: matrix.target.sha != needs.resolve.outputs.sha
         run: python -m unittest discover -s tests
@@ -269,7 +276,7 @@ jobs:
     timeout-minutes: 10
     concurrency:
       group: cloudflare-pages-${{ matrix.target.branch }}
-      cancel-in-progress: false
+      queue: max
     steps:
       # PR のコードはチェックアウトせず、生成済みのファイルだけを配信する。
       - uses: actions/download-artifact@v7

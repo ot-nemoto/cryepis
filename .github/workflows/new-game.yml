@@ -28,34 +28,8 @@ permissions:
 jobs:
   new-game:
     if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.branch }}
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Test
-        run: python -m unittest discover -s tests
-
-      # 入力は環境変数経由で渡す（シェルに直接展開しない）
-      - name: Create hero
-        env:
-          RPG_SITE_URL: ${{ inputs.branch == 'master' && (vars.PRODUCTION_SITE_URL || 'https://ot-nemoto.github.io/warriors-road/') || (vars.CLOUDFLARE_PAGES_PROJECT != '' && format('https://develop.{0}.pages.dev/', vars.CLOUDFLARE_PAGES_PROJECT) || '') }}
-          HERO_NAME: ${{ inputs.hero_name }}
-        run: python scripts/rpg.py --new-game "$HERO_NAME"
-
-      - name: Commit state
-        env:
-          BRANCH: ${{ inputs.branch }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A .state
-          git commit -m "chore: new hero"
-          git pull --rebase origin "$BRANCH"
-          git push origin "HEAD:refs/heads/$BRANCH"
+    uses: ./.github/workflows/update-game-state.yml
+    with:
+      branch: ${{ inputs.branch }}
+      operation: new-game
+      hero: ${{ inputs.hero_name }}

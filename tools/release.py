@@ -36,6 +36,8 @@ def prepare() -> None:
     raise SystemExit("ゲームの状態以外に公開する変更がありません")
   version = next_version(git("show", f"{master}:VERSION").stdout)
   branch = f"release/v{version}"
+  previous_branch = git("symbolic-ref", "--quiet", "--short", "HEAD", check=False).stdout.strip()
+  previous_commit = git("rev-parse", "HEAD").stdout.strip()
   git("switch", "-c", branch, master)
   merge = git("merge", "--no-ff", "--no-commit", develop, check=False)
   if merge.returncode and git("rev-parse", "--verify", "-q", "MERGE_HEAD", check=False).returncode:
@@ -44,6 +46,11 @@ def prepare() -> None:
   git("restore", f"--source={master}", "--staged", "--worktree", "--", "VERSION")
   if git("diff", "--cached", "--quiet", check=False).returncode == 0:
     git("merge", "--abort")
+    if previous_branch:
+      git("switch", previous_branch)
+    else:
+      git("switch", "--detach", previous_commit)
+    git("update-ref", "-d", f"refs/heads/{branch}", master)
     raise SystemExit("ゲームの状態以外に公開する変更がありません")
   Path(git("rev-parse", "--show-toplevel").stdout.strip(), "VERSION").write_text(version + "\n", encoding="utf-8")
   git("add", "--", ":(top)VERSION")

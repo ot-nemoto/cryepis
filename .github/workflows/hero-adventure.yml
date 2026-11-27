@@ -47,47 +47,9 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      # 待機中に同じゲームが更新されても、最新のセーブから進める。
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ matrix.branch }}
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - id: tests
-        name: Test
-        run: python -m unittest discover -s tests
-
-      - name: Advance production game
-        if: matrix.branch == 'master'
-        env:
-          GIST_PAT: ${{ secrets.GIST_PAT }}
-          RPG_SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://ot-nemoto.github.io/warriors-road/' }}
-        run: python scripts/rpg.py
-
-      - name: Advance development game
-        if: matrix.branch == 'develop'
-        run: python scripts/rpg.py --no-gist
-
-      # 1 人の処理が失敗しても、進められたもののふの状態は保存する。
-      - name: Commit state
-        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
-        env:
-          BRANCH: ${{ matrix.branch }}
-        run: |
-          TODAY=$(TZ=Asia/Tokyo date +%F)
-          mkdir -p .state
-          echo "$TODAY" > .state/last-run
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A .state
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: update state $TODAY"
-            git pull --rebase origin "$BRANCH"
-            git push origin "HEAD:refs/heads/$BRANCH"
-          fi
+    uses: ./.github/workflows/update-game-state.yml
+    with:
+      branch: ${{ matrix.branch }}
+      operation: advance
+    secrets:
+      GIST_PAT: ${{ matrix.branch == 'master' && secrets.GIST_PAT || '' }}
