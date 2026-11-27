@@ -1531,8 +1531,12 @@ def main() -> int:
   a = ap.parse_args()
   out = Path(a.out)
   check_out(out)
-  if a.training_cache and a.training_cache.resolve().is_relative_to(out.resolve()):
-    ap.error("--training-cache は出力先のディレクトリの外に指定してください")
+  if a.training_cache:
+    out_dir = out.resolve()
+    # キャッシュへのシンボリックリンク自体が出力先にあっても、書き直しで消える。
+    cache_paths = (a.training_cache, *a.training_cache.parents)
+    if any(path.resolve().is_relative_to(out_dir) for path in cache_paths):
+      ap.error("--training-cache は出力先のディレクトリの外に指定してください")
   world = W.load_world()
   entries = store.current_entries(world)
   today = date.fromisoformat(a.date) if a.date else shown_day(entries)

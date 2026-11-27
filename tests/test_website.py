@@ -117,14 +117,18 @@ class SiteTest(unittest.TestCase):
       self.assertEqual(build.call_count, 2)
 
   def test_site_rejects_a_training_cache_inside_the_output(self):
-    cache = self.out / "training.json"
-    with (
-      mock.patch.object(sys, "argv", ["website.py", str(self.out), "--training-cache", str(cache)]),
-      mock.patch.object(training, "cached_report") as load,
-      self.assertRaises(SystemExit),
-    ):
-      website.main()
-    load.assert_not_called()
+    self.out.mkdir()
+    link = self.out / "linked-training.json"
+    link.symlink_to(self.out.parent / "training.json")
+    for cache in (self.out / "training.json", link):
+      with (
+        self.subTest(cache=cache),
+        mock.patch.object(sys, "argv", ["website.py", str(self.out), "--training-cache", str(cache)]),
+        mock.patch.object(training, "cached_report") as load,
+        self.assertRaises(SystemExit),
+      ):
+        website.main()
+      load.assert_not_called()
 
   def test_out_dir_is_rebuilt(self):
     website.write_site(WORLD, [], DAY, {}, self.out)
