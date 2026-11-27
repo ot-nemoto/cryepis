@@ -5,51 +5,21 @@ on:
     # 日本時間 7:17
     - cron: "17 22 * * *"
   workflow_dispatch:
-    inputs:
-      branch:
-        description: "進めるゲーム"
-        type: choice
-        options: [master, develop]
-        default: master
 
 permissions:
   contents: read
 
 jobs:
-  targets:
-    if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    outputs:
-      branches: ${{ steps.branches.outputs.branches }}
-    steps:
-      - id: branches
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TARGET: ${{ inputs.branch }}
-        run: |
-          if [ -n "$TARGET" ]; then
-            branches=$(jq -cn --arg branch "$TARGET" '[$branch]')
-          elif gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/develop" --jq '.[].ref' | grep -Fxq refs/heads/develop; then
-            branches='["master","develop"]'
-          else
-            branches='["master"]'
-          fi
-          echo "branches=$branches" >> "$GITHUB_OUTPUT"
-
   advance:
-    needs: targets
-    strategy:
-      fail-fast: false
-      matrix:
-        branch: ${{ fromJSON(needs.targets.outputs.branches) }}
+    if: github.ref == 'refs/heads/master'
     concurrency:
-      group: hero-adventure-${{ matrix.branch }}
+      group: hero-adventure-master
       cancel-in-progress: false
     permissions:
       contents: write
     uses: ./.github/workflows/update-game-state.yml
     with:
-      branch: ${{ matrix.branch }}
+      branch: master
       operation: advance
     secrets:
-      GIST_PAT: ${{ matrix.branch == 'master' && secrets.GIST_PAT || '' }}
+      GIST_PAT: ${{ secrets.GIST_PAT }}

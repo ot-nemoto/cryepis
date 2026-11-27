@@ -1,4 +1,5 @@
 name: New game (add a hero)
+run-name: New game (${{ inputs.branch }})
 
 # 新しいもののふを登録する: もののふの名前を入れて手動実行すると、もののふ管理シート（.state/heroes.json）・
 # もののふの状態（.state/heroes/<id>.json）を選んだブランチにコミットする（Gist は作らない。もののふの詳細はサイトで見る）。

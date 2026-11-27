@@ -1,0 +1,38 @@
+name: Advance development game
+
+on:
+  schedule:
+    # 日本時間 7:17
+    - cron: "17 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  target:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.develop.outputs.exists }}
+    steps:
+      - id: develop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          exists=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/develop" \
+            --jq 'any(.[]; .ref == "refs/heads/develop")')
+          echo "exists=$exists" >> "$GITHUB_OUTPUT"
+
+  advance:
+    needs: target
+    if: needs.target.outputs.exists == 'true'
+    concurrency:
+      group: hero-adventure-develop
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    uses: ./.github/workflows/update-game-state.yml
+    with:
+      branch: develop
+      operation: advance

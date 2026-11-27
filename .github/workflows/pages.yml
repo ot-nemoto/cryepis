@@ -18,7 +18,7 @@ on:
   push:
     branches: [master, develop]
   workflow_run:
-    workflows: ["Advance hero adventure (text RPG)", "New game (add a hero)", "Retire hero"]
+    workflows: ["Advance hero adventure (text RPG)", "Advance development game", "New game (add a hero)", "Retire hero"]
     types: [completed]
     branches: [master]
   workflow_dispatch:
@@ -38,13 +38,13 @@ env:
 
 jobs:
   # CI と公開で使うコミットを 1 つに決める。
-  # PR・push・手動はそのきっかけのコミット、workflow_run は、毎日の実行などがコミットしたあとの master の先端
+  # PR・push・手動はそのきっかけのコミット、workflow_run は、更新したゲームのブランチの先端
   resolve:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
       sha: ${{ steps.sha.outputs.sha }}
-      targets: ${{ steps.sha.outputs.targets }}
+      branch: ${{ steps.sha.outputs.branch }}
     steps:
       - id: sha
         env:
@@ -53,34 +53,34 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          STATE_WORKFLOW: ${{ github.event.workflow_run.name }}
+          STATE_TITLE: ${{ github.event.workflow_run.display_title }}
         run: |
-          if [ "$EVENT" = "workflow_run" ]; then
-            sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/master" --jq .sha)
-          else
-            sha="$GITHUB_SHA"
-          fi
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          targets='[]'
-          add_target() {
-            targets=$(jq -c --arg branch "$1" --arg sha "$2" '. + [{branch:$branch,sha:$sha}]' <<< "$targets")
-          }
+          sha="$GITHUB_SHA"
+          branch=''
           if [ "$EVENT" = pull_request ]; then
             if [ "$BASE_REF" = master ] && [ "$HEAD_REPO" = "$GITHUB_REPOSITORY" ]; then
-              add_target "pr-$PR_NUMBER" "$sha"
+              branch="pr-$PR_NUMBER"
             fi
           elif [ "$EVENT" = workflow_run ]; then
-            add_target master "$sha"
-            develop_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/develop" --jq '.[] | select(.ref == "refs/heads/develop") | .object.sha')
-            if [ -n "$develop_sha" ]; then
-              add_target develop "$develop_sha"
+            branch=master
+            case "$STATE_WORKFLOW:$STATE_TITLE" in
+              'Advance development game:'*|*':New game (develop)'|*':Retire hero (develop)') branch=develop ;;
+            esac
+            sha=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/$branch" \
+              --jq ".[] | select(.ref == \"refs/heads/$branch\") | .object.sha")
+            if [ -z "$sha" ]; then
+              branch=''
             fi
           elif [[ "$GITHUB_REF" == refs/heads/master || "$GITHUB_REF" == refs/heads/develop ]]; then
-            add_target "$GITHUB_REF_NAME" "$sha"
+            branch="$GITHUB_REF_NAME"
           fi
-          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
 
   lint:
     needs: resolve
+    if: needs.resolve.outputs.sha != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -116,6 +116,7 @@ jobs:
 
   test:
     needs: resolve
+    if: needs.resolve.outputs.sha != ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -135,8 +136,7 @@ jobs:
     # master のときだけ公開する。テストは必ず通っていること。リンター・フォーマットは、毎日の実行のあと（workflow_run）は
     # 失敗していても公開する（コードの書き方の問題で、毎日の状態の公開を止めないため）
     if: >-
-      ${{ always() && github.event_name != 'pull_request'
-          && (github.event_name == 'workflow_run' || github.ref_name == github.event.repository.default_branch)
+      ${{ always() && needs.resolve.outputs.branch == 'master'
           && needs.resolve.result == 'success' && needs.test.result == 'success'
           && (needs.lint.result == 'success' || github.event_name == 'workflow_run') }}
     runs-on: ubuntu-latest
@@ -203,45 +203,24 @@ jobs:
   cloudflare-build:
     if: >-
       ${{ always() && !cancelled() && needs.resolve.result == 'success'
-          && vars.CLOUDFLARE_PAGES_PROJECT != '' && needs.resolve.outputs.targets != '[]' }}
+          && vars.CLOUDFLARE_PAGES_PROJECT != '' && needs.resolve.outputs.branch != ''
+          && needs.test.result == 'success'
+          && (needs.lint.result == 'success' || (github.event_name == 'workflow_run' && needs.resolve.outputs.branch == 'master'))
+          && (needs.release-check.result == 'success' || needs.release-check.result == 'skipped') }}
     needs: [resolve, lint, test, release-check]
-    strategy:
-      fail-fast: false
-      matrix:
-        target: ${{ fromJSON(needs.resolve.outputs.targets) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      artifact: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - name: Check build prerequisites
-        if: matrix.target.sha == needs.resolve.outputs.sha
-        env:
-          TEST_RESULT: ${{ needs.test.result }}
-          LINT_RESULT: ${{ needs.lint.result }}
-          RELEASE_RESULT: ${{ needs.release-check.result }}
-        run: |
-          test "$TEST_RESULT" = success
-          test "$LINT_RESULT" = success || test "$GITHUB_EVENT_NAME" = workflow_run
-          test "$RELEASE_RESULT" = success || test "$RELEASE_RESULT" = skipped
-
       - uses: actions/checkout@v5
         with:
-          ref: ${{ matrix.target.sha }}
+          ref: ${{ needs.resolve.outputs.sha }}
           persist-credentials: false
 
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-
-      - name: Lint the development snapshot
-        if: matrix.target.sha != needs.resolve.outputs.sha
-        run: |
-          pip install "ruff==$RUFF_VERSION"
-          ruff check --output-format=github .
-          ruff format --check --diff .
-
-      - name: Test the development snapshot
-        if: matrix.target.sha != needs.resolve.outputs.sha
-        run: python -m unittest discover -s tests
 
       - name: Identify training inputs
         id: training
@@ -255,33 +234,27 @@ jobs:
       - name: Generate pages
         run: python scripts/website.py _site --training-cache "$RUNNER_TEMP/cryepis-training.json"
 
-      - uses: actions/upload-artifact@v6
+      - id: upload
+        uses: actions/upload-artifact@v6
         with:
-          name: cloudflare-${{ matrix.target.branch }}
+          name: cloudflare-${{ needs.resolve.outputs.branch }}-${{ github.run_attempt }}
           path: _site
           if-no-files-found: error
           retention-days: 1
 
 
   cloudflare-deploy:
-    if: >-
-      ${{ always() && !cancelled() && needs.resolve.result == 'success'
-          && (needs.cloudflare-build.result == 'success' || needs.cloudflare-build.result == 'failure') }}
     needs: [resolve, cloudflare-build]
-    strategy:
-      fail-fast: false
-      matrix:
-        target: ${{ fromJSON(needs.resolve.outputs.targets) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
-      group: cloudflare-pages-${{ matrix.target.branch }}
+      group: cloudflare-pages-${{ needs.resolve.outputs.branch }}
       queue: max
     steps:
       # PR のコードはチェックアウトせず、生成済みのファイルだけを配信する。
       - uses: actions/download-artifact@v7
         with:
-          pattern: cloudflare-${{ matrix.target.branch }}
+          artifact-ids: ${{ needs.cloudflare-build.outputs.artifact }}
           path: pages-output
 
       - uses: actions/setup-node@v5
@@ -294,15 +267,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
           PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ matrix.target.branch }}
-          SHA: ${{ matrix.target.sha }}
+          BRANCH: ${{ needs.resolve.outputs.branch }}
+          SHA: ${{ needs.resolve.outputs.sha }}
         run: |
           set -euo pipefail
-          output="pages-output/cloudflare-$BRANCH"
-          if [ ! -d "$output" ]; then
-            echo "配信できる生成物がありません。"
-            exit 0
-          fi
+          test -s pages-output/index.html
           case "$BRANCH" in
             pr-*)
               current=$(gh api "repos/$GITHUB_REPOSITORY/pulls/${BRANCH#pr-}" --jq 'select(.state == "open") | .merge_commit_sha')
@@ -331,5 +300,5 @@ jobs:
             echo "Cloudflare Pages の本番ブランチを master に設定してください。"
             exit 1
           fi
-          npx --yes wrangler@4.168.0 pages deploy "$output" --project-name "$PROJECT" --branch "$BRANCH" --commit-hash "$SHA"
+          npx --yes wrangler@4.168.0 pages deploy pages-output --project-name "$PROJECT" --branch "$BRANCH" --commit-hash "$SHA"
           printf -- '- %s [%s](%s)\n' "$BRANCH" "$url" "$url" >> "$GITHUB_STEP_SUMMARY"
