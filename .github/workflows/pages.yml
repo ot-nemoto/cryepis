@@ -284,7 +284,7 @@ jobs:
       - name: Publish to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
           PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ matrix.target.branch }}
@@ -314,5 +314,7 @@ jobs:
             echo "$BRANCH は更新済みなので、この生成物の公開を省きます。"
             exit 0
           fi
+          : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID を設定してください}"
+          : "${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN を設定してください}"
           npx --yes wrangler@4.168.0 pages deploy "$output" --project-name "$PROJECT" --branch "$BRANCH" --commit-hash "$SHA"
           printf -- '- %s [%s](%s)\n' "$BRANCH" "$url" "$url" >> "$GITHUB_STEP_SUMMARY"

@@ -44,7 +44,7 @@ Cloudflare Pages で Direct Upload のプロジェクトを作成し、本番ブ
 | GitHub Actions の種類 | 名前 | 値 |
 |---|---|---|
 | Secret | `CLOUDFLARE_API_TOKEN` | Cloudflare の API トークン |
-| Variable | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare のアカウント ID |
+| Variable または Secret | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare のアカウント ID |
 | Variable | `CLOUDFLARE_PAGES_PROJECT` | Direct Upload プロジェクトの実際の名前 |
 | Variable | `PRODUCTION_SITE_URL` | 切り替え確認後に設定する Cloudflare の本番 HTTPS URL |
 
