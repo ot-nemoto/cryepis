@@ -4,20 +4,20 @@
   "trait": "guard",
   "personality": "diligent",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-26",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-27",
   "hero": {
     "level": 1,
     "exp": 6,
     "max_hp": 30,
-    "hp": 28,
+    "hp": 30,
     "base_atk": 6,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 6,
     "gold": 5,
-    "potions": 3,
+    "potions": 0,
     "stored": 0
   },
   "inventory": [
@@ -26,86 +26,42 @@
       "skill": null
     }
   ],
+  "stones": {},
   "storage": [],
   "place": "edo",
   "home_town": "edo",
-  "road": {
-    "to": "kofu",
-    "left": 1
-  },
-  "quest": {
-    "type": "deliver",
-    "place": "kofu",
-    "report": "kofu",
-    "monster": null,
-    "count": 1,
-    "rank": 3,
-    "danger": 2,
-    "cargo": "大名の書状",
-    "name": "大名の書状の配達",
-    "text": "大名の書状を狙う者がいると聞く。どの教えの者かは分からない。甲府まで、決して渡すな",
-    "min_level": 5,
-    "template": "deliver",
-    "town": "odawara",
-    "progress": 0,
-    "level": null,
-    "deadline": null,
-    "cost": 5,
-    "reward": {
-      "exp": 0,
-      "gold": 320,
-      "item": [
-        [
-          "none",
-          45
-        ],
-        [
-          "common",
-          10
-        ],
-        [
-          "rare",
-          30
-        ],
-        [
-          "epic",
-          13
-        ],
-        [
-          "legendary",
-          2
-        ]
-      ]
-    },
-    "id": "2026-11-26-odawara-2"
-  },
-  "taken": [
-    "2026-11-26-odawara-2"
-  ],
+  "road": null,
+  "quest": null,
+  "taken": [],
   "stay": {
     "town": "edo",
     "since": "2026-11-26"
   },
   "season_stats": {
     "quests_done": 0,
-    "quests_failed": 0,
+    "quests_failed": 1,
     "kills": 1,
-    "deaths": 0,
+    "deaths": 1,
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
-    "actions": 4,
+    "date": "2026-11-27",
+    "actions": 3,
     "events": [
-      "小田原の口入れ屋で依頼を受けた: ★★★ 大名の書状の配達（甲府へ大名の書状を届ける）（行動力 5）",
-      "眼下に雲海が広がっている",
-      "切り立った崖の細い道を進んだ",
-      "江戸に着いた",
-      "苔むした倒木をまたいだ",
-      "草原を風が吹き抜けていく"
+      "丸薬を使った（HP 16/30）",
+      "丸薬を使った（HP 20/30）",
+      "丸薬を使った（HP 18/30）",
+      "女郎蜘蛛に敗れた",
+      "力尽きた… 江戸で目を覚ました",
+      "依頼失敗（力尽きた）: ★★★ 大名の書状の配達（甲府へ大名の書状を届ける）"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 3,
+      "text": "丸薬を使った（HP 16/30） / 丸薬を使った（HP 20/30） / 丸薬を使った（HP 18/30） / 女郎蜘蛛に敗れた / 力尽きた… 江戸で目を覚ました / 依頼失敗（力尽きた）: ★★★ 大名の書状の配達（甲府へ大名の書状を届ける）"
+    },
     {
       "date": "2026-11-26",
       "actions": 4,

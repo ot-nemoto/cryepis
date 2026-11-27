@@ -4,19 +4,19 @@
   "trait": "lucky",
   "personality": "diligent",
   "season": 1,
-  "season_day": 4,
-  "day": 4,
-  "last_date": "2026-11-26",
+  "season_day": 5,
+  "day": 5,
+  "last_date": "2026-11-27",
   "hero": {
     "level": 4,
-    "exp": 53,
+    "exp": 68,
     "max_hp": 54,
-    "hp": 36,
+    "hp": 31,
     "base_atk": 12,
     "base_def": 7,
     "base_spd": 8,
     "base_dex": 10,
-    "gold": 78,
+    "gold": 90,
     "potions": 3,
     "stored": 0
   },
@@ -34,44 +34,61 @@
       "skill": null
     }
   ],
+  "stones": {},
   "storage": [
     {
       "id": "iron_helm",
       "skill": null
     }
   ],
-  "place": "kofu",
-  "home_town": "kofu",
+  "place": "edo",
+  "home_town": "edo",
   "road": null,
-  "quest": null,
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "edo",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 1,
+    "deadline": null,
+    "reward": null,
+    "cost": 3
+  },
   "taken": [
-    "2026-11-26-nagano-2"
+    "2026-11-27-patrol"
   ],
   "stay": {
-    "town": "kofu",
-    "since": "2026-11-26"
+    "town": "edo",
+    "since": "2026-11-27"
   },
   "season_stats": {
     "quests_done": 3,
     "quests_failed": 0,
-    "kills": 11,
+    "kills": 13,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
+    "date": "2026-11-27",
     "actions": 3,
     "events": [
-      "長野の口入れ屋で依頼を受けた: ★ 日用品の配達（甲府へ日用品を届ける）（行動力 3）",
-      "長野の口入れ屋の蔵に、装備を 1 つ預けた",
-      "狒々〔盗み〕を倒した (+16EXP)",
-      "小鬼を倒した (+8EXP)",
-      "山犬を倒した (+18EXP)",
-      "甲府に着いた",
-      "依頼達成！★ 日用品の配達（甲府へ日用品を届ける）（+48文）"
+      "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "鬼火を倒した (+10EXP)",
+      "眼下に雲海が広がっている",
+      "鉄鼠〔群れ〕を倒した (+5EXP)",
+      "江戸に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 3,
+      "text": "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る / 鬼火を倒した (+10EXP) / 眼下に雲海が広がっている / 鉄鼠〔群れ〕を倒した (+5EXP) / 江戸に着いた"
+    },
     {
       "date": "2026-11-26",
       "actions": 3,

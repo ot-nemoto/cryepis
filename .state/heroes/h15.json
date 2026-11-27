@@ -4,19 +4,19 @@
   "trait": "guard",
   "personality": "tactician",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-26",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-27",
   "hero": {
     "level": 3,
-    "exp": 15,
+    "exp": 20,
     "max_hp": 46,
-    "hp": 34,
+    "hp": 32,
     "base_atk": 10,
     "base_def": 7,
     "base_spd": 7,
     "base_dex": 9,
-    "gold": 14,
+    "gold": 18,
     "potions": 3,
     "stored": 0
   },
@@ -34,21 +34,22 @@
       "skill": null
     }
   ],
+  "stones": {},
   "storage": [
     {
       "id": "iron_helm",
       "skill": null
     }
   ],
-  "place": "kofu",
-  "home_town": "kofu",
+  "place": "edo",
+  "home_town": "edo",
   "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "kofu",
+    "place": "edo",
     "report": null,
     "monster": null,
     "count": 1,
@@ -58,32 +59,36 @@
     "cost": 3
   },
   "taken": [
-    "2026-11-26-patrol"
+    "2026-11-27-patrol"
   ],
   "stay": {
-    "town": "kofu",
-    "since": "2026-11-26"
+    "town": "edo",
+    "since": "2026-11-27"
   },
   "season_stats": {
     "quests_done": 1,
     "quests_failed": 0,
-    "kills": 4,
+    "kills": 5,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
+    "date": "2026-11-27",
     "actions": 3,
     "events": [
-      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
-      "眼下に雲海が広がっている",
-      "雪狼〔群れ〕を倒した (+15EXP)",
-      "遠くで雪崩の音がした",
-      "甲府に着いた",
-      "甲府の口入れ屋の蔵に、装備を 1 つ預けた"
+      "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "切り立った崖の細い道を進んだ",
+      "草原を風が吹き抜けていく",
+      "鉄鼠〔群れ〕を倒した (+5EXP)",
+      "江戸に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 3,
+      "text": "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る / 切り立った崖の細い道を進んだ / 草原を風が吹き抜けていく / 鉄鼠〔群れ〕を倒した (+5EXP) / 江戸に着いた"
+    },
     {
       "date": "2026-11-26",
       "actions": 3,

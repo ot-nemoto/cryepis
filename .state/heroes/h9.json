@@ -4,9 +4,9 @@
   "trait": "strong",
   "personality": "careful",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-26",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-27",
   "hero": {
     "level": 2,
     "exp": 16,
@@ -18,7 +18,7 @@
     "base_dex": 7,
     "gold": 21,
     "potions": 4,
-    "stored": 1
+    "stored": 2
   },
   "inventory": [
     {
@@ -26,17 +26,18 @@
       "skill": null
     }
   ],
+  "stones": {},
   "storage": [],
-  "place": "edo",
-  "home_town": "edo",
+  "place": "odawara",
+  "home_town": "odawara",
   "road": null,
   "quest": null,
   "taken": [
-    "2026-11-26-patrol"
+    "2026-11-27-patrol"
   ],
   "stay": {
-    "town": "edo",
-    "since": "2026-11-26"
+    "town": "odawara",
+    "since": "2026-11-27"
   },
   "season_stats": {
     "quests_done": 0,
@@ -46,17 +47,22 @@
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
+    "date": "2026-11-27",
     "actions": 3,
     "events": [
-      "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
-      "小鬼を倒した (+8EXP)",
-      "切り立った崖の細い道を進んだ",
-      "江戸に着いた",
-      "江戸で休んで、行動力を溜めた"
+      "江戸の口入れ屋には受けられる依頼がない。小田原へ旅に出る",
+      "道端に小さな花が咲いている",
+      "草原を風が吹き抜けていく",
+      "小田原に着いた",
+      "小田原で休んで、行動力を溜めた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 3,
+      "text": "江戸の口入れ屋には受けられる依頼がない。小田原へ旅に出る / 道端に小さな花が咲いている / 草原を風が吹き抜けていく / 小田原に着いた / 小田原で休んで、行動力を溜めた"
+    },
     {
       "date": "2026-11-26",
       "actions": 3,

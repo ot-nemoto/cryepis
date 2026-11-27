@@ -4,57 +4,108 @@
   "trait": "lucky",
   "personality": "adventurous",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-26",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-27",
   "hero": {
-    "level": 1,
-    "exp": 6,
-    "max_hp": 30,
-    "hp": 26,
-    "base_atk": 6,
-    "base_def": 6,
-    "base_spd": 6,
-    "base_dex": 6,
-    "gold": 35,
-    "potions": 3,
+    "level": 3,
+    "exp": 42,
+    "max_hp": 46,
+    "hp": 38,
+    "base_atk": 10,
+    "base_def": 7,
+    "base_spd": 7,
+    "base_dex": 9,
+    "gold": 92,
+    "potions": 2,
     "stored": 0
   },
   "inventory": [],
+  "stones": {},
   "storage": [],
-  "place": "odawara",
-  "home_town": "odawara",
-  "road": {
-    "to": "edo",
-    "left": 1
+  "place": "edo",
+  "home_town": "edo",
+  "road": null,
+  "quest": {
+    "type": "hunt",
+    "place": "odawara",
+    "report": "edo",
+    "monster": "mud_golem",
+    "count": 4,
+    "rank": 1,
+    "name": "泥田坊の討伐",
+    "text": "城の堀端に泥田坊がうろついている。夜になる前に、片付けてくれないか",
+    "template": "hunt",
+    "steps": [
+      [
+        "back",
+        1
+      ]
+    ],
+    "away": 1,
+    "town": "edo",
+    "progress": 4,
+    "level": [
+      3,
+      3
+    ],
+    "deadline": null,
+    "cost": 3,
+    "reward": {
+      "exp": 0,
+      "gold": 24,
+      "item": [
+        [
+          "none",
+          95
+        ],
+        [
+          "rare",
+          5
+        ]
+      ]
+    },
+    "id": "2026-11-27-edo-1"
   },
-  "quest": null,
   "taken": [
-    "2026-11-26-patrol"
+    "2026-11-27-edo-1"
   ],
   "stay": {
-    "town": "odawara",
-    "since": "2026-11-26"
+    "town": "edo",
+    "since": "2026-11-27"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 1,
+    "kills": 6,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
+    "date": "2026-11-27",
     "actions": 3,
     "events": [
-      "江戸の口入れ屋には受けられる依頼がない。小田原へ旅に出る",
-      "眼下に雲海が広がっている",
-      "草原を風が吹き抜けていく",
-      "小田原に着いた",
-      "送り犬を倒した (+6EXP)"
+      "岩の間から竜の骨のような白い石がのぞく",
+      "江戸に着いた",
+      "江戸の口入れ屋で依頼を受けた: ★ 泥田坊の討伐（江戸と小田原の間の道で泥田坊を4体討伐）（行動力 3）",
+      "送り犬を倒した (+6EXP)",
+      "レベルが上がった！ Lv.2",
+      "泥田坊が4体現れた",
+      "泥田坊を倒した (+17EXP)",
+      "丸薬を使った（HP 29/38）",
+      "泥田坊を倒した (+17EXP)",
+      "レベルが上がった！ Lv.3",
+      "泥田坊を倒した (+17EXP)",
+      "泥田坊を倒した (+17EXP)",
+      "討伐の目標を果たした（4体）"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 3,
+      "text": "岩の間から竜の骨のような白い石がのぞく / 江戸に着いた / 江戸の口入れ屋で依頼を受けた: ★ 泥田坊の討伐（江戸と小田原の間の道で泥田坊を4体討伐）（行動力 3） / 送り犬を倒した (+6EXP) / レベルが上がった！ Lv.2 / 泥田坊が4体現れた / 泥田坊を倒した (+17EXP) / 丸薬を使った（HP 29/38） / 泥田坊を倒した (+17EXP) / レベルが上がった！ Lv.3 / 泥田坊を倒した (+17EXP) / 泥田坊を倒した (+17EXP) / 討伐の目標を果たした（4体）"
+    },
     {
       "date": "2026-11-26",
       "actions": 3,

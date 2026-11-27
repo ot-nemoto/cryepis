@@ -4,20 +4,20 @@
   "trait": "swift",
   "personality": "careful",
   "season": 1,
-  "season_day": 6,
-  "day": 6,
-  "last_date": "2026-11-26",
+  "season_day": 7,
+  "day": 7,
+  "last_date": "2026-11-27",
   "hero": {
     "level": 6,
-    "exp": 66,
+    "exp": 126,
     "max_hp": 70,
-    "hp": 70,
+    "hp": 69,
     "base_atk": 16,
     "base_def": 8,
     "base_spd": 11,
     "base_dex": 12,
-    "gold": 278,
-    "potions": 4,
+    "gold": 323,
+    "potions": 3,
     "stored": 0
   },
   "inventory": [
@@ -38,38 +38,57 @@
       "skill": null
     }
   ],
+  "stones": {},
   "storage": [],
-  "place": "kofu",
-  "home_town": "kofu",
+  "place": "edo",
+  "home_town": "edo",
   "road": null,
-  "quest": null,
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "edo",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 1,
+    "deadline": null,
+    "reward": null,
+    "cost": 3
+  },
   "taken": [
-    "2026-11-26-edo-3"
+    "2026-11-27-patrol"
   ],
   "stay": {
-    "town": "kofu",
-    "since": "2026-11-26"
+    "town": "edo",
+    "since": "2026-11-27"
   },
   "season_stats": {
     "quests_done": 3,
     "quests_failed": 0,
-    "kills": 19,
+    "kills": 21,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
+    "date": "2026-11-27",
     "actions": 3,
     "events": [
-      "江戸の口入れ屋で依頼を受けた: ★ 海苔の配達（甲府へ海苔を届ける）（行動力 3）",
-      "遠くで羊の群れが草を食んでいる",
-      "木漏れ日が道をまだらに照らす",
-      "木漏れ日が道をまだらに照らす",
-      "甲府に着いた",
-      "依頼達成！★ 海苔の配達（甲府へ海苔を届ける）（+48文）"
+      "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "木霊を倒した (+37EXP)",
+      "どこかでキツツキが木をつついている",
+      "丸薬を使った（HP 69/70）",
+      "猪笹王〔凶暴〕を倒した (+23EXP)",
+      "江戸に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 3,
+      "text": "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る / 木霊を倒した (+37EXP) / どこかでキツツキが木をつついている / 丸薬を使った（HP 69/70） / 猪笹王〔凶暴〕を倒した (+23EXP) / 江戸に着いた"
+    },
     {
       "date": "2026-11-26",
       "actions": 3,

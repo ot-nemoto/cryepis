@@ -4,21 +4,21 @@
   "trait": "skilled",
   "personality": "diligent",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-26",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-27",
   "hero": {
-    "level": 2,
-    "exp": 6,
-    "max_hp": 38,
-    "hp": 38,
-    "base_atk": 8,
-    "base_def": 6,
-    "base_spd": 6,
-    "base_dex": 7,
-    "gold": 147,
+    "level": 3,
+    "exp": 8,
+    "max_hp": 46,
+    "hp": 40,
+    "base_atk": 10,
+    "base_def": 7,
+    "base_spd": 7,
+    "base_dex": 10,
+    "gold": 170,
     "potions": 3,
-    "stored": 1
+    "stored": 0
   },
   "inventory": [
     {
@@ -30,13 +30,54 @@
       "skill": null
     }
   ],
+  "stones": {},
   "storage": [],
   "place": "kofu",
   "home_town": "kofu",
   "road": null,
-  "quest": null,
+  "quest": {
+    "type": "hunt",
+    "place": "edo",
+    "report": "kofu",
+    "monster": "goblin",
+    "count": 3,
+    "rank": 1,
+    "name": "小鬼の討伐",
+    "text": "道ばたの祠のそばに小鬼が出て困っている。3体、追い払ってくれないか",
+    "template": "hunt",
+    "steps": [
+      [
+        "back",
+        1
+      ]
+    ],
+    "away": 1,
+    "town": "kofu",
+    "progress": 3,
+    "level": [
+      2,
+      2
+    ],
+    "deadline": null,
+    "cost": 5,
+    "reward": {
+      "exp": 0,
+      "gold": 40,
+      "item": [
+        [
+          "none",
+          95
+        ],
+        [
+          "rare",
+          5
+        ]
+      ]
+    },
+    "id": "2026-11-26-kofu-2"
+  },
   "taken": [
-    "2026-11-26-edo-4"
+    "2026-11-26-kofu-2"
   ],
   "stay": {
     "town": "kofu",
@@ -45,23 +86,32 @@
   "season_stats": {
     "quests_done": 2,
     "quests_failed": 0,
-    "kills": 2,
+    "kills": 6,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
-    "actions": 3,
+    "date": "2026-11-27",
+    "actions": 4,
     "events": [
-      "江戸の口入れ屋で依頼を受けた: ★★ 南蛮の香辛料の配達（甲府へ南蛮の香辛料を届ける）（行動力 3）",
-      "宝箱から25文を見つけた",
-      "どこかでキツツキが木をつついている",
-      "道端に小さな花が咲いている",
-      "甲府に着いた",
-      "依頼達成！★★ 南蛮の香辛料の配達（甲府へ南蛮の香辛料を届ける）（+96文）"
+      "甲府の口入れ屋で依頼を受けた: ★ 小鬼の討伐（甲府と江戸の間の道で小鬼を3体討伐）（行動力 5）",
+      "木漏れ日が道をまだらに照らす",
+      "送り犬を倒した (+6EXP)",
+      "小鬼が3体現れた",
+      "小鬼を倒した (+8EXP)",
+      "小鬼を倒した (+8EXP)",
+      "レベルが上がった！ Lv.3",
+      "小鬼を倒した (+8EXP)",
+      "討伐の目標を果たした（3体）",
+      "苔むした倒木をまたいだ"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 4,
+      "text": "甲府の口入れ屋で依頼を受けた: ★ 小鬼の討伐（甲府と江戸の間の道で小鬼を3体討伐）（行動力 5） / 木漏れ日が道をまだらに照らす / 送り犬を倒した (+6EXP) / 小鬼が3体現れた / 小鬼を倒した (+8EXP) / 小鬼を倒した (+8EXP) / レベルが上がった！ Lv.3 / 小鬼を倒した (+8EXP) / 討伐の目標を果たした（3体） / 苔むした倒木をまたいだ"
+    },
     {
       "date": "2026-11-26",
       "actions": 3,

@@ -4,19 +4,19 @@
   "trait": "strong",
   "personality": "tactician",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-26",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-27",
   "hero": {
     "level": 2,
-    "exp": 20,
+    "exp": 26,
     "max_hp": 36,
-    "hp": 28,
+    "hp": 23,
     "base_atk": 9,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 35,
+    "gold": 40,
     "potions": 3,
     "stored": 0
   },
@@ -26,38 +26,56 @@
       "skill": null
     }
   ],
+  "stones": {},
   "storage": [],
-  "place": "edo",
-  "home_town": "edo",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
-  "quest": null,
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "kofu",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 1,
+    "deadline": null,
+    "reward": null,
+    "cost": 3
+  },
   "taken": [
-    "2026-11-26-patrol"
+    "2026-11-27-patrol"
   ],
   "stay": {
-    "town": "edo",
-    "since": "2026-11-26"
+    "town": "kofu",
+    "since": "2026-11-27"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 4,
+    "kills": 5,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
+    "date": "2026-11-27",
     "actions": 3,
     "events": [
-      "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "江戸の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
       "送り犬を倒した (+6EXP)",
-      "眼下に雲海が広がっている",
-      "江戸に着いた",
-      "江戸の周りを散策した",
-      "宝箱から12文を見つけた"
+      "苔むした倒木をまたいだ",
+      "切り立った崖の細い道を進んだ",
+      "甲府に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 3,
+      "text": "江戸の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 送り犬を倒した (+6EXP) / 苔むした倒木をまたいだ / 切り立った崖の細い道を進んだ / 甲府に着いた"
+    },
     {
       "date": "2026-11-26",
       "actions": 3,

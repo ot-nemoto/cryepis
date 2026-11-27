@@ -4,9 +4,9 @@
   "trait": "guard",
   "personality": "careful",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-26",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-27",
   "hero": {
     "level": 3,
     "exp": 26,
@@ -34,16 +34,17 @@
       "skill": null
     }
   ],
+  "stones": {},
   "storage": [],
-  "place": "kofu",
-  "home_town": "kofu",
+  "place": "edo",
+  "home_town": "edo",
   "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "kofu",
+    "place": "edo",
     "report": null,
     "monster": null,
     "count": 1,
@@ -53,11 +54,11 @@
     "cost": 3
   },
   "taken": [
-    "2026-11-26-patrol"
+    "2026-11-27-patrol"
   ],
   "stay": {
-    "town": "kofu",
-    "since": "2026-11-26"
+    "town": "edo",
+    "since": "2026-11-27"
   },
   "season_stats": {
     "quests_done": 1,
@@ -67,17 +68,22 @@
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
+    "date": "2026-11-27",
     "actions": 3,
     "events": [
-      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
-      "雪ん子を倒した (+13EXP)",
-      "宝箱から24文を見つけた",
-      "岩の間から竜の骨のような白い石がのぞく",
-      "甲府に着いた"
+      "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "遠くで羊の群れが草を食んでいる",
+      "眼下に雲海が広がっている",
+      "遠くで羊の群れが草を食んでいる",
+      "江戸に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 3,
+      "text": "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る / 遠くで羊の群れが草を食んでいる / 眼下に雲海が広がっている / 遠くで羊の群れが草を食んでいる / 江戸に着いた"
+    },
     {
       "date": "2026-11-26",
       "actions": 3,

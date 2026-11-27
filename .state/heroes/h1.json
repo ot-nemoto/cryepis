@@ -4,9 +4,9 @@
   "trait": "strong",
   "personality": "thrifty",
   "season": 1,
-  "season_day": 6,
-  "day": 6,
-  "last_date": "2026-11-26",
+  "season_day": 7,
+  "day": 7,
+  "last_date": "2026-11-27",
   "hero": {
     "level": 4,
     "exp": 46,
@@ -34,16 +34,17 @@
       "skill": null
     }
   ],
+  "stones": {},
   "storage": [],
-  "place": "kofu",
-  "home_town": "kofu",
+  "place": "nagano",
+  "home_town": "nagano",
   "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "kofu",
+    "place": "nagano",
     "report": null,
     "monster": null,
     "count": 1,
@@ -53,11 +54,11 @@
     "cost": 3
   },
   "taken": [
-    "2026-11-26-patrol"
+    "2026-11-27-patrol"
   ],
   "stay": {
-    "town": "kofu",
-    "since": "2026-11-26"
+    "town": "nagano",
+    "since": "2026-11-27"
   },
   "season_stats": {
     "quests_done": 3,
@@ -67,17 +68,22 @@
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
+    "date": "2026-11-27",
     "actions": 3,
     "events": [
-      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
-      "雪原に獣の足跡が続いている",
-      "雪狼〔群れ〕を倒した (+15EXP)",
+      "甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る",
       "眼下に雲海が広がっている",
-      "甲府に着いた"
+      "道端に小さな花が咲いている",
+      "雪原に獣の足跡が続いている",
+      "長野に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 3,
+      "text": "甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る / 眼下に雲海が広がっている / 道端に小さな花が咲いている / 雪原に獣の足跡が続いている / 長野に着いた"
+    },
     {
       "date": "2026-11-26",
       "actions": 3,

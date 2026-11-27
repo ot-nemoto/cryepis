@@ -4,9 +4,9 @@
   "trait": "skilled",
   "personality": "careful",
   "season": 1,
-  "season_day": 1,
-  "day": 1,
-  "last_date": "2026-11-26",
+  "season_day": 2,
+  "day": 2,
+  "last_date": "2026-11-27",
   "hero": {
     "level": 1,
     "exp": 6,
@@ -16,21 +16,22 @@
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 6,
-    "gold": 47,
+    "gold": 62,
     "potions": 3,
     "stored": 0
   },
   "inventory": [],
+  "stones": {},
   "storage": [],
-  "place": "kofu",
-  "home_town": "kofu",
+  "place": "nagano",
+  "home_town": "nagano",
   "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "kofu",
+    "place": "nagano",
     "report": null,
     "monster": null,
     "count": 1,
@@ -40,11 +41,11 @@
     "cost": 3
   },
   "taken": [
-    "2026-11-26-patrol"
+    "2026-11-27-patrol"
   ],
   "stay": {
-    "town": "kofu",
-    "since": "2026-11-26"
+    "town": "nagano",
+    "since": "2026-11-27"
   },
   "season_stats": {
     "quests_done": 0,
@@ -54,17 +55,22 @@
     "rares": []
   },
   "last": {
-    "date": "2026-11-26",
+    "date": "2026-11-27",
     "actions": 3,
     "events": [
-      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
-      "宝箱から12文を見つけた",
-      "送り犬を倒した (+6EXP)",
-      "道端に小さな花が咲いている",
-      "甲府に着いた"
+      "甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る",
+      "どこかでキツツキが木をつついている",
+      "遠くで雪崩の音がした",
+      "宝箱から15文を見つけた",
+      "長野に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-27",
+      "actions": 3,
+      "text": "甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る / どこかでキツツキが木をつついている / 遠くで雪崩の音がした / 宝箱から15文を見つけた / 長野に着いた"
+    },
     {
       "date": "2026-11-26",
       "actions": 3,
