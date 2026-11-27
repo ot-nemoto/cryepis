@@ -377,6 +377,9 @@ class SiteTest(unittest.TestCase):
     html = website.build_guide(WORLD)
     for iid in ("gengaku_odachi", "gengaku_helmet", "gengaku_armor", "gengaku_charm"):
       self.assertIn(f"<td>{WORLD['items'][iid]['name']}</td><td>25%</td>", html)
+    for area in WORLD["areas"].values():
+      self.assertIn(f"<td>{area['name']}</td><td>{area['stone']}</td><td>{area['stone_effect']}</td>", html)
+    self.assertIn("性質そのものに数値効果はなく", html)
 
   def test_first_page_is_the_map(self):
     """ホームはなくして、最初のページ（index.html）は絵図（#261）。"""
@@ -612,7 +615,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("シーズンは 4 か月ごと", html)
     world["elements"].pop("ice")  # 氷属性のない世界でも、残りの行だけ出る
     html = website.build_guide(world)
-    self.assertNotIn("霧氷石", html)
+    self.assertNotIn('<td><span class="tag">氷属性</span></td><td>霧氷石</td>', html)
     self.assertIn('<td><span class="tag">炎属性</span></td><td>&lt;b&gt;火鋼&lt;/b&gt;</td>', html)
 
   def test_guide_page_without_deliveries(self):

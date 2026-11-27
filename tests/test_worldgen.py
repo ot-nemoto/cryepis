@@ -140,7 +140,12 @@ class CommittedMapTest(unittest.TestCase):
     self.assertEqual(
       MAP["areas"],
       [
-        {"id": a, "name": n, "en": en} | ({"stone": build_world.AREA_STONES[a]} if a in build_world.AREA_STONES else {})
+        {"id": a, "name": n, "en": en}
+        | (
+          {"stone": build_world.AREA_STONES[a][0], "stone_effect": build_world.AREA_STONES[a][1]}
+          if a in build_world.AREA_STONES
+          else {}
+        )
         for a, n, en, _ in lore.AREAS
       ],
     )

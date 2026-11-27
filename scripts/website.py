@@ -1425,6 +1425,10 @@ def build_guide(world: dict) -> str:
     if pool:
       chance = percent(1 / len(pool))
       forge_rows.extend((escape(world["places"][town]["name"]), escape(item["name"]), chance) for item in pool)
+  ore_rows = [
+    (escape(area["name"]), escape(area.get("stone", "—")), escape(area.get("stone_effect", "—")))
+    for area in world["areas"].values()
+  ]
   cards.append(
     (
       "武具と原石の入手",
@@ -1436,6 +1440,9 @@ def build_guide(world: dict) -> str:
       + "<p>依頼から出る★★武具は依頼元の町で決まる。強運は通常依頼の武具が外れたとき、もう1回引く。</p>"
       + table(("討伐成功1回", "一行の褒美", "各自の確率"), party_loot)
       + "<p>原石を受け取る人は参加者の中から均等に決める。原石の地方と武具の候補は依頼元の町で決まる。</p>"
+      + '<h4 class="sub">地方の原石</h4>'
+      + "<p>原石の性質は、将来その地方で作る武具の意匠と能力を考える手がかり。性質そのものに数値効果はなく、武具ごとの能力で決まる。</p>"
+      + table(("地方", "原石", "素材の性質"), ore_rows)
       + '<h4 class="sub">★★★★武具の生成</h4>'
       + "<p>地方ごとの名工の鍛冶屋で、その地方の原石を 10 個と 10,000 文使うと、4 部位の★★★★武具から均等に 1 つ生成する。"
       + "1 日 1 回まで。行動回数は使わず、町での買い物時に行う。旅籠 1 泊分と丸薬の買い足し分のお金は残す。</p>"

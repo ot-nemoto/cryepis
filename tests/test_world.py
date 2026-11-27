@@ -564,8 +564,20 @@ class ValidateTest(unittest.TestCase):
     )  # 0 は使えない
 
   def test_bando_legendary_forge_has_one_item_per_slot(self):
-    area = WORLD["areas"]["bando"]
-    self.assertEqual(area["stone"], "玄岳鋼")
+    self.assertEqual(
+      {aid: area["stone"] for aid, area in WORLD["areas"].items()},
+      {
+        "ou": "霧氷石",
+        "bando": "玄岳鋼",
+        "tokai": "潮風銀",
+        "hokuriku": "星鏡鉱",
+        "kinai": "紫電鉄",
+        "saigoku": "常盤玉",
+        "kyushu": "熾焔鋼",
+      },
+    )
+    self.assertTrue(all(area.get("stone_effect") for area in WORLD["areas"].values()))
+    self.assertError(lambda raw: raw["map"]["areas"][0].update(stone_effect=[]), ["stone_effect"])
     forge = WORLD["places"]["odawara"]
     self.assertTrue(forge["legendary_forge"])
     items = [item for item in WORLD["items"].values() if item.get("forge_town") == "odawara"]

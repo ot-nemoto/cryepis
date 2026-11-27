@@ -464,6 +464,8 @@ def _check_areas(c: _Check) -> set | None:
         err(f"map.json の areas[{i}]: en（英語名）は空でない文字列にしてください")
       if "stone" in a and (not isinstance(a["stone"], str) or not a["stone"]):
         err(f"map.json の areas[{i}]: stone（地方の原石名）は空でない文字列にしてください")
+      if "stone_effect" in a and (not isinstance(a["stone_effect"], str) or not a["stone_effect"]):
+        err(f"map.json の areas[{i}]: stone_effect（原石の性質）は空でない文字列にしてください")
       area_ids.add(a["id"])
   return area_ids if has_areas else None
 
