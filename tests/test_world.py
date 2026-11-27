@@ -563,6 +563,32 @@ class ValidateTest(unittest.TestCase):
       lambda r: r["season"]["item_points"]["weights"].update({"def": 0}), ["item_points"]
     )  # 0 は使えない
 
+  def test_bando_legendary_forge_has_one_item_per_slot(self):
+    self.assertEqual(
+      {aid: area["stone"] for aid, area in WORLD["areas"].items()},
+      {
+        "ou": "霧氷石",
+        "bando": "玄岳鋼",
+        "tokai": "潮風銀",
+        "hokuriku": "星鏡鉱",
+        "kinai": "紫電鉄",
+        "saigoku": "常盤玉",
+        "kyushu": "熾焔鋼",
+      },
+    )
+    self.assertTrue(all(area.get("stone_effect") for area in WORLD["areas"].values()))
+    self.assertError(lambda raw: raw["map"]["areas"][0].update(stone_effect=[]), ["stone_effect"])
+    forge = WORLD["places"]["odawara"]
+    self.assertTrue(forge["legendary_forge"])
+    items = [item for item in WORLD["items"].values() if item.get("forge_town") == "odawara"]
+    self.assertEqual(len(items), 4)
+    self.assertEqual({item["slot"] for item in items}, set(W.SLOTS))
+    self.assertTrue(all(item["rarity"] == "legendary" for item in items))
+    self.assertError(
+      lambda raw: next(item for item in raw["items"] if item["id"] == "gengaku_odachi").update(slot=["weapon"]),
+      ["gengaku_odachi", "slot"],
+    )
+
   def test_season_start_day_must_exist_in_every_month(self):
     def change(r):
       r["season"]["start"] = "2027-01-31"

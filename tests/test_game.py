@@ -2322,6 +2322,50 @@ class SkillTest(unittest.TestCase):
     day_of(common).smith(common["place"])
     self.assertIsNone(G.carried(common)[0]["skill"])
 
+  def test_bando_legendary_forge_uses_stones_and_gold_once_per_day(self):
+    state = G.new_state(WORLD, "forge-test")
+    state["place"] = state["home_town"] = "odawara"
+    state["stones"] = {"bando": 20}
+    reserve = WORLD["season"]["inn"]["price"] + WORLD["season"]["potion"]["price"] * WORLD["season"]["potion"]["keep"]
+    state["hero"]["gold"] = 20_000 + reserve
+    day = day_of(state)
+    day.forge_legendary("odawara")
+    self.assertEqual(state["stones"], {"bando": 10})
+    self.assertEqual(state["hero"]["gold"], 10_000 + reserve)
+    self.assertEqual(len(G.carried(state)), 1)
+    forged = G.carried(state)[0]
+    self.assertEqual(WORLD["items"][forged["id"]]["rarity"], "legendary")
+    self.assertIsNone(forged["skill"])
+    self.assertEqual(WORLD["items"][forged["id"]]["forge_town"], "odawara")
+    resumed = day_of(state)  # 同じ日付で Day を作り直しても、保存済みの生成済み記録を使う
+    resumed.forge_legendary("odawara")
+    self.assertEqual(len(G.carried(state)), 1)
+    self.assertEqual(state["stones"], {"bando": 10})
+    self.assertEqual(state["hero"]["gold"], 10_000 + reserve)
+
+  def test_town_visit_triggers_legendary_forge_automatically(self):
+    state = G.new_state(WORLD, "automatic-forge")
+    state.update(place="odawara", home_town="odawara", season=G.season_of(WORLD, START), season_day=0)
+    state["stones"] = {"bando": 10}
+    state["hero"]["gold"] = 100_000
+    G.advance(WORLD, state, START, actions=0)
+    forged = [x for x in G.owned(state) if WORLD["items"][x["id"]]["rarity"] == "legendary"]
+    self.assertEqual(len(forged), 1)
+    self.assertEqual(sum(state["stones"].values()), 0)
+    self.assertIn("玄岳鋼を 10 個使った", state["last"]["events"][-2])
+
+  def test_bando_legendary_forge_requires_materials_money_and_local_smithy(self):
+    for town, stones, gold in (("odawara", 9, 20_000), ("odawara", 10, 10_000), ("edo", 10, 20_000)):
+      with self.subTest(town=town, stones=stones, gold=gold):
+        state = G.new_state(WORLD, f"forge-{town}-{stones}-{gold}")
+        state["place"] = state["home_town"] = town
+        state["stones"] = {"bando": stones}
+        state["hero"]["gold"] = gold
+        day_of(state).forge_legendary(town)
+        self.assertFalse(G.carried(state))
+        self.assertEqual(state["stones"], {"bando": stones})
+        self.assertEqual(state["hero"]["gold"], gold)
+
   def test_smith_skips_gear_with_a_preferred_skill(self):
     brave = with_personality("brave")  # 武器の優先スキル: 会心の心得・二の太刀・修練
     world = copy.deepcopy(WORLD)

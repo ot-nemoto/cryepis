@@ -137,7 +137,18 @@ class CommittedMapTest(unittest.TestCase):
       self.assertEqual(p, MAP_PLACES[p["id"]], p["id"])
 
   def test_areas_open_towns_and_layout_match(self):
-    self.assertEqual(MAP["areas"], [{"id": a, "name": n, "en": en} for a, n, en, _ in lore.AREAS])
+    self.assertEqual(
+      MAP["areas"],
+      [
+        {"id": a, "name": n, "en": en}
+        | (
+          {"stone": build_world.AREA_STONES[a][0], "stone_effect": build_world.AREA_STONES[a][1]}
+          if a in build_world.AREA_STONES
+          else {}
+        )
+        for a, n, en, _ in lore.AREAS
+      ],
+    )
     self.assertEqual(MAP["open"], [build_world.pid(n) for n in build_world.OPEN])
     self.assertEqual(MAP["starts"], [build_world.pid(n) for n in build_world.STARTS])
     self.assertEqual(MAP["layout"], {"size": [1600, 1000], "background": "map-base.svg"})

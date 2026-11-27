@@ -1,12 +1,12 @@
 {
  "areas": [
-  {"id": "ou", "name": "奥羽", "en": "Ou"},
-  {"id": "bando", "name": "坂東", "en": "Bando"},
-  {"id": "tokai", "name": "東海", "en": "Tokai"},
-  {"id": "hokuriku", "name": "北陸", "en": "Hokuriku"},
-  {"id": "kinai", "name": "畿内", "en": "Kinai"},
-  {"id": "saigoku", "name": "西国", "en": "Saigoku"},
-  {"id": "kyushu", "name": "九州", "en": "Kyushu"}
+  {"id": "ou", "name": "奥羽", "en": "Ou", "stone": "霧氷石", "stone_effect": "冷たく澄み、氷の力を宿す"},
+  {"id": "bando", "name": "坂東", "en": "Bando", "stone": "玄岳鋼", "stone_effect": "重く頑丈で、攻めと守りに優れる"},
+  {"id": "tokai", "name": "東海", "en": "Tokai", "stone": "潮風銀", "stone_effect": "軽くしなやかで、素早さを活かす"},
+  {"id": "hokuriku", "name": "北陸", "en": "Hokuriku", "stone": "星鏡鉱", "stone_effect": "星を映すように澄み、器用さを助ける"},
+  {"id": "kinai", "name": "畿内", "en": "Kinai", "stone": "紫電鉄", "stone_effect": "雷の力を宿す"},
+  {"id": "saigoku", "name": "西国", "en": "Saigoku", "stone": "常盤玉", "stone_effect": "命の力を蓄え、体を支える"},
+  {"id": "kyushu", "name": "九州", "en": "Kyushu", "stone": "熾焔鋼", "stone_effect": "熱く燃え、炎の力を宿す"}
  ],
  "open": [
   "edo",
@@ -107,6 +107,7 @@
    "region": "相模",
    "emoji": "🏯",
    "text": "相模の城下町。町ごと堀と土塁で囲む総構えは、箱根の峠を越えてくる物の怪への備えでもある",
+   "legendary_forge": true,
    "shop": ["iron_sword","iron_axe","wooden_helm","iron_helm","wooden_shield","iron_shield","soaring_leaf_charm","silkvine_charm","lifeblood_charm"],
    "pos": [1107,714],
    "quests_per_day": 4

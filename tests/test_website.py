@@ -237,6 +237,7 @@ class SiteTest(unittest.TestCase):
     for it in world["items"].values():
       if it["slot"] == "helmet":
         it["towns"] = []
+        it.pop("forge_town", None)
     html = website.build_items(world)
     self.assertNotIn('id="tab-helmet"', html)
     self.assertIn('id="tab-weapon"', html)
@@ -258,7 +259,7 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f'id="panel-{slot}"', html)
     self.assertIn('data-tab="weapon" aria-selected="true" tabindex="0">⚔️ 武器</button>', html)  # 部位の先頭に絵文字
     self.assertIn('<h2 class="area">📿 御守</h2>', html)
-    self.assertEqual(html.count('class="chip" data-f='), 3)  # ★・★★・★★★
+    self.assertEqual(html.count('class="chip" data-f='), 4)  # ★〜★★★★
     charm = html.split("不動の御守")[1].split("</tr>")[0]  # ★★不動の御守（炎属性）
     self.assertIn('<td><a class="pill" href="towns.html#kofu">🏯 甲府</a></td>', charm)  # 依頼を出す町
     self.assertIn('<td class="icon"><span class="tag">炎属性</span></td>', charm)  # 属性の列（枠の札）
@@ -347,7 +348,10 @@ class SiteTest(unittest.TestCase):
     self.assertIn("未開放", kyoto)
     self.assertIn("依頼の枠 6 件", kyoto)
     self.assertNotIn("特産品", html)  # 町ごとの特産はない
+    self.assertIn("★★★★武具を生成", html)
+    self.assertIn("玄岳鋼 10 個・10,000文", html)
     self.assertNotIn("打刀", kyoto)
+
     kofu = html[html.index('id="kofu"') : html.index('id="nagano"')]  # 坂東の中は places の順
     self.assertIn("不動の御守", kofu.split("店の品ぞろえ")[0])  # レア
     self.assertIn("富士山（霊場）", kofu)
@@ -360,6 +364,22 @@ class SiteTest(unittest.TestCase):
     keys = [(W.SLOTS.index(by_name[n]["slot"]), -by_name[n]["price"]) for n in names]
     self.assertEqual(keys, sorted(keys))
     self.assertEqual(names[:2], ["鉞", "打刀"])  # 武器が先、値段の高い順
+
+  def test_legendary_forged_items_are_listed_with_fixed_skills(self):
+    html = website.build_items(WORLD)
+    for iid in ("gengaku_odachi", "gengaku_helmet", "gengaku_armor", "gengaku_charm"):
+      item = WORLD["items"][iid]
+      self.assertIn(item["name"], html)
+      self.assertIn(WORLD["skills"][item["fixed_skill"]]["name"], html)
+    self.assertIn('href="towns.html#odawara"', html)
+
+  def test_guide_lists_legendary_forge_probability(self):
+    html = website.build_guide(WORLD)
+    for iid in ("gengaku_odachi", "gengaku_helmet", "gengaku_armor", "gengaku_charm"):
+      self.assertIn(f"<td>{WORLD['items'][iid]['name']}</td><td>25%</td>", html)
+    for area in WORLD["areas"].values():
+      self.assertIn(f"<td>{area['name']}</td><td>{area['stone']}</td><td>{area['stone_effect']}</td>", html)
+    self.assertIn("性質そのものに数値効果はなく", html)
 
   def test_first_page_is_the_map(self):
     """ホームはなくして、最初のページ（index.html）は絵図（#261）。"""
@@ -595,7 +615,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("シーズンは 4 か月ごと", html)
     world["elements"].pop("ice")  # 氷属性のない世界でも、残りの行だけ出る
     html = website.build_guide(world)
-    self.assertNotIn("霧氷石", html)
+    self.assertNotIn('<td><span class="tag">氷属性</span></td><td>霧氷石</td>', html)
     self.assertIn('<td><span class="tag">炎属性</span></td><td>&lt;b&gt;火鋼&lt;/b&gt;</td>', html)
 
   def test_guide_page_without_deliveries(self):

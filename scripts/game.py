@@ -93,8 +93,8 @@ def new_hero(world: dict) -> dict:
 
 
 def stone_name(world: dict, area: str) -> str:
-  name = world["areas"].get(area, {}).get("name")
-  return f"{name}の原石" if name else "原石"
+  info = world["areas"].get(area, {})
+  return info.get("stone") or (f"{info['name']}の原石" if info.get("name") else "原石")
 
 
 def new_season_stats() -> dict:
@@ -1014,6 +1014,7 @@ class Day:
     self.decoyed = bool(same_day and used.get("decoyed"))
     self.hunting = False  # 討伐の連戦の途中か（スキルの息継ぎ）
     self.smithed = False  # 今日、鍛冶屋でスキルを付けたか（1 日 1 回）
+    self.forged = bool(same_day and used.get("forged"))  # 今日、★★★★武具を生成したか（1 日 1 回）
     self.rested = False
     self.guild = guild if guild is not None else new_guild()  # 全員で共有する高札（None なら、このもののふだけの高札）
     self.others = others or {}  # ほかのもののふの状態（ID → 状態。何人かで受ける依頼で、一緒に戦う。#72）
@@ -1360,6 +1361,37 @@ class Day:
     self.shop(town)
     self.arrange(town, state["quest"])
     self.smith(town)
+    self.forge_legendary(town)
+    self.arrange(town, state["quest"])
+
+  def forge_legendary(self, town: str) -> None:
+    """地方の名工の鍛冶屋で、原石 10 個と代金を使って ★★★★ 武具を生成する（1 日 1 回）。"""
+    if self.forged or self.state["place"] != town or not self.world["places"][town].get("legendary_forge"):
+      return
+    area = self.world["places"][town].get("area")
+    stones = self.state.setdefault("stones", {})
+    pool = sorted(
+      iid
+      for iid, item in self.world["items"].items()
+      if item.get("forge_town") == town and item["rarity"] == "legendary"
+    )
+    if len(pool) != 4 or stones.get(area, 0) < 10:
+      return
+    cost = self.price(10_000)
+    potion, inn = self.cfg["potion"], self.price(self.cfg["inn"]["price"])
+    reserve = inn + self.price(potion["price"]) * potion["keep"]
+    if self.hero["gold"] < cost + reserve:
+      return
+    iid = self.rng.choice(pool)
+    stones[area] -= 10
+    if not stones[area]:
+      del stones[area]
+    self.hero["gold"] -= cost
+    self.forged = True
+    self.remember("forged")
+    stone = stone_name(self.world, area)
+    self.obtain(iid, f"{self.world['places'][town]['name']}の鍛冶屋で{stone}を打ち", None)
+    self.log(f"{stone}を 10 個使った（-{cost}文）")
 
   def arrange(self, town: str, quest: dict | None = None) -> None:
     """町の口入れ屋で、持ち物と蔵を入れ替える（部位ごとに carry の数まで持ち、残りは蔵。#232・#234）。
@@ -1378,8 +1410,10 @@ class Day:
         strongest = max(mine, key=lambda x: (gear_key(self.world, items[x["id"]], state), x["id"]))
         mine = [strongest] + [x for x in mine if x is not strongest]
       for x in mine:  # 同じ装備のスキルなしは、2 つ目から手放す（持ち物・蔵が増え続けないように）
-        if not equipment_skills(self.world, x)[1] and any(
-          y["id"] == x["id"] and not equipment_skills(self.world, y)[1] for y in keep + store
+        if (
+          self.world["items"][x["id"]]["rarity"] != "legendary"
+          and not equipment_skills(self.world, x)[1]
+          and any(y["id"] == x["id"] and not equipment_skills(self.world, y)[1] for y in keep + store)
         ):
           dropped += 1
         elif sum(items[y["id"]]["slot"] == slot for y in keep) < n:

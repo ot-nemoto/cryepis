@@ -314,6 +314,8 @@ def _check_shape(c: _Check):
       err(f"{name} は {{ ... }}（辞書）の形にしてください")
   for i, p in enumerate(rows("map.json の places", mp.get("places"), False)):
     keys(f"map.json の places[{i}] の shop", p.get("shop"))
+    if "legendary_forge" in p and not isinstance(p["legendary_forge"], bool):
+      err(f"map.json の places[{i}]: legendary_forge は true または false にしてください")
   for i, r in enumerate(rows("map.json の roads", mp.get("roads"), False)):
     where = f"map.json の roads[{i}]"
     for end in ("from", "to"):
@@ -460,6 +462,10 @@ def _check_areas(c: _Check) -> set | None:
         err(f"map.json の areas[{i}]: id は _ で始めず、町・霊場の ID と違うものにしてください")
       if "en" in a and (not isinstance(a["en"], str) or not a["en"]):
         err(f"map.json の areas[{i}]: en（英語名）は空でない文字列にしてください")
+      if "stone" in a and (not isinstance(a["stone"], str) or not a["stone"]):
+        err(f"map.json の areas[{i}]: stone（地方の原石名）は空でない文字列にしてください")
+      if "stone_effect" in a and (not isinstance(a["stone_effect"], str) or not a["stone_effect"]):
+        err(f"map.json の areas[{i}]: stone_effect（原石の性質）は空でない文字列にしてください")
       area_ids.add(a["id"])
   return area_ids if has_areas else None
 
@@ -1006,13 +1012,25 @@ def _check_items(c: _Check):
     if "drop_level" in it:
       err(f"{where}: drop_level はもう使いません（出やすさはドロップ表の重みで決める）")
     towns = it.get("towns")
+    forge_town = it.get("forge_town")
+    if forge_town is not None:
+      if it.get("rarity") != "legendary" or not isinstance(forge_town, str):
+        err(f"{where}: forge_town は legendary の鍛造場所にしてください")
+      elif places.get(forge_town, {}).get("type") != "town" or forge_town not in opened:
+        err(f"{where}: forge_town は開放した町の ID にしてください")
     if it.get("rarity") == COMMON:
       if towns is not None:
         err(f"{where}: common に towns は書けません（common は店で売る）")
     elif it.get("rarity") in rarities:
-      if not isinstance(towns, list) or not towns:
+      craft_only = it.get("rarity") == "legendary" and isinstance(forge_town, str)
+      if towns is None:
+        if not craft_only:
+          err(f"{where}: レアには towns（宝箱や依頼で出る町の ID の一覧）を書いてください")
+      elif not isinstance(towns, list):
+        err(f"{where}: towns（武具を入手できる町の ID の一覧）は配列にしてください")
+      elif not towns and not craft_only:
         err(f"{where}: レアには towns（宝箱や依頼で出る町の ID の一覧）を書いてください")
-      else:
+      elif isinstance(towns, list):
         for tid in towns:
           if not isinstance(tid, str) or places.get(tid, {}).get("type") != "town":
             err(f"{where}: towns の {tid!r} は町の ID にしてください")
@@ -1020,6 +1038,25 @@ def _check_items(c: _Check):
             err(f"{where}: towns の {tid!r} は開放した町（open）にしてください（ほかの町の依頼は出ないため）")
     if "price" in it and (not isinstance(it["price"], int) or it["price"] <= 0):
       err(f"{where}: price は正の整数にしてください")
+
+  forge_areas: dict[str, list[str]] = {}
+  for tid, town in places.items():
+    if not town.get("legendary_forge"):
+      continue
+    area = town.get("area")
+    if isinstance(area, str):
+      forge_areas.setdefault(area, []).append(tid)
+    crafted = [it for it in items.values() if it.get("forge_town") == tid]
+    slots = [it.get("slot") for it in crafted]
+    if len(crafted) != 4 or any(slot not in SLOTS for slot in slots) or set(slots) != set(SLOTS):
+      err(f"map.json の {tid}: legendary_forge の町には、4 部位の legendary 武具を1つずつ用意してください")
+  for area, towns in forge_areas.items():
+    if len(towns) > 1:
+      err(f"map.json の {area}: 地方に legendary_forge は1か所だけにしてください")
+  for iid, it in items.items():
+    forge_town = it.get("forge_town")
+    if isinstance(forge_town, str) and forge_town and not places.get(forge_town, {}).get("legendary_forge"):
+      err(f"items.json の {iid}: forge_town の町に legendary_forge がありません")
 
 
 def _check_lowest_rare(c: _Check):

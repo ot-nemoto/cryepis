@@ -106,6 +106,16 @@ QUESTS_PER_DAY = {
   "豊後府内": 4,
   "鹿児島": 4,
 }
+AREA_STONES = {
+  "ou": ("霧氷石", "冷たく澄み、氷の力を宿す"),
+  "bando": ("玄岳鋼", "重く頑丈で、攻めと守りに優れる"),
+  "tokai": ("潮風銀", "軽くしなやかで、素早さを活かす"),
+  "hokuriku": ("星鏡鉱", "星を映すように澄み、器用さを助ける"),
+  "kinai": ("紫電鉄", "雷の力を宿す"),
+  "saigoku": ("常盤玉", "命の力を蓄え、体を支える"),
+  "kyushu": ("熾焔鋼", "熱く燃え、炎の力を宿す"),
+}
+LEGENDARY_FORGES = {"小田原"}
 # 霊場の名前 → (ID, 地域)
 DUNGEON_INFO = {
   "八甲田山": ("hakkoda", "陸奥"),
@@ -173,6 +183,7 @@ def build_places():
         "pos": [x, y],
       }
       | {"quests_per_day": QUESTS_PER_DAY[name]}
+      | ({"legendary_forge": True} if name in LEGENDARY_FORGES else {})
       | ({"label": LABEL[name]} if name in LABEL else {})
     )
   for name, x, y in DUNGEONS:
@@ -223,7 +234,11 @@ def main():
       }
     )
 
-  areas = [{"id": aid, "name": n, "en": en} for aid, n, en, _ in AREAS]
+  areas = [
+    {"id": aid, "name": n, "en": en}
+    | ({"stone": AREA_STONES[aid][0], "stone_effect": AREA_STONES[aid][1]} if aid in AREA_STONES else {})
+    for aid, n, en, _ in AREAS
+  ]
   mp = {
     "areas": areas,
     "open": [pid(n) for n in OPEN],
