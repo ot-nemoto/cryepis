@@ -71,12 +71,6 @@ def personality_text(world: dict, state: dict) -> str:
   return f"性格: {p.get('name', '-')}（{p.get('text', '')}）" + stored if p else "性格: -" + stored
 
 
-def skill_note(world: dict, x: dict) -> str:
-  """装備に付いたスキル（「〔吸命〕」の形。なければ空）。"""
-  skill = (world.get("skills") or {}).get(x.get("skill"))
-  return f"〔{skill['name']}〕" if skill else ""
-
-
 def item_power(item: dict, world: dict | None = None) -> str:
   """装備の性能（攻+5 防+1 HP+8 速-1 炎 など）。world を渡すと、属性を名前で出す。"""
   names = {"atk": "攻", "def": "防", "hp": "HP"}
@@ -112,7 +106,7 @@ def gear_text(world: dict, state: dict) -> str:
   rank = {r: i for i, r in enumerate(world["rarities"])}
   worn = [x for x in game.worn(world, state).values() if x]
   worn.sort(key=lambda x: -rank[world["items"][x["id"]]["rarity"]])  # 安定ソートなので部位の順は保つ
-  return "/".join(item_label(world, x["id"]) + skill_note(world, x) for x in worn) or "なし"
+  return "/".join(item_label(world, x["id"]) + game.equipment_skill_note(world, x) for x in worn) or "なし"
 
 
 def build_text(world: dict, state: dict) -> str:
@@ -171,7 +165,7 @@ def build_text(world: dict, state: dict) -> str:
         x["id"],
       ),
     )
-    return [item_label(world, x["id"]) + skill_note(world, x) for x in xs] or ["なし"]
+    return [item_label(world, x["id"]) + game.equipment_skill_note(world, x) for x in xs] or ["なし"]
 
   detail += ["", "── 持ち物（シーズンをまたいで持ち越す）──", *listing(game.carried(state))]
   detail += ["", "── 蔵（どの町の口入れ屋でも出し入れできる）──", *listing(game.stored(state))]

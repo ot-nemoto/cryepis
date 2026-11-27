@@ -285,7 +285,11 @@ class SiteTest(unittest.TestCase):
   def test_items_page_shows_the_descriptions(self):
     html = website.build_items(WORLD)
     for it in WORLD["items"].values():  # すべてに説明があり、名前の下に出る
-      self.assertIn(f'<td>{escape(it["name"])}<br><span class="note">{escape(it["text"])}</span></td>', html)
+      row = html.split(f"<td>{escape(it['name'])}", 1)[1].split("</td>", 1)[0]
+      self.assertIn(f'<br><span class="note">{escape(it["text"])}</span>', row)
+      if "fixed_skill" in it:
+        name = WORLD["skills"][it["fixed_skill"]]["name"]
+        self.assertIn(f"固定スキル {name}", row)
 
   def test_item_description_is_optional_and_escaped(self):
     world = copy.deepcopy(WORLD)
@@ -447,9 +451,10 @@ class SiteTest(unittest.TestCase):
     self.assertIn("会心の倍率を 4 倍にする", html)  # しくみの value は値に置き換える
     self.assertIn("最大 HP の 5% 回復", html)  # HP の割合は %
     self.assertIn("スキルを付ける余裕", html)  # 性格の表にスキルの行
+    self.assertIn("追加枠に性格の優先スキルがない装備", html)
     self.assertIn("★★ 500文", html)
     items = website.build_items(WORLD)
-    self.assertIn("鍛冶屋でスキルを付けられる", items)
+    self.assertIn("鍛冶屋で追加スキルを付けられる", items)
 
   def test_hero_text_shows_skills_and_storage(self):
     state = game.new_state(WORLD, "h1")
@@ -458,6 +463,11 @@ class SiteTest(unittest.TestCase):
     text = view.build_text(WORLD, state)
     self.assertIn("業物の太刀〔鎧通し〕", text)
     self.assertIn("── 蔵", text)
+
+  def test_hero_displays_fixed_and_additional_skill(self):
+    state = game.new_state(WORLD)
+    state["inventory"] = [{"id": "cross_spear", "skill": "combo"}]
+    self.assertIn("十文字槍〔固定 鎧通し〕〔追加 二の太刀〕", view.build_text(WORLD, state))
 
   def test_guide_page(self):
     html = website.build_guide(WORLD)
