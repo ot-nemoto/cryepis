@@ -244,6 +244,8 @@ jobs:
 
 
   cloudflare-deploy:
+    # release-check は PR 専用。通常のブランチ更新では、そのスキップを配信に伝播させない。
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.cloudflare-build.result == 'success' }}
     needs: [resolve, cloudflare-build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
