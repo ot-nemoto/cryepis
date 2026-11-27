@@ -563,6 +563,20 @@ class ValidateTest(unittest.TestCase):
       lambda r: r["season"]["item_points"]["weights"].update({"def": 0}), ["item_points"]
     )  # 0 は使えない
 
+  def test_bando_legendary_forge_has_one_item_per_slot(self):
+    area = WORLD["areas"]["bando"]
+    self.assertEqual(area["stone"], "玄岳鋼")
+    forge = WORLD["places"]["odawara"]
+    self.assertTrue(forge["legendary_forge"])
+    items = [item for item in WORLD["items"].values() if item.get("forge_town") == "odawara"]
+    self.assertEqual(len(items), 4)
+    self.assertEqual({item["slot"] for item in items}, set(W.SLOTS))
+    self.assertTrue(all(item["rarity"] == "legendary" for item in items))
+    self.assertError(
+      lambda raw: next(item for item in raw["items"] if item["id"] == "gengaku_odachi").update(slot=["weapon"]),
+      ["gengaku_odachi", "slot"],
+    )
+
   def test_season_start_day_must_exist_in_every_month(self):
     def change(r):
       r["season"]["start"] = "2027-01-31"

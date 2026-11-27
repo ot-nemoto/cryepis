@@ -516,7 +516,7 @@ def build_towns(world: dict) -> str:
     size = f'<span role="img" aria-label="依頼の枠 {slots} 件">{marks}</span>'
     if town not in opened:
       return [("口入れ屋の規模", size)] + [
-        (k, "-") for k in ("宝箱や依頼で出る武具", "店の品ぞろえ", "道（行き先と行動回数）")
+        (k, "-") for k in ("宝箱や依頼で出る武具", "店の品ぞろえ", "名工の鍛冶屋", "道（行き先と行動回数）")
       ]
     # 店の品ぞろえは、武具の種類（武器・頭・胴・御守）の順に、同じ種類なら値段の高い順
     shop = sorted(
@@ -527,6 +527,11 @@ def build_towns(world: dict) -> str:
       key=lambda i: -world["rarities"].index(items[i]["rarity"]),
     )
     kinds = {"land": "陸路", "sea": "航路"}
+    forge = (
+      f"★★★★武具を生成（{escape(game.stone_name(world, places[town].get('area', '')))} 10 個・10,000文）"
+      if places[town].get("legendary_forge")
+      else "—"
+    )
     roads = [
       f"{escape(places[b]['name'])}（{kinds.get(world['road_info'][(town, b)]['kind'], '')} "
       f"{world['roads'][(town, b)]}）"
@@ -541,10 +546,11 @@ def build_towns(world: dict) -> str:
       ("口入れ屋の規模", size),
       (
         "宝箱や依頼で出る武具",
-        ("<br>".join(label(i) for i in rares) or "-")
+        ("<br>".join(label(i) for i in rares if not items[i].get("forge_town")) or "-")
         + ("" if world["season"].get("rare_drops", True) else '<div class="note">今は珍しい武具が出ません</div>'),
       ),
       ("店の品ぞろえ", "<br>".join([label(i) for i in shop] + [potion])),
+      ("名工の鍛冶屋", forge),
       ("道（行き先と行動回数）", "・".join(roads) or "-"),
     ]
 
@@ -582,8 +588,11 @@ def item_rows(world: dict) -> dict[str, list[dict]]:
   rows: dict[str, list[dict]] = {slot: [] for slot in W.SLOTS}
   for iid, it in items.items():
     towns = [t for t in it.get("towns", []) if t in world["towns"]]
-    if iid in world["region_items"] or towns:
-      rows[it["slot"]].append({"id": iid, "item": it, "shops": shops.get(iid, []), "towns": towns})
+    forge_town = it.get("forge_town")
+    if iid in world["region_items"] or towns or forge_town in world["towns"]:
+      rows[it["slot"]].append(
+        {"id": iid, "item": it, "shops": shops.get(iid, []), "towns": towns, "forge_town": forge_town}
+      )
   for slot in rows:
     rows[slot].sort(
       key=lambda r: (-rank[r["item"]["rarity"]], -game.item_score(world, r["item"]), r["item"].get("price", 0))
@@ -649,7 +658,7 @@ def build_items(world: dict) -> str:
     for r in rows[slot]:
       it = r["item"]
       fixed = world.get("skills", {}).get(it.get("fixed_skill"))
-      how = "".join(town_pill(world, t) for t in r["towns"] or r["shops"]) or "-"  # レアは依頼を出す町、ほかは店
+      how = "".join(town_pill(world, t) for t in r["towns"] or r["shops"] or [r["forge_town"]]) or "-"
       trs.append(
         f'<tr data-f="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
         f"<td>{escape(it['name'])}"
@@ -1311,7 +1320,7 @@ def build_guide(world: dict) -> str:
       + table(("能力", "+1 あたり", "1 点になる量"), weight_rows)
       + '<h4 class="sub">珍しさごとの点数</h4>'
       + table(("珍しさ", "点数の上限", "属性", "固定スキル", "追加スキル"), rarity_rows)
-      + '<p class="note">★★★★の固定スキルは予定枠。追加スキルの価格は鍛冶屋で1回付けるときの代金。</p>'
+      + '<p class="note">追加スキルの価格は鍛冶屋で1回付けるときの代金。★★★★武具は地方ごとの鍛冶屋で生成し、固定スキルは武具ごとに決まる。</p>'
       + f'<p class="note">{escape(example)}。もののふは ★ の多い武具を装備し（★ が同じなら点数の高いもの。'
       "それも同じなら、特性と性格で選ぶ。もののふの性格の「同じ点数の装備」）、店でもその順に買う（同じ強さの品は買い直さない）。"
       "スキルは点数に入らない</p>",
@@ -1407,6 +1416,15 @@ def build_guide(world: dict) -> str:
       reward += f"、{gear}を残り {party[kind] - 1} 人に 1 つずつ"
       gear_chance = (party[kind] - 1) / party[kind]
     party_loot.append((label, reward, f"原石 {percent(1 / party[kind])}、武具 {percent(gear_chance)}"))
+  forge_rows = []
+  for town in world["towns"]:
+    pool = sorted(
+      (item for item in world["items"].values() if item.get("forge_town") == town),
+      key=lambda item: W.SLOTS.index(item["slot"]),
+    )
+    if pool:
+      chance = percent(1 / len(pool))
+      forge_rows.extend((escape(world["places"][town]["name"]), escape(item["name"]), chance) for item in pool)
   cards.append(
     (
       "武具と原石の入手",
@@ -1417,7 +1435,12 @@ def build_guide(world: dict) -> str:
       + table(("通常依頼の達成報告1回", "★★武具", "★★武具（強運）"), quest_loot)
       + "<p>依頼から出る★★武具は依頼元の町で決まる。強運は通常依頼の武具が外れたとき、もう1回引く。</p>"
       + table(("討伐成功1回", "一行の褒美", "各自の確率"), party_loot)
-      + "<p>原石を受け取る人は参加者の中から均等に決める。原石の地方と武具の候補は依頼元の町で決まる。</p>",
+      + "<p>原石を受け取る人は参加者の中から均等に決める。原石の地方と武具の候補は依頼元の町で決まる。</p>"
+      + '<h4 class="sub">★★★★武具の生成</h4>'
+      + "<p>地方ごとの名工の鍛冶屋で、その地方の原石を 10 個と 10,000 文使うと、4 部位の★★★★武具から均等に 1 つ生成する。"
+      + "1 日 1 回まで。行動回数は使わず、町での買い物時に行う。旅籠 1 泊分と丸薬の買い足し分のお金は残す。</p>"
+      + table(("町", "生成される武具", "確率"), forge_rows)
+      + "<p>現在は坂東の小田原で、玄岳鋼から生成できる。</p>",
     )
   )
   cards.append(season_card(world))

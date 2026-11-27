@@ -106,6 +106,8 @@ QUESTS_PER_DAY = {
   "豊後府内": 4,
   "鹿児島": 4,
 }
+AREA_STONES = {"bando": "玄岳鋼"}
+LEGENDARY_FORGES = {"小田原"}
 # 霊場の名前 → (ID, 地域)
 DUNGEON_INFO = {
   "八甲田山": ("hakkoda", "陸奥"),
@@ -173,6 +175,7 @@ def build_places():
         "pos": [x, y],
       }
       | {"quests_per_day": QUESTS_PER_DAY[name]}
+      | ({"legendary_forge": True} if name in LEGENDARY_FORGES else {})
       | ({"label": LABEL[name]} if name in LABEL else {})
     )
   for name, x, y in DUNGEONS:
@@ -223,7 +226,10 @@ def main():
       }
     )
 
-  areas = [{"id": aid, "name": n, "en": en} for aid, n, en, _ in AREAS]
+  areas = [
+    {"id": aid, "name": n, "en": en} | ({"stone": AREA_STONES[aid]} if aid in AREA_STONES else {})
+    for aid, n, en, _ in AREAS
+  ]
   mp = {
     "areas": areas,
     "open": [pid(n) for n in OPEN],
