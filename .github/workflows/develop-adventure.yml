@@ -2,8 +2,9 @@ name: Advance development game
 
 on:
   schedule:
-    # 日本時間 7:17
+    # 日本時間 7:17 と 19:17
     - cron: "17 22 * * *"
+    - cron: "17 10 * * *"
   workflow_dispatch:
 
 permissions:

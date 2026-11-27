@@ -6,7 +6,7 @@
 
 ```mermaid
 flowchart LR
-    subgraph daily["hero-adventure.yml（毎日 JST 7:17）"]
+    subgraph daily["master-adventure.yml（毎日 JST 7:17）"]
         direction TB
         test["Test<br/>（unittest）"]
         rpg["rpg.py（world.py・game.py・store.py・view.py）<br/>現役のもののふを全員 1 日進める"]
@@ -43,7 +43,7 @@ flowchart LR
     commit -->|"日付を更新"| lastRun
 ```
 
-- 太線（`hero-adventure.yml` の中）: ステップの実行順。各ステップの実行条件は下の「毎日の workflow の処理順」を参照
+- 太線（`master-adventure.yml` の中）: ステップの実行順。各ステップの実行条件は下の「毎日の workflow の処理順」を参照
 - 実線: データの読み書き
 - 手動実行の workflow は毎日の workflow と同じ `concurrency` グループで、`.state/` への書き込みが重ならないようにしている
 
@@ -72,7 +72,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     autonumber
-    participant WF as hero-adventure.yml
+    participant WF as master-adventure.yml
     participant RP as rpg.py
     participant G as 番付の Gist
     participant S as .state/*
