@@ -56,7 +56,7 @@ PAGES = (
 
 CSS = """
 :root{--bg:#f6efdc;--card:#fffaf0;--ink:#3f2f22;--sub:#6b5a48;--line:#d9c9a8;--accent:#7a5530;--hero:#b91c1c;
---minus:#c0262d;color-scheme:light;
+--minus:#c0262d;color-scheme:light;scroll-padding-top:calc(var(--site-header-height, 4rem) + 8px);
 --t-plain:#a9c25d;--t-forest:#2f6b3a;--t-jungle:#3f8f4f;--t-desert:#d9b36c;--t-wetland:#4f9a8c;--t-snow:#8fc3e0;
 --t-mountain:#8a7462;--t-volcano:#c4553a;--t-sea:#3f74b5}
 @media (prefers-color-scheme:dark){:root{--bg:#1f1a14;--card:#2a231b;--ink:#efe4cf;--sub:#bfae92;--line:#4a3d2c;
@@ -66,7 +66,7 @@ CSS = """
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 'Hiragino Sans','Hiragino Kaku Gothic ProN',
 'Noto Sans JP','Yu Gothic',Meiryo,sans-serif}
-header{border-bottom:1px solid var(--line);background:var(--card)}
+header{position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line);background:var(--card)}
 .wrap{max-width:1100px;margin:0 auto;padding-inline:16px}
 header .wrap{display:flex;flex-wrap:wrap;gap:4px 20px;align-items:baseline;padding-block:10px}
 header h1{font-size:20px;margin:0}
@@ -86,6 +86,7 @@ table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--sub);font-weight:normal;font-size:13px;white-space:nowrap}
 .wide-table{min-width:640px;table-layout:fixed}
+.items-table{min-width:880px}
 .monsters{min-width:820px}
 .num{text-align:right;white-space:nowrap}
 .scroll{overflow-x:auto}
@@ -173,6 +174,19 @@ document.getElementById('zhome').onclick=()=>{v=home.slice();set();};})();
 """
 
 
+SITE_HEADER_JS = """
+(()=>{
+const header=document.querySelector('body > header');
+const sync=()=>document.documentElement.style.setProperty(
+  '--site-header-height', Math.ceil(header.getBoundingClientRect().height)+'px'
+);
+sync();
+if(window.ResizeObserver)new ResizeObserver(sync).observe(header);
+else window.addEventListener('resize',sync);
+})();
+"""
+
+
 def page(title: str, body: str, current: str, depth: int = 0, script: str = "") -> str:
   """ページの HTML（depth はサイトの一番上からの深さ。リンクの先頭に ../ をつける）。"""
   up = "../" * depth
@@ -184,7 +198,7 @@ def page(title: str, body: str, current: str, depth: int = 0, script: str = "") 
     f'<meta name="viewport" content="width=device-width,initial-scale=1">'
     f"<title>{escape(title)} | {TITLE}</title><style>{CSS}</style></head><body>"
     f'<header><div class="wrap"><h1><a href="{up}index.html">{TITLE}</a></h1><nav>{nav}</nav></div></header>'
-    f'<main class="wrap">{body}</main>' + (f"<script>{script}</script>" if script else "") + "</body></html>\n"
+    f'<main class="wrap">{body}</main><script>{SITE_HEADER_JS}{script}</script></body></html>\n'
   )
 
 
@@ -612,17 +626,16 @@ def build_items(world: dict) -> str:
         f'<tr data-f="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
         f"<td>{escape(it['name'])}"
         + (f'<br><span class="note">{escape(it["text"])}</span>' if it.get("text") else "")
-        + (f'<br><span class="note">固定スキル {escape(fixed["name"])}</span>' if fixed else "")
-        + "</td>"
+        + f"</td><td>{escape(fixed['name']) if fixed else '—'}</td>"
         + element_cell(world, it.get("element"))
         + "".join(stat_cell(it.get(k, 0)) for k, _ in ITEM_STATS)
         + f'<td class="num">{str(it["price"]) + "文" if it.get("price") else "—"}</td><td>{how}</td></tr>'
       )
     table = (
-      '<div class="card board"><div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em">'
-      '<col style="width:20em"><col style="width:5em">'
+      '<div class="card board"><div class="scroll"><table class="wide-table items-table"><colgroup>'
+      '<col style="width:4.5em"><col style="width:16em"><col style="width:7em"><col style="width:5em">'
       + '<col style="width:3em">' * len(ITEM_STATS)
-      + '<col style="width:5.5em"><col></colgroup><tr><th></th><th>名前</th>'
+      + '<col style="width:5.5em"><col></colgroup><tr><th></th><th>名前</th><th>固定スキル</th>'
       + '<th class="icon">属性</th>'
       + "".join(f'<th class="num">{name}</th>' for _, name in ITEM_STATS)
       + '<th class="num">値段</th><th>入手方法</th></tr>'
