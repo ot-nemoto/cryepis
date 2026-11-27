@@ -877,6 +877,33 @@ class PartyQuestTest(unittest.TestCase):
         ["cross_spear", "iron_face_guard", "road_guard_charm", "yamabushi_robe"],
       )
 
+  def test_elite_quests_made_before_297_are_dropped(self):
+    """★・行動力・報酬の決まりを変える前（#297）に貼られた・受けられた大物の依頼は捨てる。黙って消さず日誌に残す。"""
+    q = next(q for q in self.world["town_quests"]["nagano"] if q["monster"] == "yeti")
+    e = G.make_town_quest(self.world, q, "nagano", START)
+    self.assertTrue(G.quest_ok(self.world, e))
+    old = copy.deepcopy(e) | {"rank": 2, "cost": 5, "steps": [["go", 2], ["hunt", 1], ["back", 2]]}
+    old["reward"] = dict(e["reward"], gold=80)
+    for bad in (
+      old,
+      e | {"rank": 2},
+      e | {"cost": 5},
+      e | {"reward": dict(e["reward"], gold=80)},
+      e | {"template": "nagano_4"},
+    ):
+      self.assertFalse(G.quest_ok(self.world, bad, steps=False))
+    boss = G.make_boss_quest(self.world, "den_lord", START)
+    self.assertTrue(G.quest_ok(self.world, boss))
+    self.assertFalse(G.quest_ok(self.world, boss | {"reward": dict(boss["reward"], gold=160)}))
+    state = self.hero("a")
+    state["quest"] = old
+    with tempfile.TemporaryDirectory() as tmp:
+      path = Path(tmp) / "a.json"
+      G.save_state(state, path)
+      loaded = G.load_state(self.world, path, "a")
+    self.assertIsNone(loaded["quest"])
+    self.assertEqual(loaded["inbox"], ["受けていた「吹雪の雪女」は、決まりが変わったので取り下げられた"])
+
   def test_boss_quest_reward_is_fixed(self):
     boss = G.make_boss_quest(self.world, "den_lord", START)
     self.assertEqual((boss["rank"], boss["party"]), (4, 3))

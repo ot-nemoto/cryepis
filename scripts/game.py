@@ -196,6 +196,8 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "もの
   quest = state["quest"]
   if quest and not quest_ok(world, quest):
     state["quest"] = None
+    if quest.get("name"):  # 黙って消さず、次に進めた日の日誌に残す
+      state.setdefault("inbox", []).append(f"受けていた「{quest['name']}」は、決まりが変わったので取り下げられた")
   if state["quest"]:
     quest = state["quest"]
     renew_quest_texts(world, quest)
@@ -310,21 +312,28 @@ def boss_town(world: dict, monster: dict) -> str | None:
 
 def elite_ok(world: dict, quest: dict) -> bool:
   """大物・主の討伐が、今の決まりで作られた依頼か（受けられるレベルが物の怪のレベルで、倒す数が町の依頼と同じで、
-  人数が今の決まり）。決まりを変える前に貼られた・受けられた依頼は捨てる。大物・主でなければ True。"""
+  人数・★・必要な行動力・達成報酬が今の決まり）。決まりを変える前に貼られた・受けられた依頼は捨てる
+  （#297 で ★・行動力・報酬を変えた雪女の依頼など）。大物・主でなければ True。"""
   target = world["monsters"].get(quest.get("monster"), {})
   if not target.get("elite") and not target.get("boss"):
     return True
   if target.get("boss"):
-    count = 1
+    count, rank = 1, len(world["quest_ranks"])
     ok = quest.get("place") == target["boss"] and quest.get("report") == boss_town(world, target)
   else:
     template = next(
       (q for q in world["town_quests"].get(quest.get("town"), []) if q["id"] == quest.get("template")), None
     )
-    count = template["count"] if template else None
-    ok = template is not None
+    count, rank = (template["count"], template["rank"]) if template else (None, None)
+    ok = template is not None and (quest.get("report"), quest.get("place")) in world["roads"]
+  if not ok:
+    return False
+  cost = sum(n for _, n in hunt_steps(world, quest["report"], quest["place"]))
+  gold = world["quest_reward"]["party_gold"]["boss" if target.get("boss") else "elite"]
   return (
-    ok
+    quest.get("rank") == rank
+    and quest.get("cost") == cost
+    and (quest.get("reward") or {}).get("gold") == gold
     and quest.get("min_level") == target["level"]
     and quest.get("count") == count
     and quest.get("level") == [target["level"], target["level"]]
