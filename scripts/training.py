@@ -1,4 +1,4 @@
-"""戦闘の比較試験と、調練ページに載せる再現可能な結果。"""
+"""戦闘の試験と、調練ページに載せる基準勝率。"""
 
 from __future__ import annotations
 
@@ -35,19 +35,6 @@ def make_hero(
   return state
 
 
-class TrialDay(game.Day):
-  """武具の能力に影響を与えずに、指定したスキルを試す。"""
-
-  def __init__(self, world, state, today, rng, trial_skill):
-    super().__init__(world, state, today, rng)
-    self.trial_skill = trial_skill
-
-  def skill(self, sid, pool=None):
-    if sid == self.trial_skill:
-      return self.world["skills"][sid].get("value", True)
-    return super().skill(sid, pool)
-
-
 def fight(
   world: dict,
   monster: dict,
@@ -58,30 +45,21 @@ def fight(
   n: int,
   party: int = 1,
   personalities: list[str] | None = None,
-  *,
-  skill: str | None = None,
-  carriers: int = 0,
 ) -> tuple[float, float | None]:
   """n 回戦って、(勝った割合, 勝ったときに減った HP の割合の平均。1 回も勝てなければ None)。
   party 人で力を合わせて戦う（みな同じ特性・レベル・装備・丸薬）。personalities を渡すと、i 回目の k 人目は
   personalities[(i + k) % 数] の性格（性格を 1 人ずつ順に入れる）。渡さなければ性格のないもののふ。
   乱数の種は 0〜n-1（k 人目は i * party + k）なので、同じ条件なら何度やっても同じ結果（1 人なら種は i）。
-  skill と carriers は効果だけを試すスキルと人数。適用する位置は性格の一巡ごとにずらす。
   減った HP は戦いの前後の差（何人かなら全員の平均）なので、丸薬を使うと、回復した分だけ少なく出る（道の物の怪は --potions 0 で測る）。"""
   wins, lost = 0, 0.0
   heroes = {p: make_hero(world, trait, level, gear, potions, p) for p in (personalities or [None])}
   max_hp = game.stats(world, next(iter(heroes.values())))["max_hp"]
   for seed in range(n):
     days = []
-    first_carrier = (seed // len(heroes)) % party
     for k in range(party):
       pers = personalities[(seed + k) % len(personalities)] if personalities else None
       state = copy.deepcopy(heroes[pers])
-      rng = random.Random(seed * party + k)
-      if skill and (k - first_carrier) % party < carriers:
-        day = TrialDay(world, state, DAY, rng, skill)
-      else:
-        day = game.Day(world, state, DAY, rng)
+      day = game.Day(world, state, DAY, random.Random(seed * party + k))
       day.gain_exp = lambda exp: None  # 勝っても育たない（戦いの結果だけを見る）
       days.append(day)
     if game.party_battle(days, dict(monster)):
@@ -94,39 +72,12 @@ TRIALS = 10_008
 POTIONS = 3
 TRAIT = "lucky"
 TARGETS = (("yeti", 15, 2), ("rock_golem", 15, 2), ("great_eagle", 15, 2), ("den_lord", 20, 3))
-SPEED_GEAR = ("cross_spear", "iron_face_guard", "yamabushi_robe", "soaring_leaf_charm")
-ELEMENT_GEAR = ("cross_spear", "crimson_grass_charm")
-SKILL_CASES = {
-  "yeti": (("combo", SPEED_GEAR), ("focus", ())),
-  "rock_golem": (("pierce", ()), ("focus", ())),
-  "great_eagle": (("weak_point", ELEMENT_GEAR), ("focus", ())),
-  "den_lord": (("combo", SPEED_GEAR), ("pierce", ()), ("focus", ())),
-}
 
 
 def measure_opponent(target: tuple[str, int, int], *, world: dict, trials: int, personalities: list[str]) -> dict:
   mid, level, party = target
-  monster = world["monsters"][mid]
-
-  def wins(gear: tuple, skill: str | None = None, carriers: int = 0) -> int:
-    rate, _ = fight(
-      world, monster, TRAIT, level, list(gear), POTIONS, trials, party, personalities, skill=skill, carriers=carriers
-    )
-    return round(rate * trials)
-
-  baseline = wins(())
-  comparisons = [
-    {
-      "skill": skill,
-      "gear": list(gear),
-      "normal": wins(gear) if gear else baseline,
-      "one": wins(gear, skill, 1),
-      "all": wins(gear, skill, party),
-    }
-    for skill, gear in SKILL_CASES[mid]
-    if skill in world["skills"] and all(iid in world["items"] for iid in gear)
-  ]
-  return {"monster": mid, "level": level, "party": party, "baseline": baseline, "comparisons": comparisons}
+  rate, _ = fight(world, world["monsters"][mid], TRAIT, level, [], POTIONS, trials, party, personalities)
+  return {"monster": mid, "level": level, "party": party, "baseline": round(rate * trials)}
 
 
 def build_report(world: dict, trials: int = TRIALS) -> dict:

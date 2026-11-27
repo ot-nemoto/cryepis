@@ -84,25 +84,23 @@ class SiteTest(unittest.TestCase):
         target = (path.parent / href.split("#")[0]).resolve()
         self.assertTrue(target.is_file(), f"{path.name} → {href}")
 
-  def test_training_page_shows_the_measured_comparisons(self):
+  def test_training_page_shows_only_the_baseline_win_rates(self):
     report = training.build_report(WORLD, trials=12)
     html = website.build_training(WORLD, report)
     self.assertIn('<a href="training.html" class="on">調練</a>', html)
     self.assertIn("各条件 12 戦の勝率", html)
-    for name in (
-      "雪女",
-      "だいだらぼっち",
-      "大天狗",
-      "酒呑童子",
-      "二の太刀",
-      "鎧通し",
-      "弱点突き",
-      "心眼",
-      "不動の御守",
-    ):
-      self.assertIn(name, html)
-    result = report["opponents"][0]
-    self.assertIn(f"{result['baseline'] / 12:.2%}", html)
+    self.assertIn("武具・スキルなし", html)
+    names = [WORLD["monsters"][result["monster"]]["name"] for result in report["opponents"]]
+    self.assertEqual(names, ["雪女", "だいだらぼっち", "大天狗", "酒呑童子"])
+    for name, row in zip(names, report["opponents"], strict=True):
+      self.assertIn(
+        f'<th scope="row">{name}</th><td class="num">Lv{row["level"]}</td>'
+        f'<td class="num">{row["party"]}人</td><td class="num">{row["baseline"] / 12:.2%}</td>',
+        html,
+      )
+      self.assertNotIn("comparisons", row)
+    self.assertNotIn("1人に適用", html)
+    self.assertNotIn("全員に適用", html)
 
   def test_training_cache_is_reused_and_invalidated_by_key(self):
     path = self.out.parent / "training.json"
@@ -477,7 +475,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn('<a class="pill" href="#g0">能力</a>', html)  # 上の移動ボタン
     self.assertIn('<div class="card" id="g0">', html)
     self.assertIn(f'<td class="num">{game.exp_need(WORLD, 1)}</td>', html)  # 次の Lv までの経験値
-    self.assertIn("あとで固定スキルも付ける予定", html)  # 珍しさごとのスキル
+    self.assertIn("<th>固定スキル</th><th>追加スキル</th>", html)
     self.assertIn('<span class="tag">鎧通し</span>', html)  # スキルも札で囲む
     self.assertIn("器用さ ÷ 150 の確率で、ダメージが 3 倍", html)
     self.assertIn("最大 HP の 50% ぶん回復", html)
@@ -491,15 +489,13 @@ class SiteTest(unittest.TestCase):
     self.assertIn("<tr><td>速</td><td>0.5 点</td><td>2</td></tr>", item)
     self.assertIn("<tr><td>属性</td><td>1 点</td><td>属性 1 つ</td></tr>", item)
     self.assertIn("例: 鉞（攻 +2・速 -2）は 2 − 1 = 1 点", item)  # マイナスも同じ点数で引く
-    self.assertIn("<tr><td>★</td><td>1 点まで</td><td>なし</td><td>なし</td></tr>", item)
-    self.assertIn(
-      "<tr><td>★★★</td><td>2 点まで</td><td>付くことがある（武器・御守）</td><td>1 つ（800文。★★★ 以上は、あとで固定スキルも付ける予定）</td></tr>",
-      item,
-    )
-    self.assertIn(
-      "<tr><td>★★★★</td><td>3 点まで</td><td>付くことがある（武器・御守）</td><td>1 つ（1000文。★★★ 以上は、あとで固定スキルも付ける予定）</td></tr>",
-      item,
-    )
+    self.assertIn("<tr><td>★</td><td>1 点まで</td><td>なし</td><td>0</td><td>0</td></tr>", item)
+    for rarity, cap, fixed, price in (("★★", 2, 0, 500), ("★★★", 2, 1, 800), ("★★★★", 3, 1, 1000)):
+      self.assertIn(
+        f"<tr><td>{rarity}</td><td>{cap} 点まで</td><td>付くことがある（武器・御守）</td>"
+        f"<td>{fixed}</td><td>1（{price}文）</td></tr>",
+        item,
+      )
     self.assertIn("特性の倍率がかかる前の値。強運のもののふと同じ", html)  # 「ふつうのもののふ」という特性はない
     levels = html.split('<table class="levels">')[1].split("</table>")[0]  # Lv1〜20 の能力の表
     self.assertEqual(levels.count('<td class="num">Lv'), 20)
