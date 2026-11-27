@@ -1,12 +1,18 @@
 name: New game (add a hero)
+run-name: New game (${{ inputs.branch }})
 
 # 新しいもののふを登録する: もののふの名前を入れて手動実行すると、もののふ管理シート（.state/heroes.json）・
-# もののふの状態（.state/heroes/<id>.json）を master にコミットする（Gist は作らない。もののふの詳細はサイトで見る）。
+# もののふの状態（.state/heroes/<id>.json）を選んだブランチにコミットする（Gist は作らない。もののふの詳細はサイトで見る）。
 # もののふは最大 30 人（引退したもののふは数えない）。冒険は次回の毎日の実行（hero-adventure.yml）から進む。
 
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: "変更するゲーム"
+        type: choice
+        options: [master, develop]
+        default: master
       hero_name:
         description: "もののふの名前（表示幅 32 まで（全角 16 文字・半角 32 文字）。超えた分は切り捨てる）"
         type: string
@@ -14,7 +20,7 @@ on:
 
 # 毎日の実行・引退と同じグループにして、.state/ への書き込みを直列にする
 concurrency:
-  group: hero-adventure
+  group: hero-adventure-${{ inputs.branch }}
   cancel-in-progress: false
 
 permissions:
@@ -22,31 +28,9 @@ permissions:
 
 jobs:
   new-game:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Test
-        run: python -m unittest discover -s tests
-
-      # 入力は環境変数経由で渡す（シェルに直接展開しない）
-      - name: Create hero
-        env:
-          HERO_NAME: ${{ inputs.hero_name }}
-        run: python scripts/rpg.py --new-game "$HERO_NAME"
-
-      - name: Commit state
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A .state
-          git commit -m "chore: new hero"
-          git pull --rebase
-          git push
+    if: github.ref == 'refs/heads/master'
+    uses: ./.github/workflows/update-game-state.yml
+    with:
+      branch: ${{ inputs.branch }}
+      operation: new-game
+      hero: ${{ inputs.hero_name }}

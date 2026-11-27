@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import json
 import math
 import os
 import shutil
@@ -31,6 +32,7 @@ import sys
 from datetime import UTC, date, datetime
 from html import escape
 from pathlib import Path
+from urllib.parse import urlsplit
 
 sys.path.insert(0, os.path.dirname(__file__))
 import common  # noqa: E402
@@ -43,6 +45,7 @@ import world as W  # noqa: E402
 
 TITLE = common.SITE_TITLE
 TITLE_EN = "Warriors on the Road"
+VERSION = (common.ROOT / "VERSION").read_text(encoding="utf-8").strip()
 PAGES = (
   ("index.html", "絵図"),
   ("ranking.html", "番付"),
@@ -74,7 +77,7 @@ html.sticky-header{scroll-padding-top:var(--site-header-offset)}
 header .wrap{display:flex;flex-wrap:wrap;gap:4px 20px;align-items:baseline;padding-block:10px}
 header h1{font-size:20px;margin:0;max-width:100%}
 header h1 a{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px;color:inherit;text-decoration:none}
-.site-title-en{font-size:12px;font-weight:normal;color:var(--sub)}
+.site-title-en,.site-version{font-size:12px;font-weight:normal;color:var(--sub)}
 nav{display:flex;gap:14px;flex-wrap:wrap}
 nav a{color:var(--sub);text-decoration:none;padding:2px 0;border-bottom:2px solid transparent}
 nav a.on{color:var(--ink);border-color:var(--accent);font-weight:bold}
@@ -219,7 +222,9 @@ def page(title: str, body: str, current: str, depth: int = 0, script: str = "") 
     f"<title>{escape(title)} | {TITLE}</title><style>{CSS}</style></head><body>"
     f'<header><div class="wrap"><h1><a href="{up}index.html">{escape(TITLE)} '
     f'<span class="site-title-en" lang="en">{escape(TITLE_EN)}</span></a></h1><nav>{nav}</nav></div></header>'
-    f'<main class="wrap">{body}</main>' + (f"<script>{script}</script>" if script else "") + "</body></html>\n"
+    f'<main class="wrap">{body}<footer class="site-version">v{escape(VERSION)}</footer></main>'
+    + (f"<script>{script}</script>" if script else "")
+    + "</body></html>\n"
   )
 
 
@@ -1550,9 +1555,27 @@ def shown_day(entries: list[tuple[dict, dict]]) -> date:
   return date.fromisoformat(max(days)) if days else datetime.now(UTC).astimezone(common.JST).date()
 
 
+def redirect_pages(files: list[Path], out: Path, base_url: str) -> None:
+  """旧サイトの各ページから、同じページの新しい URL へ移す。"""
+  redirect = urlsplit(base_url)
+  if redirect.scheme != "https" or not redirect.hostname or redirect.query or redirect.fragment:
+    raise SystemExit("移転先には HTTPS のサイト URL を指定してください")
+  for path in files:
+    target = base_url.rstrip("/") + "/" + path.relative_to(out).as_posix()
+    encoded = json.dumps(target, ensure_ascii=True).replace("<", r"\u003c")
+    path.write_text(
+      '<!doctype html><html lang="ja"><head><meta charset="utf-8">'
+      "<title>もののふ道中の移転先</title></head><body>"
+      f'<p>もののふ道中は移転しました。<a href="{escape(target)}">新しいサイトを開く</a></p>'
+      f"<script>location.replace({encoded} + location.search + location.hash)</script></body></html>\n",
+      encoding="utf-8",
+    )
+
+
 def main() -> int:
   ap = argparse.ArgumentParser(description="GitHub Pages に載せるサイトを書き出す")
   ap.add_argument("out", help="書き出す先のディレクトリ（中身は作り直す）")
+  ap.add_argument("--redirect-to", help="書き出す各ページを移転先への案内にする")
   ap.add_argument("--date", help="表示する日付（既定はもののふを最後に進めた日。まだ誰も進めていなければ今日の JST）")
   ap.add_argument("--training-cache", type=Path, help="調練結果を再利用するファイル")
   a = ap.parse_args()
@@ -1568,8 +1591,10 @@ def main() -> int:
   entries = store.current_entries(world)
   today = date.fromisoformat(a.date) if a.date else shown_day(entries)
   retired = store.current_entries(world, retired=True)
-  report = training.cached_report(world, a.training_cache)
+  report = None if a.redirect_to else training.cached_report(world, a.training_cache)
   written = write_site(world, entries, today, store.load_guild(), out, retired, training_report=report)
+  if a.redirect_to:
+    redirect_pages(written, out, a.redirect_to)
   print(f"{a.out} に {len(written)} ファイルを書き出しました")
   return 0
 

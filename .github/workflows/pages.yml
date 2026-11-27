@@ -16,10 +16,11 @@ name: Publish site (GitHub Pages)
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [master, develop]
   workflow_run:
-    workflows: ["Advance hero adventure (text RPG)", "New game (add a hero)", "Retire hero"]
+    workflows: ["Advance hero adventure (text RPG)", "Advance development game", "New game (add a hero)", "Retire hero"]
     types: [completed]
+    branches: [master]
   workflow_dispatch:
 
 # PR は同じ PR の古い実行を取り消す。それ以外は取り消さない（コミットごとに CI の結果を残す）。
@@ -30,35 +31,56 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   RUFF_VERSION: "0.17.4"
 
 jobs:
   # CI と公開で使うコミットを 1 つに決める。
-  # PR・push・手動はそのきっかけのコミット、workflow_run は、毎日の実行などがコミットしたあとの master の先端
+  # PR・push・手動はそのきっかけのコミット、workflow_run は、更新したゲームのブランチの先端
   resolve:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
       sha: ${{ steps.sha.outputs.sha }}
+      branch: ${{ steps.sha.outputs.branch }}
     steps:
       - id: sha
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
-          BRANCH: ${{ github.event.repository.default_branch }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          STATE_WORKFLOW: ${{ github.event.workflow_run.name }}
+          STATE_TITLE: ${{ github.event.workflow_run.display_title }}
         run: |
-          if [ "$EVENT" = "workflow_run" ]; then
-            sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${BRANCH}" --jq .sha)
-          else
-            sha="$GITHUB_SHA"
+          sha="$GITHUB_SHA"
+          branch=''
+          if [ "$EVENT" = pull_request ]; then
+            if [ "$BASE_REF" = master ] && [ "$HEAD_REPO" = "$GITHUB_REPOSITORY" ]; then
+              branch="pr-$PR_NUMBER"
+            fi
+          elif [ "$EVENT" = workflow_run ]; then
+            branch=master
+            case "$STATE_WORKFLOW:$STATE_TITLE" in
+              'Advance development game:'*|*':New game (develop)'|*':Retire hero (develop)') branch=develop ;;
+            esac
+            sha=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/$branch" \
+              --jq ".[] | select(.ref == \"refs/heads/$branch\") | .object.sha")
+            if [ -z "$sha" ]; then
+              branch=''
+            fi
+          elif [[ "$GITHUB_REF" == refs/heads/master || "$GITHUB_REF" == refs/heads/develop ]]; then
+            branch="$GITHUB_REF_NAME"
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          echo "使うコミット: $sha"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
 
   lint:
     needs: resolve
+    if: needs.resolve.outputs.sha != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -79,8 +101,22 @@ jobs:
       - name: Format
         run: ruff format --check --diff .
 
+  release-check:
+    if: github.event_name == 'pull_request' && github.base_ref == 'master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Check the proposed merge
+        run: python tools/release.py --check HEAD^1 HEAD
+
   test:
     needs: resolve
+    if: needs.resolve.outputs.sha != ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -100,8 +136,7 @@ jobs:
     # master のときだけ公開する。テストは必ず通っていること。リンター・フォーマットは、毎日の実行のあと（workflow_run）は
     # 失敗していても公開する（コードの書き方の問題で、毎日の状態の公開を止めないため）
     if: >-
-      ${{ always() && github.event_name != 'pull_request'
-          && (github.event_name == 'workflow_run' || github.ref_name == github.event.repository.default_branch)
+      ${{ always() && needs.resolve.outputs.branch == 'master'
           && needs.resolve.result == 'success' && needs.test.result == 'success'
           && (needs.lint.result == 'success' || github.event_name == 'workflow_run') }}
     runs-on: ubuntu-latest
@@ -137,7 +172,14 @@ jobs:
           key: ${{ steps.training.outputs.key }}
 
       - name: Build site
-        run: python scripts/website.py _site --training-cache "$RUNNER_TEMP/cryepis-training.json"
+        env:
+          PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
+        run: |
+          args=()
+          if [ -n "$PRODUCTION_SITE_URL" ]; then
+            args+=(--redirect-to "$PRODUCTION_SITE_URL")
+          fi
+          python scripts/website.py _site --training-cache "$RUNNER_TEMP/cryepis-training.json" "${args[@]}"
 
       - uses: actions/upload-pages-artifact@v5
         with:
@@ -157,3 +199,106 @@ jobs:
       - id: deploy_retry
         if: ${{ steps.deploy.outcome == 'failure' }}
         uses: actions/deploy-pages@v5
+
+  cloudflare-build:
+    if: >-
+      ${{ always() && !cancelled() && needs.resolve.result == 'success'
+          && vars.CLOUDFLARE_PAGES_PROJECT != '' && needs.resolve.outputs.branch != ''
+          && needs.test.result == 'success'
+          && (needs.lint.result == 'success' || (github.event_name == 'workflow_run' && needs.resolve.outputs.branch == 'master'))
+          && (needs.release-check.result == 'success' || needs.release-check.result == 'skipped') }}
+    needs: [resolve, lint, test, release-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      artifact: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Identify training inputs
+        id: training
+        run: echo "key=$(python scripts/training.py)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/cryepis-training.json
+          key: ${{ steps.training.outputs.key }}
+
+      - name: Generate pages
+        run: python scripts/website.py _site --training-cache "$RUNNER_TEMP/cryepis-training.json"
+
+      - id: upload
+        uses: actions/upload-artifact@v6
+        with:
+          name: cloudflare-${{ needs.resolve.outputs.branch }}-${{ github.run_attempt }}
+          path: _site
+          if-no-files-found: error
+          retention-days: 1
+
+
+  cloudflare-deploy:
+    needs: [resolve, cloudflare-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: cloudflare-pages-${{ needs.resolve.outputs.branch }}
+      queue: max
+    steps:
+      # PR のコードはチェックアウトせず、生成済みのファイルだけを配信する。
+      - uses: actions/download-artifact@v7
+        with:
+          artifact-ids: ${{ needs.cloudflare-build.outputs.artifact }}
+          path: pages-output
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Publish to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ needs.resolve.outputs.branch }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: |
+          set -euo pipefail
+          test -s pages-output/index.html
+          case "$BRANCH" in
+            pr-*)
+              current=$(gh api "repos/$GITHUB_REPOSITORY/pulls/${BRANCH#pr-}" --jq 'select(.state == "open") | .merge_commit_sha')
+              url="https://$BRANCH.$PROJECT.pages.dev/"
+              ;;
+            develop|master)
+              current=$(gh api "repos/$GITHUB_REPOSITORY/commits/$BRANCH" --jq .sha)
+              url="https://$PROJECT.pages.dev/"
+              if [ "$BRANCH" = develop ]; then
+                url="https://develop.$PROJECT.pages.dev/"
+              fi
+              ;;
+            *) exit 1 ;;
+          esac
+          if [ "$current" != "$SHA" ]; then
+            echo "$BRANCH は更新済みなので、この生成物の公開を省きます。"
+            exit 0
+          fi
+          : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID を設定してください}"
+          : "${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN を設定してください}"
+          production_branch=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT" \
+            | jq -er '.result.production_branch')
+          if [ "$production_branch" != master ]; then
+            echo "Cloudflare Pages の本番ブランチを master に設定してください。"
+            exit 1
+          fi
+          npx --yes wrangler@4.168.0 pages deploy pages-output --project-name "$PROJECT" --branch "$BRANCH" --commit-hash "$SHA"
+          printf -- '- %s [%s](%s)\n' "$BRANCH" "$url" "$url" >> "$GITHUB_STEP_SUMMARY"

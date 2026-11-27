@@ -1,69 +1,25 @@
 name: Advance hero adventure (text RPG)
 
-# 現役のもののふ（.state/heroes.json）を全員 1 日分進め、番付の Gist を更新する（1 日の行動回数は決まっていて、出来事が乱数で決まる。世界は world/ のデータ）。
-# 状態は .state/heroes/<id>.json に書き、最後に master にコミットする（もののふの詳細と絵図はサイトで見る。pages.yml が公開する）。もののふは new-game.yml で増やす。
-
 on:
   schedule:
-    # cron は UTC。JST 7:17 に実行（混雑する毎時 0 分を避けている）
+    # 日本時間 7:17
     - cron: "17 22 * * *"
   workflow_dispatch:
 
-concurrency:
-  group: hero-adventure
-  cancel-in-progress: false
-
 permissions:
-  contents: write # RPG の状態（.state/）と keepalive（.state/last-run）をコミットするために必要
+  contents: read
 
 jobs:
   advance:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      # 起動時点の SHA ではなくブランチの先端を取る。実行が重なって待たされた場合も、
-      # 先行の実行がコミットした .state/heroes/ の続きから進める
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Test
-        run: python -m unittest discover -s tests
-
-      # Test が失敗した日は実行しない（状態も作らない）。もののふがいなければ何もしない。
-      # もののふごとに失敗を隔離し、1 人でも失敗したらこのステップは失敗にする（ほかのもののふは進めて、状態もコミットする）。
-      - name: Advance heroes
-        if: ${{ success() }}
-        env:
-          GIST_PAT: ${{ secrets.GIST_PAT }}
-        run: python scripts/rpg.py
-
-      # rpg.py が更新した状態（.state/）を master にコミットする。
-      # あわせて 60 日間アクティビティがないと scheduled workflow が停止するのを防ぐため、
-      # .state/last-run も更新する（keepalive）。変更が無ければコミットしない。
-      # Test が失敗した日も keepalive は残す（!cancelled()）。
-      - name: Commit state (RPG + keepalive)
-        if: ${{ !cancelled() }}
-        run: |
-          TODAY=$(TZ=Asia/Tokyo date +%F)
-          mkdir -p .state
-          echo "$TODAY" > .state/last-run
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A .state
-          if git diff --cached --quiet; then
-            echo "変更なし"
-          else
-            if git diff --cached --quiet -- .state ':!.state/last-run'; then
-              MSG="chore: keepalive $TODAY"
-            else
-              MSG="chore: update state $TODAY"
-            fi
-            git commit -m "$MSG"
-            git pull --rebase
-            git push
-          fi
+    if: github.ref == 'refs/heads/master'
+    concurrency:
+      group: hero-adventure-master
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    uses: ./.github/workflows/update-game-state.yml
+    with:
+      branch: master
+      operation: advance
+    secrets:
+      GIST_PAT: ${{ secrets.GIST_PAT }}

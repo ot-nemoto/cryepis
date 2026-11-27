@@ -23,11 +23,34 @@ Gist は Fine-grained PAT に対応していないため Classic PAT を使い�
 |---|---|---|
 | Secret | `GIST_PAT` | 手順 1 の Classic PAT |
 
-Repository variable は使わない（番付の Gist の ID は `.state/board.json` に記録される）。
+本番の番付 Gist の ID は master の `.state/board.json` に記録される。
 もののふがいない間、毎日の実行は何もしない（keepalive だけコミットする）。
 
-`.state/` の記録は github-actions[bot] 名義で master に直接コミットされます（PR は通しません）。
-master にブランチ保護（PR 必須など）を設定すると、このコミットが失敗するので注意してください。
+`.state/` の記録は github-actions[bot] 名義で 対象のブランチに直接コミットされます（PR は通しません）。
+ブランチ保護を設定する場合は、日次進行・登録・引退で使う Actions の直接 push を許可してください。
+
+## 3. 開発と本番リリース
+
+- デフォルトブランチは本番の `master`。初回はこの仕組みをマージした master から `develop` を作る。作成時点のセーブを初期値として、以降はそれぞれのブランチで進む。
+- 機能の作業ブランチは `develop` から切り、PR の送り先も `develop` にする。ゲームを手動で進める・もののふを登録する・引退させるときは、Actions の **Use workflow from** で `master`、登録・引退は入力の **変更するゲーム** で対象を選ぶ。手動で進めるときは本番の *Advance hero adventure (text RPG)* と開発の *Advance development game* を使い分ける。
+- 番付 Gist は本番のみ。開発側は `python scripts/rpg.py --no-gist` でセーブを保存し、番付は開発版サイトで確認する。
+- 本番と開発のセーブが混ざらないように、本番へは毎回 `python tools/release.py` でリリースブランチを作る。最新の master を元に develop を取り込み、`.state/` は master の内容を保持し、`VERSION` の末尾を 1 つ上げる。コードの競合を解決し直す場合は、リリース準備時のエラーメッセージに従う。
+- リリースブランチから `master` への PR を作り、公開対象の Issue ごとに `Closes #番号` を書く。CI は PR のマージ結果で `.state/` の差分とバージョンを確認する。プレビュー確認後は **Create a merge commit** で取り込む。日次処理ではバージョンを更新しない。
+
+## 4. Cloudflare Pages への公開
+
+Cloudflare Pages で Direct Upload のプロジェクトを作成し、本番ブランチを `master` にする。同じプロジェクトに本番・開発・本番 PR の生成済み HTML を公開する。API トークンは Cloudflare の対象アカウントに絞り、**Account / Cloudflare Pages / Edit** 権限を付ける。
+
+| GitHub Actions の種類 | 名前 | 値 |
+|---|---|---|
+| Secret | `CLOUDFLARE_API_TOKEN` | Cloudflare の API トークン |
+| Variable または Secret | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare のアカウント ID |
+| Variable | `CLOUDFLARE_PAGES_PROJECT` | Direct Upload プロジェクトの実際の名前 |
+| Variable | `PRODUCTION_SITE_URL` | 切り替え確認後に設定する Cloudflare の本番 HTTPS URL |
+
+`CLOUDFLARE_PAGES_PROJECT` を設定すると、`pages.yml` が Cloudflare にも配信する。GitHub Actions の実行結果の **Summary** に公開 URL が載る。本番 PR のプレビューは、GitHub が作るマージ結果に含まれる本番セーブの写しで生成する。PR の番号が 123 なら、プレビュー名は `pr-123`。
+
+本番・開発・本番 PR のプレビューが表示できることを確認してから `PRODUCTION_SITE_URL` を登録する。次回の公開で旧 GitHub Pages が移転案内になり、次回の本番実行で番付 Gist のリンクも更新される。切り替えを戻す場合は `PRODUCTION_SITE_URL` を消して、master で公開を再実行する。
 
 ## トラブルシューティング
 
