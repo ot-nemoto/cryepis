@@ -869,17 +869,6 @@ GEAR_NAMES = {
 }
 
 
-def skill_slots(world: dict, rarity: str) -> str:
-  """珍しさごとのスキルの数の説明（★ はなし。スキルの付く珍しさは 1 つ。★★★ 以上は、あとで固定スキルを足す予定）。
-  いちばん下の珍しさは、items.json の並びではなく rarities の順で決める。"""
-  prices = world.get("skill_prices") or {}
-  if rarity not in prices:
-    return "なし"
-  if rarity == min(prices, key=world["rarities"].index):
-    return f"1 つ（{prices[rarity]}文）"
-  return f"1 つ（{prices[rarity]}文。★★★ 以上は、あとで固定スキルも付ける予定）"
-
-
 def skill_tag(name: str) -> str:
   """スキルの名前の札（特性と同じ枠）。"""
   return f'<span class="tag">{escape(name)}</span>'
@@ -1250,14 +1239,16 @@ def build_guide(world: dict) -> str:
   weight_rows = [
     (escape(labels[k]), escape(f"{v:g} 点"), escape(f"{1 / v:g}" if v else "—")) for k, v in points["weights"].items()
   ] + [("属性", escape(f"{points.get('element', 0):g} 点"), "属性 1 つ")]
+  prices = world.get("skill_prices") or {}
   rarity_rows = [
     (
       escape(game.rarity_mark(world, r)),
       escape(f"{points['max'][r]:g} 点まで"),
-      escape("なし" if r == W.COMMON else "付くことがある（武器・御守）"),
-      escape(skill_slots(world, r)),
+      "なし" if r == W.COMMON else "付くことがある（武器・御守）",
+      "1" if rank >= 3 else "0",
+      f"1（{prices[r]}文）" if r in prices else "0",
     )
-    for r in world["rarities"]
+    for rank, r in enumerate(world["rarities"], 1)
   ]
   # 例には、マイナスの能力のある武具（なければ最初の武具）を使う
   items = list(world["items"].values())
@@ -1274,7 +1265,8 @@ def build_guide(world: dict) -> str:
       "<p>武具の強さは点数で決まる。能力の増減に、能力ごとの点数を掛けて足す（マイナスの能力も同じ点数で引く）</p>"
       + table(("能力", "+1 あたり", "1 点になる量"), weight_rows)
       + '<h4 class="sub">珍しさごとの点数</h4>'
-      + table(("珍しさ", "点数の上限", "属性", "スキル"), rarity_rows)
+      + table(("珍しさ", "点数の上限", "属性", "固定スキル", "追加スキル"), rarity_rows)
+      + '<p class="note">固定スキルの列は予定の枠数。追加スキルの価格は鍛冶屋で1回付けるときの代金。</p>'
       + f'<p class="note">{escape(example)}。もののふは ★ の多い武具を装備し（★ が同じなら点数の高いもの。'
       "それも同じなら、特性と性格で選ぶ。もののふの性格の「同じ点数の装備」）、店でもその順に買う（同じ強さの品は買い直さない）。"
       "スキルは点数に入らない</p>",
@@ -1409,31 +1401,26 @@ def build_training(world: dict, report: dict | None) -> str:
   trials = report["trials"]
   trait = escape(world["season"]["hero_traits"][report["trait"]]["name"])
 
-  def win_rate(wins: int) -> str:
-    return f"{wins / trials:.2%}"
-
-  cards = []
+  rows = []
   for result in report["opponents"]:
     monster = escape(world["monsters"][result["monster"]]["name"])
-    rows = []
-    for comparison in result["comparisons"]:
-      skill = world["skills"][comparison["skill"]]
-      label = f'{escape(skill["name"])}<br><span class="note">{escape(skill_logic(skill))}</span>'
-      gear = "・".join(escape(world["items"][iid]["name"]) for iid in comparison["gear"]) or "武具なし"
-      rates = "".join(f'<td class="num">{win_rate(comparison[key])}</td>' for key in ("normal", "one", "all"))
-      rows.append(f'<tr><th scope="row">{label}</th><td>{gear}</td>{rates}</tr>')
-    cards.append(
-      f'<section class="card"><h3>{monster}（Lv{result["level"]} × {result["party"]}人）</h3>'
-      f"<p>基準の勝率 <strong>{win_rate(result['baseline'])}</strong>（武具・スキルなし）</p>"
-      '<div class="scroll"><table class="guide"><thead><tr><th scope="col">スキル</th><th scope="col">装備</th>'
-      '<th scope="col">スキルなし</th><th scope="col">1人に適用</th><th scope="col">全員に適用</th>'
-      "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div></section>"
+    rate = f"{result['baseline'] / trials:.2%}"
+    rows.append(
+      f'<tr><th scope="row">{monster}</th><td class="num">Lv{result["level"]}</td>'
+      f'<td class="num">{result["party"]}人</td><td class="num">{rate}</td></tr>'
     )
   intro = (
-    f"<p>各条件 {trials:,} 戦の勝率。特性は全員{trait}、丸薬は1人 {report['potions']} 個。"
-    "性格は順に入れ替え、同じ乱数種で比較しています。各行の装備は全員共通です。</p>"
+    f"<p>各条件 {trials:,} 戦の勝率。ふつうのもののふ（武具・スキルなし、特性は全員{trait}）で測定。"
+    f"丸薬は1人 {report['potions']} 個で、性格は順に入れ替えています。</p>"
   )
-  return page("調練", title + intro + "".join(cards), "training.html")
+  results = (
+    '<section class="card"><h3>大物・主の基準勝率</h3><div class="scroll"><table class="guide">'
+    '<thead><tr><th scope="col">相手</th><th scope="col">もののふのLv</th>'
+    '<th scope="col">人数</th><th scope="col">勝率</th></tr></thead><tbody>'
+    + "".join(rows)
+    + "</tbody></table></div></section>"
+  )
+  return page("調練", title + intro + results, "training.html")
 
 
 # ---- もののふの詳細 ---------------------------------------------------------------------------
