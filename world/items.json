@@ -3,10 +3,10 @@
  "skill_kinds": {"counter": "対策", "attack": "攻め", "guard": "守り", "heal": "回復", "travel": "旅", "money": "お金", "growth": "成長"},
  "skill_prices": {"rare": 500, "epic": 800, "legendary": 1000},
  "skills": [
-  {"id": "pierce", "name": "鎧通し", "slot": "weapon", "kind": "counter", "text": "硬い物の怪の守りを打ち消す", "logic": "性質「硬い」の守りの増え分を 0 にする", "counter": {"trait": "armored"}},
-  {"id": "weak_point", "name": "弱点突き", "slot": "weapon", "kind": "attack", "text": "弱点を突いたときのダメージが増える", "logic": "属性の倍率 1.3 を value にする", "value": 1.5},
+  {"id": "pierce", "name": "鎧通し", "slot": "weapon", "kind": "counter", "text": "硬い物の怪へのダメージが増える", "logic": "性質「硬い」の物の怪への最終ダメージを value 倍し、四捨五入する", "value": 1.1, "counter": {"trait": "armored"}},
+  {"id": "weak_point", "name": "弱点突き", "slot": "weapon", "kind": "attack", "text": "弱点を突いたときのダメージが増える", "logic": "属性の倍率 1.3 を value にする", "value": 1.4},
   {"id": "crit_art", "name": "会心の心得", "slot": "weapon", "kind": "attack", "text": "会心の一撃が強くなる", "logic": "会心の倍率を value 倍にする", "value": 4},
-  {"id": "combo", "name": "二の太刀", "slot": "weapon", "kind": "attack", "text": "2 回攻撃しやすい", "logic": "2 回攻撃の条件「相手の 2 倍以上素早い」を「value 倍以上」にする", "value": 1.5},
+  {"id": "combo", "name": "二の太刀", "slot": "weapon", "kind": "attack", "text": "2 回攻撃しやすい", "logic": "2 回攻撃の条件「相手の 2 倍以上素早い」を「value 倍以上」にする", "value": 1.8},
   {"id": "finisher", "name": "とどめ", "slot": "weapon", "kind": "attack", "text": "弱った物の怪を倒しやすい", "logic": "物の怪の残り HP が 20% 以下なら、ダメージ value 倍", "value": 1.5},
   {"id": "parry", "name": "受け太刀", "slot": "weapon", "kind": "guard", "text": "武器で攻撃を受け止める", "logic": "素早さが相手以上なら、受けるダメージ −value", "value": 1},
   {"id": "lifesteal", "name": "吸命", "slot": "weapon", "kind": "heal", "text": "倒すと少し回復する", "logic": "物の怪を倒すたびに、最大 HP の value 回復", "value": 0.05},

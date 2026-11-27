@@ -2478,17 +2478,27 @@ class SkillTest(unittest.TestCase):
     day.battle(strong)
     self.assertIn("踏ん張って", " ".join(day.events))  # 1 日 1 回、HP 1 で耐える
 
-  def test_pierce_ignores_armor(self):
+  def test_pierce_boosts_final_damage_only_against_armored_monsters(self):
     state = with_personality("brave")
-    armored = dict(WORLD["monsters"]["wild_dog"], trait="armored", **{"def": 20})
-    state["inventory"] = gear(("iron_sword", None))
-    plain = day_of(state).pick_weapon(armored, W.trait_effect(armored)["guard"])
     state["inventory"] = gear(("iron_sword", "pierce"))
+    armored = dict(WORLD["monsters"]["wild_dog"], trait="armored", hp=22, spd=6, **{"def": 20})
     day = day_of(state)
-    w, *_ = day.pick_gear(armored, W.trait_effect(armored)["guard"])
-    self.assertEqual(w["skill"], "pierce")
-    self.assertEqual(day.counters(w, armored), 1)
-    self.assertEqual(plain[0], "iron_sword")
+    body = W.trait_effect(armored)
+    equipped = day.ready(armored, body)
+    self.assertEqual(equipped["weapon"]["id"], "iron_sword")
+    self.assertEqual(equipped["guard"], 41)
+    with mock.patch.object(day, "damage", return_value=20) as damage:
+      self.assertTrue(day.battle(armored))
+    damage.assert_called_once()
+    self.assertEqual(damage.call_args.args[1], 41)
+    self.assertIsNone(day.ready(dict(armored, trait=None), body)["pierce"])
+
+  def test_weapons_with_pierce_are_compared_by_damage(self):
+    state = with_personality("brave")
+    state["inventory"] = gear(("iron_sword", "pierce"), ("iron_axe", None))
+    armored = dict(WORLD["monsters"]["wild_dog"], trait="armored", spd=6, **{"def": 2})
+    iid, *_ = day_of(state).pick_weapon(armored, W.trait_effect(armored)["guard"])
+    self.assertEqual(iid, "iron_axe")
 
   def test_money_and_travel_skills(self):
     state = with_personality("brave")
