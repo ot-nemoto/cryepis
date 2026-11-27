@@ -316,5 +316,13 @@ jobs:
           fi
           : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID を設定してください}"
           : "${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN を設定してください}"
+          production_branch=$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT" \
+            | jq -er '.result.production_branch')
+          if [ "$production_branch" != master ]; then
+            echo "Cloudflare Pages の本番ブランチを master に設定してください。"
+            exit 1
+          fi
           npx --yes wrangler@4.168.0 pages deploy "$output" --project-name "$PROJECT" --branch "$BRANCH" --commit-hash "$SHA"
           printf -- '- %s [%s](%s)\n' "$BRANCH" "$url" "$url" >> "$GITHUB_STEP_SUMMARY"
