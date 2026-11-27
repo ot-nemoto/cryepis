@@ -451,6 +451,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("会心の倍率を 4 倍にする", html)  # しくみの value は値に置き換える
     self.assertIn("最大 HP の 5% 回復", html)  # HP の割合は %
     self.assertIn("スキルを付ける余裕", html)  # 性格の表にスキルの行
+    self.assertIn("追加枠に性格の優先スキルがない装備", html)
     self.assertIn("★★ 500文", html)
     items = website.build_items(WORLD)
     self.assertIn("鍛冶屋で追加スキルを付けられる", items)

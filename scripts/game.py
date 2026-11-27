@@ -1442,8 +1442,8 @@ class Day:
   def smith(self, town: str) -> None:
     """町の鍛冶屋で、装備にスキルを付ける（1 日 1 回。行動力は使わない。#233・#235・#237）。
     性格の skill（from: 付ける装備の珍しさの下限、margin: 余裕の倍率、prefer: 部位ごとの優先スキル）で決める。
-    持っている装備を優先順（★ の多いもの → 点数の高いもの）に見て、優先スキルの付いていない最初の装備に付ける
-    （優先スキルが付いた装備は、もう変えない）。付けるスキルは部位のスキルからランダム。
+    持っている装備を優先順（★ の多いもの → 点数の高いもの）に見て、追加枠に優先スキルのない最初の装備に付ける。
+    付けるスキルは武具の固定スキルを除く同部位の候補からランダム。
     余裕 = 手元のお金 − 旅籠代 − 丸薬 keep 個分 が、代金の margin 倍以上あるとき。"""
     cfg = personality(self.world, self.state).get("skill")
     prices, skills = self.world.get("skill_prices") or {}, self.world.get("skills") or {}
