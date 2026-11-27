@@ -1094,9 +1094,9 @@ class Day:
         need = self.skill("combo", [w]) or 2
         hits = 2 if s["spd"] >= need * monster.get("spd", s["spd"]) else 1
         mult = self.skill("crit_art", [w]) or crit["multiplier"]
-        g = monster["def"] if monster.get("trait") == "armored" and self.skill("pierce", [w]) else guard
+        pierce = self.skill("pierce", [w]) if monster.get("trait") == "armored" else None
         crits = 1 + (mult - 1) * s["dex"] / divisor
-        damage = max(1, s["atk"] - g // 2) * rate * hits * crits
+        damage = max(1, s["atk"] - guard // 2) * rate * hits * crits * (pierce or 1)
         key = (self.counters(w, monster) + self.counters(acc, monster), damage, acc is usual_acc, w is usual_wpn)
         if best is None or key > best[0]:
           best = (key, w, rate, s, acc)
@@ -1128,8 +1128,6 @@ class Day:
     usual = worn(self.world, self.state)
     self.gear = [weapon, accessory, usual["helmet"], usual["shield"]]
     trait, sk = monster.get("trait"), self.skill
-    if trait == "armored" and sk("pierce"):
-      guard = monster["def"]
     if trait == "fierce" and sk("deflect"):
       atk = monster["atk"]
     if trait == "swarm" and sk("swarm_guard"):
@@ -1141,6 +1139,7 @@ class Day:
       "weapon": weapon,
       "accessory": accessory,
       "rate": rate,
+      "pierce": sk("pierce") if trait == "armored" else None,
       "s": s,
       "guard": guard,  # このもののふが攻めるときの物の怪の守り
       "atk": atk,  # 物の怪がこのもののふを攻めるときの攻撃
@@ -1973,6 +1972,8 @@ def _fight(sides: list[dict], monster: dict, hp: int) -> bool:
     dmg = round(d.damage(c["s"]["atk"], c["guard"], c["s"]["dex"], **extra) * c["rate"])
     if d.skill("finisher") and hp <= full * 0.2:
       dmg = W.half_up(dmg * d.skill("finisher"))
+    if c["pierce"]:
+      dmg = W.half_up(dmg * c["pierce"])
     c["killing_crit"] = d.crit  # 最後の攻撃が会心か（とどめを刺したもののふのものだけ、悟りに使う）
     return max(1, dmg)
 

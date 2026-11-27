@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import game  # noqa: E402
 import mapsvg  # noqa: E402
 import rpg  # noqa: E402
+import training  # noqa: E402
 import view  # noqa: E402
 import website  # noqa: E402
 import world as W  # noqa: E402
@@ -66,6 +67,7 @@ class SiteTest(unittest.TestCase):
         "items.html",
         "monsters.html",
         "guide.html",
+        "training.html",
         "towns.html",
         "heroes/h1.html",
         "heroes/h2.html",
@@ -81,6 +83,37 @@ class SiteTest(unittest.TestCase):
           continue
         target = (path.parent / href.split("#")[0]).resolve()
         self.assertTrue(target.is_file(), f"{path.name} → {href}")
+
+  def test_training_page_shows_the_measured_comparisons(self):
+    report = training.build_report(WORLD, trials=12)
+    html = website.build_training(WORLD, report)
+    self.assertIn('<a href="training.html" class="on">調練</a>', html)
+    self.assertIn("各条件 12 戦の勝率", html)
+    for name in (
+      "雪女",
+      "だいだらぼっち",
+      "大天狗",
+      "酒呑童子",
+      "二の太刀",
+      "鎧通し",
+      "弱点突き",
+      "心眼",
+      "不動の御守",
+    ):
+      self.assertIn(name, html)
+    result = report["opponents"][0]
+    self.assertIn(f"{result['baseline'] / 12:.2%}", html)
+
+  def test_training_cache_is_reused_and_invalidated_by_key(self):
+    path = self.out.parent / "training.json"
+    expected = training.build_report(WORLD, trials=12)
+    with mock.patch.object(training, "build_report", return_value=expected) as build:
+      self.assertEqual(training.cached_report(WORLD, path), expected)
+      self.assertEqual(training.cached_report(WORLD, path), expected)
+      self.assertEqual(build.call_count, 1)
+      with mock.patch.object(training, "cache_key", return_value="different"):
+        self.assertEqual(training.cached_report(WORLD, path), expected)
+      self.assertEqual(build.call_count, 2)
 
   def test_out_dir_is_rebuilt(self):
     website.write_site(WORLD, [], DAY, {}, self.out)

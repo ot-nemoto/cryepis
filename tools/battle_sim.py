@@ -19,65 +19,14 @@
 from __future__ import annotations
 
 import argparse
-import copy
-import random
 import sys
-from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import game  # noqa: E402
 import world as W  # noqa: E402
-
-DAY = date(2026, 12, 1)
-
-
-def make_hero(
-  world: dict, trait: str, level: int, gear: list[str], potions: int, personality: str | None = None
-) -> dict:
-  """特性 trait のもののふを、レベルアップの伸びだけで level まで育てる（装備は gear、丸薬は potions 個）。
-  personality が None なら性格のないもののふ（倒れる前に丸薬を使う）。"""
-  state = game.new_state(world, "sim", "試し")
-  state["trait"] = trait
-  state["personality"] = personality
-  state["hero"]["level"] = level
-  game.set_base_stats(world, state)  # レベルと特性で決まる能力（レベルアップを繰り返したのと同じ）
-  state["inventory"] = [{"id": iid, "skill": None} for iid in gear]
-  state["hero"].update(potions=potions, hp=game.stats(world, state)["max_hp"], exp=0)
-  return state
-
-
-def fight(
-  world: dict,
-  monster: dict,
-  trait: str,
-  level: int,
-  gear: list[str],
-  potions: int,
-  n: int,
-  party: int = 1,
-  personalities: list[str] | None = None,
-) -> tuple[float, float | None]:
-  """n 回戦って、(勝った割合, 勝ったときに減った HP の割合の平均。1 回も勝てなければ None)。
-  party 人で力を合わせて戦う（みな同じ特性・レベル・装備・丸薬）。personalities を渡すと、i 回目の k 人目は
-  personalities[(i + k) % 数] の性格（性格を 1 人ずつ順に入れる）。渡さなければ性格のないもののふ。
-  乱数の種は 0〜n-1（k 人目は i * party + k）なので、同じ条件なら何度やっても同じ結果（1 人なら種は i）。
-  減った HP は戦いの前後の差（何人かなら全員の平均）なので、丸薬を使うと、回復した分だけ少なく出る（道の物の怪は --potions 0 で測る）。"""
-  wins, lost = 0, 0.0
-  heroes = {p: make_hero(world, trait, level, gear, potions, p) for p in (personalities or [None])}
-  max_hp = game.stats(world, next(iter(heroes.values())))["max_hp"]
-  for seed in range(n):
-    days = []
-    for k in range(party):
-      pers = personalities[(seed + k) % len(personalities)] if personalities else None
-      state = copy.deepcopy(heroes[pers])
-      day = game.Day(world, state, DAY, random.Random(seed * party + k))
-      day.gain_exp = lambda exp: None  # 勝っても育たない（戦いの結果だけを見る）
-      days.append(day)
-    if game.party_battle(days, dict(monster)):
-      wins += 1
-      lost += sum(1 - d.state["hero"]["hp"] / max_hp for d in days) / party
-  return wins / n, (lost / wins if wins else None)
+from training import DAY as DAY  # noqa: E402
+from training import fight  # noqa: E402
+from training import make_hero as make_hero
 
 
 def win_rate(

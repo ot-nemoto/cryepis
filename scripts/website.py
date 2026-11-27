@@ -8,6 +8,7 @@
   towns.html          町の情報（全部の町を地方ごとのタブで切り替える。説明・口入れ屋の規模・特産品・店・レア・道。開放していない町は「-」）
   items.html          開放した地域で手に入る武具（装備の種類ごとのタブ。レアリティで絞り込める）
   monsters.html       開放した道に出る物の怪と主（地方ごとのタブ。街道の地形の割合・Lv・生息地・性質・属性・強さ。生息地で絞り込める）
+  training.html       調練（戦闘シミュレーションの結果）
   guide.html          手引き（能力・もののふの特性・物の怪の性質・属性と相性・戦いの決まりの説明）
   guild.html          町ごとの口入れ屋の高札（地方ごとのタブ。レアリティで絞り込める。受けられた依頼は ACCEPTED）
   heroes/<id>.html    もののふごとの詳細（ステータス・装備・持ち物・依頼・冒険の記録）
@@ -36,6 +37,7 @@ import common  # noqa: E402
 import game  # noqa: E402
 import mapsvg  # noqa: E402
 import store  # noqa: E402
+import training  # noqa: E402
 import view  # noqa: E402
 import world as W  # noqa: E402
 
@@ -49,6 +51,7 @@ PAGES = (
   ("items.html", "武具"),
   ("monsters.html", "物の怪"),
   ("guide.html", "手引き"),
+  ("training.html", "調練"),
 )
 
 CSS = """
@@ -1394,6 +1397,45 @@ def build_guide(world: dict) -> str:
   return page("手引き", body, "guide.html")
 
 
+# ---- 調練 ------------------------------------------------------------------------------------
+
+
+def build_training(world: dict, report: dict | None) -> str:
+  title = "<h2>調練</h2>"
+  if report is None:
+    return page("調練", title + "<p>調練結果はサイトの公開時に生成されます。</p>", "training.html")
+  if not report["opponents"]:
+    return page("調練", title + "<p>現在、調練の対象となる大物・主はありません。</p>", "training.html")
+  trials = report["trials"]
+  trait = escape(world["season"]["hero_traits"][report["trait"]]["name"])
+
+  def win_rate(wins: int) -> str:
+    return f"{wins / trials:.2%}"
+
+  cards = []
+  for result in report["opponents"]:
+    monster = escape(world["monsters"][result["monster"]]["name"])
+    rows = []
+    for comparison in result["comparisons"]:
+      skill = world["skills"][comparison["skill"]]
+      label = f'{escape(skill["name"])}<br><span class="note">{escape(skill_logic(skill))}</span>'
+      gear = "・".join(escape(world["items"][iid]["name"]) for iid in comparison["gear"]) or "武具なし"
+      rates = "".join(f'<td class="num">{win_rate(comparison[key])}</td>' for key in ("normal", "one", "all"))
+      rows.append(f'<tr><th scope="row">{label}</th><td>{gear}</td>{rates}</tr>')
+    cards.append(
+      f'<section class="card"><h3>{monster}（Lv{result["level"]} × {result["party"]}人）</h3>'
+      f"<p>基準の勝率 <strong>{win_rate(result['baseline'])}</strong>（武具・スキルなし）</p>"
+      '<div class="scroll"><table class="guide"><thead><tr><th scope="col">スキル</th><th scope="col">装備</th>'
+      '<th scope="col">スキルなし</th><th scope="col">1人に適用</th><th scope="col">全員に適用</th>'
+      "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div></section>"
+    )
+  intro = (
+    f"<p>各条件 {trials:,} 戦の勝率。特性は全員{trait}、丸薬は1人 {report['potions']} 個。"
+    "性格は順に入れ替え、同じ乱数種で比較しています。各行の装備は全員共通です。</p>"
+  )
+  return page("調練", title + intro + "".join(cards), "training.html")
+
+
 # ---- もののふの詳細 ---------------------------------------------------------------------------
 def build_hero(world: dict, hero: dict, state: dict) -> str:
   body = (
@@ -1444,6 +1486,8 @@ def write_site(
   guild: dict,
   out: Path,
   retired: list[tuple[dict, dict]] | None = None,
+  *,
+  training_report: dict | None = None,
 ) -> list[Path]:
   """サイトを out に書き出す（out の中身は作り直す）。書き出したファイルの一覧を返す。
   retired（引退したもののふ）は、詳細のページだけを書き出す（一覧や番付には出さない）。"""
@@ -1460,6 +1504,7 @@ def write_site(
     "items.html": build_items(world),
     "monsters.html": build_monsters(world),
     "guide.html": build_guide(world),
+    "training.html": build_training(world, training_report),
     "towns.html": build_towns(world),
   }
   for hero, state in entries + (retired or []):
@@ -1482,12 +1527,15 @@ def main() -> int:
   ap = argparse.ArgumentParser(description="GitHub Pages に載せるサイトを書き出す")
   ap.add_argument("out", help="書き出す先のディレクトリ（中身は作り直す）")
   ap.add_argument("--date", help="表示する日付（既定はもののふを最後に進めた日。まだ誰も進めていなければ今日の JST）")
+  ap.add_argument("--training-cache", type=Path, help="調練結果を再利用するファイル")
   a = ap.parse_args()
+  check_out(Path(a.out))
   world = W.load_world()
   entries = store.current_entries(world)
   today = date.fromisoformat(a.date) if a.date else shown_day(entries)
   retired = store.current_entries(world, retired=True)
-  written = write_site(world, entries, today, store.load_guild(), Path(a.out), retired)
+  report = training.cached_report(world, a.training_cache)
+  written = write_site(world, entries, today, store.load_guild(), Path(a.out), retired, training_report=report)
   print(f"{a.out} に {len(written)} ファイルを書き出しました")
   return 0
 
