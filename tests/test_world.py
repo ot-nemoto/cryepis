@@ -352,7 +352,10 @@ class ValidateTest(unittest.TestCase):
     self.assertError(boss_quest, ["nagano_3", "主は狙えない"])
 
   def test_item_dex_is_checked(self):
-    self.assertError(lambda r: r["items"][-1].update(dex="2"), ["crimson_grass_charm", "dex"])
+    self.assertError(
+      lambda r: next(i for i in r["items"] if i["id"] == "crimson_grass_charm").update(dex="2"),
+      ["crimson_grass_charm", "dex"],
+    )
 
   def test_every_terrain_has_a_japanese_name(self):
     self.assertEqual(set(W.TERRAIN_NAMES), set(W.TERRAINS))
@@ -409,14 +412,15 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["items"][5].update(drop_level=5), ["drop_level"])
 
   def test_rare_items_need_quest_towns(self):
-    self.assertError(lambda r: r["items"][-1].pop("towns"), ["crimson_grass_charm", "towns"])
-    self.assertError(lambda r: r["items"][-1].update(towns=["kumano"]), ["towns", "kumano"])
+    def charm(raw):
+      return next(i for i in raw["items"] if i["id"] == "crimson_grass_charm")
+
+    self.assertError(lambda r: charm(r).pop("towns"), ["crimson_grass_charm", "towns"])
+    self.assertError(lambda r: charm(r).update(towns=["kumano"]), ["towns", "kumano"])
     self.assertError(lambda r: r["items"][0].update(towns=["edo"]), ["iron_sword", "common"])
-    self.assertError(
-      lambda r: r["items"][-1].update(towns=["kyoto"]), ["crimson_grass_charm", "kyoto", "開放"]
-    )  # 開放していない町
+    self.assertError(lambda r: charm(r).update(towns=["kyoto"]), ["crimson_grass_charm", "kyoto", "開放"])
     for bad in (5, "edo", [["edo"]]):  # 型が違っても落ちずにエラーを返す
-      self.assertError(lambda r, bad=bad: r["items"][-1].update(towns=bad), ["crimson_grass_charm", "towns"])
+      self.assertError(lambda r, bad=bad: charm(r).update(towns=bad), ["crimson_grass_charm", "towns"])
 
   def test_every_town_needs_a_rare(self):
     def change(r):

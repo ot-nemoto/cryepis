@@ -208,7 +208,7 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f'id="panel-{slot}"', html)
     self.assertIn('data-tab="weapon" aria-selected="true" tabindex="0">⚔️ 武器</button>', html)  # 部位の先頭に絵文字
     self.assertIn('<h2 class="area">📿 御守</h2>', html)
-    self.assertEqual(html.count('class="chip" data-f='), 2)  # ★ と ★★
+    self.assertEqual(html.count('class="chip" data-f='), 3)  # ★・★★・★★★
     charm = html.split("不動の御守")[1].split("</tr>")[0]  # ★★不動の御守（炎属性）
     self.assertIn('<td><a class="pill" href="towns.html#kofu">🏯 甲府</a></td>', charm)  # 依頼を出す町
     self.assertIn('<td class="icon"><span class="tag">炎属性</span></td>', charm)  # 属性の列（枠の札）
@@ -238,7 +238,7 @@ class SiteTest(unittest.TestCase):
 
   def test_items_page_shows_the_descriptions(self):
     html = website.build_items(WORLD)
-    for it in WORLD["items"].values():  # 13 個すべてに説明があり、名前の下に出る
+    for it in WORLD["items"].values():  # すべてに説明があり、名前の下に出る
       self.assertIn(f'<td>{escape(it["name"])}<br><span class="note">{escape(it["text"])}</span></td>', html)
 
   def test_item_description_is_optional_and_escaped(self):
