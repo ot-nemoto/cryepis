@@ -56,7 +56,7 @@ PAGES = (
 
 CSS = """
 :root{--bg:#f6efdc;--card:#fffaf0;--ink:#3f2f22;--sub:#6b5a48;--line:#d9c9a8;--accent:#7a5530;--hero:#b91c1c;
---minus:#c0262d;color-scheme:light;scroll-padding-top:calc(var(--site-header-height, 4rem) + 8px);
+--minus:#c0262d;color-scheme:light;
 --t-plain:#a9c25d;--t-forest:#2f6b3a;--t-jungle:#3f8f4f;--t-desert:#d9b36c;--t-wetland:#4f9a8c;--t-snow:#8fc3e0;
 --t-mountain:#8a7462;--t-volcano:#c4553a;--t-sea:#3f74b5}
 @media (prefers-color-scheme:dark){:root{--bg:#1f1a14;--card:#2a231b;--ink:#efe4cf;--sub:#bfae92;--line:#4a3d2c;
@@ -66,7 +66,9 @@ CSS = """
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 'Hiragino Sans','Hiragino Kaku Gothic ProN',
 'Noto Sans JP','Yu Gothic',Meiryo,sans-serif}
-header{position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line);background:var(--card)}
+header{border-bottom:1px solid var(--line);background:var(--card)}
+html.sticky-header{scroll-padding-top:calc(var(--site-header-height) + 8px)}
+.sticky-header body > header{position:sticky;top:0;z-index:10}
 .wrap{max-width:1100px;margin:0 auto;padding-inline:16px}
 header .wrap{display:flex;flex-wrap:wrap;gap:4px 20px;align-items:baseline;padding-block:10px}
 header h1{font-size:20px;margin:0}
@@ -176,13 +178,15 @@ document.getElementById('zhome').onclick=()=>{v=home.slice();set();};})();
 
 SITE_HEADER_JS = """
 (()=>{
-const header=document.querySelector('body > header');
-const sync=()=>document.documentElement.style.setProperty(
-  '--site-header-height', Math.ceil(header.getBoundingClientRect().height)+'px'
-);
+const header=document.querySelector('body > header'),root=document.documentElement;
+const sync=()=>{
+  const height=Math.ceil(header.getBoundingClientRect().height);
+  root.style.setProperty('--site-header-height',height+'px');
+  root.classList.toggle('sticky-header',height*2<=root.clientHeight);
+};
 sync();
+window.addEventListener('resize',sync);
 if(window.ResizeObserver)new ResizeObserver(sync).observe(header);
-else window.addEventListener('resize',sync);
 })();
 """
 
