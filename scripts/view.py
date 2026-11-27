@@ -29,7 +29,7 @@ RANKINGS = (  # (見出し, カードでの見出し（None ならカードに�
   ("レベル", "Lv  ", lambda s: s["hero"]["level"], lambda s: s["hero"]["level"], ""),
   ("討伐数", "討伐", lambda s: s["season_stats"]["kills"], lambda s: s["season_stats"]["kills"], "体"),
   ("依頼達成", "依頼", lambda s: s["season_stats"]["quests_done"], lambda s: s["season_stats"]["quests_done"], "件"),
-  ("レア武具", None, lambda s: len(s["season_stats"]["rares"]), lambda s: len(s["season_stats"]["rares"]), "個"),
+  ("珍しい武具", None, lambda s: len(s["season_stats"]["rares"]), lambda s: len(s["season_stats"]["rares"]), "個"),
 )
 
 
@@ -124,7 +124,7 @@ def build_text(world: dict, state: dict) -> str:
   else:
     today = random.Random(f"teaser-{state['last_date']}").choice(TEASERS)
   lines = [
-    f"⚔️ {state['name']} Lv.{hero['level']}  {season} Day {state['season_day']}",
+    f"⚔️ {state['name']} Lv.{hero['level']}  {season} {state['season_day']}日目",
     location(world, state),
     f"HP {hp_bar} {hero['hp']}/{s['max_hp']}  攻{s['atk']} 防{s['def']}  {hero['gold']}文",
     f"装備: {gear}",
@@ -133,13 +133,13 @@ def build_text(world: dict, state: dict) -> str:
   ss = state["season_stats"]
   detail = [
     "",
-    "── ステータス ──",
+    "── 能力 ──",
     f"シーズン{state['season'] or '-'} {state['season_day']}日目 / 通算 {state['day']}日",
     f"Lv.{hero['level']}  "
     + (
-      "EXP MAX"
+      "経験値は上限"
       if hero["level"] >= world["season"]["max_level"]
-      else f"EXP {hero['exp']}/{game.exp_need(world, hero['level'])}"
+      else f"経験値 {hero['exp']}/{game.exp_need(world, hero['level'])}"
     )
     + f"  丸薬: {hero['potions']}",
     f"攻撃 {s['atk']}（基本 {hero['base_atk']}）  防御 {s['def']}（基本 {hero['base_def']}）  "
@@ -193,7 +193,7 @@ def build_text(world: dict, state: dict) -> str:
     "── 今シーズンの成績 ──",
     f"依頼達成 {ss['quests_done']}  依頼失敗 {ss['quests_failed']}  倒した敵 {ss['kills']}  "
     f"力尽きた回数 {ss['deaths']}",
-    "手に入れたレア: " + ("、".join(item_label(world, i) for i in ss["rares"]) or "まだない"),
+    "手に入れた珍しい武具: " + ("、".join(item_label(world, i) for i in ss["rares"]) or "まだない"),
   ]
   detail += ["", "── 冒険の記録（日付は進めた日、カッコ内は行動回数）──"]
   detail += [f"{j['date']} ({j['actions']}回) {j['text']}" for j in state["journal"]]
@@ -203,7 +203,7 @@ def build_text(world: dict, state: dict) -> str:
       rares = "、".join(item_label(world, i) for i in r["rares"] if i in world["items"]) or "なし"
       detail.append(
         f"シーズン{r['season']}: Lv.{r['level']}（{r['days']}日） 依頼達成 {r['quests_done']}  "
-        f"倒した敵 {r['kills']}  力尽きた回数 {r['deaths']}  レア: {rares}"
+        f"倒した敵 {r['kills']}  力尽きた回数 {r['deaths']}  珍しい武具: {rares}"
       )
   return "\n".join(lines + detail) + "\n"
 

@@ -2,7 +2,6 @@ import json
 import sys
 import tempfile
 import unittest
-import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 from pathlib import Path
 from unittest import mock
@@ -18,7 +17,6 @@ import website  # noqa: E402
 
 WORLD = rpg.load_world()
 DAY = date.fromisoformat(WORLD["season"]["start"])
-NS = "{http://www.w3.org/2000/svg}"
 
 
 def play(days, hero_id="h1"):
@@ -82,7 +80,7 @@ class DisplayTest(unittest.TestCase):
 
   def test_card_before_the_journey(self):
     lines = view.build_text(WORLD, game.new_state(WORLD, "h1", "アリス")).splitlines()
-    self.assertEqual(lines[0], "⚔️ アリス Lv.1  旅立ち前 Day 0")
+    self.assertEqual(lines[0], "⚔️ アリス Lv.1  旅立ち前 0日目")
     self.assertIn("旅立とうとしている", lines[4])
 
   def test_detail_lists_items_and_past_seasons(self):
@@ -244,7 +242,7 @@ class HeroesTest(unittest.TestCase):
     state = game.new_state(world, "h1", name)
     game.advance(world, state, DAY)
     head = view.build_text(world, state).splitlines()[0]
-    self.assertEqual(head, f"⚔️ {name} Lv.{state['hero']['level']}  S{state['season']} Day {state['season_day']}")
+    self.assertEqual(head, f"⚔️ {name} Lv.{state['hero']['level']}  S{state['season']} {state['season_day']}日目")
     hero = {"id": "h1", "name": name}
     news = view.news([(hero, state)], DAY, rpg.BOARD_NAME_WIDTH)
     self.assertTrue(news[0].startswith(view.shorten(name, rpg.BOARD_NAME_WIDTH) + ": "), news)
@@ -368,7 +366,7 @@ class HeroesTest(unittest.TestCase):
     store.hero_state_path("h1").unlink()
     self.assertEqual(store.current_entries(WORLD), [])  # サイトの書き出しは、状態のないもののふを飛ばす
 
-  def test_hero_that_failed_stays_on_the_site_map(self):
+  def test_hero_that_failed_stays_on_the_heroes_page(self):
     self.new_game("アリス")
     self.new_game("ボブ")
     self.daily("2026-12-01")
@@ -382,13 +380,10 @@ class HeroesTest(unittest.TestCase):
     with mock.patch.object(game, "advance", side_effect=fail_alice), mock.patch.object(common, "warn"):
       self.assertEqual(self.daily("2026-12-02"), 1)
     world = rpg.load_world()
-    html = website.build_map(world, store.current_entries(world), date(2026, 12, 2))
-    svg = ET.fromstring(html[html.index("<svg") : html.index("</svg>") + 6])
-    titles = "、".join(
-      g.find(f"{NS}title").text for g in svg.iter(f"{NS}g") if g.get("class") == "hero"
-    )  # 進められなかったもののふも、保存してある状態でサイトの地図の印（マウスを乗せたときの説明）に載る
-    self.assertIn("アリス Lv.", titles)
-    self.assertIn("ボブ Lv.", titles)
+    html = website.build_heroes(world, store.current_entries(world), date(2026, 12, 2))
+    # 進められなかったもののふも、保存してある状態でもののふ一覧に載る。
+    self.assertIn('<a href="heroes/h1.html">アリス</a>', html)
+    self.assertIn('<a href="heroes/h2.html">ボブ</a>', html)
 
   def test_retired_heroes_keep_their_site_page(self):
     self.new_game("アリス")

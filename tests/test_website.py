@@ -154,13 +154,17 @@ class SiteTest(unittest.TestCase):
     entries[0][1]["last_date"] = None  # まだ進めていないもののふがいても、最後に進めた日
     self.assertEqual(website.shown_day(entries), last)
 
-  def test_map_is_inline_svg_with_hero_marks(self):
-    entries, guild, today = party(1, 1)
-    html = website.build_map(WORLD, entries, today)
+  def test_map_is_inline_svg_without_hero_marks(self):
+    entries, _, today = party(1, 1)
+    website.write_site(WORLD, entries, today, {}, self.out)
+    html = (self.out / "index.html").read_text(encoding="utf-8")
     svg = html[html.index("<svg") : html.index("</svg>") + 6]
     root = ET.fromstring(svg)  # 正しい SVG として埋め込まれている
     self.assertEqual(list(root.iter("{http://www.w3.org/2000/svg}a")), [])  # 地図に名札（リンク）は出さない
-    self.assertEqual(len([g for g in root.iter("{http://www.w3.org/2000/svg}g") if g.get("class") == "hero"]), 1)
+    self.assertIsNone(root.find('.//{http://www.w3.org/2000/svg}g[@class="hero"]'))
+    self.assertIn("街道と霊場", svg)
+    self.assertNotIn("もののふがいる場所", svg)
+    self.assertNotIn("まだ入れない", svg)
     self.assertNotIn("もののふの居場所", html)  # 地図のページにもののふの一覧は出さない（もののふのページで見る）
     self.assertNotIn('href="heroes/h1.html"', html)
 
@@ -190,7 +194,7 @@ class SiteTest(unittest.TestCase):
     html = website.build_guild(WORLD, entries, today, guild)
     taken = [e for es in guild["towns"].values() for e in es if e["status"] != "open"]
     self.assertTrue(taken)
-    self.assertEqual(html.count('<span class="stamp">ACCEPTED</span>'), len(taken))
+    self.assertEqual(html.count('<span class="stamp">引受済</span>'), len(taken))
     self.assertNotIn("heroes/", html.split("<main")[1])  # 受けたもののふの名前は出さない
     self.assertNotIn("滞在中", html)
     total = sum(len(es) for es in guild["towns"].values())
@@ -204,7 +208,7 @@ class SiteTest(unittest.TestCase):
     for town in WORLD["towns"]:  # 町の名前に英語名を添える
       p = WORLD["places"][town]
       self.assertIn(f'{p["name"]} <span class="en">{p["en"]}</span>', html)
-      # 町のページの「高札を見る」（guild.html#町の ID）が、その地方のタブの中の高札を指す
+      # 町ごとの高札は、対応する地方のタブにある
       panel = html[html.index(f'id="panel-{p["area"]}"') :]
       panel = panel[: panel.index("</section>")]
       self.assertIn(f'<div class="card board" id="{town}">', panel)
@@ -291,7 +295,8 @@ class SiteTest(unittest.TestCase):
       description, after = row.split("</td>", 1)
       self.assertIn(f'<br><span class="note">{escape(it["text"])}</span>', description)
       fixed = WORLD["skills"].get(it.get("fixed_skill"))
-      self.assertTrue(after.startswith(f"<td>{escape(fixed['name']) if fixed else '—'}</td>"), row)
+      skill = f'<span class="tag">{escape(fixed["name"])}</span>' if fixed else "—"
+      self.assertTrue(after.startswith(f"<td>{skill}</td>"), row)
 
   def test_item_description_is_optional_and_escaped(self):
     world = copy.deepcopy(WORLD)
@@ -321,8 +326,11 @@ class SiteTest(unittest.TestCase):
       p = WORLD["places"][town]
       self.assertIn(f'id="{town}"', html)
       self.assertIn(p["text"], html)
-      self.assertIn(f"依頼の枠 {p['quests_per_day']} 件", html)  # 口入れ屋の規模はどの町にもある
-      self.assertEqual(f'href="guild.html#{town}"' in html, town in WORLD["towns"])
+      slots = p["quests_per_day"]
+      card = html.split(f'id="{town}"', 1)[1].split("</table>", 1)[0]
+      marks = " ".join(["📜"] * slots)
+      self.assertIn(f'<span role="img" aria-label="依頼の枠 {slots} 件">{marks}</span>', card)
+      self.assertNotIn(f'href="guild.html#{town}"', html)
     self.assertLess(html.index("坂東 <span"), html.index("畿内 <span"))  # 開放した地方が先
     self.assertNotIn("オルドラの町の一覧です", html)  # 説明文は出さない
     self.assertLess(html.index("<h2>町の情報</h2>"), html.index('class="tabs"'))  # タブは見出しのすぐ下
@@ -342,7 +350,7 @@ class SiteTest(unittest.TestCase):
     self.assertNotIn("打刀", kyoto)
     kofu = html[html.index('id="kofu"') : html.index('id="nagano"')]  # 坂東の中は places の順
     self.assertIn("不動の御守", kofu.split("店の品ぞろえ")[0])  # レア
-    self.assertIn("富士山（霊場・まだ入れない）", kofu)
+    self.assertIn("富士山（霊場）", kofu)
     self.assertIn("長野（陸路 3）", kofu)
     shop = kofu.split("店の品ぞろえ</th><td>")[1].split("</td>")[0]  # 種類の順、同じ種類なら値段の高い順
     *equips, potion = shop.split("<br>")  # 装備のあとに丸薬
@@ -355,15 +363,14 @@ class SiteTest(unittest.TestCase):
 
   def test_first_page_is_the_map(self):
     """ホームはなくして、最初のページ（index.html）は絵図（#261）。"""
-    entries, _, today = party(2, 2)
-    html = website.build_map(WORLD, entries, today)
+    html = website.build_map(WORLD, DAY)
     self.assertIn("<title>絵図 | もののふ道中</title>", html)
     self.assertIn(
       '<h1><a href="index.html">もののふ道中 <span class="site-title-en" lang="en">Warriors on the Road</span></a></h1>',
       html,
     )
     self.assertIn('<a href="index.html" class="on">絵図</a><a href="ranking.html">番付</a>', html)  # メニューの最初
-    self.assertIn("<h2>世界の絵図</h2>", html)
+    self.assertIn("<h2>諸国絵図</h2>", html)
     self.assertNotIn("ホーム", html)
     self.assertNotIn("map.html", html)  # メニューに地図のページはない
 
@@ -407,13 +414,13 @@ class SiteTest(unittest.TestCase):
     for t in ("plain", "mountain", "forest", "snow", "sea"):  # 海はまだ開放していない地方の物の怪
       self.assertIn(f'class="chip" data-f="{t}"', head)
     self.assertNotIn('data-f="wetland"', head)  # どの地方の道にもない地形の物の怪はいない（#267）
-    self.assertIn('data-f="world"', head)  # 大物は WORLD、主は RAID で絞り込める
-    self.assertIn('data-f="raid"', head)
+    self.assertIn('data-f="world" aria-pressed="false"><span class="habitat">大物</span>', head)
+    self.assertIn('data-f="raid" aria-pressed="false"><span class="habitat">主</span>', head)
     self.assertIn(
-      '<tr data-f="world"><td>雪女</td><td class="num">N/A</td><td><span class="habitat">WORLD</span></td>', south
+      '<tr data-f="world"><td>雪女</td><td class="num">—</td><td><span class="habitat">大物</span></td>', south
     )
     self.assertIn(
-      '<tr data-f="raid"><td>酒呑童子</td><td class="num">N/A</td><td><span class="habitat">RAID</span></td>', south
+      '<tr data-f="raid"><td>酒呑童子</td><td class="num">—</td><td><span class="habitat">主</span></td>', south
     )
     self.assertIn('<span class="f-label">生息地</span>', head)
     self.assertIn('id="f-none"', html)
@@ -606,7 +613,7 @@ class SiteTest(unittest.TestCase):
 
   def test_monster_page_chips_follow_the_rows(self):
     world = copy.deepcopy(WORLD)
-    for qs in world["town_quests"].values():  # 大物の依頼がなければ、WORLD のボタンは出さない
+    for qs in world["town_quests"].values():  # 大物の依頼がなければ、大物のボタンは出さない
       qs[:] = [q for q in qs if not world["monsters"].get(q.get("monster"), {}).get("elite")]
     html = website.build_monsters(world)
     self.assertNotIn('data-f="world"', html)
@@ -650,7 +657,7 @@ class SiteTest(unittest.TestCase):
   def test_guild_before_anyone_played(self):
     html = website.build_guild(WORLD, [], DAY, game.new_guild())
     self.assertIn('<span class="open">受付中</span>', html)
-    self.assertNotIn("ACCEPTED</span>", html)
+    self.assertNotIn("引受済</span>", html)
     for p in (WORLD["places"][t] for t in WORLD["towns"]):
       self.assertIn(p["name"], html)
 
@@ -660,7 +667,6 @@ class SiteTest(unittest.TestCase):
     for html in (
       website.build_ranking(WORLD, [(hero, state)], DAY),
       website.build_hero(WORLD, hero, state),
-      website.build_map(WORLD, [(hero, state)], DAY),
     ):
       self.assertNotIn("<b>&悪", html)
       self.assertIn("&lt;b&gt;&amp;悪", html)
