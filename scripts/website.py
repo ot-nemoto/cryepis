@@ -593,7 +593,7 @@ def build_items(world: dict) -> str:
     "<h2>武具一覧</h2>",
     "" if world["season"].get("rare_drops", True) else '<p class="note">今はレア（★★ 以上）の配布を止めています。</p>',
     (
-      '<p class="note">★★ 以上の装備には、町の鍛冶屋でスキルを付けられる（'
+      '<p class="note">★★ 以上の装備には、町の鍛冶屋で追加スキルを付けられる（'
       + escape("・".join(f"{game.rarity_mark(world, r)} {p}文" for r, p in world["skill_prices"].items()))
       + "。くわしくは手引きの「装備のスキル」）</p>"
       if world.get("skill_prices")
@@ -606,11 +606,13 @@ def build_items(world: dict) -> str:
     trs = []
     for r in rows[slot]:
       it = r["item"]
+      fixed = world.get("skills", {}).get(it.get("fixed_skill"))
       how = "".join(town_pill(world, t) for t in r["towns"] or r["shops"]) or "-"  # レアは依頼を出す町、ほかは店
       trs.append(
         f'<tr data-f="{it["rarity"]}"><td class="mark">{escape(game.rarity_mark(world, it["rarity"]))}</td>'
         f"<td>{escape(it['name'])}"
         + (f'<br><span class="note">{escape(it["text"])}</span>' if it.get("text") else "")
+        + (f'<br><span class="note">固定スキル {escape(fixed["name"])}</span>' if fixed else "")
         + "</td>"
         + element_cell(world, it.get("element"))
         + "".join(stat_cell(it.get(k, 0)) for k, _ in ITEM_STATS)
@@ -950,10 +952,11 @@ def skill_cards(world: dict, table) -> list[tuple[str, str]]:
   prices = world.get("skill_prices") or {}
   price_text = "・".join(f"{game.rarity_mark(world, r)} {p}文" for r, p in prices.items())
   body = (
-    f"<p>スキルは {escape(game.rarity_mark(world, next(iter(prices), 'rare')))} 以上の装備に、町の鍛冶屋で付けられる"
+    f"<p>追加スキルは {escape(game.rarity_mark(world, next(iter(prices), 'rare')))} 以上の装備に、町の鍛冶屋で付けられる"
     f"（代金 {escape(price_text)}。1 日 1 回まで、行動力は使わない）。部位ごとのスキルからランダムで 1 つ付き、"
     "持っている装備を ★ の多い順に見て、性格の優先スキルの付いていない最初の装備に付ける（優先スキルが付いた装備は、もう変えない）。スキルは点数（武具の強さ）には入らない。"
-    "★★★ 以上の固定スキルは、まだない</p>"
+    "★★★ 武具の固定スキルは武具一覧に載っている。固定スキルと追加スキルは同時に効き、"
+    "追加スキルは固有の固定スキルを除いて抽選する。主の武具には入手時から追加スキルが付いている。</p>"
   )
   for slot in W.SLOTS:
     rows = [
@@ -1266,7 +1269,7 @@ def build_guide(world: dict) -> str:
       + table(("能力", "+1 あたり", "1 点になる量"), weight_rows)
       + '<h4 class="sub">珍しさごとの点数</h4>'
       + table(("珍しさ", "点数の上限", "属性", "固定スキル", "追加スキル"), rarity_rows)
-      + '<p class="note">固定スキルの列は予定の枠数。追加スキルの価格は鍛冶屋で1回付けるときの代金。</p>'
+      + '<p class="note">★★★★の固定スキルは予定枠。追加スキルの価格は鍛冶屋で1回付けるときの代金。</p>'
       + f'<p class="note">{escape(example)}。もののふは ★ の多い武具を装備し（★ が同じなら点数の高いもの。'
       "それも同じなら、特性と性格で選ぶ。もののふの性格の「同じ点数の装備」）、店でもその順に買う（同じ強さの品は買い直さない）。"
       "スキルは点数に入らない</p>",

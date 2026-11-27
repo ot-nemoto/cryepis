@@ -968,6 +968,7 @@ def _check_monsters(c: _Check, area_ids: set | None):
 def _check_items(c: _Check):
   """items.json の rarities と武具（スロット・能力・属性・町・値段）。"""
   err, places, items, rarities, opened, elements = c.err, c.places, c.items, c.rarities, c.opened, c.elements
+  skills = _index(c.raw.get("skills"))
   # items.json
   if not rarities or len(set(rarities)) != len(rarities) or NONE in rarities or COMMON not in rarities:
     err(f"items.json: rarities は重複のない一覧にし、{COMMON} を入れてください（none は使えません）")
@@ -994,6 +995,14 @@ def _check_items(c: _Check):
       it.get("slot") not in ELEMENT_SLOTS or not isinstance(it["element"], str) or it["element"] not in elements
     ):
       err(f"{where}: element は武器と御守だけに、{'/'.join(elements)} のどれかで書いてください")
+    if "fixed_skill" in it:
+      fixed = it["fixed_skill"]
+      if it.get("rarity") not in rarities[2:]:
+        err(f"{where}: fixed_skill は ★★★ 以上の武具に書いてください")
+      if not isinstance(fixed, str) or fixed not in skills or skills[fixed].get("slot") != it.get("slot"):
+        err(f"{where}: fixed_skill は武具の部位に合うスキルの ID にしてください")
+      elif not any(sid != fixed and sk.get("slot") == it.get("slot") for sid, sk in skills.items()):
+        err(f"{where}: fixed_skill と異なる同じ部位の追加スキルを1つ以上用意してください")
     if "drop_level" in it:
       err(f"{where}: drop_level はもう使いません（出やすさはドロップ表の重みで決める）")
     towns = it.get("towns")

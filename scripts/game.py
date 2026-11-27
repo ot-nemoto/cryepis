@@ -419,6 +419,25 @@ def carry_limit(world: dict, slot: str) -> int:
   return world["season"].get("carry", {}).get(slot, 99)
 
 
+def equipment_skills(world: dict, instance: dict) -> tuple[str | None, str | None]:
+  """装備1つの固定スキルと追加スキル。以前の追加枠に同じスキルがあれば、固定枠で効く。"""
+  fixed = world["items"][instance["id"]].get("fixed_skill")
+  extra = instance.get("skill")
+  return fixed, extra if extra != fixed else None
+
+
+def equipment_skill_note(world: dict, instance: dict) -> str:
+  """日誌と武具の表示に使う、装備ごとのスキルの札。"""
+  skills = world.get("skills") or {}
+  fixed_id, extra_id = equipment_skills(world, instance)
+  fixed, extra = skills.get(fixed_id), skills.get(extra_id)
+  text = f"〔固定 {fixed['name']}〕" if fixed else ""
+  if extra:
+    label = "追加 " if fixed else ""
+    text += f"〔{label}{extra['name']}〕"
+  return text
+
+
 def gear_stat(world: dict, state: dict | None) -> str | None:
   """同じ点数の装備を選ぶときに重んじる能力（#244）。特性の得意（strong_stat）・不得意（weak_stat）を、
   性格の扱い方（gear: grow＝伸ばす・cover＝補う・balance＝バランス）で選ぶ。なければ None（バランス）。"""
@@ -445,7 +464,8 @@ def worn(world: dict, state: dict) -> dict[str, dict | None]:
   best_key: dict[str, tuple] = {}
   for x in sorted(carried(state), key=lambda x: (x["id"], x.get("skill") or "")):
     item = world["items"][x["id"]]
-    k = (gear_key(world, item, state), -prefer_index(world, state, x))
+    fixed, extra = equipment_skills(world, x)
+    k = (gear_key(world, item, state), -prefer_index(world, state, x), bool(fixed and extra))
     if best[item["slot"]] is None or k > best_key[item["slot"]]:
       best[item["slot"]], best_key[item["slot"]] = x, k
   return best
@@ -948,24 +968,21 @@ def quest_text(world: dict, quest: dict) -> str:
 
 
 # ---- スキルの順位（#235） ---------------------------------------------------------------
-def counter_share(world: dict, sk: dict, monsters: list[dict]) -> float:
-  """対策スキル sk が効く物の怪の割合（monsters の中で）。対策でなければ 0。"""
-  counter = sk.get("counter")
-  if not counter or not monsters:
-    return 0.0
-  hit = sum(
-    1
-    for m in monsters
-    if counter.get("trait") == m.get("trait") or (counter.get("element") is True and bool(m.get("element")))
+def counters_monster(sk: dict | None, monster: dict) -> bool:
+  counter = sk.get("counter") if sk else None
+  if not counter:
+    return False
+  return counter.get("trait") == monster.get("trait") or (
+    counter.get("element") is True and bool(monster.get("element"))
   )
-  return hit / len(monsters)
 
 
 def prefer_index(world: dict, state: dict, x: dict) -> int:
   """装備 x のスキルが、性格の優先スキル（skill.prefer の部位の一覧）の何番目か（0 が一番）。優先スキルでなければ 99。"""
   slot = world["items"][x["id"]]["slot"]
   prefer = personality(world, state).get("skill", {}).get("prefer", {}).get(slot, [])
-  return prefer.index(x["skill"]) if x.get("skill") in prefer else 99
+  _, extra = equipment_skills(world, x)
+  return prefer.index(extra) if extra in prefer else 99
 
 
 # ---- 1 日分を進める -------------------------------------------------------------------
@@ -1045,7 +1062,7 @@ class Day:
     if not sk:
       return None
     gear = pool if pool is not None else (self.gear if self.gear is not None else self.worn_set())
-    if any(x and x.get("skill") == sid for x in gear):
+    if any(x and sid in equipment_skills(self.world, x) for x in gear):
       return sk.get("value", True)
     return None
 
@@ -1104,14 +1121,11 @@ class Day:
     return best[1], best[2], best[3], best[4]
 
   def counters(self, x: dict | None, monster: dict) -> int:
-    """装備 x のスキルが、物の怪の性質・属性に効く対策なら 1（#234）。"""
-    sk = self.world.get("skills", {}).get((x or {}).get("skill"))
-    counter = (sk or {}).get("counter")
-    if not counter:
+    """装備 x の固定・追加スキルのどちらかが、物の怪の性質・属性に効く対策なら1。"""
+    if x is None:
       return 0
-    return int(
-      counter.get("trait") == monster.get("trait") or (counter.get("element") is True and bool(monster.get("element")))
-    )
+    skills = self.world.get("skills", {})
+    return int(any(counters_monster(skills.get(sid), monster) for sid in equipment_skills(self.world, x)))
 
   def battle(self, monster: dict) -> bool:
     """勝てば True。丸薬が尽きて HP が 0 になったら False（1 人で戦う。何人かで戦うのは party_battle）。
@@ -1303,22 +1317,25 @@ class Day:
         return None  # rare もない（宝箱など、町のない抽選）なら何も出ない
     return None
 
-  def random_item_skill(self, iid: str) -> str:
-    slot = self.world["items"][iid]["slot"]
-    return self.rng.choice(sorted(sid for sid, sk in self.world["skills"].items() if sk["slot"] == slot))
+  def random_item_skill(self, iid: str) -> str | None:
+    item = self.world["items"][iid]
+    pool = sorted(
+      sid for sid, sk in self.world["skills"].items() if sk["slot"] == item["slot"] and sid != item.get("fixed_skill")
+    )
+    return self.rng.choice(pool) if pool else None
 
   def obtain(self, iid: str, source: str, skill: str | None = None) -> None:
     item = self.world["items"][iid]
     before = equipment(self.world, self.state)[item["slot"]]
-    carried(self.state).append({"id": iid, "skill": skill})
+    instance = {"id": iid, "skill": skill}
+    carried(self.state).append(instance)
     mark = rarity_mark(self.world, item["rarity"])
     if item["rarity"] != "common":
       self.state["season_stats"]["rares"].append(iid)
     text = f"{source}{mark}「{item['name']}」を手に入れた"
     if equipment(self.world, self.state)[item["slot"]] == iid and before != iid:
       text += "（装備した）"
-    if skill:
-      text += f"〔{self.world['skills'][skill]['name']}〕"
+    text += equipment_skill_note(self.world, instance)
     self.log(text + ("！" if item["rarity"] != W.COMMON else ""))
 
   def obtain_stones(self, town: str, count: int, source: str) -> None:
@@ -1361,7 +1378,9 @@ class Day:
         strongest = max(mine, key=lambda x: (gear_key(self.world, items[x["id"]], state), x["id"]))
         mine = [strongest] + [x for x in mine if x is not strongest]
       for x in mine:  # 同じ装備のスキルなしは、2 つ目から手放す（持ち物・蔵が増え続けないように）
-        if not x.get("skill") and any(y["id"] == x["id"] and not y.get("skill") for y in keep + store):
+        if not equipment_skills(self.world, x)[1] and any(
+          y["id"] == x["id"] and not equipment_skills(self.world, y)[1] for y in keep + store
+        ):
           dropped += 1
         elif sum(items[y["id"]]["slot"] == slot for y in keep) < n:
           keep.append(x)
@@ -1378,8 +1397,7 @@ class Day:
     """持っておく装備の順（大きいほうを先に持つ）: 依頼の物の怪（foes）に効く対策スキルの割合（依頼があるときだけ）
     → 弱点を突ける属性の割合（依頼がなければ開放した道の物の怪で見る）（属性の武器・御守を蔵にしまい込まない）→ 性格の優先スキル
     （prefer の前のほうが先）→ 装備の優先順（gear_key）→ ID。"""
-    sk = (self.world.get("skills") or {}).get(x.get("skill"))
-    hit = counter_share(self.world, sk, foes) if sk and foes else 0.0  # 対策は、依頼の物の怪があるときだけ
+    hit = sum(self.counters(x, m) for m in foes) / len(foes) if foes else 0.0
     element = self.world["items"][x["id"]].get("element")
     area = foes or self.region_foes()  # 属性は、依頼がなければ開放した道の物の怪で見る（属性の武器をしまい込まない）
     weak = (
@@ -1388,7 +1406,15 @@ class Day:
       else 0.0
     )
     want = -prefer_index(self.world, self.state, x)
-    return (hit, weak, want, gear_key(self.world, self.world["items"][x["id"]], self.state), x["id"])
+    fixed, extra = equipment_skills(self.world, x)
+    return (
+      hit,
+      weak,
+      want,
+      gear_key(self.world, self.world["items"][x["id"]], self.state),
+      bool(fixed and extra),
+      x["id"],
+    )
 
   def region_foes(self) -> list[dict]:
     """開放した道に出る物の怪（依頼のないときの入れ替えに使う）。"""
@@ -1435,11 +1461,10 @@ class Day:
       reverse=True,
     )
     foes = self.quest_foes(self.state["quest"])
-    skills_of = self.world.get("skills") or {}
 
-    def needed(x: dict) -> bool:  # 今の依頼の物の怪に効く対策スキルは、付け直さない
-      sk = skills_of.get(x.get("skill"))
-      return bool(sk and foes and counter_share(self.world, sk, foes) > 0)
+    def needed(x: dict) -> bool:  # 今の依頼に効く追加スキルは、付け直さない
+      _, extra = equipment_skills(self.world, x)
+      return any(counters_monster(skills.get(extra), monster) for monster in foes)
 
     target = next((x for x in able if prefer_index(self.world, self.state, x) == 99 and not needed(x)), None)
     if target is None:
@@ -1449,9 +1474,12 @@ class Day:
     spare = self.hero["gold"] - self.price(self.cfg["inn"]["price"]) - self.price(potion["price"]) * potion["keep"]
     if spare < cost * cfg["margin"]:
       return
+    extra = self.random_item_skill(target["id"])
+    if extra is None:
+      return
     self.hero["gold"] -= cost
     self.smithed = True
-    target["skill"] = self.random_item_skill(target["id"])
+    target["skill"] = extra
     star = "（優先スキル）" if prefer_index(self.world, self.state, target) < 99 else ""
     self.log(
       f"{self.world['places'][town]['name']}の鍛冶屋で{items[target['id']]['name']}にスキルを付けた"

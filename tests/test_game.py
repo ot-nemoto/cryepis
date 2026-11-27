@@ -906,9 +906,11 @@ class PartyQuestTest(unittest.TestCase):
             item = self.world["items"][obtained["id"]]
             self.assertEqual(item["rarity"], "epic")
             self.assertIn(town, item["towns"])
-            skill = obtained["skill"]
+            fixed, skill = G.equipment_skills(self.world, obtained)
+            self.assertEqual(fixed, item["fixed_skill"])
             if kind == "boss":
               self.assertEqual(self.world["skills"][skill]["slot"], item["slot"])
+              self.assertNotEqual(obtained["skill"], fixed)
             else:
               self.assertIsNone(skill)
 
@@ -2499,6 +2501,37 @@ class SkillTest(unittest.TestCase):
     armored = dict(WORLD["monsters"]["wild_dog"], trait="armored", spd=6, **{"def": 2})
     iid, *_ = day_of(state).pick_weapon(armored, W.trait_effect(armored)["guard"])
     self.assertEqual(iid, "iron_axe")
+
+  def test_fixed_and_additional_skills_both_apply(self):
+    state = with_personality("brave")
+    state["inventory"] = gear(
+      ("cross_spear", "crit_art"),
+      ("iron_face_guard", "focus"),
+      ("yamabushi_robe", None),
+      ("road_guard_charm", "haggle"),
+    )
+    day = day_of(state)
+    armored = WORLD["monsters"]["rock_golem"]
+    equipment = day.ready(armored, W.trait_effect(armored))
+    self.assertEqual((equipment["pierce"], equipment["mult"], equipment["divisor"]), (1.1, 4, 120))
+    self.assertTrue(day.skill("insight"))
+    self.assertEqual(day.skill("second_wind"), 0.05)
+    day.gear = None
+    self.assertEqual(day.event_weights(False)["battle"], WORLD["season"]["road_events"]["battle"] * 0.75)
+    self.assertEqual(day.price(100), 90)
+
+  def test_smith_excludes_fixed_skill_and_fills_old_duplicate_slot(self):
+    state = with_personality("brave")
+    state["hero"]["gold"] = 10_000
+    state["inventory"] = gear(("cross_spear", "pierce"))
+    day = day_of(state)
+    obtained = state["inventory"][0]
+    self.assertEqual(G.equipment_skills(WORLD, obtained), ("pierce", None))
+    with mock.patch.object(day.rng, "choice", return_value="combo") as choose:
+      day.smith(TOWN)
+    self.assertNotIn("pierce", choose.call_args.args[0])
+    self.assertEqual(G.equipment_skills(WORLD, obtained), ("pierce", "combo"))
+    self.assertTrue(day.smithed)
 
   def test_money_and_travel_skills(self):
     state = with_personality("brave")

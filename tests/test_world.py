@@ -411,6 +411,13 @@ class ValidateTest(unittest.TestCase):
   def test_drop_level_is_no_longer_used(self):
     self.assertError(lambda r: r["items"][5].update(drop_level=5), ["drop_level"])
 
+  def test_fixed_skills_belong_to_the_same_slot_and_require_epic_rarity(self):
+    def assign(raw, iid, skill):
+      next(item for item in raw["items"] if item["id"] == iid)["fixed_skill"] = skill
+
+    self.assertError(lambda r: assign(r, "cross_spear", "focus"), ["cross_spear", "fixed_skill", "部位"])
+    self.assertError(lambda r: assign(r, "steel_sword", "pierce"), ["steel_sword", "fixed_skill", "★★★"])
+
   def test_rare_items_need_quest_towns(self):
     def charm(raw):
       return next(i for i in raw["items"] if i["id"] == "crimson_grass_charm")
