@@ -42,10 +42,10 @@ ruff format .                          # フォーマッター（インデント
 ## ネタを追加するとき
 
 1. `scripts/` にスクリプトを、`tests/` にテストを追加する（Gist の更新は `common.update_gist` を使い回せる）
-2. ネタごとに `.github/workflows/` に workflow を作る（`hero-adventure.yml` を参考にする）
+2. ネタごとに `.github/workflows/` に workflow を作る（`master-adventure.yml` を参考にする）
    - 最初に Test ステップ（`python -m unittest discover -s tests`）を置く
    - `.state/` に書くなら `permissions: contents: write` とコミットのステップを用意する。
-     keepalive（`.state/last-run`）はどれか 1 つの毎日の workflow で更新すれば足りる（今は `hero-adventure.yml`）
+     keepalive（`.state/last-run`）はどれか 1 つの毎日の workflow で更新すれば足りる（今は `master-adventure.yml`）
 3. public Gist を作り（ファイルは 1 つ）、ID を管理するしくみ（`.state/` のファイルなど）を用意して Pin する
 4. ドキュメントを更新する: この README の「ネタ一覧」とネタごとの節、docs/SETUP.md（Gist・Variable）、
    docs/DATA_FLOW.md（図・ファイルの表）、`.state/` に書く場合は docs/STATE_FORMAT.md（データ形式）
@@ -189,7 +189,7 @@ HP ██████████ 117/123  攻33 防16  1587文
 | `.state/board.json` | 番付の Gist の ID と URL |
 | `.state/guild.json` | 町ごとの口入れ屋の高札（日をまたいで残る。受付中・受注中・達成・失敗） |
 | `.state/heroes/<id>.json` | もののふごとの状態・持ち物・日誌・シーズンの記録（形式は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md)） |
-| `.github/workflows/hero-adventure.yml` | 毎日 JST 7:17 に rpg.py を動かし（番付の Gist を更新）、`.state/` と `heroes/` をコミットする |
+| `.github/workflows/master-adventure.yml` | 毎日 JST 7:17 に rpg.py を動かし（番付の Gist を更新）、`.state/` と `heroes/` をコミットする |
 | `.github/workflows/new-game.yml` / `retire-hero.yml` | もののふの追加・引退（手動実行） |
 | `.github/workflows/pages.yml` | CI（Ruff のリンター・フォーマット、テスト）と、サイトの公開。PR では CI だけ、master への push と毎日の実行・もののふの登録・引退のあとは CI が通ったら（CI と公開は同じコミットで行う） website.py でサイトを書き出して GitHub Pages に公開する。公開（deploy-pages）が一時的に失敗したら、30 秒待って 1 回だけやり直す（Settings → Pages の Source は「GitHub Actions」） |
 
