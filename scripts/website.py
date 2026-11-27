@@ -1529,13 +1529,16 @@ def main() -> int:
   ap.add_argument("--date", help="表示する日付（既定はもののふを最後に進めた日。まだ誰も進めていなければ今日の JST）")
   ap.add_argument("--training-cache", type=Path, help="調練結果を再利用するファイル")
   a = ap.parse_args()
-  check_out(Path(a.out))
+  out = Path(a.out)
+  check_out(out)
+  if a.training_cache and a.training_cache.resolve().is_relative_to(out.resolve()):
+    ap.error("--training-cache は出力先のディレクトリの外に指定してください")
   world = W.load_world()
   entries = store.current_entries(world)
   today = date.fromisoformat(a.date) if a.date else shown_day(entries)
   retired = store.current_entries(world, retired=True)
   report = training.cached_report(world, a.training_cache)
-  written = write_site(world, entries, today, store.load_guild(), Path(a.out), retired, training_report=report)
+  written = write_site(world, entries, today, store.load_guild(), out, retired, training_report=report)
   print(f"{a.out} に {len(written)} ファイルを書き出しました")
   return 0
 

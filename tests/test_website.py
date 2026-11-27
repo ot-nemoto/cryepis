@@ -111,9 +111,20 @@ class SiteTest(unittest.TestCase):
       self.assertEqual(training.cached_report(WORLD, path), expected)
       self.assertEqual(training.cached_report(WORLD, path), expected)
       self.assertEqual(build.call_count, 1)
-      with mock.patch.object(training, "cache_key", return_value="different"):
-        self.assertEqual(training.cached_report(WORLD, path), expected)
+      changed = copy.deepcopy(WORLD)
+      changed["skills"]["pierce"]["value"] = 1.2
+      self.assertEqual(training.cached_report(changed, path), expected)
       self.assertEqual(build.call_count, 2)
+
+  def test_site_rejects_a_training_cache_inside_the_output(self):
+    cache = self.out / "training.json"
+    with (
+      mock.patch.object(sys, "argv", ["website.py", str(self.out), "--training-cache", str(cache)]),
+      mock.patch.object(training, "cached_report") as load,
+      self.assertRaises(SystemExit),
+    ):
+      website.main()
+    load.assert_not_called()
 
   def test_out_dir_is_rebuilt(self):
     website.write_site(WORLD, [], DAY, {}, self.out)

@@ -7,12 +7,15 @@ import hashlib
 import json
 import random
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from datetime import date
+from functools import partial
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import common
 import game
+import world as W
 
 DAY = date(2026, 12, 1)
 
@@ -101,7 +104,8 @@ SKILL_CASES = {
 }
 
 
-def measure_opponent(world: dict, mid: str, level: int, party: int, trials: int, personalities: list[str]) -> dict:
+def measure_opponent(target: tuple[str, int, int], *, world: dict, trials: int, personalities: list[str]) -> dict:
+  mid, level, party = target
   monster = world["monsters"][mid]
 
   def wins(gear: tuple, skill: str | None = None, carriers: int = 0) -> int:
@@ -128,15 +132,17 @@ def measure_opponent(world: dict, mid: str, level: int, party: int, trials: int,
 def build_report(world: dict, trials: int = TRIALS) -> dict:
   """既存の戦闘処理で調練を試し、勝利数と比較条件を返す。"""
   personalities = sorted(world["season"]["personalities"])
-  opponents = [
-    measure_opponent(world, mid, level, party, trials, personalities)
-    for mid, level, party in TARGETS
-    if mid in world["monsters"] and level <= world["season"]["max_level"]
-  ]
+  targets = [t for t in TARGETS if t[0] in world["monsters"] and t[1] <= world["season"]["max_level"]]
+  measure = partial(measure_opponent, world=world, trials=trials, personalities=personalities)
+  if trials < TRIALS or len(targets) < 2:
+    opponents = list(map(measure, targets))
+  else:
+    with ProcessPoolExecutor(max_workers=len(targets)) as pool:
+      opponents = list(pool.map(measure, targets))
   return {"trials": trials, "trait": TRAIT, "potions": POTIONS, "opponents": opponents}
 
 
-def cache_key() -> str:
+def cache_key(world: dict) -> str:
   """戦闘・世界・検証条件の同じ結果だけを再利用する。"""
   root = common.ROOT
   inputs = [root / "scripts" / f"{stem}.py" for stem in ("common", "game", "training", "world")] + sorted(
@@ -146,13 +152,15 @@ def cache_key() -> str:
   for path in inputs:
     key.update(path.name.encode())
     key.update(path.read_bytes())
+  battle_data = ("season", "starts", "monsters", "traits", "elements", "rarities", "items", "skills")
+  key.update(json.dumps({name: world[name] for name in battle_data}, sort_keys=True).encode())
   return f"cryepis-training-{key.hexdigest()}"
 
 
 def cached_report(world: dict, path: Path | None = None) -> dict:
   if path is None:
     return build_report(world)
-  key = cache_key()
+  key = cache_key(world)
   try:
     data = json.loads(path.read_text(encoding="utf-8"))
   except (FileNotFoundError, UnicodeDecodeError, json.JSONDecodeError):
@@ -170,4 +178,4 @@ def cached_report(world: dict, path: Path | None = None) -> dict:
 
 
 if __name__ == "__main__":
-  print(cache_key())
+  print(cache_key(W.load_world()))

@@ -2493,6 +2493,13 @@ class SkillTest(unittest.TestCase):
     self.assertEqual(damage.call_args.args[1], 41)
     self.assertIsNone(day.ready(dict(armored, trait=None), body)["pierce"])
 
+  def test_weapons_with_pierce_are_compared_by_damage(self):
+    state = with_personality("brave")
+    state["inventory"] = gear(("iron_sword", "pierce"), ("iron_axe", None))
+    armored = dict(WORLD["monsters"]["wild_dog"], trait="armored", spd=6, **{"def": 2})
+    iid, *_ = day_of(state).pick_weapon(armored, W.trait_effect(armored)["guard"])
+    self.assertEqual(iid, "iron_axe")
+
   def test_money_and_travel_skills(self):
     state = with_personality("brave")
     state["inventory"] = gear(("lifeblood_charm", "haggle"))

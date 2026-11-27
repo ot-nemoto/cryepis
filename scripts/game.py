@@ -1097,7 +1097,8 @@ class Day:
         pierce = self.skill("pierce", [w]) if monster.get("trait") == "armored" else None
         crits = 1 + (mult - 1) * s["dex"] / divisor
         damage = max(1, s["atk"] - guard // 2) * rate * hits * crits * (pierce or 1)
-        key = (self.counters(w, monster) + self.counters(acc, monster), damage, acc is usual_acc, w is usual_wpn)
+        weapon_counter = 0 if pierce else self.counters(w, monster)
+        key = (weapon_counter + self.counters(acc, monster), damage, acc is usual_acc, w is usual_wpn)
         if best is None or key > best[0]:
           best = (key, w, rate, s, acc)
     return best[1], best[2], best[3], best[4]
