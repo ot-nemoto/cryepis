@@ -142,7 +142,9 @@ def build_board(world: dict, entries: list[tuple[dict, dict]], today: date) -> s
 
   detail = ["", f"── シーズン{season}（{first}〜{last}）──"]
   if site_url():
-    detail.append(f"サイト「クリエピス戦記」（絵図・番付・もののふ・町・口入れ屋・武具・物の怪・手引き）: {site_url()}")
+    detail.append(
+      f"サイト「{common.SITE_TITLE}」（絵図・番付・もののふ・町・口入れ屋・武具・物の怪・手引き）: {site_url()}"
+    )
   for title, _, key, value, unit in view.RANKINGS:
     detail += ["", f"── {title} ──"]
     detail += [

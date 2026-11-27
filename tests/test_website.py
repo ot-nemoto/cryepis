@@ -355,7 +355,11 @@ class SiteTest(unittest.TestCase):
     """ホームはなくして、最初のページ（index.html）は絵図（#261）。"""
     entries, _, today = party(2, 2)
     html = website.build_map(WORLD, entries, today)
-    self.assertIn("<title>絵図 | クリエピス戦記</title>", html)
+    self.assertIn("<title>絵図 | もののふ道中</title>", html)
+    self.assertIn(
+      '<h1><a href="index.html">もののふ道中 <span class="site-title-en" lang="en">Warriors on the Road</span></a></h1>',
+      html,
+    )
     self.assertIn('<a href="index.html" class="on">絵図</a><a href="ranking.html">番付</a>', html)  # メニューの最初
     self.assertIn("<h2>世界の絵図</h2>", html)
     self.assertNotIn("ホーム", html)
@@ -672,9 +676,11 @@ class SiteTest(unittest.TestCase):
     self.assertIn(escape(gear), website.build_hero(world, hero, state))
 
   def test_site_url_only_in_actions(self):
-    with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "Owner/cryepis"}, clear=True):
-      self.assertEqual(rpg.site_url(), "https://owner.github.io/cryepis/")
-      self.assertIn("https://owner.github.io/cryepis/", rpg.build_board(WORLD, [], DAY))
+    with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "Owner/warriors-road"}, clear=True):
+      self.assertEqual(rpg.site_url(), "https://owner.github.io/warriors-road/")
+      board = rpg.build_board(WORLD, [], DAY)
+      self.assertIn("https://owner.github.io/warriors-road/", board)
+      self.assertIn("サイト「もののふ道中」", board)
     with mock.patch.dict("os.environ", {}, clear=True):
       self.assertIsNone(rpg.site_url())
 
