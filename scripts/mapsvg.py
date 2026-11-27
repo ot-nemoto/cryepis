@@ -1,4 +1,4 @@
-"""世界の MAP を SVG の地図画像にする（標準ライブラリだけで描く）。
+"""世界の地図を SVG 画像にする（標準ライブラリだけで描く）。
 
 world/map.json の layout（大きさとベースの地図）と、場所ごとの pos（座標）、道ごとの path（線）を使う。
 layout.background にベースの地図（world/ の中の画像）があれば一番下に敷く。
@@ -138,7 +138,7 @@ def place_title(p: dict) -> str:
   """マウスを乗せたときに出す、場所の説明（ブラウザで開いたとき）。"""
   if p["type"] == "town":
     return f"{p['name']}（{p.get('alias', '')}）{p.get('region', '')}"
-  return f"{p['name']}（霊場・まだ入れない）{p.get('region', '')}"
+  return f"{p['name']}（霊場）{p.get('region', '')}"
 
 
 def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) -> str | None:
@@ -234,7 +234,7 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
     out += grid_lines(ox, oy, width, height)
 
   # 見出しと凡例
-  out.append('<text x="24" y="38" font-size="24" font-weight="bold" fill="#3f2f22">世界の MAP</text>')
+  out.append('<text x="24" y="38" font-size="24" font-weight="bold" fill="#3f2f22">街道と霊場</text>')
   out.append('<text x="24" y="60" font-size="13" fill="#6b5a48">道の上の数字は、移動にかかる行動回数です</text>')
   ly = canvas_h - 22
   legend = [
@@ -243,18 +243,21 @@ def render(world: dict, entries: list[tuple[dict, dict]], grid: bool = False) ->
       f'<path d="M100,{ly - 16} L110,{ly - 5} L100,{ly + 6} L90,{ly - 5} Z" fill="#3a1414" stroke="#e8c070" '
       'stroke-width="2"/>',
       118,
-      "霊場（まだ入れない）",
+      "霊場",
     ),
-    (f'<path d="M290,{ly - 5} H340" fill="none" {ROAD_STYLE["land"]}/>', 348, "陸路"),
-    (f'<path d="M400,{ly - 5} H450" fill="none" {ROAD_STYLE["sea"]}/>', 458, "航路"),
-    (f'<path d="M510,{ly - 5} H560" fill="none" {ROAD_STYLE["trail"]}/>', 568, "霊場への道"),
-    (badge(700, ly - 5, 3, "land", "legend"), 716, "移動にかかる行動回数"),
-    (
-      f'<circle cx="890" cy="{ly - 5}" r="9" fill="none" stroke="#dc2626" stroke-width="3"/>',
-      906,
-      "もののふがいる場所",
-    ),
+    (f'<path d="M180,{ly - 5} H230" fill="none" {ROAD_STYLE["land"]}/>', 238, "陸路"),
+    (f'<path d="M290,{ly - 5} H340" fill="none" {ROAD_STYLE["sea"]}/>', 348, "航路"),
+    (f'<path d="M400,{ly - 5} H450" fill="none" {ROAD_STYLE["trail"]}/>', 458, "霊場への道"),
+    (badge(590, ly - 5, 3, "land", "legend"), 606, "移動にかかる行動回数"),
   ]
+  if here:
+    legend.append(
+      (
+        f'<circle cx="780" cy="{ly - 5}" r="9" fill="none" stroke="#dc2626" stroke-width="3"/>',
+        796,
+        "もののふがいる場所",
+      )
+    )
   for shape, tx, label in legend:
     out.append(shape)
     out.append(f'<text x="{tx}" y="{ly}" font-size="13" fill="#3f2f22">{escape(label)}</text>')
