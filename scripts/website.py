@@ -434,9 +434,7 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
   ):
     # まだ誰も進めていない・その日の高札になっていない: その日の朝の高札を見せる（保存はしない）
     guild = copy.deepcopy(guild) if guild.get("season") == season else game.new_guild()
-    guild["levels"] = sorted(
-      st["hero"]["level"] for _, st in entries
-    )  # 毎日の実行と同じく、もののふたちの Lv で抽選する
+    guild["levels"] = game.town_levels(st for _, st in entries)  # 毎日の実行と同じく、町ごとの居場所と Lv で抽選する
     game.refresh_guild(world, guild, today, season)
   places = world["places"]
 
@@ -454,15 +452,15 @@ def build_guild(world: dict, entries: list[tuple[dict, dict]], today: date, guil
       rows.append(
         f'<tr data-f="{e["rank"]}"><td class="mark">{escape(mark)}</td><td>{escape(rest)}'
         + "".join(f'<div class="note">{n}</div>' for n in notes)
-        + f'</td><td class="num">{e["cost"]}</td>'
+        + "</td>"
         f'<td class="num">{exp_text}{e["reward"]["gold"]}文</td>'
         f"<td>{guild_status(world, e, today)}</td></tr>"
       )
     return (
       f'<div class="card board" id="{escape(town)}"><h3>{escape(p.get("emoji", ""))} {name_html(p["name"], p.get("en"))}'
       f'<span class="note">（{escape(p.get("alias", ""))}・{escape(p.get("region", ""))}）</span></h3>'
-      '<div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em"><col><col style="width:4.5em">'
-      '<col style="width:6.5em"><col style="width:13em"></colgroup><tr><th></th><th>依頼</th><th class="num">行動力</th>'
+      '<div class="scroll"><table class="wide-table"><colgroup><col style="width:4.5em"><col>'
+      '<col style="width:6.5em"><col style="width:13em"></colgroup><tr><th></th><th>依頼</th>'
       '<th class="num">報酬</th><th>状態</th></tr>' + "".join(rows) + "</table></div></div>"
     )
 
@@ -1194,7 +1192,7 @@ def build_guide(world: dict) -> str:
     (
       "大物",
       "道では出会わない。町の討伐の依頼で、何人かで狙って戦う（1 人では勝てない）。依頼は、物の怪のレベル以上のもののふだけが受けられ、"
-      "受けられるもののふが人数分いる日だけ高札に出る",
+      "その日の朝に、その町に受けられるもののふが人数分いるときだけ高札に出る（道の途中のもののふは数えない）",
     ),
     (
       "主",
@@ -1382,6 +1380,23 @@ def build_guide(world: dict) -> str:
       "報酬はもらえない（それまでの戦いの経験値・お金・武具は残る）。高札の依頼は翌朝、最初の状態で受付中に戻る",
     ),
   ]
+  party_gold = world["quest_reward"]["party_gold"]
+  trip = game.HUNT_TRIP
+  cost_rows = [
+    ("配達", "依頼元の町から届け先までの、いちばん近い道のりの片道分"),
+    (
+      "討伐・大物の討伐",
+      f"町から狩り場への移動 {trip} ＋ 討伐 1 ＋ 帰り {trip} で、どの道でも 1 人 {2 * trip + 1} 行動。"
+      "何体と連戦しても討伐は 1 行動。大物の仲間待ちは別に数える",
+    ),
+    ("主の討伐", "町から霊場への山道の移動 ＋ 討伐 1 ＋ 帰りの山道。仲間待ちは別に数える"),
+    ("受注・報告", "行動回数を使わない"),
+    (
+      "大物・主の達成報酬",
+      f"★や行動回数によらず、大物 {party_gold['elite']}文・主 {party_gold['boss']}文を参加した全員が受け取る",
+    ),
+  ]
+  cards.append(("依頼の行動回数", table(("依頼", "行動回数"), cost_rows)))
   cards.append(("依頼の進め方", table(("場面", "どうなるか"), quest_rows)))
   cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))
   cards.append(("物の怪の経験値とお金", table(("項目", "決め方"), reward_rows)))

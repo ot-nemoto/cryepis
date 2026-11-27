@@ -196,6 +196,8 @@ def load_state(world: dict, path: Path, hero_id: str = "h1", name: str = "もの
   quest = state["quest"]
   if quest and not quest_ok(world, quest):
     state["quest"] = None
+    if quest.get("name"):  # 黙って消さず、次に進めた日の日誌に残す
+      state.setdefault("inbox", []).append(f"受けていた「{quest['name']}」は、決まりが変わったので取り下げられた")
   if state["quest"]:
     quest = state["quest"]
     renew_quest_texts(world, quest)
@@ -310,21 +312,28 @@ def boss_town(world: dict, monster: dict) -> str | None:
 
 def elite_ok(world: dict, quest: dict) -> bool:
   """大物・主の討伐が、今の決まりで作られた依頼か（受けられるレベルが物の怪のレベルで、倒す数が町の依頼と同じで、
-  人数が今の決まり）。決まりを変える前に貼られた・受けられた依頼は捨てる。大物・主でなければ True。"""
+  人数・★・必要な行動力・達成報酬が今の決まり）。決まりを変える前に貼られた・受けられた依頼は捨てる
+  （#297 で ★・行動力・報酬を変えた雪女の依頼など）。大物・主でなければ True。"""
   target = world["monsters"].get(quest.get("monster"), {})
   if not target.get("elite") and not target.get("boss"):
     return True
   if target.get("boss"):
-    count = 1
+    count, rank = 1, len(world["quest_ranks"])
     ok = quest.get("place") == target["boss"] and quest.get("report") == boss_town(world, target)
   else:
     template = next(
       (q for q in world["town_quests"].get(quest.get("town"), []) if q["id"] == quest.get("template")), None
     )
-    count = template["count"] if template else None
-    ok = template is not None
+    count, rank = (template["count"], template["rank"]) if template else (None, None)
+    ok = template is not None and (quest.get("report"), quest.get("place")) in world["roads"]
+  if not ok:
+    return False
+  cost = sum(n for _, n in hunt_steps(world, quest["report"], quest["place"]))
+  gold = world["quest_reward"]["party_gold"]["boss" if target.get("boss") else "elite"]
   return (
-    ok
+    quest.get("rank") == rank
+    and quest.get("cost") == cost
+    and (quest.get("reward") or {}).get("gold") == gold
     and quest.get("min_level") == target["level"]
     and quest.get("count") == count
     and quest.get("level") == [target["level"], target["level"]]
@@ -539,7 +548,8 @@ def draw_quests(
   枠ごとにレアリティ（★〜）を重みで選び、その町の依頼から選ぶ。その町に当たったレアリティの依頼がなければ
   1 つ下に落とす。町の依頼は高札に 1 度に 1 つだけ出て（exclude は高札に残っている町の依頼の ID）、
   足りない枠には共通の依頼（templates）が入る。
-  levels（もののふたちの今の Lv）を渡すと、何人かで受ける大物の依頼は、受けられるもののふが人数分いるときだけ出す（#72）。"""
+  levels（その町にいるもののふたちの今の Lv）を渡すと、何人かで受ける大物の依頼は、その町に受けられるもののふが
+  人数分いるときだけ出す（#72・#297）。"""
   ranks = world["quest_ranks"]
   rng = random.Random(f"board-{d.isoformat()}-{season}-{town}")
 
@@ -594,6 +604,16 @@ def new_guild() -> dict:
   return {"season": None, "towns": {}, "refreshed": {}}
 
 
+def town_levels(states) -> dict[str, list[int]]:
+  """町ごとの、その町にいるもののふの Lv（大物の依頼を高札に出すかの抽選に使う。#297）。
+  道の途中のもののふ（road がある）は、どの町にもいないとして数えない。別の依頼を受けているもののふは数える。"""
+  levels: dict[str, list[int]] = {}
+  for st in states:
+    if not st.get("road") and isinstance(st.get("place"), str):
+      levels.setdefault(st["place"], []).append(st["hero"]["level"])
+  return {town: sorted(lvs) for town, lvs in sorted(levels.items())}
+
+
 def last_open_day(world: dict, entry: dict) -> date:
   """受付中の依頼を受けられる最後の日（貼られた日から quest_open_days 日）。"""
   return date.fromisoformat(entry["posted"]) + timedelta(days=world["season"]["quest_open_days"] - 1)
@@ -637,7 +657,8 @@ def refresh_guild(world: dict, guild: dict, d: date, season: int, towns: list[st
       kept.append(e)
     exclude = {e["template"] for e in kept}
     slots = max(0, quests_per_day(world, town) - sum(not str(e["template"]).startswith("boss-") for e in kept))
-    new = draw_quests(world, town, d, season, slots, exclude, guild.get("levels"))
+    levels = guild.get("levels")  # 町ごとの、その町にいるもののふの Lv（ないときは人数を問わない）
+    new = draw_quests(world, town, d, season, slots, exclude, None if levels is None else levels.get(town, []))
     for mid in guild.get("awake") or []:  # 目覚めた主の依頼（高札の枠とは別に貼る）
       target = world["monsters"].get(mid, {})
       if f"boss-{mid}" not in exclude and boss_town(world, target) == town:
@@ -693,14 +714,14 @@ def release_orphans(guild: dict, states: dict[str, dict], keep: set | frozenset 
   return n
 
 
-HUNT_TRIP_MAX = 2  # 討伐の狩り場までの行動力の上限（狩り場は町の近く。道の長さの半分、最大 2）
+HUNT_TRIP = 1  # 討伐の狩り場までの行動回数（狩り場は町の近く。道の長さによらず 1。#297）
 
 
 def hunt_steps(world: dict, town: str, to: str) -> list[list]:
   """討伐の段取り: 行き（狩り場まで）→ 討伐（何体いても 1 行動で連戦）→ 帰り。[[段取り, 残りの行動力], ...]。
-  霊場（主）へは、山道の行動回数そのまま行き帰りする。"""
+  町の近くの狩り場（通常の討伐・大物）へは行き帰り 1 行動ずつ。霊場（主）へは、山道の行動回数そのまま行き帰りする。"""
   if (town, to) in world["roads"]:
-    trip = min(HUNT_TRIP_MAX, -(-world["roads"][(town, to)] // 2))
+    trip = HUNT_TRIP
   else:
     trip = next(r["distance"] for r in world["trails"] if {r["from"], r["to"]} == {town, to})
   return [["go", trip], ["hunt", 1], ["back", trip]]
@@ -708,7 +729,8 @@ def hunt_steps(world: dict, town: str, to: str) -> list[list]:
 
 def finish_quest(world: dict, quest: dict, town: str) -> dict:
   """必要な行動力と、報酬（1 行動あたりの報酬 × 必要な行動力 × レアリティの倍率）をつける（期限はない）。
-  討伐も配達も、行動力が同じなら報酬も同じ（討伐は別に、1 体ごとの戦闘の経験値とお金が入る）。"""
+  討伐も配達も、行動力が同じなら報酬も同じ（討伐は別に、1 体ごとの戦闘の経験値とお金が入る）。
+  何人かで受ける大物・主の達成報酬のお金は、★や行動力によらない決まった額（quests.json の reward の party_gold。#297）。"""
   lvl, rank = quest_level(world, quest), quest["rank"]
   base, cfg = world["quest_reward"], world["quest_ranks"][rank - 1]
   if quest["type"] == "hunt":
@@ -721,6 +743,9 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
     cost = sum(n for _, n in quest["steps"])
   else:
     cost = world["dist"][town][quest["place"]]
+  gold = round(base["gold"] * cost * cfg["reward"] * (base.get("deliver_rate", 1) if quest["type"] == "deliver" else 1))
+  if quest.get("party"):
+    gold = base["party_gold"]["boss" if target.get("boss") else "elite"]
   quest.update(
     town=town,
     progress=0,
@@ -729,9 +754,7 @@ def finish_quest(world: dict, quest: dict, town: str) -> dict:
     cost=cost,
     reward={
       "exp": round(base["exp"] * cost * cfg["reward"]),
-      "gold": round(
-        base["gold"] * cost * cfg["reward"] * (base.get("deliver_rate", 1) if quest["type"] == "deliver" else 1)
-      ),
+      "gold": gold,
       "item": None if quest.get("party") else cfg["item"],
     },
   )

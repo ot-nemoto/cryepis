@@ -247,6 +247,7 @@
   {"id": "yeti", "name": "雪女", "level": 13, "hp": 718, "atk": 40, "def": 12, "spd": 16, "dex": 30, "terrain": "snow", "trait": "fierce", "element": "ice", "elite": true},
   {"id": "rock_golem", "name": "だいだらぼっち", "level": 13, "hp": 1361, "atk": 60, "def": 10, "spd": 2, "dex": 6, "terrain": "mountain", "trait": "armored", "elite": true},
   {"id": "great_eagle", "name": "大天狗", "level": 13, "hp": 1243, "atk": 40, "def": 10, "spd": 40, "dex": 10, "terrain": "mountain", "trait": "first_strike", "element": "thunder", "elite": true},
+  {"id": "sea_monk", "name": "海坊主", "level": 13, "hp": 1160, "atk": 60, "def": 10, "spd": 12, "dex": 6, "terrain": "sea", "elite": true},
   {"id": "den_lord", "name": "酒呑童子", "level": 18, "hp": 1265, "atk": 80, "def": 12, "spd": 18, "dex": 15, "terrain": "mountain", "trait": "armored", "boss": "fuji", "text": "富士山の奥に棲む鬼の頭領。山を越えて坂東へ物の怪を送り出している"}
  ]
 }

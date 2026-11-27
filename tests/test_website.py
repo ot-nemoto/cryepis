@@ -91,7 +91,7 @@ class SiteTest(unittest.TestCase):
     self.assertIn("各条件 12 戦の勝率", html)
     self.assertIn("武具・スキルなし", html)
     names = [WORLD["monsters"][result["monster"]]["name"] for result in report["opponents"]]
-    self.assertEqual(names, ["雪女", "だいだらぼっち", "大天狗", "酒呑童子"])
+    self.assertEqual(names, ["海坊主", "大天狗", "だいだらぼっち", "雪女", "酒呑童子"])
     for name, row in zip(names, report["opponents"], strict=True):
       self.assertIn(
         f'<th scope="row">{name}</th><td class="num">Lv{row["level"]}</td>'

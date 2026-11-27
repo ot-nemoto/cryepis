@@ -305,8 +305,8 @@ def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, 
   for day in days:
     order = [hid for hid, (_, _, ds) in loaded.items() if (day in ds or actions is not None) and hid not in errors]
     random.Random(f"order-{day.isoformat()}").shuffle(order)
-    # 何人かで受ける大物の依頼は、受けられるもののふが人数分いるときだけ出す（その日の朝の Lv で数える。#72）
-    guild["levels"] = sorted(st["hero"]["level"] for hid, (_, st, _) in loaded.items() if hid not in errors)
+    # 何人かで受ける大物の依頼は、その町に受けられるもののふが人数分いるときだけ出す（その日の朝の居場所と Lv。#72・#297）
+    guild["levels"] = game.town_levels(st for hid, (_, st, _) in loaded.items() if hid not in errors)
     # 一緒に戦う仲間の状態（この日を進めるもののふだけ。ほかは進めないので保存されず、一緒に戦った結果が残らない）
     others = {hid: loaded[hid][1] for hid in order}
     for hid in order:
@@ -323,7 +323,7 @@ def advance_heroes(world: dict, loaded: dict, today: date, actions: int | None, 
           others[h].clear()
           others[h].update(st)
         others.pop(hid, None)  # 進められなかったもののふとは、もう一緒に戦わない
-  guild.pop("levels", None)  # その日の朝の Lv は保存しない
+  guild.pop("levels", None)  # その日の朝の居場所と Lv は保存しない
   return errors
 
 

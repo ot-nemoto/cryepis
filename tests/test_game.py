@@ -35,8 +35,13 @@ def day_of(state, d=START, seed="t"):
 
 
 def a_hunt(town=TOWN):
-  """town の高札から討伐の依頼を 1 つ。"""
-  return next(q for i in range(60) for q in G.board(WORLD, town, START + timedelta(days=i), 1) if q["type"] == "hunt")
+  """town の高札から、1 人で受ける討伐の依頼を 1 つ（大物は何人かで受けるので除く）。"""
+  return next(
+    q
+    for i in range(60)
+    for q in G.board(WORLD, town, START + timedelta(days=i), 1)
+    if q["type"] == "hunt" and not q.get("party")
+  )
 
 
 def common_hunt(town=TOWN, rank=1, seed=0):
@@ -49,6 +54,11 @@ def with_rares():
   """江戸に抽選確認用の epic・legendary を置いた世界。"""
   world = copy.deepcopy(WORLD)
   world["season"]["rare_drops"] = True  # レアの配布を止めていても、しくみは確かめる
+  for item in world[
+    "items"
+  ].values():  # 江戸・小田原の大物の ★★★ 武具は外す（江戸は試しの武具だけ、小田原は epic なし）
+    if item.get("rarity") == "epic" and isinstance(item.get("towns"), list):
+      item["towns"] = [t for t in item["towns"] if t not in ("edo", "odawara")]
   world["items"]["x_epic"] = {
     "id": "x_epic",
     "name": "試しの鎧",
@@ -181,11 +191,10 @@ class QuestTest(unittest.TestCase):
           self.assertIsNone(q["deadline"])
           self.assertGreater(q["cost"], 0)
           self.assertTrue(G.quest_ok(WORLD, q))
-          if q["type"] == "hunt":  # 討伐は町から出る道で、その道に出る物の怪（大物は、その道の地形の大物）
+          if q["type"] == "hunt":  # 討伐は町から出る道で、その道に出る物の怪（大物は町ごとに決まった大物）
             self.assertEqual(q["report"], town)
             target = WORLD["monsters"][q["monster"]]
-            if target.get("elite"):
-              self.assertIn(target["terrain"], WORLD["road_info"][(town, q["place"])]["terrain"])
+            if target.get("elite"):  # 大物の地形は道の地形と合わなくてよい（海坊主は海。行動回数は道によらない。#297）
               self.assertEqual(q["min_level"], target["level"])  # 物の怪のレベル以上で受けられる
             else:
               pool = [m for m, _ in WORLD["road_info"][(town, q["place"])]["monsters"]]
@@ -194,7 +203,7 @@ class QuestTest(unittest.TestCase):
 
   def test_elites_are_not_on_roads_and_need_their_level(self):
     elites = [mid for mid, m in WORLD["monsters"].items() if m.get("elite")]
-    self.assertEqual(set(elites), {"yeti", "rock_golem", "great_eagle"})
+    self.assertEqual(set(elites), {"sea_monk", "yeti", "rock_golem", "great_eagle"})
     on_roads = {m for i in WORLD["road_info"].values() for m, _ in i["monsters"]}
     self.assertFalse(on_roads & set(elites))  # 道では出会わない
     for town, quests in WORLD["town_quests"].items():  # どの大物の依頼も、物の怪のレベルから受けられる
@@ -249,6 +258,9 @@ class QuestTest(unittest.TestCase):
         x = G.make_town_quest(WORLD, q, town, START)
         rate = base["deliver_rate"] if q["type"] == "deliver" else 1  # 配達は 1 行動あたりのお金が多い
         self.assertEqual(x["reward"]["exp"], 0, q["id"])
+        if x.get("party"):  # 大物の達成報酬は、★と行動力によらない決まった額（#297）
+          self.assertEqual(x["reward"]["gold"], base["party_gold"]["elite"], q["id"])
+          continue
         self.assertEqual(x["reward"]["gold"], round(base["gold"] * x["cost"] * mult[q["rank"] - 1] * rate), q["id"])
 
   def test_hunt_rank_by_level_and_count(self):
@@ -270,9 +282,9 @@ class QuestTest(unittest.TestCase):
     self.assertEqual(G.make_quest(world, t, "edo", START, random.Random(0), 1)["rank"], 2)
 
   def test_rank_falls_back_to_what_the_town_has(self):
-    for i in range(60):  # 小田原には ★★★★ の依頼がない
-      for q in G.board(WORLD, "odawara", START + timedelta(days=i), 1):
-        self.assertLessEqual(q["rank"], 3)  # ★★★★ は作らない（WORLD・RAID 用）
+    for i in range(60):  # 町に大物を受けられるもののふがいなければ、★★★★ の大物の依頼は出ない
+      for q in G.draw_quests(WORLD, "odawara", START + timedelta(days=i), 1, 3, levels=[]):
+        self.assertLessEqual(q["rank"], 3)  # 共通の依頼では ★★★★ は作らない（★★★ に下げる）
 
   def test_hunt_report_gives_reward(self):
     state = play(1, actions=0)
@@ -634,11 +646,17 @@ class RoadTest(unittest.TestCase):
   def test_hunt_takes_go_hunt_and_back(self):
     state = play(1, actions=0)
     state["hero"].update(max_hp=999, hp=999)  # 負けないようにして、段取りどおりに進むか確かめる
-    quest = a_hunt(state["place"])
+    state.update(place="kofu", home_town="kofu")  # 甲府から出る道は、どれも 3 行動
+    quest = next(  # 長い道（3 行動）の、弱い物の怪の討伐（道の長さによらず 3 行動になるか）
+      q
+      for i in range(200)
+      for q in [common_hunt(state["place"], 1, i)]
+      if WORLD["roads"][(q["report"], q["place"])] >= 3 and WORLD["monsters"][q["monster"]]["level"] <= 2
+    )
     town, road = quest["report"], WORLD["roads"][(quest["report"], quest["place"])]
-    trip = min(G.HUNT_TRIP_MAX, -(-road // 2))
-    self.assertEqual(quest["steps"], [["go", trip], ["hunt", 1], ["back", trip]])  # 何体いても討伐は 1 行動
-    self.assertEqual(quest["cost"], 2 * trip + 1)
+    self.assertEqual(road, 3)
+    self.assertEqual(quest["steps"], [["go", 1], ["hunt", 1], ["back", 1]])  # 道の長さによらず、何体いても 3 行動
+    self.assertEqual(quest["cost"], 3)
     state["quest"] = quest
     day = day_of(state)
     target = WORLD["monsters"][quest["monster"]]["name"]
@@ -834,6 +852,89 @@ class PartyQuestTest(unittest.TestCase):
     quest["steps"] = [["hunt", 1], ["back", 2]]
     quest["away"] = 2
     state["quest"] = quest
+
+  def test_each_bando_town_has_its_own_elite(self):
+    """坂東の 4 町に固有の大物を 1 体ずつ置く。どれも ★★★★・3 行動・決まった達成報酬（#297）。"""
+    want = {"edo": "sea_monk", "odawara": "great_eagle", "kofu": "rock_golem", "nagano": "yeti"}
+    gold = self.world["quest_reward"]["party_gold"]
+    for town, mid in want.items():
+      elites = [q for q in self.world["town_quests"][town] if self.world["monsters"][q["monster"]].get("elite")]
+      self.assertEqual([q["monster"] for q in elites], [mid], town)
+      e = G.make_town_quest(self.world, elites[0], town, START)
+      self.assertEqual((e["rank"], e["cost"], e["party"]), (4, 3, 2), town)
+      self.assertEqual(e["steps"], [["go", 1], ["hunt", 1], ["back", 1]], town)
+      self.assertEqual(e["reward"]["gold"], gold["elite"], town)
+    umi = self.world["monsters"]["sea_monk"]
+    self.assertEqual(
+      (umi["name"], umi["level"], umi["hp"], umi["atk"], umi["def"], umi["spd"], umi["dex"], umi["terrain"]),
+      ("海坊主", 13, 1160, 60, 10, 12, 6, "sea"),
+    )
+    self.assertNotIn("element", umi)
+    self.assertNotIn("trait", umi)
+    for town in want:  # 大物の ★★★ 武具は、坂東の 4 町で同じ 4 種
+      self.assertEqual(
+        W.party_gear(self.world["items"], town),
+        ["cross_spear", "iron_face_guard", "road_guard_charm", "yamabushi_robe"],
+      )
+
+  def test_elite_quests_made_before_297_are_dropped(self):
+    """★・行動力・報酬の決まりを変える前（#297）に貼られた・受けられた大物の依頼は捨てる。黙って消さず日誌に残す。"""
+    q = next(q for q in self.world["town_quests"]["nagano"] if q["monster"] == "yeti")
+    e = G.make_town_quest(self.world, q, "nagano", START)
+    self.assertTrue(G.quest_ok(self.world, e))
+    old = copy.deepcopy(e) | {"rank": 2, "cost": 5, "steps": [["go", 2], ["hunt", 1], ["back", 2]]}
+    old["reward"] = dict(e["reward"], gold=80)
+    for bad in (
+      old,
+      e | {"rank": 2},
+      e | {"cost": 5},
+      e | {"reward": dict(e["reward"], gold=80)},
+      e | {"template": "nagano_4"},
+    ):
+      self.assertFalse(G.quest_ok(self.world, bad, steps=False))
+    boss = G.make_boss_quest(self.world, "den_lord", START)
+    self.assertTrue(G.quest_ok(self.world, boss))
+    self.assertFalse(G.quest_ok(self.world, boss | {"reward": dict(boss["reward"], gold=160)}))
+    state = self.hero("a")
+    state["quest"] = old
+    with tempfile.TemporaryDirectory() as tmp:
+      path = Path(tmp) / "a.json"
+      G.save_state(state, path)
+      loaded = G.load_state(self.world, path, "a")
+    self.assertIsNone(loaded["quest"])
+    self.assertEqual(loaded["inbox"], ["受けていた「吹雪の雪女」は、決まりが変わったので取り下げられた"])
+
+  def test_boss_quest_reward_is_fixed(self):
+    boss = G.make_boss_quest(self.world, "den_lord", START)
+    self.assertEqual((boss["rank"], boss["party"]), (4, 3))
+    self.assertEqual(boss["steps"], [["go", 2], ["hunt", 1], ["back", 2]])  # 霊場へは山道の行動回数で行き帰り
+    self.assertEqual(boss["cost"], 5)
+    self.assertEqual(boss["reward"]["gold"], self.world["quest_reward"]["party_gold"]["boss"])
+
+  def test_town_levels_count_only_heroes_in_the_town(self):
+    a, b, c, d = (self.hero(h, level) for h, level in (("a", 13), ("b", 14), ("c", 15), ("d", 2)))
+    b["place"] = "kofu"
+    c["road"] = {"to": "kofu", "left": 1}  # 道の途中のもののふは、どの町にも数えない
+    a["quest"] = {"type": "deliver"}  # 別の依頼を受けていても数える
+    self.assertEqual(G.town_levels([a, b, c, d]), {"kofu": [14], "nagano": [2, 13]})
+
+  def test_elite_quests_need_enough_heroes_in_the_town(self):
+    """Lv13 以上が 2 人いても、別の町にいれば大物の依頼は出ない。同じ町にそろえば、その町の高札にだけ出る（#297）。"""
+
+    def elites(levels):
+      found = set()
+      for day in range(60):
+        guild = G.new_guild()
+        guild["levels"] = levels
+        G.refresh_guild(self.world, guild, START + timedelta(days=day), 1)
+        for town, entries in guild["towns"].items():
+          found |= {
+            (town, e["monster"]) for e in entries if self.world["monsters"].get(e["monster"] or "", {}).get("elite")
+          }
+      return found
+
+    self.assertEqual(elites({"nagano": [13], "kofu": [20]}), set())  # 別々の町にいる
+    self.assertEqual(elites({"kofu": [13, 20], "edo": [3, 15]}), {("kofu", "rock_golem")})
 
   def test_elite_quests_need_enough_heroes(self):
     def elites(levels):
@@ -1972,7 +2073,9 @@ class PersonalityTest(unittest.TestCase):
     state["hero"]["level"] = 5
     G.refresh_guild(WORLD, guild, START, 1)
     entries = guild["towns"][town]
-    hunt = next(e for e in entries if e["type"] == "hunt")  # 討伐 4 件の高札にする（配達は Lv を見ないので）
+    hunt = next(
+      e for e in entries if e["type"] == "hunt" and not e.get("party")
+    )  # 討伐 4 件の高札にする（配達は Lv を見ないので）
     entries[:] = [dict(copy.deepcopy(hunt), id=f"{hunt['id']}-{i}") for i in range(4)]
     for i, e in enumerate(entries):  # Lv と ★ を作り直して、選び方だけを見る
       e.update(level=[[5, 5], [4, 4], [5, 5], [6, 6]][i % 4], rank=[2, 1, 1, 1][i % 4], min_level=0)
