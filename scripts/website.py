@@ -67,7 +67,7 @@ CSS = """
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 'Hiragino Sans','Hiragino Kaku Gothic ProN',
 'Noto Sans JP','Yu Gothic',Meiryo,sans-serif}
 header{border-bottom:1px solid var(--line);background:var(--card)}
-html.sticky-header{scroll-padding-top:calc(var(--site-header-height) + 8px)}
+html.sticky-header{scroll-padding-top:var(--site-header-offset)}
 .sticky-header body > header{position:sticky;top:0;z-index:10}
 .wrap{max-width:1100px;margin:0 auto;padding-inline:16px}
 header .wrap{display:flex;flex-wrap:wrap;gap:4px 20px;align-items:baseline;padding-block:10px}
@@ -183,13 +183,17 @@ let offset=0;
 const sync=()=>{
   const height=Math.ceil(header.getBoundingClientRect().height),sticky=height*2<=root.clientHeight;
   const nextOffset=sticky?height+8:0;
-  root.style.setProperty('--site-header-height',height+'px');
+  root.style.setProperty('--site-header-offset',nextOffset+'px');
   root.classList.toggle('sticky-header',sticky);
   if(nextOffset>offset&&location.hash){
     let id=location.hash.slice(1);
     try{id=decodeURIComponent(id);}catch(e){}
-    const top=document.getElementById(id)?.getBoundingClientRect().top;
-    if(top>=-1&&top<nextOffset)window.scrollBy(0,top-nextOffset);
+    const target=document.getElementById(id);
+    const heading=target?.querySelector('h1,h2,h3,h4,h5,h6')||target;
+    const box=heading?.getBoundingClientRect();
+    if(box&&box.bottom>Math.max(0,offset-8)&&box.top<nextOffset){
+      window.scrollBy(0,target.getBoundingClientRect().top-nextOffset);
+    }
   }
   offset=nextOffset;
 };
