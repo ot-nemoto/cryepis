@@ -175,6 +175,13 @@ def build_text(world: dict, state: dict) -> str:
 
   detail += ["", "── 持ち物（シーズンをまたいで持ち越す）──", *listing(game.carried(state))]
   detail += ["", "── 蔵（どの町の口入れ屋でも出し入れできる）──", *listing(game.stored(state))]
+  stones = state.get("stones", {})
+  if stones:
+    detail += [
+      "",
+      "── 原石 ──",
+      *(f"{game.stone_name(world, area)}: {count}個" for area, count in sorted(stones.items()) if count),
+    ]
   quest = state["quest"]
   if quest and quest["type"] != "patrol":
     detail += ["", "── 受けている依頼 ──", game.quest_text(world, quest)]

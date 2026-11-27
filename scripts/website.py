@@ -471,7 +471,7 @@ def build_towns(world: dict) -> str:
     size = f"依頼の枠 {game.quests_per_day(world, town)} 件"
     if town not in opened:
       return [("口入れ屋の規模", size)] + [
-        (k, "-") for k in ("依頼の報酬で出るレア", "店の品ぞろえ", "道（行き先と行動回数）")
+        (k, "-") for k in ("宝箱や依頼で出る武具", "店の品ぞろえ", "道（行き先と行動回数）")
       ]
     # 店の品ぞろえは、武具の種類（武器・頭・胴・御守）の順に、同じ種類なら値段の高い順
     shop = sorted(
@@ -495,7 +495,7 @@ def build_towns(world: dict) -> str:
     return [
       ("口入れ屋の規模", f'{size}（<a href="guild.html#{escape(town)}">高札を見る</a>）'),
       (
-        "依頼の報酬で出るレア",
+        "宝箱や依頼で出る武具",
         ("<br>".join(label(i) for i in rares) or "-")
         + ("" if world["season"].get("rare_drops", True) else '<div class="note">今はレアの配布を止めています</div>'),
       ),
@@ -841,12 +841,12 @@ def element_chart(world: dict) -> str:
 
 
 def season_card(world: dict) -> tuple[str, str]:
-  """手引きの「シーズン」: レベルが戻り、装備だけが残る決まり。"""
+  """手引きの「シーズン」: レベルが戻り、装備と原石が残る決まり。"""
   months = world["season"]["months"]
   return (
     "シーズン",
     f"<p>シーズンは {escape(str(months))} か月ごと。シーズンが変わると、レベル・経験値・お金・丸薬・"
-    "居場所・依頼・溜めた行動力は最初に戻り、持ち物と蔵の装備だけが残る。</p>",
+    "居場所・依頼・溜めた行動力は最初に戻り、持ち物と蔵の装備、各地方の原石が残る。</p>",
   )
 
 
@@ -1322,7 +1322,7 @@ def build_guide(world: dict) -> str:
           strict=True,
         )
       )
-      + "。宝箱は装備・丸薬・お金のどれか",
+      + "。宝箱の中身は「武具と原石の入手」を参照",
     ),
     (
       "力尽きた",
@@ -1336,6 +1336,50 @@ def build_guide(world: dict) -> str:
   cards.append(("依頼の進め方", table(("場面", "どうなるか"), quest_rows)))
   cards.append(("戦いの決まり", table(("決まり", "説明"), rules)))
   cards.append(("物の怪の経験値とお金", table(("項目", "決め方"), reward_rows)))
+
+  def percent(rate: float) -> str:
+    return f"{rate * 100:.4f}".rstrip("0").rstrip(".") + "%"
+
+  rare_drops = cfg.get("rare_drops", True)
+  loot_rows = []
+  for mode, label in (("stroll", "散策1行動"), ("road", "移動1行動")):
+    events = cfg[f"{mode}_events"]
+    chest = events.get("treasure", 0) / sum(events.values())
+    loot = dict(cfg[f"{mode}_treasure"])
+    if not rare_drops:
+      loot["gold"] = loot.get("gold", 0) + loot.pop("item", 0)
+
+    probabilities = [percent(chest * loot.get(k, 0) / sum(loot.values())) for k in W.TREASURE_KINDS]
+    loot_rows.append((label, *probabilities))
+  quest_loot = []
+  for rank in world["quest_ranks"]:
+    weights = dict(rank["item"])
+    if weights.get("rare"):
+      chance_ = weights["rare"] / sum(weights.values()) if rare_drops else 0
+      quest_loot.append((escape(rank["mark"]), percent(chance_), percent(1 - (1 - chance_) ** 2)))
+  party = cfg["party"]
+  stones = cfg["party_stones"]
+  party_loot = []
+  for kind, label, gear in (("elite", "大物", "★★★武具"), ("boss", "主", "ランダムなスキル付き★★★武具")):
+    reward = f"原石 {stones[kind]} 個を 1 人に"
+    gear_chance = 0
+    if rare_drops:
+      reward += f"、{gear}を残り {party[kind] - 1} 人に 1 つずつ"
+      gear_chance = (party[kind] - 1) / party[kind]
+    party_loot.append((label, reward, f"原石 {percent(1 / party[kind])}、武具 {percent(gear_chance)}"))
+  cards.append(
+    (
+      "武具と原石の入手",
+      ("" if rare_drops else '<p class="note">今は★★以上の武具の配布を止めています。</p>')
+      + table(("行動", "★★武具", "原石1個", "丸薬1個", "お金"), loot_rows)
+      + "<p>表は1行動あたりの確率。宝探しが効くと宝箱の出現率が上がる。"
+      "宝箱から出る★★武具と原石は散策した町、または出発した町で決まる。</p>"
+      + table(("通常依頼の達成報告1回", "★★武具", "★★武具（強運）"), quest_loot)
+      + "<p>依頼から出る★★武具は依頼元の町で決まる。強運は通常依頼の武具が外れたとき、もう1回引く。</p>"
+      + table(("討伐成功1回", "一行の褒美", "各自の確率"), party_loot)
+      + "<p>原石を受け取る人は参加者の中から均等に決める。原石の地方と武具の候補は依頼元の町で決まる。</p>",
+    )
+  )
   cards.append(season_card(world))
   nav = (
     '<p class="guide-nav">'

@@ -352,7 +352,10 @@ class ValidateTest(unittest.TestCase):
     self.assertError(boss_quest, ["nagano_3", "主は狙えない"])
 
   def test_item_dex_is_checked(self):
-    self.assertError(lambda r: r["items"][-1].update(dex="2"), ["crimson_grass_charm", "dex"])
+    self.assertError(
+      lambda r: next(i for i in r["items"] if i["id"] == "crimson_grass_charm").update(dex="2"),
+      ["crimson_grass_charm", "dex"],
+    )
 
   def test_every_terrain_has_a_japanese_name(self):
     self.assertEqual(set(W.TERRAIN_NAMES), set(W.TERRAINS))
@@ -409,14 +412,15 @@ class ValidateTest(unittest.TestCase):
     self.assertError(lambda r: r["items"][5].update(drop_level=5), ["drop_level"])
 
   def test_rare_items_need_quest_towns(self):
-    self.assertError(lambda r: r["items"][-1].pop("towns"), ["crimson_grass_charm", "towns"])
-    self.assertError(lambda r: r["items"][-1].update(towns=["kumano"]), ["towns", "kumano"])
+    def charm(raw):
+      return next(i for i in raw["items"] if i["id"] == "crimson_grass_charm")
+
+    self.assertError(lambda r: charm(r).pop("towns"), ["crimson_grass_charm", "towns"])
+    self.assertError(lambda r: charm(r).update(towns=["kumano"]), ["towns", "kumano"])
     self.assertError(lambda r: r["items"][0].update(towns=["edo"]), ["iron_sword", "common"])
-    self.assertError(
-      lambda r: r["items"][-1].update(towns=["kyoto"]), ["crimson_grass_charm", "kyoto", "開放"]
-    )  # 開放していない町
+    self.assertError(lambda r: charm(r).update(towns=["kyoto"]), ["crimson_grass_charm", "kyoto", "開放"])
     for bad in (5, "edo", [["edo"]]):  # 型が違っても落ちずにエラーを返す
-      self.assertError(lambda r, bad=bad: r["items"][-1].update(towns=bad), ["crimson_grass_charm", "towns"])
+      self.assertError(lambda r, bad=bad: charm(r).update(towns=bad), ["crimson_grass_charm", "towns"])
 
   def test_every_town_needs_a_rare(self):
     def change(r):
@@ -426,11 +430,19 @@ class ValidateTest(unittest.TestCase):
 
     self.assertError(change, ["nagano", "rare"])
 
-  def test_treasure_cannot_hold_rares(self):
-    self.assertError(lambda r: r["season"]["treasure"].append(["rare", 1]), ["treasure", "rare"])
-    self.assertError(
-      lambda r: r["season"]["treasure"].append(["crimson_grass_charm", 1]), ["treasure", "crimson_grass_charm"]
-    )
+  def test_party_quests_need_epic_rewards_when_rare_drops_are_enabled(self):
+    for town in ("nagano", "kofu"):
+      with self.subTest(town=town):
+        raw = copy.deepcopy(RAW)
+        for item in raw["items"]:
+          if item["rarity"] == "epic":
+            item["towns"].remove(town)
+        self.assertTrue(any(town in e and "epic" in e for e in W.validate(raw)))
+        raw["season"]["rare_drops"] = False
+        self.assertEqual(W.validate(raw), [])
+
+  def test_treasure_table_rejects_unknown_outcomes(self):
+    self.assertError(lambda r: r["season"]["road_treasure"].update(unknown=1), ["road_treasure"])
 
   def test_every_town_quest_has_some_rare(self):
     towns = {tid for i in RAW["items"] if i["rarity"] == "rare" for tid in i["towns"]}
@@ -737,8 +749,8 @@ class BrokenDataTest(unittest.TestCase):
       any("ID は文字列" in e for e in errors_after(lambda r: r["map"]["places"][0].update(id=[]))),
     )
     for change in (
-      lambda r: r["season"]["treasure"].append([[], 1]),  # ドロップ表のキーが一覧
-      lambda r: r["season"].update(treasure=-1),
+      lambda r: r["season"].update(road_treasure=[[[], 1]]),
+      lambda r: r["season"].update(road_treasure=-1),
       lambda r: r["map"].update(roads=None),
       lambda r: r["map"]["places"][0].update(shop=None),
       lambda r: r.update(traits=None),

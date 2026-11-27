@@ -208,7 +208,7 @@ class SiteTest(unittest.TestCase):
       self.assertIn(f'id="panel-{slot}"', html)
     self.assertIn('data-tab="weapon" aria-selected="true" tabindex="0">⚔️ 武器</button>', html)  # 部位の先頭に絵文字
     self.assertIn('<h2 class="area">📿 御守</h2>', html)
-    self.assertEqual(html.count('class="chip" data-f='), 2)  # ★ と ★★
+    self.assertEqual(html.count('class="chip" data-f='), 3)  # ★・★★・★★★
     charm = html.split("不動の御守")[1].split("</tr>")[0]  # ★★不動の御守（炎属性）
     self.assertIn('<td><a class="pill" href="towns.html#kofu">🏯 甲府</a></td>', charm)  # 依頼を出す町
     self.assertIn('<td class="icon"><span class="tag">炎属性</span></td>', charm)  # 属性の列（枠の札）
@@ -238,7 +238,7 @@ class SiteTest(unittest.TestCase):
 
   def test_items_page_shows_the_descriptions(self):
     html = website.build_items(WORLD)
-    for it in WORLD["items"].values():  # 13 個すべてに説明があり、名前の下に出る
+    for it in WORLD["items"].values():  # すべてに説明があり、名前の下に出る
       self.assertIn(f'<td>{escape(it["name"])}<br><span class="note">{escape(it["text"])}</span></td>', html)
 
   def test_item_description_is_optional_and_escaped(self):
@@ -490,6 +490,24 @@ class SiteTest(unittest.TestCase):
     html = website.build_monsters(world)
     other = html[html.index(f'id="panel-{website.OTHER_AREA}"') :]
     self.assertIn("<td>酒呑童子</td>", other[: other.index("</section>")])
+
+  def test_guide_shows_loot_when_chests_or_rares_are_disabled(self):
+    world = copy.deepcopy(WORLD)
+    for key in ("stroll_events", "road_events"):
+      world["season"][key].pop("treasure")
+    html = website.build_guide(world)
+    for action in ("散策", "移動"):
+      self.assertIn(f"<td>{action}1行動</td>" + "<td>0%</td>" * 4, html)
+
+    world = copy.deepcopy(WORLD)
+    world["season"]["rare_drops"] = False
+    html = website.build_guide(world)
+    self.assertIn("今は★★以上の武具の配布を止めています", html)
+    self.assertIn("<td>散策1行動</td><td>0%</td><td>0.3%</td><td>3.75%</td><td>10.95%</td>", html)
+    self.assertIn("<td>移動1行動</td><td>0%</td><td>0.1%</td><td>1.92%</td><td>5.98%</td>", html)
+    self.assertIn("<td>★★★</td><td>0%</td><td>0%</td>", html)
+    self.assertIn("<td>大物</td><td>原石 1 個を 1 人に</td><td>原石 50%、武具 0%</td>", html)
+    self.assertIn("<td>主</td><td>原石 3 個を 1 人に</td><td>原石 33.3333%、武具 0%</td>", html)
 
   def test_guide_page_season_and_elements(self):
     html = website.build_guide(WORLD)

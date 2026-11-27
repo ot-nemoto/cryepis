@@ -46,7 +46,7 @@ def common_hunt(town=TOWN, rank=1, seed=0):
 
 
 def with_rares():
-  """坂東の町に epic・legendary も置いた世界（今のデータには上のレアがないので、仕組みを確かめるため）。"""
+  """江戸に抽選確認用の epic・legendary を置いた世界。"""
   world = copy.deepcopy(WORLD)
   world["season"]["rare_drops"] = True  # レアの配布を止めていても、しくみは確かめる
   world["items"]["x_epic"] = {
@@ -460,8 +460,8 @@ class BattleAndItemTest(unittest.TestCase):
     day = G.Day(world, G.new_state(world), START, random.Random("t"))  # Lv.1 でも出る（レベルの制限はない）
     self.assertEqual({day.draw([["legendary", 1]], "edo") for _ in range(50)}, {"x_legend"})
     self.assertEqual({day.draw([["epic", 1]], "edo") for _ in range(50)}, {"x_epic"})
-    # 長野には epic・legendary がないので、1 つ下に落として rare（大鎧）が出る
-    self.assertEqual({day.draw([["legendary", 1]], "nagano") for _ in range(20)}, {"steel_shield"})
+    # 小田原には epic・legendary がないので、rare（鍬形の兜）まで下げる
+    self.assertEqual({day.draw([["legendary", 1]], "odawara") for _ in range(20)}, {"steel_helm"})
     self.assertEqual({day.draw([["rare", 1]], None) for _ in range(20)}, {None})  # 宝箱（町なし）では出ない
     commons = {day.draw([["common", 1]]) for _ in range(300)}
     sold = {iid for t in WORLD["towns"] for iid in WORLD["places"][t]["shop"]}  # 開放した町の店の品だけ
@@ -504,6 +504,17 @@ class BattleAndItemTest(unittest.TestCase):
     state["quest"] = quest
     G.Day(world, state, START, random.Random("t")).report(quest)
     self.assertIn("x_legend", ids(state))
+
+  def test_lucky_redraws_once_when_reporting_a_normal_quest(self):
+    state = G.new_state(WORLD)
+    state["trait"] = "lucky"
+    quest = a_hunt() | {"progress": 99, "town": "edo"}
+    state["quest"] = quest
+    day = day_of(state)
+    with mock.patch.object(day, "draw_once", side_effect=[None, "steel_sword"]) as draw:
+      day.report(quest)
+    self.assertEqual(ids(state), ["steel_sword"])
+    self.assertEqual(draw.call_count, 2)
 
   def test_rarity_marks_follow_the_rarities(self):
     self.assertEqual([G.rarity_mark(WORLD, r) for r in WORLD["rarities"]], ["★", "★★", "★★★", "★★★★"])
@@ -876,6 +887,30 @@ class PartyQuestTest(unittest.TestCase):
       self.assertEqual(st["quest"]["progress"], 1)
     self.assertEqual(a["hero"]["gold"] - gold_a, self.world["monsters"]["yeti"]["gold"] // 2)
     self.assertTrue(any("雪女〔凶暴〕を倒した" in e for e in a["inbox"]))  # a の日誌には、次に進めるときに届く
+
+  def test_party_rewards_go_to_different_members(self):
+    for kind, size, stone_count in (("elite", 2, 1), ("boss", 3, 3)):
+      with self.subTest(kind=kind):
+        states = [self.hero(f"h{i}") for i in range(size)]
+        days = [G.Day(self.world, st, START, random.Random(i)) for i, st in enumerate(states)]
+        town = "nagano" if kind == "elite" else "kofu"
+        days[0].party_loot(days, town, kind)
+        self.assertEqual(sum(st["stones"].get("bando", 0) for st in states), stone_count)
+        self.assertEqual(sum(bool(st["stones"]) for st in states), 1)
+        for st in states:
+          if st["stones"]:
+            self.assertFalse(st["inventory"])
+          else:
+            self.assertEqual(len(st["inventory"]), 1)
+            obtained = st["inventory"][0]
+            item = self.world["items"][obtained["id"]]
+            self.assertEqual(item["rarity"], "epic")
+            self.assertIn(town, item["towns"])
+            skill = obtained["skill"]
+            if kind == "boss":
+              self.assertEqual(self.world["skills"][skill]["slot"], item["slot"])
+            else:
+              self.assertIsNone(skill)
 
   def test_all_down_means_everyone_falls(self):
     self.world["monsters"]["yeti"].update(hp=5000, atk=300)  # 必ず負ける大物
@@ -2204,6 +2239,29 @@ class PersonalityTest(unittest.TestCase):
     day.road_event(TOWN, WORLD["neighbors"][TOWN][0], stroll=True)
     self.assertEqual(state["hero"]["potions"], potions + 1)
 
+  def test_road_and_stroll_chests_award_a_regional_stone(self):
+    for mode in ("road", "stroll"):
+      with self.subTest(mode=mode):
+        world = copy.deepcopy(WORLD)
+        world["season"][f"{mode}_events"] = {"treasure": 1}
+        world["season"][f"{mode}_treasure"] = {"stone": 1}
+        state = G.new_state(world)
+        day = G.Day(world, state, START, random.Random(0))
+        day.road_event(TOWN, world["neighbors"][TOWN][0], stroll=mode == "stroll")
+        self.assertEqual(state["stones"], {"bando": 1})
+        self.assertFalse(state["inventory"])
+
+  def test_stone_loot_works_in_worlds_without_areas(self):
+    world = copy.deepcopy(WORLD)
+    world["areas"] = {}
+    for place in world["places"].values():
+      place.pop("area", None)
+    state = G.new_state(world)
+    day = G.Day(world, state, START, random.Random(0))
+    day.obtain_stones(TOWN, 1, "宝箱から")
+    self.assertEqual(state["stones"], {"": 1})
+    self.assertEqual(day.events[-1], "宝箱から原石を 1 つ手に入れた")
+
   def test_shop_buys_potions_first_and_keeps_inn_money(self):
     state = with_personality("careful")  # 先に 3 個、旅籠は HP 70% 未満
     state["hero"].update(potions=0, gold=WORLD["season"]["potion"]["price"] * 3 + WORLD["season"]["inn"]["price"], hp=1)
@@ -2295,14 +2353,13 @@ class SkillTest(unittest.TestCase):
     state["hero"]["level"] = 18
     world = copy.deepcopy(WORLD)
     world["season"]["road_events"] = {"treasure": 1}
-    world["season"]["treasure"] = [["none", 1]]
+    world["season"]["road_treasure"] = {"gold": 1}
     day = G.Day(world, state, START, random.Random(0))
-    with mock.patch.object(day.rng, "random", return_value=0.9):  # 丸薬ではなくお金
-      for _ in range(30):
-        gold = state["hero"]["gold"]
-        day.road_event(TOWN, WORLD["neighbors"][TOWN][0])
-        low, high = WORLD["season"]["treasure_gold"]
-        self.assertTrue(low <= state["hero"]["gold"] - gold <= high)  # もののふの Lv に関係なく 10〜30文
+    for _ in range(30):
+      gold = state["hero"]["gold"]
+      day.road_event(TOWN, WORLD["neighbors"][TOWN][0])
+      low, high = WORLD["season"]["treasure_gold"]
+      self.assertTrue(low <= state["hero"]["gold"] - gold <= high)  # もののふの Lv に関係なく 10〜30文
 
   def test_prefer_index(self):
     state = with_personality("brave")

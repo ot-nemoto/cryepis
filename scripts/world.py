@@ -49,7 +49,7 @@ REWARD_STATS = ("hp", "atk", "def", "spd", "dex")  # 物の怪の強さ点に使
 QUEST_TYPES = ("hunt", "deliver")
 ROAD_EVENTS = ("battle", "treasure", "nothing")
 STROLL_EVENTS = ("battle", "strong_battle", "treasure", "nothing")
-STROLL_TREASURE = ("item", "potion", "gold")
+TREASURE_KINDS = ("item", "stone", "potion", "gold")
 PERSONALITY_SPARE = (
   "rest",
   "stroll",
@@ -207,6 +207,26 @@ def road_open(r: dict, opened: set, places: dict) -> bool:
   return all(r.get(e) in opened or places.get(r.get(e), {}).get("type") == "dungeon" for e in ("from", "to"))
 
 
+def boss_town(trails: list[dict], towns, dungeon: str | None) -> str | None:
+  """その霊場への山道がつながる、最初の開放した町。"""
+  for trail in trails:
+    a, b = trail.get("from"), trail.get("to")
+    if a == dungeon and b in towns:
+      return b
+    if b == dungeon and a in towns:
+      return a
+  return None
+
+
+def party_gear(items: dict, town: str) -> list[str]:
+  """大物・主の討伐で、その依頼元の町から出る★★★武具。"""
+  return sorted(
+    iid
+    for iid, item in items.items()
+    if item.get("rarity") == "epic" and isinstance(item.get("towns"), list) and town in item["towns"]
+  )
+
+
 def _rows(value) -> list:
   """一覧ならそのまま、そうでなければ空（形の誤りは _check_shape が知らせる）。"""
   return value if isinstance(value, list) else []
@@ -341,7 +361,7 @@ def _check_ids(c: _Check):
 
 def _check_season(c: _Check):
   """season.json の基本の項目（start・数値の範囲・文章・宝箱・道の出来事など）。"""
-  err, season, items, rarities = c.err, c.season, c.items, c.rarities
+  err, season = c.err, c.season
   # season.json
   try:
     if date.fromisoformat(season["start"]).day > 28:  # どの月にもある日でないと、シーズンの区切りが作れない
@@ -368,13 +388,16 @@ def _check_season(c: _Check):
     texts = season.get(key)
     if not isinstance(texts, list) or not texts or not all(isinstance(t, str) and t for t in texts):
       err(f"season.json: {key} は文字列の一覧（1 つ以上）にしてください")
-  c.table_ok("season.json の treasure", season.get("treasure"))
-  treasure = season.get("treasure")
-  for key, _ in treasure if _weights_ok(treasure) else []:  # レアは依頼の報酬だけで出る
-    if not _hashable(key):  # キーが文字列でないことは、上の table_ok が知らせる
-      continue
-    if (key in rarities and key != COMMON) or items.get(key, {}).get("rarity", COMMON) != COMMON:
-      err(f"season.json の treasure: {key!r} は宝箱からは出せません（レアは町の依頼の報酬だけで出る）")
+  for key in ("stroll_treasure", "road_treasure"):
+    if not _weights_dict_ok(season.get(key), TREASURE_KINDS):
+      err(f"season.json: {key} は {'/'.join(TREASURE_KINDS)} の重み（0 以上、合計が正）にしてください")
+  stones = season.get("party_stones")
+  if (
+    not isinstance(stones, dict)
+    or set(stones) != {"elite", "boss"}
+    or not all(type(n) is int and n > 0 for n in stones.values())
+  ):
+    err("season.json: party_stones の elite・boss は石の個数（正の整数）にしてください")
   gold = season.get("treasure_gold")
   if (
     not isinstance(gold, list)
@@ -708,8 +731,6 @@ def _check_personalities(c: _Check):
   err, season = c.err, c.season
   if not _weights_dict_ok(season.get("stroll_events"), STROLL_EVENTS):
     err(f"season.json: stroll_events は {'/'.join(STROLL_EVENTS)} の重み（0 以上、合計が正）にしてください")
-  if not _weights_dict_ok(season.get("stroll_treasure"), STROLL_TREASURE):
-    err(f"season.json: stroll_treasure は {'/'.join(STROLL_TREASURE)} の重み（0 以上、合計が正）にしてください")
   levels = season.get("stroll_strong_levels")
   if (
     not isinstance(levels, list)
@@ -978,10 +999,10 @@ def _check_items(c: _Check):
     towns = it.get("towns")
     if it.get("rarity") == COMMON:
       if towns is not None:
-        err(f"{where}: common に towns は書けません（common は店で売る。宝箱と依頼の報酬ではどの町でも出る）")
+        err(f"{where}: common に towns は書けません（common は店で売る）")
     elif it.get("rarity") in rarities:
       if not isinstance(towns, list) or not towns:
-        err(f"{where}: レアには towns（依頼の報酬で出る町の ID の一覧）を書いてください")
+        err(f"{where}: レアには towns（宝箱や依頼で出る町の ID の一覧）を書いてください")
       else:
         for tid in towns:
           if not isinstance(tid, str) or places.get(tid, {}).get("type") != "town":
@@ -1124,6 +1145,7 @@ def _check_town_quests(c: _Check, ranks: list):
     err("quests.json: towns は {町の ID: 依頼の一覧} にしてください")
     town_quests = {}
   seen_ids = [q.get("id") for q in raw["quests"]]
+  party_towns = set()
   for tid, qs in town_quests.items():
     if places.get(tid, {}).get("type") != "town":
       err(f"quests.json の towns: {tid!r} は町の ID にしてください")
@@ -1141,9 +1163,12 @@ def _check_town_quests(c: _Check, ranks: list):
       _rank_ok(err, ranks, where, q.get("rank"))
       to = q.get("to")
       if q.get("type") == "hunt":
+        target = monsters.get(q.get("monster"), {})
+        if target.get("elite"):
+          party_towns.add(tid)
         if (tid, to) not in road_foes:
           err(f"{where}: to の {to!r} は、{tid} から陸路・航路で直接つながる開放した町にしてください")
-        elif q.get("monster") not in road_foes[(tid, to)] and not monsters.get(q.get("monster"), {}).get("elite"):
+        elif q.get("monster") not in road_foes[(tid, to)] and not target.get("elite"):
           err(f"{where}: monster の {q.get('monster')!r} は、その道に出る物の怪か大物にしてください（主は狙えない）")
         if not isinstance(q.get("count"), int) or q["count"] < 1:
           err(f"{where}: count は 1 以上の整数にしてください")
@@ -1152,6 +1177,13 @@ def _check_town_quests(c: _Check, ranks: list):
           err(f"{where}: to は開放した別の町の ID にしてください")
       else:
         err(f"{where}: type は {'/'.join(QUEST_TYPES)} のどれかにしてください")
+
+  if c.season.get("rare_drops", True):
+    trails = [r for r in c.roads if r.get("kind") == "trail" and road_open(r, opened, places)]
+    boss_towns = {boss_town(trails, opened, m["boss"]) for m in monsters.values() if isinstance(m.get("boss"), str)}
+    for town in sorted(party_towns | (boss_towns - {None})):
+      if not party_gear(c.items, town):
+        err(f"items.json: {town} の大物・主の討伐で出る ★★★ 武具（epic）がありません")
 
 
 def _check_item_points(c: _Check):
@@ -1440,7 +1472,7 @@ def build(raw: dict) -> dict:
     "skills": {k["id"]: k for k in raw.get("skills") or []},
     "skill_kinds": dict(raw.get("skill_kinds") or {}),
     "skill_prices": dict(raw.get("skill_prices") or {}),
-    # 開放した地域の common（開放した町の店で売っている品）。宝箱と依頼の報酬の common はここから出る
+    # 開放した地域の common（開放した町の店で売っている品）
     "region_items": sorted({iid for t in towns for iid in places[t].get("shop", [])}),
     "quests": raw["quests"],
     "quest_ranks": raw["quest_ranks"],
