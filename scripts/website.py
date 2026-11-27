@@ -179,10 +179,19 @@ document.getElementById('zhome').onclick=()=>{v=home.slice();set();};})();
 SITE_HEADER_JS = """
 (()=>{
 const header=document.querySelector('body > header'),root=document.documentElement;
+let offset=0;
 const sync=()=>{
-  const height=Math.ceil(header.getBoundingClientRect().height);
+  const height=Math.ceil(header.getBoundingClientRect().height),sticky=height*2<=root.clientHeight;
+  const nextOffset=sticky?height+8:0;
   root.style.setProperty('--site-header-height',height+'px');
-  root.classList.toggle('sticky-header',height*2<=root.clientHeight);
+  root.classList.toggle('sticky-header',sticky);
+  if(nextOffset>offset&&location.hash){
+    let id=location.hash.slice(1);
+    try{id=decodeURIComponent(id);}catch(e){}
+    const top=document.getElementById(id)?.getBoundingClientRect().top;
+    if(top>=-1&&top<nextOffset)window.scrollBy(0,top-nextOffset);
+  }
+  offset=nextOffset;
 };
 sync();
 window.addEventListener('resize',sync);
