@@ -1106,6 +1106,16 @@ def _check_quest_reward(c: _Check):
     err("quests.json: reward には、1 行動あたりの exp と gold（0 以上の数）を書いてください")
   elif "deliver_rate" in base and (not _num(base["deliver_rate"]) or base["deliver_rate"] <= 0):
     err("quests.json: reward の deliver_rate（配達のお金の倍率）は正の数にしてください")
+  if isinstance(base, dict):
+    party_gold = base.get("party_gold")
+    if (
+      not isinstance(party_gold, dict)
+      or set(party_gold) != {"elite", "boss"}
+      or any(not isinstance(v, int) or isinstance(v, bool) or v < 0 for v in party_gold.values())
+    ):
+      err(
+        "quests.json: reward の party_gold には、大物（elite）・主（boss）の達成報酬のお金（0 以上の整数）を書いてください"
+      )
 
 
 def _check_hunt_ranks(c: _Check, ranks: list):

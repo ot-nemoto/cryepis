@@ -427,7 +427,7 @@ class HeroesTest(unittest.TestCase):
 
     with mock.patch.object(game, "refresh_guild", side_effect=capture):
       website.build_guild(world, [({"id": "h1"}, state)], date(2026, 12, 1), game.new_guild())
-    self.assertEqual(seen, [[14]])  # 毎日の実行と同じく、もののふたちの Lv で大物の依頼を抽選する
+    self.assertEqual(seen, [{state["place"]: [14]}])  # 毎日の実行と同じく、町ごとの居場所と Lv で大物の依頼を抽選する
 
   def test_failed_heros_changes_to_the_guild_are_undone(self):
     guild = game.new_guild()

@@ -1,11 +1,11 @@
 {
  "ranks": [
-  {"mark": "★", "weight": 60, "reward": 1, "item": [["none", 95], ["rare", 5]]},
-  {"mark": "★★", "weight": 25, "reward": 2, "item": [["none", 90], ["rare", 10]]},
-  {"mark": "★★★", "weight": 12, "reward": 4, "item": [["none", 80], ["rare", 20]]},
-  {"mark": "★★★★", "weight": 3, "reward": 8, "item": [["none", 100]]}
+  {"mark": "★", "weight": 40, "reward": 1, "item": [["none", 95], ["rare", 5]]},
+  {"mark": "★★", "weight": 40, "reward": 2, "item": [["none", 90], ["rare", 10]]},
+  {"mark": "★★★", "weight": 10, "reward": 4, "item": [["none", 80], ["rare", 20]]},
+  {"mark": "★★★★", "weight": 10, "reward": 8, "item": [["none", 100]]}
  ],
- "reward": {"exp": 0, "gold": 8, "deliver_rate": 2},
+ "reward": {"exp": 0, "gold": 8, "deliver_rate": 2, "party_gold": {"elite": 160, "boss": 320}},
  "hunt_ranks": [15, 40],
  "templates": [
   {"id": "hunt", "type": "hunt", "name": "討伐", "weight": 3, "count": [1, 5]},
@@ -41,14 +41,17 @@
   }
  },
  "towns": {
-  "edo": [],
-  "odawara": [],
+  "edo": [
+   {"id": "edo_elite", "rank": 4, "type": "hunt", "name": "入り江の海坊主", "to": "odawara", "monster": "sea_monk", "count": 1, "text": "夜の入り江に、黒い大入道のような影が浮かぶ。近づいた舟は大波にのまれ、戻らない者も出ている。討ってほしい"}
+  ],
+  "odawara": [
+   {"id": "odawara_elite", "rank": 4, "type": "hunt", "name": "箱根の大天狗", "to": "edo", "monster": "great_eagle", "count": 1, "text": "箱根の峠に、雷をまとった大天狗が舞い降りる。荷を奪われた旅人が、命からがら小田原へ逃げてくる。追い払ってほしい"}
+  ],
   "kofu": [
-   {"id": "kofu_4", "rank": 3, "type": "hunt", "name": "峠の大天狗", "to": "edo", "monster": "great_eagle", "count": 1, "text": "甲斐の山のてっぺんには、雷をつれた大天狗がいる。城の見張り台を襲うので、追い払ってほしい"}
+   {"id": "kofu_elite", "rank": 4, "type": "hunt", "name": "裾野のだいだらぼっち", "to": "edo", "monster": "rock_golem", "count": 1, "text": "富士の山を作ったという大男が、裾野をのし歩いている。踏みつぶされた村も出ている。討ってほしい"}
   ],
   "nagano": [
-   {"id": "nagano_3", "rank": 2, "type": "hunt", "name": "吹雪の雪女", "to": "kofu", "monster": "yeti", "count": 1, "text": "吹雪の晩、山から雪女が下りてくる。凍えた旅人が、峠でいくつも見つかっている。食い止めてほしい"},
-   {"id": "nagano_4", "rank": 3, "type": "hunt", "name": "裾野のだいだらぼっち", "to": "kofu", "monster": "rock_golem", "count": 1, "text": "富士の山を作ったという大男が、裾野をのし歩いている。踏みつぶされた村も出ている。討ってほしい"}
+   {"id": "nagano_3", "rank": 4, "type": "hunt", "name": "吹雪の雪女", "to": "kofu", "monster": "yeti", "count": 1, "text": "吹雪の晩、山から雪女が下りてくる。凍えた旅人が、峠でいくつも見つかっている。食い止めてほしい"}
   ]
  }
 }

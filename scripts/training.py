@@ -71,7 +71,7 @@ def fight(
 TRIALS = 10_008
 POTIONS = 3
 TRAIT = "lucky"
-TARGETS = (("yeti", 15, 2), ("rock_golem", 15, 2), ("great_eagle", 15, 2), ("den_lord", 20, 3))
+TARGETS = (("sea_monk", 15, 2), ("great_eagle", 15, 2), ("rock_golem", 15, 2), ("yeti", 15, 2), ("den_lord", 20, 3))
 
 
 def measure_opponent(target: tuple[str, int, int], *, world: dict, trials: int, personalities: list[str]) -> dict:
