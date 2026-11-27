@@ -269,11 +269,13 @@ class SiteTest(unittest.TestCase):
     self.assertEqual(axe.count('class="pill"'), 4)  # 買える店
     self.assertNotIn("依頼の報酬", html)  # 入手方法の補足の文は出さない
     self.assertNotIn("宝箱", html)
-    self.assertIn('<th>名前</th><th class="icon">属性</th><th class="num">HP</th>', html)  # 特産の列はない
+    self.assertIn(
+      '<th>名前</th><th>固定スキル</th><th class="icon">属性</th><th class="num">HP</th>', html
+    )  # 特産の列はない
     self.assertNotIn("特産", html)
     sword = html.split("<td>打刀")[1].split("</tr>")[0]
     self.assertIn(
-      '</span></td><td class="icon"></td><td class="num zero">0</td>', sword
+      '</span></td><td>—</td><td class="icon"></td><td class="num zero">0</td>', sword
     )  # ★ は属性なし（名前の下に説明がある）
     self.assertNotIn("🏷️", html)  # 属性は絵文字にしない
     self.assertNotIn("🌪️", html)
@@ -282,14 +284,14 @@ class SiteTest(unittest.TestCase):
       marks = [len(game.rarity_mark(WORLD, r["item"]["rarity"])) for r in website.item_rows(WORLD)[slot]]
       self.assertEqual(marks, sorted(marks, reverse=True))
 
-  def test_items_page_shows_the_descriptions(self):
+  def test_items_page_shows_descriptions_and_fixed_skills_in_separate_cells(self):
     html = website.build_items(WORLD)
     for it in WORLD["items"].values():  # すべてに説明があり、名前の下に出る
-      row = html.split(f"<td>{escape(it['name'])}", 1)[1].split("</td>", 1)[0]
-      self.assertIn(f'<br><span class="note">{escape(it["text"])}</span>', row)
-      if "fixed_skill" in it:
-        name = WORLD["skills"][it["fixed_skill"]]["name"]
-        self.assertIn(f"固定スキル {name}", row)
+      row = html.split(f"<td>{escape(it['name'])}", 1)[1].split("</tr>", 1)[0]
+      description, after = row.split("</td>", 1)
+      self.assertIn(f'<br><span class="note">{escape(it["text"])}</span>', description)
+      fixed = WORLD["skills"].get(it.get("fixed_skill"))
+      self.assertTrue(after.startswith(f"<td>{escape(fixed['name']) if fixed else '—'}</td>"), row)
 
   def test_item_description_is_optional_and_escaped(self):
     world = copy.deepcopy(WORLD)
