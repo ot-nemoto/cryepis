@@ -1,5 +1,9 @@
 name: Update game state
 
+# ゲームの状態（.state/）を読み、rpg.py で進めて（登録・引退も）、保存する。
+# 保存先は、Variable R2_STATE_BRANCHES（空白区切り）に入っているゲームは Cloudflare R2、それ以外はそのブランチへのコミット（#301）。
+# R2 のときは、R2 の最新（<branch>/latest.tar.gz）を取得し、保存するときはスナップショットを残してから最新を置き換える。
+
 on:
   workflow_call:
     inputs:
@@ -14,9 +18,63 @@ on:
     secrets:
       GIST_PAT:
         required: false
+      CLOUDFLARE_API_TOKEN:
+        required: false
+      CLOUDFLARE_ACCOUNT_ID:
+        required: false
 
 jobs:
+  # R2 に置くゲームなら、R2 から最新の状態を取得する（トークンは、コードを動かす run-game には渡さない）
+  load-state:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      r2: ${{ steps.storage.outputs.r2 }}
+      etag: ${{ steps.get.outputs.etag }}
+      artifact: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - id: storage
+        env:
+          BRANCH: ${{ inputs.branch }}
+          R2_STATE_BRANCHES: ${{ vars.R2_STATE_BRANCHES }}
+        run: |
+          r2=false
+          for b in $R2_STATE_BRANCHES; do
+            if [ "$b" = "$BRANCH" ]; then r2=true; fi
+          done
+          echo "r2=$r2" >> "$GITHUB_OUTPUT"
+
+      # R2 を扱う action は、いま動いているワークフローと同じコミット（master）のものを使う
+      - if: steps.storage.outputs.r2 == 'true'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+
+      - id: get
+        if: steps.storage.outputs.r2 == 'true'
+        uses: ./.github/actions/r2-state
+        with:
+          mode: get
+          branch: ${{ inputs.branch }}
+          file: ${{ runner.temp }}/state.tar.gz
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+
+      - id: upload
+        if: steps.storage.outputs.r2 == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: game-state-in-${{ inputs.branch }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/state.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
   run-game:
+    needs: load-state
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -30,8 +88,32 @@ jobs:
           ref: ${{ inputs.branch }}
           persist-credentials: false
 
+      - if: needs.load-state.outputs.r2 == 'true'
+        uses: actions/download-artifact@v7
+        with:
+          artifact-ids: ${{ needs.load-state.outputs.artifact }}
+          path: ${{ runner.temp }}/state-input
+
+      # R2 に置くゲームは、R2 の状態で .state/ を置き換える（リポジトリの .state/ は使わない）
+      - name: Use the state on R2
+        if: needs.load-state.outputs.r2 == 'true'
+        run: |
+          rm -rf .state
+          mkdir .state
+          tar -xzf "$RUNNER_TEMP/state-input/state.tar.gz" -C .state
+
+      # 保存するときに、取得してから別の実行が更新していないことを確かめるための目印
+      # （R2 は最新の ETag、コミットは .state/ の tree）
       - id: source
-        run: echo "tree=$(git rev-parse --verify -q HEAD:.state || printf absent)" >> "$GITHUB_OUTPUT"
+        env:
+          R2: ${{ needs.load-state.outputs.r2 }}
+          ETAG: ${{ needs.load-state.outputs.etag }}
+        run: |
+          if [ "$R2" = true ]; then
+            echo "tree=$ETAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "tree=$(git rev-parse --verify -q HEAD:.state || printf absent)" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-python@v6
         with:
@@ -83,7 +165,7 @@ jobs:
           retention-days: 1
 
   save-state:
-    needs: run-game
+    needs: [load-state, run-game]
     if: >-
       ${{ !cancelled() && needs.run-game.outputs.source != '' && needs.run-game.outputs.artifact != ''
           && (needs.run-game.result == 'success' || inputs.operation == 'advance') }}
@@ -92,18 +174,52 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # 生成元のコードは実行せず、対象ブランチの .state/ だけを書き戻す。
-      - uses: actions/checkout@v5
+      # 生成元のコードは実行しない。
+      # R2: 状態をまとめて、R2 に保存する（R2 を扱う action は、いま動いているワークフローと同じコミットのもの）
+      - if: needs.load-state.outputs.r2 == 'true'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+
+      - if: needs.load-state.outputs.r2 == 'true'
+        uses: actions/download-artifact@v7
+        with:
+          artifact-ids: ${{ needs.run-game.outputs.artifact }}
+          path: ${{ runner.temp }}/state-output
+
+      - name: Pack state
+        if: needs.load-state.outputs.r2 == 'true'
+        run: tar -czf "$RUNNER_TEMP/state.tar.gz" -C "$RUNNER_TEMP/state-output" .
+
+      - name: Save state to R2
+        if: needs.load-state.outputs.r2 == 'true'
+        uses: ./.github/actions/r2-state
+        with:
+          mode: put
+          branch: ${{ inputs.branch }}
+          file: ${{ runner.temp }}/state.tar.gz
+          operation: ${{ inputs.operation }}
+          etag: ${{ needs.run-game.outputs.source }}
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+
+      # コミット: 対象ブランチの .state/ だけを書き戻す。
+      - if: needs.load-state.outputs.r2 != 'true'
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.branch }}
           path: repository
 
-      - uses: actions/download-artifact@v7
+      - if: needs.load-state.outputs.r2 != 'true'
+        uses: actions/download-artifact@v7
         with:
           artifact-ids: ${{ needs.run-game.outputs.artifact }}
           path: state-output
 
       - name: Commit state
+        if: needs.load-state.outputs.r2 != 'true'
         working-directory: repository
         env:
           BRANCH: ${{ inputs.branch }}
