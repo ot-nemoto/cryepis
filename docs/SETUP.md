@@ -28,6 +28,7 @@ Gist は Fine-grained PAT に対応していないため Classic PAT を使い�
 
 `.state/` の記録は github-actions[bot] 名義で 対象のブランチに直接コミットされます（PR は通しません）。
 ブランチ保護を設定する場合は、日次進行・登録・引退で使う Actions の直接 push を許可してください。
+Variable `R2_STATE_BRANCHES` に入れたゲームは、コミットせずに Cloudflare R2 に保存します（「5. ゲームの状態を R2 に置く」）。
 
 ## 3. 開発と本番リリース
 
@@ -53,6 +54,57 @@ Cloudflare Pages で Direct Upload のプロジェクトを作成し、本番ブ
 
 本番・開発・本番 PR のプレビューが表示できることを確認してから `PRODUCTION_SITE_URL` を登録する。次回の公開で旧 GitHub Pages が移転案内になり、次回の本番実行で番付 Gist のリンクも更新される。切り替えを戻す場合は `PRODUCTION_SITE_URL` を消して、master で公開を再実行する。
 
+## 5. ゲームの状態を R2 に置く（#301）
+
+Variable `R2_STATE_BRANCHES`（空白区切り。例: `develop`）に入れたゲームは、状態（`.state/`）をブランチにコミットせず、Cloudflare R2 に保存する。
+毎日の実行・登録・引退は R2 から最新を取得して進め、R2 に保存する。サイトの書き出し（`pages.yml`）も R2 の状態を使う（本番 PR のプレビューは master の状態）。
+R2 の読み書きは `.github/actions/r2-state` にまとめている。
+
+| 項目 | 内容 |
+|---|---|
+| バケット | `warriors-road-state`（標準ストレージクラス） |
+| 最新 | `<ゲーム>/latest.tar.gz`（`.state/` の中身を tar.gz にしたもの） |
+| スナップショット | `<ゲーム>/snapshots/<日時（JST）>-<操作>.tar.gz`（例: `develop/snapshots/2026-11-28T071702+0900-advance.tar.gz`）。保存のたびに先に書き、そのあと最新を置き換える。最新を置き換えられなかったときは消す |
+| 残す期間 | スナップショットはライフサイクルルールで 30 日後に消える（`master/snapshots/`・`develop/snapshots/` だけ。最新は消えない） |
+| 認証 | Secret `CLOUDFLARE_API_TOKEN`（**Workers R2 Storage / Edit** を加える）と `CLOUDFLARE_ACCOUNT_ID`。S3 互換 API のキーはトークンから作る（Access Key ID はトークンの ID、Secret Access Key はトークンの値の SHA-256） |
+| 重なりの防止 | 同じゲームの実行は `concurrency` で直列にする。そのうえで、取得したときの最新の ETag を `If-Match` に付けて置き換え、別の実行が先に保存していたら止める |
+
+定期実行は master にあるワークフローで動くので、ワークフローの変更は master にリリースしてから効く。
+
+### ゲームを R2 に切り替える
+
+実行が重ならない時間（JST 7:17 の前後を避ける）に行う。
+
+1. 切り替えるブランチの今の `.state/` を R2 の最新に置く（手元で。wrangler で Cloudflare にログインしておく）
+
+   ```sh
+   git fetch origin develop
+   tmp=$(mktemp -d)
+   git archive origin/develop .state | tar -x -C "$tmp"
+   tar -czf "$tmp/state.tar.gz" -C "$tmp/.state" .
+   npx wrangler r2 object put warriors-road-state/develop/latest.tar.gz --file "$tmp/state.tar.gz" --remote
+   ```
+
+2. Variable `R2_STATE_BRANCHES` にゲームを加える（例: `gh variable set R2_STATE_BRANCHES --body develop`）
+3. 手動で進めて（開発は *Advance development game*）、R2 の最新が更新され、ブランチにコミットが増えず、サイトに反映されることを確かめる
+
+### 手元で R2 の状態を使う
+
+```sh
+npx wrangler r2 object get warriors-road-state/develop/latest.tar.gz --file state.tar.gz --remote
+rm -rf .state && mkdir .state && tar -xzf state.tar.gz -C .state
+python scripts/rpg.py --dry-run --actions 4
+```
+
+### 前の状態に戻す
+
+実行が重ならない時間に、戻したいスナップショット（Cloudflare ダッシュボードの R2 で一覧できる）を最新に置き換える。
+
+```sh
+npx wrangler r2 object get "warriors-road-state/develop/snapshots/2026-11-28T071702+0900-advance.tar.gz" --file state.tar.gz --remote
+npx wrangler r2 object put warriors-road-state/develop/latest.tar.gz --file state.tar.gz --remote
+```
+
 ## トラブルシューティング
 
 | 症状 | 原因 |
@@ -67,4 +119,7 @@ Cloudflare Pages で Direct Upload のプロジェクトを作成し、本番ブ
 | 警告 `番付の Gist（…）が見つからないので、新しく作ります` | 番付の Gist が消された。新しい Gist が作られるので Pin し直す |
 | `….json が JSON として読めません` / `読めません`（ジョブが失敗する） | マージ衝突などでファイルが壊れた。master の履歴から直前の正しい内容に戻す |
 | workflow が動かない | 60 日無活動で停止。Actions タブで *Enable workflow*（keepalive で通常は防げる） |
+| `R2 に <ゲーム> の状態（<ゲーム>/latest.tar.gz）がありません` | R2 に切り替えたのに、最新を置いていない。「ゲームを R2 に切り替える」の 1 を行う |
+| `セーブが別の実行で更新されています`（R2 に保存するとき） | 取得してから保存するまでに、別の実行が R2 の最新を置き換えた。もう一度実行する |
+| `Cloudflare の API トークンを確かめられませんでした` | `CLOUDFLARE_API_TOKEN` が無効、または呼び出し元のワークフローから Secret が渡されていない |
 | 実行が数十分遅れる | Actions の cron は遅延することがある（仕様） |

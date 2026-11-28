@@ -15,7 +15,8 @@
 
 - 日付はすべて JST の `YYYY-MM-DD`（文字列）
 - インデント（2 スペース）付きの整形済み JSON（UTF-8）で保存する
-- workflow の最後に github-actions[bot] が master に直接コミットする（変更が無ければコミットしない）
+- workflow の最後に github-actions[bot] が master に直接コミットする（変更が無ければコミットしない）。
+  Variable `R2_STATE_BRANCHES` に入れたゲームは、コミットせずに Cloudflare R2 に置く（[SETUP.md](SETUP.md) の「5. ゲームの状態を R2 に置く」）
 
 ---
 
