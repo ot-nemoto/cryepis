@@ -4,19 +4,19 @@
   "trait": "swift",
   "personality": "careful",
   "season": 1,
-  "season_day": 7,
-  "day": 7,
-  "last_date": "2026-11-27",
+  "season_day": 8,
+  "day": 8,
+  "last_date": "2026-11-28",
   "hero": {
-    "level": 6,
-    "exp": 126,
-    "max_hp": 70,
-    "hp": 69,
-    "base_atk": 16,
-    "base_def": 8,
-    "base_spd": 11,
-    "base_dex": 12,
-    "gold": 323,
+    "level": 7,
+    "exp": 2,
+    "max_hp": 78,
+    "hp": 78,
+    "base_atk": 17,
+    "base_def": 9,
+    "base_spd": 14,
+    "base_dex": 14,
+    "gold": 340,
     "potions": 3,
     "stored": 0
   },
@@ -40,15 +40,15 @@
   ],
   "stones": {},
   "storage": [],
-  "place": "edo",
-  "home_town": "edo",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "edo",
+    "place": "kofu",
     "report": null,
     "monster": null,
     "count": 1,
@@ -58,32 +58,37 @@
     "cost": 3
   },
   "taken": [
-    "2026-11-27-patrol"
+    "2026-11-28-patrol"
   ],
   "stay": {
-    "town": "edo",
-    "since": "2026-11-27"
+    "town": "kofu",
+    "since": "2026-11-28"
   },
   "season_stats": {
     "quests_done": 3,
     "quests_failed": 0,
-    "kills": 21,
+    "kills": 22,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
-      "木霊を倒した (+37EXP)",
-      "どこかでキツツキが木をつついている",
-      "丸薬を使った（HP 69/70）",
-      "猪笹王〔凶暴〕を倒した (+23EXP)",
-      "江戸に着いた"
+      "江戸の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "木漏れ日が道をまだらに照らす",
+      "道端に小さな花が咲いている",
+      "大山椒魚を倒した (+23EXP)",
+      "レベルが上がった！ Lv.7",
+      "甲府に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "江戸の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 木漏れ日が道をまだらに照らす / 道端に小さな花が咲いている / 大山椒魚を倒した (+23EXP) / レベルが上がった！ Lv.7 / 甲府に着いた"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,

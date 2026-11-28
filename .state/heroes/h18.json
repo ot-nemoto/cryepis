@@ -4,19 +4,19 @@
   "trait": "skilled",
   "personality": "diligent",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-27",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-28",
   "hero": {
     "level": 3,
-    "exp": 8,
+    "exp": 28,
     "max_hp": 46,
-    "hp": 40,
+    "hp": 28,
     "base_atk": 10,
     "base_def": 7,
     "base_spd": 7,
     "base_dex": 10,
-    "gold": 170,
+    "gold": 225,
     "potions": 3,
     "stored": 0
   },
@@ -28,85 +28,69 @@
     {
       "id": "wooden_helm",
       "skill": null
+    },
+    {
+      "id": "crimson_grass_charm",
+      "skill": null
     }
   ],
   "stones": {},
   "storage": [],
   "place": "kofu",
   "home_town": "kofu",
-  "road": null,
+  "road": {
+    "to": "nagano",
+    "left": 1
+  },
   "quest": {
-    "type": "hunt",
-    "place": "edo",
-    "report": "kofu",
-    "monster": "goblin",
-    "count": 3,
-    "rank": 1,
-    "name": "小鬼の討伐",
-    "text": "道ばたの祠のそばに小鬼が出て困っている。3体、追い払ってくれないか",
-    "template": "hunt",
-    "steps": [
-      [
-        "back",
-        1
-      ]
-    ],
-    "away": 1,
-    "town": "kofu",
-    "progress": 3,
-    "level": [
-      2,
-      2
-    ],
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "nagano",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 0,
     "deadline": null,
-    "cost": 5,
-    "reward": {
-      "exp": 0,
-      "gold": 40,
-      "item": [
-        [
-          "none",
-          95
-        ],
-        [
-          "rare",
-          5
-        ]
-      ]
-    },
-    "id": "2026-11-26-kofu-2"
+    "reward": null,
+    "cost": 3
   },
   "taken": [
-    "2026-11-26-kofu-2"
+    "2026-11-28-patrol"
   ],
   "stay": {
     "town": "kofu",
     "since": "2026-11-26"
   },
   "season_stats": {
-    "quests_done": 2,
+    "quests_done": 3,
     "quests_failed": 0,
-    "kills": 6,
+    "kills": 8,
     "deaths": 0,
-    "rares": []
+    "rares": [
+      "crimson_grass_charm"
+    ]
   },
   "last": {
-    "date": "2026-11-27",
-    "actions": 4,
+    "date": "2026-11-28",
+    "actions": 3,
     "events": [
-      "甲府の口入れ屋で依頼を受けた: ★ 小鬼の討伐（甲府と江戸の間の道で小鬼を3体討伐）（行動力 5）",
-      "木漏れ日が道をまだらに照らす",
-      "送り犬を倒した (+6EXP)",
-      "小鬼が3体現れた",
-      "小鬼を倒した (+8EXP)",
-      "小鬼を倒した (+8EXP)",
-      "レベルが上がった！ Lv.3",
-      "小鬼を倒した (+8EXP)",
-      "討伐の目標を果たした（3体）",
-      "苔むした倒木をまたいだ"
+      "苔むした倒木をまたいだ",
+      "甲府に戻った",
+      "依頼達成！★ 小鬼の討伐（甲府と江戸の間の道で小鬼を3体討伐）（+40文）",
+      "報酬で★★「不動の御守」を手に入れた（装備した）！",
+      "甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る",
+      "雪狼〔群れ〕を倒した (+15EXP)",
+      "鉄鼠〔群れ〕を倒した (+5EXP)"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "苔むした倒木をまたいだ / 甲府に戻った / 依頼達成！★ 小鬼の討伐（甲府と江戸の間の道で小鬼を3体討伐）（+40文） / 報酬で★★「不動の御守」を手に入れた（装備した）！ / 甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る / 雪狼〔群れ〕を倒した (+15EXP) / 鉄鼠〔群れ〕を倒した (+5EXP)"
+    },
     {
       "date": "2026-11-27",
       "actions": 4,

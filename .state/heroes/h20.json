@@ -4,19 +4,19 @@
   "trait": "lucky",
   "personality": "adventurous",
   "season": 1,
-  "season_day": 3,
-  "day": 3,
-  "last_date": "2026-11-27",
+  "season_day": 4,
+  "day": 4,
+  "last_date": "2026-11-28",
   "hero": {
-    "level": 2,
-    "exp": 22,
-    "max_hp": 38,
-    "hp": 30,
-    "base_atk": 8,
-    "base_def": 6,
-    "base_spd": 6,
-    "base_dex": 7,
-    "gold": 40,
+    "level": 3,
+    "exp": 0,
+    "max_hp": 46,
+    "hp": 46,
+    "base_atk": 10,
+    "base_def": 7,
+    "base_spd": 7,
+    "base_dex": 9,
+    "gold": 107,
     "potions": 3,
     "stored": 0
   },
@@ -30,78 +30,57 @@
   "storage": [],
   "place": "kofu",
   "home_town": "kofu",
-  "road": null,
+  "road": {
+    "to": "nagano",
+    "left": 2
+  },
   "quest": {
-    "type": "hunt",
-    "place": "edo",
-    "report": "kofu",
-    "monster": "giant_rat",
-    "count": 4,
-    "rank": 1,
-    "name": "鉄鼠の討伐",
-    "text": "道ばたの祠のそばに鉄鼠がうろついている。夜になる前に、片付けてくれないか",
-    "template": "hunt",
-    "steps": [
-      [
-        "back",
-        2
-      ]
-    ],
-    "away": 2,
-    "town": "kofu",
-    "progress": 4,
-    "level": [
-      1,
-      1
-    ],
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "nagano",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 0,
     "deadline": null,
-    "cost": 5,
-    "reward": {
-      "exp": 0,
-      "gold": 40,
-      "item": [
-        [
-          "none",
-          95
-        ],
-        [
-          "rare",
-          5
-        ]
-      ]
-    },
-    "id": "2026-11-26-kofu-1"
+    "reward": null,
+    "cost": 3
   },
   "taken": [
-    "2026-11-26-kofu-1"
+    "2026-11-28-patrol"
   ],
   "stay": {
     "town": "kofu",
     "since": "2026-11-26"
   },
   "season_stats": {
-    "quests_done": 0,
+    "quests_done": 1,
     "quests_failed": 0,
-    "kills": 6,
+    "kills": 7,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "甲府の口入れ屋で依頼を受けた: ★ 鉄鼠の討伐（甲府と江戸の間の道で鉄鼠を4体討伐）（行動力 5）",
-      "眼下に雲海が広がっている",
-      "岩の間から竜の骨のような白い石がのぞく",
-      "鉄鼠が4体現れた",
-      "鉄鼠〔群れ〕を倒した (+5EXP)",
-      "鉄鼠〔群れ〕を倒した (+5EXP)",
-      "鉄鼠〔群れ〕を倒した (+5EXP)",
-      "鉄鼠〔群れ〕を倒した (+5EXP)",
-      "討伐の目標を果たした（4体）"
+      "送り犬を倒した (+6EXP)",
+      "レベルが上がった！ Lv.3",
+      "宝箱から22文を見つけた",
+      "甲府に戻った",
+      "依頼達成！★ 鉄鼠の討伐（甲府と江戸の間の道で鉄鼠を4体討伐）（+40文）",
+      "甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る",
+      "遠くで雪崩の音がした"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "送り犬を倒した (+6EXP) / レベルが上がった！ Lv.3 / 宝箱から22文を見つけた / 甲府に戻った / 依頼達成！★ 鉄鼠の討伐（甲府と江戸の間の道で鉄鼠を4体討伐）（+40文） / 甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る / 遠くで雪崩の音がした"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,

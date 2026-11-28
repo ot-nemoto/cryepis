@@ -4,19 +4,19 @@
   "trait": "guard",
   "personality": "careful",
   "season": 1,
-  "season_day": 4,
-  "day": 4,
-  "last_date": "2026-11-27",
+  "season_day": 5,
+  "day": 5,
+  "last_date": "2026-11-28",
   "hero": {
     "level": 3,
-    "exp": 26,
+    "exp": 31,
     "max_hp": 46,
-    "hp": 38,
+    "hp": 36,
     "base_atk": 10,
     "base_def": 7,
     "base_spd": 7,
     "base_dex": 9,
-    "gold": 52,
+    "gold": 56,
     "potions": 3,
     "stored": 0
   },
@@ -36,15 +36,15 @@
   ],
   "stones": {},
   "storage": [],
-  "place": "edo",
-  "home_town": "edo",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "edo",
+    "place": "kofu",
     "report": null,
     "monster": null,
     "count": 1,
@@ -54,31 +54,36 @@
     "cost": 3
   },
   "taken": [
-    "2026-11-27-patrol"
+    "2026-11-28-patrol"
   ],
   "stay": {
-    "town": "edo",
-    "since": "2026-11-27"
+    "town": "kofu",
+    "since": "2026-11-28"
   },
   "season_stats": {
     "quests_done": 1,
     "quests_failed": 0,
-    "kills": 8,
+    "kills": 9,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
-      "遠くで羊の群れが草を食んでいる",
-      "眼下に雲海が広がっている",
-      "遠くで羊の群れが草を食んでいる",
-      "江戸に着いた"
+      "江戸の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "どこかでキツツキが木をつついている",
+      "苔むした倒木をまたいだ",
+      "鉄鼠〔群れ〕を倒した (+5EXP)",
+      "甲府に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "江戸の口入れ屋には受けられる依頼がない。甲府へ旅に出る / どこかでキツツキが木をつついている / 苔むした倒木をまたいだ / 鉄鼠〔群れ〕を倒した (+5EXP) / 甲府に着いた"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,

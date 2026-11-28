@@ -4,9 +4,9 @@
   "trait": "lucky",
   "personality": "diligent",
   "season": 1,
-  "season_day": 5,
-  "day": 5,
-  "last_date": "2026-11-27",
+  "season_day": 6,
+  "day": 6,
+  "last_date": "2026-11-28",
   "hero": {
     "level": 4,
     "exp": 68,
@@ -18,7 +18,7 @@
     "base_dex": 10,
     "gold": 90,
     "potions": 3,
-    "stored": 0
+    "stored": 1
   },
   "inventory": [
     {
@@ -41,29 +41,16 @@
       "skill": null
     }
   ],
-  "place": "edo",
-  "home_town": "edo",
+  "place": "odawara",
+  "home_town": "odawara",
   "road": null,
-  "quest": {
-    "type": "patrol",
-    "name": "旅",
-    "template": null,
-    "town": null,
-    "place": "edo",
-    "report": null,
-    "monster": null,
-    "count": 1,
-    "progress": 1,
-    "deadline": null,
-    "reward": null,
-    "cost": 3
-  },
+  "quest": null,
   "taken": [
-    "2026-11-27-patrol"
+    "2026-11-28-patrol"
   ],
   "stay": {
-    "town": "edo",
-    "since": "2026-11-27"
+    "town": "odawara",
+    "since": "2026-11-28"
   },
   "season_stats": {
     "quests_done": 3,
@@ -73,17 +60,22 @@
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
-      "鬼火を倒した (+10EXP)",
+      "江戸の口入れ屋には受けられる依頼がない。小田原へ旅に出る",
       "眼下に雲海が広がっている",
-      "鉄鼠〔群れ〕を倒した (+5EXP)",
-      "江戸に着いた"
+      "岩の間から竜の骨のような白い石がのぞく",
+      "小田原に着いた",
+      "小田原で休んで、行動力を溜めた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "江戸の口入れ屋には受けられる依頼がない。小田原へ旅に出る / 眼下に雲海が広がっている / 岩の間から竜の骨のような白い石がのぞく / 小田原に着いた / 小田原で休んで、行動力を溜めた"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,

@@ -4,19 +4,19 @@
   "trait": "lucky",
   "personality": "thrifty",
   "season": 1,
-  "season_day": 2,
-  "day": 2,
-  "last_date": "2026-11-27",
+  "season_day": 3,
+  "day": 3,
+  "last_date": "2026-11-28",
   "hero": {
-    "level": 2,
-    "exp": 19,
-    "max_hp": 38,
-    "hp": 30,
-    "base_atk": 8,
-    "base_def": 6,
-    "base_spd": 6,
-    "base_dex": 7,
-    "gold": 54,
+    "level": 3,
+    "exp": 4,
+    "max_hp": 46,
+    "hp": 46,
+    "base_atk": 10,
+    "base_def": 7,
+    "base_spd": 7,
+    "base_dex": 9,
+    "gold": 104,
     "potions": 3,
     "stored": 0
   },
@@ -25,76 +25,57 @@
   "storage": [],
   "place": "kofu",
   "home_town": "kofu",
-  "road": null,
+  "road": {
+    "to": "edo",
+    "left": 2
+  },
   "quest": {
-    "type": "hunt",
-    "place": "nagano",
-    "report": "kofu",
-    "monster": "wild_dog",
-    "count": 2,
-    "rank": 1,
-    "name": "送り犬の討伐",
-    "text": "道ばたの祠のそばに送り犬がうろついている。夜になる前に、片付けてくれないか",
-    "template": "hunt",
-    "steps": [
-      [
-        "back",
-        2
-      ]
-    ],
-    "away": 2,
-    "town": "kofu",
-    "progress": 2,
-    "level": [
-      1,
-      1
-    ],
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "edo",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 0,
     "deadline": null,
-    "cost": 5,
-    "reward": {
-      "exp": 0,
-      "gold": 40,
-      "item": [
-        [
-          "none",
-          95
-        ],
-        [
-          "rare",
-          5
-        ]
-      ]
-    },
-    "id": "2026-11-26-kofu-0"
+    "reward": null,
+    "cost": 3
   },
   "taken": [
-    "2026-11-26-kofu-0"
+    "2026-11-28-patrol"
   ],
   "stay": {
     "town": "kofu",
     "since": "2026-11-26"
   },
   "season_stats": {
-    "quests_done": 0,
+    "quests_done": 1,
     "quests_failed": 0,
-    "kills": 5,
+    "kills": 7,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "甲府の口入れ屋で依頼を受けた: ★ 送り犬の討伐（甲府と長野の間の道で送り犬を2体討伐）（行動力 5）",
-      "雪原に獣の足跡が続いている",
-      "道端に小さな花が咲いている",
-      "送り犬が2体現れた",
-      "送り犬を倒した (+6EXP)",
-      "送り犬を倒した (+6EXP)",
-      "討伐の目標を果たした（2体）"
+      "鉄鼠〔群れ〕を倒した (+5EXP)",
+      "小鬼を倒した (+8EXP)",
+      "レベルが上がった！ Lv.3",
+      "甲府に戻った",
+      "依頼達成！★ 送り犬の討伐（甲府と長野の間の道で送り犬を2体討伐）（+40文）",
+      "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "岩の間から竜の骨のような白い石がのぞく"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "鉄鼠〔群れ〕を倒した (+5EXP) / 小鬼を倒した (+8EXP) / レベルが上がった！ Lv.3 / 甲府に戻った / 依頼達成！★ 送り犬の討伐（甲府と長野の間の道で送り犬を2体討伐）（+40文） / 甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る / 岩の間から竜の骨のような白い石がのぞく"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,

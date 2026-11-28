@@ -4,19 +4,19 @@
   "trait": "strong",
   "personality": "adventurous",
   "season": 1,
-  "season_day": 5,
-  "day": 5,
-  "last_date": "2026-11-27",
+  "season_day": 6,
+  "day": 6,
+  "last_date": "2026-11-28",
   "hero": {
     "level": 3,
-    "exp": 25,
+    "exp": 47,
     "max_hp": 41,
-    "hp": 28,
+    "hp": 17,
     "base_atk": 11,
     "base_def": 7,
     "base_spd": 7,
     "base_dex": 9,
-    "gold": 28,
+    "gold": 44,
     "potions": 4,
     "stored": 0
   },
@@ -32,10 +32,10 @@
   ],
   "stones": {},
   "storage": [],
-  "place": "kofu",
-  "home_town": "kofu",
+  "place": "nagano",
+  "home_town": "nagano",
   "road": {
-    "to": "nagano",
+    "to": "kofu",
     "left": 1
   },
   "quest": {
@@ -43,7 +43,7 @@
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "nagano",
+    "place": "kofu",
     "report": null,
     "monster": null,
     "count": 1,
@@ -53,26 +53,26 @@
     "cost": 3
   },
   "taken": [
-    "2026-11-27-patrol"
+    "2026-11-28-patrol"
   ],
   "stay": {
-    "town": "kofu",
-    "since": "2026-11-27"
+    "town": "nagano",
+    "since": "2026-11-28"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 7,
+    "kills": 9,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "岩の間から竜の骨のような白い石がのぞく",
-      "甲府に着いた",
-      "甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る",
+      "苔むした倒木をまたいだ",
+      "長野に着いた",
+      "長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
       "山蛭〔毒〕を倒した (+11EXP)",
       "毒で HP が 4 減った",
       "山蛭〔毒〕を倒した (+11EXP)",
@@ -80,6 +80,11 @@
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "苔むした倒木をまたいだ / 長野に着いた / 長野の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 山蛭〔毒〕を倒した (+11EXP) / 毒で HP が 4 減った / 山蛭〔毒〕を倒した (+11EXP) / 毒で HP が 4 減った"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,

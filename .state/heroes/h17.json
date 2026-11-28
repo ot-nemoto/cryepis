@@ -4,62 +4,113 @@
   "trait": "lucky",
   "personality": "thrifty",
   "season": 1,
-  "season_day": 4,
-  "day": 4,
-  "last_date": "2026-11-27",
+  "season_day": 5,
+  "day": 5,
+  "last_date": "2026-11-28",
   "hero": {
-    "level": 3,
-    "exp": 6,
-    "max_hp": 46,
-    "hp": 46,
-    "base_atk": 10,
+    "level": 4,
+    "exp": 20,
+    "max_hp": 54,
+    "hp": 54,
+    "base_atk": 12,
     "base_def": 7,
-    "base_spd": 7,
-    "base_dex": 9,
-    "gold": 54,
-    "potions": 4,
+    "base_spd": 8,
+    "base_dex": 10,
+    "gold": 89,
+    "potions": 2,
     "stored": 0
   },
   "inventory": [
+    {
+      "id": "steel_helm",
+      "skill": null
+    }
+  ],
+  "stones": {},
+  "storage": [
     {
       "id": "wooden_helm",
       "skill": null
     }
   ],
-  "stones": {},
-  "storage": [],
-  "place": "odawara",
-  "home_town": "odawara",
-  "road": null,
-  "quest": null,
+  "place": "edo",
+  "home_town": "edo",
+  "road": {
+    "to": "kofu",
+    "left": 2
+  },
+  "quest": {
+    "type": "deliver",
+    "place": "kofu",
+    "report": "kofu",
+    "monster": null,
+    "count": 1,
+    "rank": 3,
+    "danger": 2,
+    "cargo": "大名の書状",
+    "name": "大名の書状の配達",
+    "text": "大名の書状を狙う者がいると聞く。どの教えの者かは分からない。甲府まで、決して渡すな",
+    "min_level": 5,
+    "template": "deliver",
+    "town": "odawara",
+    "progress": 0,
+    "level": null,
+    "deadline": null,
+    "cost": 5,
+    "reward": {
+      "exp": 0,
+      "gold": 320,
+      "item": [
+        [
+          "none",
+          80
+        ],
+        [
+          "rare",
+          20
+        ]
+      ]
+    },
+    "id": "2026-11-26-odawara-2"
+  },
   "taken": [
-    "2026-11-27-patrol"
+    "2026-11-26-odawara-2"
   ],
   "stay": {
-    "town": "odawara",
-    "since": "2026-11-27"
+    "town": "edo",
+    "since": "2026-11-28"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 5,
+    "kills": 7,
     "deaths": 0,
-    "rares": []
+    "rares": [
+      "steel_helm"
+    ]
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "江戸の口入れ屋には受けられる依頼がない。小田原へ旅に出る",
-      "泥田坊を倒した (+17EXP)",
-      "レベルが上がった！ Lv.3",
-      "草原を風が吹き抜けていく",
-      "小田原に着いた",
-      "小田原の周りを散策した",
-      "宝箱から20文を見つけた"
+      "小田原の口入れ屋で依頼を受けた: ★★★ 大名の書状の配達（甲府へ大名の書状を届ける）（行動力 5）",
+      "宝箱から★★「鍬形の兜」を手に入れた（装備した）！",
+      "丸薬を使った（HP 29/46）",
+      "丸薬を使った（HP 26/46）",
+      "鉄甲虫〔硬い〕を倒した (+36EXP)",
+      "江戸に着いた",
+      "江戸の口入れ屋の蔵に、装備を 1 つ預けた",
+      "丸薬を使った（HP 29/46）",
+      "野槌〔先手〕を倒した (+30EXP)",
+      "レベルが上がった！ Lv.4"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "小田原の口入れ屋で依頼を受けた: ★★★ 大名の書状の配達（甲府へ大名の書状を届ける）（行動力 5） / 宝箱から★★「鍬形の兜」を手に入れた（装備した）！ / 丸薬を使った（HP 29/46） / 丸薬を使った（HP 26/46） / 鉄甲虫〔硬い〕を倒した (+36EXP) / 江戸に着いた / 江戸の口入れ屋の蔵に、装備を 1 つ預けた / 丸薬を使った（HP 29/46） / 野槌〔先手〕を倒した (+30EXP) / レベルが上がった！ Lv.4"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,
