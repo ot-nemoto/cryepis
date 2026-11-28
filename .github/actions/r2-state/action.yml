@@ -99,6 +99,12 @@ runs:
             code=$(s3 -T "$FILE" -H "x-amz-content-sha256: $hash" -H 'If-None-Match: *' "$base/$snapshot")
             [ "$code" = 200 ] || fail "スナップショットを保存できませんでした" "$code"
             code=$(s3 -T "$FILE" -H "x-amz-content-sha256: $hash" -H "If-Match: $ETAG" "$base/latest.tar.gz")
+            if [ "$code" != 200 ]; then
+              # 最新を置き換えられなかったセーブは、スナップショットにも残さない（応答の本文はエラー表示のために残す）
+              mv "$work/body" "$work/put-body"
+              s3 -X DELETE -H "x-amz-content-sha256: $empty" "$base/$snapshot" > /dev/null || true
+              mv "$work/put-body" "$work/body"
+            fi
             if [ "$code" = 412 ]; then
               fail "セーブが別の実行で更新されています。最新の状態で再実行してください" "$code"
             fi
