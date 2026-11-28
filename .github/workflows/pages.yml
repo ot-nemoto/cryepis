@@ -87,6 +87,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       r2: ${{ steps.storage.outputs.r2 }}
+      game: ${{ steps.storage.outputs.game }}
+      etag: ${{ steps.get.outputs.etag }}
       artifact: ${{ steps.upload.outputs.artifact-id }}
     steps:
       - id: storage
@@ -111,7 +113,8 @@ jobs:
           sparse-checkout: .github/actions
           persist-credentials: false
 
-      - if: steps.storage.outputs.r2 == 'true'
+      - id: get
+        if: steps.storage.outputs.r2 == 'true'
         uses: ./.github/actions/r2-state
         with:
           mode: get
@@ -253,7 +256,40 @@ jobs:
       # deploy-pages は、アップロード直後のアーティファクトが API から見えず（Found 0 artifact(s)）、たまに失敗する。
       # 一時的な問題なので、失敗したら少し待って 1 回だけやり直す（2 回とも失敗したときだけジョブを失敗にする）
       # （待っても直らないとき、たとえばアップロードが登録されていないときは、Actions で Re-run failed jobs する）
+      # R2 に置いたゲームは、書き出しに使った状態が今も最新か確かめる。別の実行が先に新しい状態を保存していたら、
+      # この（古い状態の）書き出しは公開しない（R2 ではコミットが増えないので、コミットの比較では見分けられない）
+      - if: needs.load-state.outputs.r2 == 'true'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/actions
+          path: r2-action
+          persist-credentials: false
+
+      - id: latest
+        if: needs.load-state.outputs.r2 == 'true'
+        uses: ./r2-action/.github/actions/r2-state
+        with:
+          mode: etag
+          branch: ${{ needs.load-state.outputs.game }}
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+
+      - id: fresh
+        env:
+          R2: ${{ needs.load-state.outputs.r2 }}
+          BUILT: ${{ needs.load-state.outputs.etag }}
+          LATEST: ${{ steps.latest.outputs.etag }}
+        run: |
+          if [ "$R2" = true ] && [ "$BUILT" != "$LATEST" ]; then
+            echo "R2 の状態が書き出したあとで更新されたので、この生成物の公開を省きます。"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - id: deploy
+        if: steps.fresh.outputs.ok == 'true'
         uses: actions/deploy-pages@v5
         continue-on-error: true
 
@@ -326,7 +362,7 @@ jobs:
   cloudflare-deploy:
     # release-check は PR 専用。通常のブランチ更新では、そのスキップを配信に伝播させない。
     if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.cloudflare-build.result == 'success' }}
-    needs: [resolve, cloudflare-build]
+    needs: [resolve, load-state, cloudflare-build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -343,7 +379,40 @@ jobs:
         with:
           node-version: "22"
 
+      # R2 に置いたゲームは、書き出しに使った状態が今も最新か確かめる。別の実行が先に新しい状態を保存していたら、
+      # この（古い状態の）書き出しは公開しない（R2 ではコミットが増えないので、コミットの比較では見分けられない）
+      - if: needs.load-state.outputs.r2 == 'true'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/actions
+          path: r2-action
+          persist-credentials: false
+
+      - id: latest
+        if: needs.load-state.outputs.r2 == 'true'
+        uses: ./r2-action/.github/actions/r2-state
+        with:
+          mode: etag
+          branch: ${{ needs.load-state.outputs.game }}
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+
+      - id: fresh
+        env:
+          R2: ${{ needs.load-state.outputs.r2 }}
+          BUILT: ${{ needs.load-state.outputs.etag }}
+          LATEST: ${{ steps.latest.outputs.etag }}
+        run: |
+          if [ "$R2" = true ] && [ "$BUILT" != "$LATEST" ]; then
+            echo "R2 の状態が書き出したあとで更新されたので、この生成物の公開を省きます。"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish to Cloudflare Pages
+        if: steps.fresh.outputs.ok == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
