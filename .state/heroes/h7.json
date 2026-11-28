@@ -4,19 +4,19 @@
   "trait": "lucky",
   "personality": "brave",
   "season": 1,
-  "season_day": 5,
-  "day": 5,
-  "last_date": "2026-11-27",
+  "season_day": 6,
+  "day": 6,
+  "last_date": "2026-11-28",
   "hero": {
     "level": 4,
-    "exp": 10,
+    "exp": 44,
     "max_hp": 54,
-    "hp": 54,
+    "hp": 17,
     "base_atk": 12,
     "base_def": 7,
     "base_spd": 8,
     "base_dex": 10,
-    "gold": 45,
+    "gold": 94,
     "potions": 3,
     "stored": 0
   },
@@ -44,48 +44,41 @@
   "place": "nagano",
   "home_town": "nagano",
   "road": null,
-  "quest": {
-    "type": "patrol",
-    "name": "旅",
-    "template": null,
-    "town": null,
-    "place": "nagano",
-    "report": null,
-    "monster": null,
-    "count": 1,
-    "progress": 1,
-    "deadline": null,
-    "reward": null,
-    "cost": 3
-  },
+  "quest": null,
   "taken": [
-    "2026-11-27-patrol"
+    "2026-11-27-nagano-2"
   ],
   "stay": {
     "town": "nagano",
     "since": "2026-11-27"
   },
   "season_stats": {
-    "quests_done": 2,
+    "quests_done": 3,
     "quests_failed": 0,
-    "kills": 10,
+    "kills": 12,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る",
-      "小鬼を倒した (+8EXP)",
+      "長野の口入れ屋で依頼を受けた: ★ 大山椒魚の討伐（長野と甲府の間の道で大山椒魚を1体討伐）（行動力 3）",
+      "吐く息が白い",
+      "大山椒魚を倒した (+23EXP)",
+      "討伐の目標を果たした（1体）",
       "山蛭〔毒〕を倒した (+11EXP)",
-      "毒で HP が 4 減った",
-      "レベルが上がった！ Lv.4",
-      "遠くで羊の群れが草を食んでいる",
-      "長野に着いた"
+      "毒で HP が 5 減った",
+      "長野に戻った",
+      "依頼達成！★ 大山椒魚の討伐（長野と甲府の間の道で大山椒魚を1体討伐）（+24文）"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "長野の口入れ屋で依頼を受けた: ★ 大山椒魚の討伐（長野と甲府の間の道で大山椒魚を1体討伐）（行動力 3） / 吐く息が白い / 大山椒魚を倒した (+23EXP) / 討伐の目標を果たした（1体） / 山蛭〔毒〕を倒した (+11EXP) / 毒で HP が 5 減った / 長野に戻った / 依頼達成！★ 大山椒魚の討伐（長野と甲府の間の道で大山椒魚を1体討伐）（+24文）"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,

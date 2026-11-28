@@ -4,19 +4,19 @@
   "trait": "guard",
   "personality": "tactician",
   "season": 1,
-  "season_day": 4,
-  "day": 4,
-  "last_date": "2026-11-27",
+  "season_day": 5,
+  "day": 5,
+  "last_date": "2026-11-28",
   "hero": {
     "level": 3,
-    "exp": 20,
+    "exp": 37,
     "max_hp": 46,
-    "hp": 32,
+    "hp": 27,
     "base_atk": 10,
     "base_def": 7,
     "base_spd": 7,
     "base_dex": 9,
-    "gold": 18,
+    "gold": 56,
     "potions": 3,
     "stored": 0
   },
@@ -41,15 +41,15 @@
       "skill": null
     }
   ],
-  "place": "edo",
-  "home_town": "edo",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
   "quest": {
     "type": "patrol",
     "name": "旅",
     "template": null,
     "town": null,
-    "place": "edo",
+    "place": "kofu",
     "report": null,
     "monster": null,
     "count": 1,
@@ -59,31 +59,36 @@
     "cost": 3
   },
   "taken": [
-    "2026-11-27-patrol"
+    "2026-11-28-patrol"
   ],
   "stay": {
-    "town": "edo",
-    "since": "2026-11-27"
+    "town": "kofu",
+    "since": "2026-11-28"
   },
   "season_stats": {
     "quests_done": 1,
     "quests_failed": 0,
-    "kills": 5,
+    "kills": 6,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "甲府の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
-      "切り立った崖の細い道を進んだ",
-      "草原を風が吹き抜けていく",
-      "鉄鼠〔群れ〕を倒した (+5EXP)",
-      "江戸に着いた"
+      "江戸の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "泥田坊を倒した (+17EXP)",
+      "宝箱から25文を見つけた",
+      "木漏れ日が道をまだらに照らす",
+      "甲府に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "江戸の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 泥田坊を倒した (+17EXP) / 宝箱から25文を見つけた / 木漏れ日が道をまだらに照らす / 甲府に着いた"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,

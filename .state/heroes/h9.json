@@ -4,19 +4,19 @@
   "trait": "strong",
   "personality": "careful",
   "season": 1,
-  "season_day": 4,
-  "day": 4,
-  "last_date": "2026-11-27",
+  "season_day": 5,
+  "day": 5,
+  "last_date": "2026-11-28",
   "hero": {
     "level": 2,
-    "exp": 16,
+    "exp": 22,
     "max_hp": 36,
-    "hp": 26,
+    "hp": 36,
     "base_atk": 9,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 21,
+    "gold": 6,
     "potions": 4,
     "stored": 2
   },
@@ -28,36 +28,41 @@
   ],
   "stones": {},
   "storage": [],
-  "place": "odawara",
-  "home_town": "odawara",
+  "place": "edo",
+  "home_town": "edo",
   "road": null,
   "quest": null,
   "taken": [
-    "2026-11-27-patrol"
+    "2026-11-28-patrol"
   ],
   "stay": {
-    "town": "odawara",
-    "since": "2026-11-27"
+    "town": "edo",
+    "since": "2026-11-28"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 0,
-    "kills": 4,
+    "kills": 5,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "江戸の口入れ屋には受けられる依頼がない。小田原へ旅に出る",
-      "道端に小さな花が咲いている",
+      "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る",
+      "送り犬を倒した (+6EXP)",
       "草原を風が吹き抜けていく",
-      "小田原に着いた",
-      "小田原で休んで、行動力を溜めた"
+      "江戸に着いた",
+      "江戸の旅籠で休んだ（-20文、HP 全回復）"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "小田原の口入れ屋には受けられる依頼がない。江戸へ旅に出る / 送り犬を倒した (+6EXP) / 草原を風が吹き抜けていく / 江戸に着いた / 江戸の旅籠で休んだ（-20文、HP 全回復）"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,

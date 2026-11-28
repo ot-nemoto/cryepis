@@ -4,19 +4,19 @@
   "trait": "guard",
   "personality": "diligent",
   "season": 1,
-  "season_day": 4,
-  "day": 4,
-  "last_date": "2026-11-27",
+  "season_day": 5,
+  "day": 5,
+  "last_date": "2026-11-28",
   "hero": {
-    "level": 1,
-    "exp": 6,
-    "max_hp": 30,
-    "hp": 30,
-    "base_atk": 6,
+    "level": 2,
+    "exp": 1,
+    "max_hp": 38,
+    "hp": 38,
+    "base_atk": 8,
     "base_def": 6,
     "base_spd": 6,
-    "base_dex": 6,
-    "gold": 5,
+    "base_dex": 7,
+    "gold": 9,
     "potions": 0,
     "stored": 0
   },
@@ -28,35 +28,55 @@
   ],
   "stones": {},
   "storage": [],
-  "place": "edo",
-  "home_town": "edo",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
-  "quest": null,
-  "taken": [],
+  "quest": {
+    "type": "patrol",
+    "name": "旅",
+    "template": null,
+    "town": null,
+    "place": "kofu",
+    "report": null,
+    "monster": null,
+    "count": 1,
+    "progress": 1,
+    "deadline": null,
+    "reward": null,
+    "cost": 3
+  },
+  "taken": [
+    "2026-11-28-patrol"
+  ],
   "stay": {
-    "town": "edo",
-    "since": "2026-11-26"
+    "town": "kofu",
+    "since": "2026-11-28"
   },
   "season_stats": {
     "quests_done": 0,
     "quests_failed": 1,
-    "kills": 1,
+    "kills": 2,
     "deaths": 1,
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "丸薬を使った（HP 16/30）",
-      "丸薬を使った（HP 20/30）",
-      "丸薬を使った（HP 18/30）",
-      "女郎蜘蛛に敗れた",
-      "力尽きた… 江戸で目を覚ました",
-      "依頼失敗（力尽きた）: ★★★ 大名の書状の配達（甲府へ大名の書状を届ける）"
+      "江戸の口入れ屋には受けられる依頼がない。甲府へ旅に出る",
+      "木漏れ日が道をまだらに照らす",
+      "鉄鼠〔群れ〕を倒した (+5EXP)",
+      "レベルが上がった！ Lv.2",
+      "木漏れ日が道をまだらに照らす",
+      "甲府に着いた"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "江戸の口入れ屋には受けられる依頼がない。甲府へ旅に出る / 木漏れ日が道をまだらに照らす / 鉄鼠〔群れ〕を倒した (+5EXP) / レベルが上がった！ Lv.2 / 木漏れ日が道をまだらに照らす / 甲府に着いた"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,

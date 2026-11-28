@@ -4,19 +4,19 @@
   "trait": "strong",
   "personality": "careful",
   "season": 1,
-  "season_day": 4,
-  "day": 4,
-  "last_date": "2026-11-27",
+  "season_day": 5,
+  "day": 5,
+  "last_date": "2026-11-28",
   "hero": {
     "level": 2,
-    "exp": 2,
+    "exp": 20,
     "max_hp": 36,
-    "hp": 36,
+    "hp": 24,
     "base_atk": 9,
     "base_def": 6,
     "base_spd": 6,
     "base_dex": 7,
-    "gold": 52,
+    "gold": 114,
     "potions": 4,
     "stored": 0
   },
@@ -28,49 +28,42 @@
   ],
   "stones": {},
   "storage": [],
-  "place": "nagano",
-  "home_town": "nagano",
+  "place": "kofu",
+  "home_town": "kofu",
   "road": null,
-  "quest": {
-    "type": "patrol",
-    "name": "旅",
-    "template": null,
-    "town": null,
-    "place": "nagano",
-    "report": null,
-    "monster": null,
-    "count": 1,
-    "progress": 1,
-    "deadline": null,
-    "reward": null,
-    "cost": 3
-  },
+  "quest": null,
   "taken": [
-    "2026-11-27-patrol"
+    "2026-11-27-nagano-1"
   ],
   "stay": {
-    "town": "nagano",
-    "since": "2026-11-27"
+    "town": "kofu",
+    "since": "2026-11-28"
   },
   "season_stats": {
-    "quests_done": 0,
+    "quests_done": 1,
     "quests_failed": 0,
-    "kills": 2,
+    "kills": 4,
     "deaths": 0,
     "rares": []
   },
   "last": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "actions": 3,
     "events": [
-      "甲府の口入れ屋には受けられる依頼がない。長野へ旅に出る",
-      "遠くで雪崩の音がした",
-      "宝箱から30文を見つけた",
-      "宝箱から12文を見つけた",
-      "長野に着いた"
+      "長野の口入れ屋で依頼を受けた: ★ 手紙の配達（甲府へ手紙を届ける）（行動力 3）",
+      "吐く息が白い",
+      "小鬼を倒した (+8EXP)",
+      "鬼火を倒した (+10EXP)",
+      "甲府に着いた",
+      "依頼達成！★ 手紙の配達（甲府へ手紙を届ける）（+48文）"
     ]
   },
   "journal": [
+    {
+      "date": "2026-11-28",
+      "actions": 3,
+      "text": "長野の口入れ屋で依頼を受けた: ★ 手紙の配達（甲府へ手紙を届ける）（行動力 3） / 吐く息が白い / 小鬼を倒した (+8EXP) / 鬼火を倒した (+10EXP) / 甲府に着いた / 依頼達成！★ 手紙の配達（甲府へ手紙を届ける）（+48文）"
+    },
     {
       "date": "2026-11-27",
       "actions": 3,
