@@ -1,0 +1,127 @@
+name: Game state on R2
+description: >-
+  ゲームの状態（.state/ をまとめた tar.gz）を Cloudflare R2 から取得する・R2 に保存する（#301）。
+  S3 互換 API のキーは Cloudflare の API トークンから作る（Access Key ID はトークンの ID、Secret Access Key はトークンの値の SHA-256）。
+
+inputs:
+  mode:
+    description: "get（最新を取得する）、etag（最新の ETag だけを調べる）、put（スナップショットを残してから最新を置き換える）"
+    required: true
+  branch:
+    description: "ゲーム（master または develop）"
+    required: true
+  file:
+    description: "get は保存先、put は保存する tar.gz（etag では使わない）"
+    default: ""
+  operation:
+    description: "put のとき、スナップショットの名前に付ける操作（advance・new-game・retire）"
+    default: ""
+  etag:
+    description: "put のとき、取得した時点の最新の ETag。R2 の最新がこれと違えば保存しない"
+    default: ""
+  api-token:
+    description: "Cloudflare の API トークン（Workers R2 Storage の編集権限）"
+    required: true
+  account-id:
+    description: "Cloudflare のアカウント ID"
+    required: true
+  bucket:
+    description: "R2 のバケット"
+    default: warriors-road-state
+
+outputs:
+  etag:
+    description: "get・etag のとき、最新の ETag"
+    value: ${{ steps.r2.outputs.etag }}
+
+runs:
+  using: composite
+  steps:
+    - id: r2
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        BRANCH: ${{ inputs.branch }}
+        FILE: ${{ inputs.file }}
+        OPERATION: ${{ inputs.operation }}
+        ETAG: ${{ inputs.etag }}
+        CLOUDFLARE_API_TOKEN: ${{ inputs.api-token }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.account-id }}
+        BUCKET: ${{ inputs.bucket }}
+      run: |
+        set -euo pipefail
+        case "$BRANCH" in master|develop) ;; *) echo "::error::ゲームは master か develop です: $BRANCH"; exit 1 ;; esac
+        if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+          echo "::error::CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID が必要です"
+          exit 1
+        fi
+        api=https://api.cloudflare.com/client/v4
+        key_id=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/user/tokens/verify" | jq -r '.result.id // empty' 2>/dev/null || true)
+        if [ -z "$key_id" ]; then
+          key_id=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify" | jq -r '.result.id // empty' 2>/dev/null || true)
+        fi
+        if [ -z "$key_id" ]; then
+          echo "::error::Cloudflare の API トークンを確かめられませんでした"
+          exit 1
+        fi
+        secret=$(printf %s "$CLOUDFLARE_API_TOKEN" | sha256sum | cut -d' ' -f1)
+        echo "::add-mask::$secret"
+        work=$(mktemp -d)
+        trap 'rm -rf "$work"' EXIT
+        printf 'user = "%s:%s"\n' "$key_id" "$secret" > "$work/curl.conf"
+        base="https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com/$BUCKET/$BRANCH"
+        empty=$(sha256sum < /dev/null | cut -d' ' -f1)
+        # 応答の本文は $work/body、ヘッダーは $work/head に置き、HTTP ステータスを返す（通信できなければ 000）
+        s3() {
+          rm -f "$work/body" "$work/head"
+          touch "$work/body" "$work/head"
+          curl -sS -K "$work/curl.conf" --aws-sigv4 "aws:amz:auto:s3" -o "$work/body" -D "$work/head" -w '%{http_code}' "$@" || true
+        }
+        etag_of() { grep -i '^etag:' "$work/head" | head -1 | cut -d' ' -f2- | tr -d '\r'; }
+        fail() { echo "::error::$1（HTTP $2）"; cat "$work/body" >&2 || true; exit 1; }
+
+        case "$MODE" in
+          get)
+            code=$(s3 -H "x-amz-content-sha256: $empty" "$base/latest.tar.gz")
+            if [ "$code" = 404 ]; then
+              fail "R2 に $BRANCH の状態（$BRANCH/latest.tar.gz）がありません" "$code"
+            fi
+            [ "$code" = 200 ] || fail "R2 から $BRANCH の状態を取得できませんでした" "$code"
+            tar -tzf "$work/body" > /dev/null
+            mv "$work/body" "$FILE"
+            echo "etag=$(etag_of)" >> "$GITHUB_OUTPUT"
+            ;;
+          etag)
+            code=$(s3 -I -H "x-amz-content-sha256: $empty" "$base/latest.tar.gz")
+            [ "$code" = 200 ] || fail "R2 の $BRANCH の最新（$BRANCH/latest.tar.gz）を確かめられませんでした" "$code"
+            echo "etag=$(etag_of)" >> "$GITHUB_OUTPUT"
+            ;;
+          put)
+            [ -n "$ETAG" ] || { echo "::error::取得した時点の ETag がありません"; exit 1; }
+            case "$OPERATION" in advance|new-game|retire) ;; *) echo "::error::操作が正しくありません: $OPERATION"; exit 1 ;; esac
+            tar -tzf "$FILE" > /dev/null
+            hash=$(sha256sum "$FILE" | cut -d' ' -f1)
+            # 例: develop/snapshots/2026-11-28T071702+0900-advance.tar.gz（URL では + を %2B にする）
+            stamp=$(TZ=Asia/Tokyo date +%Y-%m-%dT%H%M%S%z)
+            snapshot="snapshots/${stamp/+/%2B}-$OPERATION.tar.gz"
+            code=$(s3 -T "$FILE" -H "x-amz-content-sha256: $hash" -H 'If-None-Match: *' "$base/$snapshot")
+            [ "$code" = 200 ] || fail "スナップショットを保存できませんでした" "$code"
+            code=$(s3 -T "$FILE" -H "x-amz-content-sha256: $hash" -H "If-Match: $ETAG" "$base/latest.tar.gz")
+            if [ "$code" != 200 ]; then
+              # 最新を置き換えられなかったセーブは、スナップショットにも残さない（応答の本文はエラー表示のために残す）
+              mv "$work/body" "$work/put-body"
+              s3 -X DELETE -H "x-amz-content-sha256: $empty" "$base/$snapshot" > /dev/null
+              mv "$work/put-body" "$work/body"
+            fi
+            if [ "$code" = 412 ]; then
+              fail "セーブが別の実行で更新されています。最新の状態で再実行してください" "$code"
+            fi
+            [ "$code" = 200 ] || fail "最新の状態を保存できませんでした" "$code"
+            echo "R2 に保存しました: $BRANCH/latest.tar.gz、$BRANCH/${snapshot/\%2B/+}"
+            ;;
+          *)
+            echo "::error::mode は get・etag・put のどれかです: $MODE"
+            exit 1
+            ;;
+        esac

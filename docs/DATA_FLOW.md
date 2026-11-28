@@ -46,6 +46,7 @@ flowchart LR
 - 太線（`master-adventure.yml` の中）: ステップの実行順。各ステップの実行条件は下の「毎日の workflow の処理順」を参照
 - 実線: データの読み書き
 - 手動実行の workflow は毎日の workflow と同じ `concurrency` グループで、`.state/` への書き込みが重ならないようにしている
+- Variable `R2_STATE_BRANCHES` に入れたゲームは、`.state/` をブランチにコミットせず Cloudflare R2 に置く（下の「状態を R2 に置くゲーム」）
 
 ## ファイルごとの役割
 
@@ -93,6 +94,31 @@ sequenceDiagram
 
 毎日の実行が終わると（成功・失敗にかかわらず）、`pages.yml` がコミットされた最新の状態で CI（リンター・フォーマット・テスト）を確かめ、通ったらサイトを書き出して GitHub Pages に公開する。
 毎日の実行のコミットは GITHUB_TOKEN で push するので push では動かず、`workflow_run` で受ける（もののふの登録・引退のあとも同じ）。
+
+## 状態を R2 に置くゲーム
+
+Variable `R2_STATE_BRANCHES` に入れたゲームは、`.state/` の中身を tar.gz にまとめて Cloudflare R2 に置く（#301。設定は [SETUP.md](SETUP.md) の「5. ゲームの状態を R2 に置く」）。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant R2 as R2（<ゲーム>/latest.tar.gz）
+    participant L as load-state
+    participant G as run-game（rpg.py）
+    participant S as save-state
+    participant P as pages.yml
+
+    L->>R2: 最新と ETag を取得
+    L->>G: アーティファクトで渡す（トークンは渡さない）
+    G->>G: .state/ を置き換えて進める
+    G->>S: 進めた .state/ をアーティファクトで渡す
+    S->>R2: snapshots/<日時>-<操作>.tar.gz を書く
+    S->>R2: ETag が取得したときと同じなら latest.tar.gz を置き換える
+    P->>R2: 最新を取得して、サイトを書き出す
+```
+
+- ブランチにはコミットしないので、毎日の実行のあとの公開は、ブランチの先端のコミットと R2 の最新で書き出す
+- スナップショットは 30 日で消える（ライフサイクルルール）
 
 ## もののふを追加・引退させる workflow
 

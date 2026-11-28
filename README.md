@@ -21,7 +21,8 @@ GitHub プロフィールに Pin した Gist の中身を、GitHub Actions の�
 - Gist の更新には `gist` スコープの Classic PAT（Secret `GIST_PAT`）を使う。Gist の ID は `.state/` のファイル（RPG は `board.json`）に記録する
 - Pinned カードには Gist の**名前順で先頭のファイル**の、先頭 5 行（見出し + 4 行）ほどしか出ず、1 行 55 桁前後で切れる。
   各ネタはこの範囲に収まるように出力する（Gist のファイルは 1 つだけにする。1 行は `common.LINE_MAX` = 49 桁まで）
-- 記録用のデータは `.state/` に置き、workflow の最後に github-actions[bot] 名義で master に直接コミットする（PR は通さない）
+- 記録用のデータは `.state/` に置き、workflow の最後に github-actions[bot] 名義で master に直接コミットする（PR は通さない）。
+  Variable `R2_STATE_BRANCHES` に入れたゲームは、コミットせずに Cloudflare R2 に保存する（[docs/SETUP.md](docs/SETUP.md) の「5. ゲームの状態を R2 に置く」）
 - `.state/last-run` は keepalive 用。毎日コミットし、60 日無活動による scheduled workflow の停止を防ぐ
 - 標準ライブラリのみで動く（Python 3.12）。GitHub API・Gist の更新・表示幅の計算は `scripts/common.py` にまとめている
 
@@ -191,6 +192,8 @@ HP ██████████ 117/123  攻33 防16  1587文
 | `.state/heroes/<id>.json` | もののふごとの状態・持ち物・日誌・シーズンの記録（形式は [docs/STATE_FORMAT.md](docs/STATE_FORMAT.md)） |
 | `.github/workflows/master-adventure.yml` | 毎日 JST 7:17 に rpg.py を動かし（番付の Gist を更新）、`.state/` と `heroes/` をコミットする |
 | `.github/workflows/new-game.yml` / `retire-hero.yml` | もののふの追加・引退（手動実行） |
+| `.github/workflows/update-game-state.yml` | 毎日の実行・追加・引退の本体（状態を読み、rpg.py で進め、コミットか R2 に保存する） |
+| `.github/actions/r2-state` | ゲームの状態を Cloudflare R2 から取得する・R2 に保存する |
 | `.github/workflows/pages.yml` | CI（Ruff のリンター・フォーマット、テスト）と、サイトの公開。PR では CI だけ、master への push と毎日の実行・もののふの登録・引退のあとは CI が通ったら（CI と公開は同じコミットで行う） website.py でサイトを書き出して GitHub Pages に公開する。公開（deploy-pages）が一時的に失敗したら、30 秒待って 1 回だけやり直す（Settings → Pages の Source は「GitHub Actions」） |
 
 ```sh
