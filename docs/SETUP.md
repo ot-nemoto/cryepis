@@ -33,7 +33,7 @@ Gist は Fine-grained PAT に対応していないため Classic PAT を使い�
 
 - デフォルトブランチは本番の `master`。初回はこの仕組みをマージした master から `develop` を作る。作成時点のセーブを初期値として、以降はそれぞれのブランチで進む。
 - 機能の作業ブランチは `develop` から切り、PR の送り先も `develop` にする。ゲームを手動で進める・もののふを登録する・引退させるときは、Actions の **Use workflow from** で `master`、登録・引退は入力の **変更するゲーム** で対象を選ぶ。手動で進めるときは本番の *Advance hero adventure (text RPG)* と開発の *Advance development game* を使い分ける。
-- 開発用は JST 7:17 と 19:17 に起動する。同じ日の進行は 1 回で、2 回目は未処理分があれば進め、開発サイトを更新する。
+- 開発用は本番と同じく JST 7:17 に 1 日 1 回起動する。実行されなかった日は、次の実行で最大 7 日分さかのぼって進める（#299）。
 - 番付 Gist は本番のみ。開発側は `python scripts/rpg.py --no-gist` でセーブを保存し、番付は開発版サイトで確認する。
 - 本番と開発のセーブが混ざらないように、本番へは毎回 `python tools/release.py` でリリースブランチを作る。最新の master を元に develop を取り込み、`.state/` は master の内容を保持し、`VERSION` の末尾を 1 つ上げる。コードの競合を解決し直す場合は、リリース準備時のエラーメッセージに従う。
 - リリースブランチから `master` への PR を作り、公開対象の Issue ごとに `Closes #番号` を書く。CI は PR のマージ結果で `.state/` の差分とバージョンを確認する。プレビュー確認後は **Create a merge commit** で取り込む。日次処理ではバージョンを更新しない。
