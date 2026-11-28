@@ -1,0 +1,33 @@
+name: tmp r2 check (#301)
+on:
+  push:
+    branches: [tmp/301-r2-check]
+permissions:
+  contents: write
+jobs:
+  advance:
+    uses: ./.github/workflows/update-game-state.yml
+    with: {branch: develop, operation: advance}
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  stale:
+    needs: advance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with: {sparse-checkout: .github/actions}
+      - id: get
+        uses: ./.github/actions/r2-state
+        with: {mode: get, branch: develop, file: "${{ runner.temp }}/s.tar.gz", api-token: "${{ secrets.CLOUDFLARE_API_TOKEN }}", account-id: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"}
+      - id: put
+        continue-on-error: true
+        uses: ./.github/actions/r2-state
+        with: {mode: put, branch: develop, operation: advance, file: "${{ runner.temp }}/s.tar.gz", etag: '"stale-etag"', api-token: "${{ secrets.CLOUDFLARE_API_TOKEN }}", account-id: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"}
+      - id: after
+        uses: ./.github/actions/r2-state
+        with: {mode: etag, branch: develop, api-token: "${{ secrets.CLOUDFLARE_API_TOKEN }}", account-id: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"}
+      - env: {OUT: "${{ steps.put.outcome }}", A: "${{ steps.get.outputs.etag }}", B: "${{ steps.after.outputs.etag }}"}
+        run: |
+          echo "stale put=$OUT before=$A after=$B"
+          test "$OUT" = failure && test "$A" = "$B"
