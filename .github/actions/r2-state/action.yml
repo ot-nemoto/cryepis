@@ -5,14 +5,14 @@ description: >-
 
 inputs:
   mode:
-    description: "get（最新を取得する）または put（スナップショットを残してから最新を置き換える）"
+    description: "get（最新を取得する）、etag（最新の ETag だけを調べる）、put（スナップショットを残してから最新を置き換える）"
     required: true
   branch:
     description: "ゲーム（master または develop）"
     required: true
   file:
-    description: "get は保存先、put は保存する tar.gz"
-    required: true
+    description: "get は保存先、put は保存する tar.gz（etag では使わない）"
+    default: ""
   operation:
     description: "put のとき、スナップショットの名前に付ける操作（advance・new-game・retire）"
     default: ""
@@ -31,7 +31,7 @@ inputs:
 
 outputs:
   etag:
-    description: "get のとき、取得した最新の ETag"
+    description: "get・etag のとき、最新の ETag"
     value: ${{ steps.r2.outputs.etag }}
 
 runs:
@@ -56,10 +56,10 @@ runs:
           exit 1
         fi
         api=https://api.cloudflare.com/client/v4
-        key_id=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/user/tokens/verify" | jq -r '.result.id // empty')
+        key_id=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/user/tokens/verify" | jq -r '.result.id // empty' 2>/dev/null || true)
         if [ -z "$key_id" ]; then
           key_id=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify" | jq -r '.result.id // empty')
+            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify" | jq -r '.result.id // empty' 2>/dev/null || true)
         fi
         if [ -z "$key_id" ]; then
           echo "::error::Cloudflare の API トークンを確かめられませんでした"
@@ -72,8 +72,12 @@ runs:
         printf 'user = "%s:%s"\n' "$key_id" "$secret" > "$work/curl.conf"
         base="https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com/$BUCKET/$BRANCH"
         empty=$(sha256sum < /dev/null | cut -d' ' -f1)
-        # 応答の本文は $work/body、ヘッダーは $work/head に置き、HTTP ステータスを返す
-        s3() { curl -sS -K "$work/curl.conf" --aws-sigv4 "aws:amz:auto:s3" -o "$work/body" -D "$work/head" -w '%{http_code}' "$@"; }
+        # 応答の本文は $work/body、ヘッダーは $work/head に置き、HTTP ステータスを返す（通信できなければ 000）
+        s3() {
+          rm -f "$work/body" "$work/head"
+          touch "$work/body" "$work/head"
+          curl -sS -K "$work/curl.conf" --aws-sigv4 "aws:amz:auto:s3" -o "$work/body" -D "$work/head" -w '%{http_code}' "$@" || true
+        }
         etag_of() { grep -i '^etag:' "$work/head" | head -1 | cut -d' ' -f2- | tr -d '\r'; }
         fail() { echo "::error::$1（HTTP $2）"; cat "$work/body" >&2 || true; exit 1; }
 
@@ -86,6 +90,11 @@ runs:
             [ "$code" = 200 ] || fail "R2 から $BRANCH の状態を取得できませんでした" "$code"
             tar -tzf "$work/body" > /dev/null
             mv "$work/body" "$FILE"
+            echo "etag=$(etag_of)" >> "$GITHUB_OUTPUT"
+            ;;
+          etag)
+            code=$(s3 -I -H "x-amz-content-sha256: $empty" "$base/latest.tar.gz")
+            [ "$code" = 200 ] || fail "R2 の $BRANCH の最新（$BRANCH/latest.tar.gz）を確かめられませんでした" "$code"
             echo "etag=$(etag_of)" >> "$GITHUB_OUTPUT"
             ;;
           put)
@@ -102,7 +111,7 @@ runs:
             if [ "$code" != 200 ]; then
               # 最新を置き換えられなかったセーブは、スナップショットにも残さない（応答の本文はエラー表示のために残す）
               mv "$work/body" "$work/put-body"
-              s3 -X DELETE -H "x-amz-content-sha256: $empty" "$base/$snapshot" > /dev/null || true
+              s3 -X DELETE -H "x-amz-content-sha256: $empty" "$base/$snapshot" > /dev/null
               mv "$work/put-body" "$work/body"
             fi
             if [ "$code" = 412 ]; then
@@ -112,7 +121,7 @@ runs:
             echo "R2 に保存しました: $BRANCH/latest.tar.gz、$BRANCH/${snapshot/\%2B/+}"
             ;;
           *)
-            echo "::error::mode は get か put です: $MODE"
+            echo "::error::mode は get・etag・put のどれかです: $MODE"
             exit 1
             ;;
         esac
